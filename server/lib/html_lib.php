@@ -102,6 +102,7 @@ function team_reiter(array $konto, string $aktiv): string
     ];
     if ($konto['rolle'] === 'betreiber') {
         $reiter[] = ['/team/konten', 'Team-Konten'];
+        $reiter[] = ['/team/daten', 'Daten'];
     }
     $h = '<nav class="team-nav" aria-label="Team-Bereich">';
     foreach ($reiter as [$pfad, $text]) {

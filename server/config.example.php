@@ -52,5 +52,6 @@ return [
         'absender_name' => 'Wintersymposium Notfallmedizin',
         'antwort_an' => '',             // optional, z. B. admin@…
         'tageslimit' => 450,            // Mails je Tag; System-Mails gehen immer raus
+        'umleiten_an' => '',            // nur Staging: alle Mails an diese Adresse (Empfänger im Betreff)
     ],
 ];

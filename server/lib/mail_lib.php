@@ -46,6 +46,7 @@ function mail_konfig(): array
         'absender_name' => 'Wintersymposium Notfallmedizin',
         'antwort_an' => '',
         'tageslimit' => 450,
+        'umleiten_an' => '',
     ];
 }
 
@@ -228,6 +229,12 @@ function antwort_abschliessen(): void
 function mail_zustellen(string $an, string $betreff, string $text): ?string
 {
     $c = mail_konfig();
+    // Staging: alles an eine Adresse umleiten, der eigentliche Empfänger steht im Betreff (E-47)
+    $um = mail_adresse((string)($c['umleiten_an'] ?? ''));
+    if ($um !== null) {
+        $betreff = '[an ' . $an . '] ' . $betreff;
+        $an = $um;
+    }
     $nachricht = mail_nachricht($c, $an, $betreff, $text);
     if ($c['modus'] === 'datei') {
         // Name sortierbar nach Zeit (Mikrosekunden), damit Tests die neueste Mail finden
