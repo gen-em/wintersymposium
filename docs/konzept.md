@@ -205,6 +205,7 @@ nicht_uebernehmen:
 | R-09 | Alle Texte der Oberfläche und Mails auf Deutsch; Ton nach zina-branding (`4 Regeln/Erscheinungsbild.md`). |
 | R-10 | Öffentliches Repo (E-25): keine Kontonamen, IP-Adressen, Serverpfade, Postfach-Logins oder Hosting-Interna in Code, Doku, Commits, PR-Texten und Issues; Domain und öffentliche Absenderadressen dürfen genannt werden. Betriebsangaben gehören in das private Repo `gen-em/server-infrastruktur` oder zum Admin. Alles Umgebungsspezifische liegt in `config.php`. |
 | R-11 | Alles, was die Veranstaltung betrifft (Fristen, Limits, Kapazitäten, Zeiträume), ist eine Einstellung in der Oberfläche, kein fester Wert im Code. |
+| R-12 | Browser-Prüfung vor jedem PR (Admin 2026-10-29): jede Funktion wird in der Sandbox in **Chromium, Firefox und WebKit** (Safari-Engine) auf **Handy (390 px), Tablet (768 px), schmalem Desktop (1024 px) und breitem Desktop (1440 px)** geprüft – Darstellung (kein seitliches Scrollen, nichts ragt aus dem Fenster), Klickwege, **Auswahlfelder** (jede Option), **Aufklapp-Elemente** und **Popups**, keine Konsolenfehler. Werkzeug: `tools/browser/durchlauf.js`; neue Seiten und Abläufe werden dort ergänzt, das Ergebnis (Zahl) steht im PR und im Prüfprotokoll. Ziel: Fehler vor der Auslieferung finden, damit der Admin möglichst wenig selbst testen muss. Grenze: WebKit ist nicht Safari; ein echtes iPhone bleibt eine Stichprobe des Admins. |
 
 ## 6. Arbeitspakete
 
@@ -309,6 +310,7 @@ nicht_uebernehmen:
     - {problem: "NAdoku versiegelt mit eigenem Serverschlüssel in config.php; ein weiterer Eintrag hätte die Einrichtung auf Staging und Produktion erschwert", loesung: "Schlüssel per HKDF aus dem vorhandenen geheimnis abgeleitet (E-43)"}
     - {problem: "Bliebe der einzige Betreiber ohne Handy und Codes, käme niemand mehr in den Team-Bereich", loesung: "Notzugang im Browser mit dem Installationsschlüssel (O-34, E-43), dazu cli/konto.php für Server mit Kommandozeile"}
     - {problem: "Aktionen-Spalte der Konten-Tabelle sprang aus der Tabelle (Zelle als Flexbox)", loesung: "Flexbox in ein inneres Element verlegt; im Browser bei 390 und 1280 px geprüft"}
+    - {problem: "Konten-Tabelle auf Tablet und Handy rechts abgeschnitten (Knöpfe halb verdeckt); der erste Browser-Durchlauf nahm scrollbare Tabellen von der Prüfung aus und sah es nicht, gefunden beim Ansehen der Bildschirmfotos", loesung: "Tabellen mit Klasse .karten unter 960 px als Karten; der Durchlauf prüft Tabellen jetzt mit (verdecktes Seitwärts-Scrollen ist ein Fehler); Gegenprobe ohne Karten meldet den Fehler in allen Engines"}
 
 - id: AP-4
   titel: Anmeldung, Einmal-Links, Warteliste und Nachrücken
@@ -529,6 +531,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-29 | Beispielprogramm auf der Startseite bis AP-3 (Wunsch des Admins); Hinweis zum Entfernen in AP-3. |
 | 2026-10-29 | AP-3 Schritt 1 umgesetzt: E-43 (Team-Login) neu; AP-3 mit Schritten und Ergebnis; O-14 zurückgestellt (erst TOTP); O-34 (Notweg) neu. |
 | 2026-10-29 | O-34 entschieden: Notzugang im Browser mit dem Installationsschlüssel, ein Betreiber reicht (E-43 ergänzt). |
+| 2026-10-29 | R-12 (Browser-Prüfung in drei Engines und vier Breiten vor jedem PR) neu. |
 | 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |

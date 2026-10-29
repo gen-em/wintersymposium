@@ -14,6 +14,7 @@ AP-3 Schritt 1: Konten und Team-Login.
 - Ratenschutz für Login, Codes und Einrichtungslinks; gleiche Meldung und Laufzeit für bekannte und unbekannte Adressen.
 - Notzugang für Betreiber unter `/notzugang` (O-34): mit dem Installationsschlüssel aus der config.php wird der zweite Faktor eines Betreiber-Kontos zurückgesetzt und ein Passwort-Link angezeigt; 3 Versuche je Stunde, Audit-Eintrag, nicht verlinkt.
 - Notweg auf der Kommandozeile: `cli/konto.php` (Liste, Link erzeugen, zweiten Faktor zurücksetzen).
+- Browser-Durchlauf (R-12): `tools/browser/einrichten.sh` richtet Chromium, Firefox und WebKit in der Sandbox ein, `tools/browser/durchlauf.js` prüft alle Seiten und Abläufe in den drei Engines auf Handy-, Tablet-, schmaler und breiter Desktopbreite, mit Auswahlfeldern, Aufklapp-Elementen, Popups, Überstand und Konsolenfehlern.
 - QR-Code lokal erzeugt: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, MIT) und `assets/qr.js`, übernommen aus NAdoku.
 
 ### Geändert
@@ -21,6 +22,7 @@ AP-3 Schritt 1: Konten und Team-Login.
 - Datenbank (Migration 4): eine Tabelle `konto` mit Rollen (Teilnehmend, Admin, Betreiber) ersetzt `team_konto`; vorhandene Konten werden mit gleicher id übernommen und richten beim ersten Login den zweiten Faktor ein. Neue Tabellen `konto_code` (Wiederherstellungscodes) und `konto_link` (Einrichtungs- und Passwortlinks, nur Hash).
 - Installer legt den ersten Betreiber in `konto` an und verweist danach auf das Einloggen.
 - Login-Seiten sind wie der Team-Bereich von der Wartung ausgenommen.
+- Tabellen im Team-Bereich (Klasse `.karten`) werden unter 960 px als Karten dargestellt statt rechts abgeschnitten.
 - Aufräum-Job löscht abgelaufene Einrichtungslinks.
 
 - Favicon besser erkennbar (Variante B): Auf hellen Oberflächen füllt das lila Bildzeichen die nachtblaue Kachel fast ganz aus statt nur zu drei Vierteln; bei 16 px war es vorher kaum zu erkennen. Auf dunklen Oberflächen unverändert. `favicon.ico` neu erzeugt.

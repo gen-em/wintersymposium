@@ -85,18 +85,18 @@ if (is_array($link)): ?>
     <p class="mono umbruch"><?= e($link['url']) ?></p>
 </div>
 <?php endif; ?>
-<div class="tabelle-wrap"><table class="t">
+<div class="tabelle-wrap"><table class="t karten">
     <thead><tr><th>Name</th><th>Rolle</th><th>Status</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
     <tbody>
     <?php foreach (konto_team_liste() as $k):
         $eigen = (int)$k['id'] === $ich;
         $status = (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($k['hat_passwort'] ? ($k['totp_seit'] !== null ? 'aktiv' : 'zweiter Faktor fehlt') : 'Einrichtung offen'); ?>
         <tr>
-            <td><strong><?= e($k['name']) ?></strong><?= $eigen ? ' <span class="meta">(du)</span>' : '' ?><br><span class="meta klein"><?= e($k['email']) ?></span></td>
-            <td><?= e(ROLLEN[$k['rolle']]) ?></td>
-            <td><span class="chip <?= (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen') ?>"><?= e($status) ?></span></td>
-            <td class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
-            <td><div class="aktionen-zelle">
+            <td data-label="Name"><strong><?= e($k['name']) ?></strong><?= $eigen ? ' <span class="meta">(du)</span>' : '' ?><br><span class="meta klein"><?= e($k['email']) ?></span></td>
+            <td data-label="Rolle"><?= e(ROLLEN[$k['rolle']]) ?></td>
+            <td data-label="Status"><span class="chip <?= (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen') ?>"><?= e($status) ?></span></td>
+            <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
+            <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
             <?php if (!$eigen): ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="link"><button class="knopf zweit klein" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link' : 'Neuer Einrichtungslink' ?></button></form>
                 <?php if ($k['totp_seit'] !== null): ?>

@@ -214,6 +214,17 @@ a.knopf { color: var(--auf-akz); }
 table.t { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .92rem; }
 table.t th, table.t td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--linie); }
 table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; color: var(--meta); }
+.aktionen-zelle .knopf { white-space: nowrap; }
+/* Tabellen mit Klasse .karten: unter 960 px jede Zeile als Karte, statt seitlich zu scrollen */
+@media (max-width: 959px) {
+    table.t.karten { min-width: 0; }
+    table.t.karten thead { display: none; }
+    table.t.karten, table.t.karten tbody, table.t.karten tr, table.t.karten td { display: block; width: 100%; }
+    table.t.karten tr { padding: 10px 0; border-bottom: 1px solid var(--linie); }
+    table.t.karten td { border: 0; padding: 4px 14px; }
+    table.t.karten td[data-label]:not([data-label="Name"])::before { content: attr(data-label); display: block; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; color: var(--meta); }
+    .tabelle-wrap:has(table.karten) { overflow-x: visible; }
+}
 .aktionen-zelle { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
 .aktionen-zelle form { margin: 0; }
 .rolle-wechsel > summary { cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; color: var(--akz); font-weight: 700; font-size: .88rem; }

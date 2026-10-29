@@ -1,0 +1,274 @@
+/*
+ * Browser-Durchlauf (Regel R-12): alle Seiten und Abläufe in Chromium,
+ * Firefox und WebKit (Safari-Engine), je auf Handy-, Tablet-, schmaler und
+ * breiter Desktopbreite. Prüft je Seite und Breite:
+ *   - Antwort ohne Fehlerstatus
+ *   - kein seitliches Scrollen (scrollWidth ≤ Fensterbreite)
+ *   - keine Konsolen- und Skriptfehler
+ *   - jedes Element liegt innerhalb der Fensterbreite
+ *   - Bedienelemente auf jeder Seite: jedes Auswahlfeld mit jeder Option,
+ *     jedes Aufklapp-Element (details) auf und zu, jedes Popup (dialog)
+ *     über seinen Auslöser auf und mit Escape wieder zu
+ *   - Klickwege: Menü auf dem Handy, Team-Reiter, Login mit zweitem Faktor,
+ *     Konto anlegen über das Formular, Einrichtungslink, Ausloggen
+ * Bildschirmfotos landen im Ausgabeordner, dazu bericht.txt.
+ *
+ * Einrichtung einmal je Sandbox: bash tools/browser/einrichten.sh
+ * Lauf (Testdatenbank wird geleert, wie bei lauf.php):
+ *   WS_TEST_DB_HOST=… WS_TEST_DB_NAME=… WS_TEST_DB_USER=… WS_TEST_DB_PASS=… \
+ *   node tools/browser/durchlauf.js [Ausgabeordner]
+ */
+'use strict';
+// Eigener Ordner mit allen drei Engines (tools/browser/einrichten.sh); die
+// Sandbox gibt sonst /opt/pw-browsers vor, dort liegt nur Chromium.
+if (require('fs').existsSync('/opt/ws-browsers')) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/ws-browsers';
+}
+const pw = require('playwright');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
+const { spawn, execFileSync } = require('child_process');
+
+const WURZEL = path.resolve(__dirname, '..', '..');
+const AUS = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'ws-browser-' + Date.now()));
+const ENGINES = ['chromium', 'firefox', 'webkit'];
+const BREITEN = [
+  ['handy', 390, 844],
+  ['tablet', 768, 1024],
+  ['desktop-schmal', 1024, 768],
+  ['desktop-breit', 1440, 900],
+];
+
+fs.mkdirSync(AUS, { recursive: true });
+const ergebnisse = [];
+function notiere(engine, breite, seite, was, ok, info = '') {
+  ergebnisse.push({ engine, breite, seite, was, ok, info });
+  if (!ok) console.log(`  FEHLER ${engine} ${breite} ${seite}: ${was} ${info}`);
+}
+
+function b32(s) {
+  const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = '';
+  for (const c of s) bits += a.indexOf(c).toString(2).padStart(5, '0');
+  const out = []; for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2));
+  return Buffer.from(out);
+}
+function totp(key, t) {
+  const b = Buffer.alloc(8); b.writeBigUInt64BE(BigInt(Math.floor(t / 30)));
+  const h = crypto.createHmac('sha1', key).update(b).digest(); const o = h[19] & 15;
+  const n = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(n % 1e6).padStart(6, '0');
+}
+
+function php(args, config) {
+  return execFileSync('php', args, { env: { ...process.env, WS_CONFIG: config }, encoding: 'utf8' });
+}
+
+/** Sichtbare Elemente, die rechts aus dem Fenster ragen. Läuft im Browser. */
+function ueberstand() {
+  return [...document.querySelectorAll('body *')].filter(e => {
+    // Ausnahme nur für ausdrücklich scrollbare Bereiche (.scroll-erlaubt); Tabellen zählen mit.
+    if (e.closest('.scroll-erlaubt')) return false;
+    if (e.checkVisibility && !e.checkVisibility({ visibilityProperty: true })) return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.right > window.innerWidth + 1;
+  }).slice(0, 3).map(e => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).split(' ')[0] : ''));
+}
+
+/**
+ * Bedienelemente der Seite durchgehen: Auswahlfelder, Aufklapp-Elemente,
+ * Popups. Lässt die Seite danach im Ausgangszustand (Werte zurückgesetzt).
+ */
+/** Jedes sichtbare Auswahlfeld im Bereich: jede Option wählen, Wert muss übernommen werden. */
+async function pruefeAuswahl(bereich, engine, breite, name) {
+  const selects = bereich.locator('select');
+  for (let i = 0; i < await selects.count(); i++) {
+    const sel = selects.nth(i);
+    if (!await sel.isVisible()) continue; // in zugeklappten Bereichen: geprüft beim Aufklappen
+    const id = (await sel.getAttribute('id')) || ('select-' + i);
+    const werte = await sel.locator('option').evaluateAll(os => os.map(o => o.value));
+    const vorher = await sel.inputValue();
+    let ok = werte.length > 0;
+    for (const w of werte) {
+      await sel.selectOption(w);
+      if (await sel.inputValue() !== w) ok = false;
+    }
+    await sel.selectOption(vorher);
+    notiere(engine, breite, name, `Auswahlfeld ${id}: ${werte.length} Optionen wählbar`, ok);
+  }
+}
+
+async function pruefeBedienung(p, engine, breite, name) {
+  await pruefeAuswahl(p.locator('body'), engine, breite, name);
+  // Aufklapp-Elemente (Menü, Infos, Rolle ändern): auf und zu
+  const details = p.locator('details');
+  for (let i = 0; i < await details.count(); i++) {
+    const d = details.nth(i);
+    const sum = d.locator(':scope > summary');
+    if (!await sum.isVisible()) continue;
+    const label = ((await sum.textContent()) || '').trim().slice(0, 30);
+    await sum.click();
+    const offen = await d.evaluate(e => e.open);
+    const inhaltSichtbar = await d.evaluate(e => [...e.children].some(c => c.tagName !== 'SUMMARY' && c.getBoundingClientRect().height > 0));
+    const rausOffen = await p.evaluate(ueberstand);
+    notiere(engine, breite, name, `Aufgeklappt „${label}“ innerhalb der Fensterbreite`, rausOffen.length === 0, rausOffen.join(', '));
+    await pruefeAuswahl(d, engine, breite, name);
+    await sum.click();
+    const zu = await d.evaluate(e => !e.open);
+    notiere(engine, breite, name, `Aufklappen „${label}“`, offen && inhaltSichtbar && zu);
+  }
+  // Popups: Auslöser mit aria-haspopup="dialog" oder data-dialog öffnen dialog[open]
+  const ausloeser = p.locator('[aria-haspopup="dialog"], [data-dialog]');
+  for (let i = 0; i < await ausloeser.count(); i++) {
+    const a = ausloeser.nth(i);
+    if (!await a.isVisible()) continue;
+    const label = ((await a.textContent()) || '').trim().slice(0, 30);
+    await a.click();
+    const auf = await p.locator('dialog[open]').count() === 1 && await p.isVisible('dialog[open]');
+    const imFenster = auf ? await p.evaluate(() => { const r = document.querySelector('dialog[open]').getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth + 1; }) : false;
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(100);
+    const zu = await p.locator('dialog[open]').count() === 0;
+    notiere(engine, breite, name, `Popup „${label}“: öffnet im Fenster, Escape schließt`, auf && imFenster && zu);
+  }
+}
+
+/** Seite prüfen: Status, seitliches Scrollen, Fehler; Bildschirmfoto. */
+async function pruefeSeite(p, fehler, engine, breite, name, url) {
+  fehler.length = 0;
+  const antwort = url ? await p.goto(url, { waitUntil: 'load' }) : null;
+  await p.waitForTimeout(150);
+  if (antwort) notiere(engine, breite, name, 'Status', antwort.status() < 400, String(antwort.status()));
+  const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+  notiere(engine, breite, name, 'kein seitliches Scrollen', m.sw <= m.iw, `${m.sw} > ${m.iw}`);
+  // Elemente, die rechts aus dem Fenster ragen (außer in scrollbaren Tabellen)
+  const raus = await p.evaluate(ueberstand);
+  notiere(engine, breite, name, 'alles innerhalb der Fensterbreite', raus.length === 0, raus.join(', '));
+  // Abgeschnittenes in scrollbaren Rahmen (overflow): Inhalt breiter als der Rahmen
+  const abgeschnitten = await p.evaluate(() => [...document.querySelectorAll('.tabelle-wrap')].filter(w => !w.closest('.scroll-erlaubt') && w.scrollWidth > w.clientWidth + 1).length);
+  notiere(engine, breite, name, 'Tabellen ohne verdecktes Seitwärts-Scrollen', abgeschnitten === 0, `${abgeschnitten} Tabelle(n)`);
+  await pruefeBedienung(p, engine, breite, name);
+  notiere(engine, breite, name, 'keine Konsolenfehler', fehler.length === 0, fehler.join(' | '));
+  await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-${name}.png`), fullPage: true });
+}
+
+(async () => {
+  // Vorbereitung: Datenbank, Installation, Server
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ws-durchlauf-'));
+  const vor = JSON.parse(php([path.join(WURZEL, 'tools/browser/vorbereiten.php'), tmp], ''));
+  const port = 19000 + Math.floor(Math.random() * 900);
+  const basis = `http://127.0.0.1:${port}`;
+  const server = spawn('php', ['-S', `127.0.0.1:${port}`, '-t', path.join(WURZEL, 'server/public'), path.join(WURZEL, 'server/public/index.php')],
+    { env: { ...process.env, WS_CONFIG: vor.config }, stdio: ['ignore', fs.openSync(path.join(tmp, 'server.log'), 'a'), fs.openSync(path.join(tmp, 'server.log'), 'a')] });
+  await new Promise(r => setTimeout(r, 700));
+
+  try {
+    for (const engine of ENGINES) {
+      console.log(`== ${engine}`);
+      // Jede Engine richtet den zweiten Faktor frisch ein.
+      php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
+      const browser = await pw[engine].launch();
+      const version = browser.version();
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const p = await ctx.newPage();
+      const fehler = [];
+      p.on('console', m => { if (m.type() === 'error') fehler.push(m.text()); });
+      p.on('pageerror', e => fehler.push(String(e)));
+
+      // Öffentliche Seiten in allen Breiten, mit Klickwegen
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'start', basis + '/');
+        notiere(engine, breite, 'start', w < 760 ? 'Menü-Knopf sichtbar, Liste versteckt' : 'Navigation sichtbar',
+          w < 760 ? (await p.isVisible('.menue summary') && !await p.isVisible('.nav-gross a')) : await p.isVisible('.nav-gross a'));
+        for (const s of ['impressum', 'datenschutz', 'einloggen', 'notzugang']) {
+          await pruefeSeite(p, fehler, engine, breite, s, basis + '/' + s);
+        }
+      }
+
+      // Login mit Einrichtung des zweiten Faktors (Handybreite)
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/einloggen');
+      await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
+      await p.click('form:has(input[value=passwort]) button');
+      await p.waitForSelector('svg.qr:not([hidden]) path', { timeout: 5000 }).catch(() => {});
+      notiere(engine, 'handy', 'einrichtung', 'QR-Code gezeichnet', await p.isVisible('svg.qr path'));
+      await pruefeSeite(p, fehler, engine, 'handy', 'einrichtung', null);
+      const uri = await p.getAttribute('svg.qr', 'data-qr');
+      const key = b32(new URL(uri.replace('otpauth://', 'http://')).searchParams.get('secret'));
+      await p.fill('#code', totp(key, Date.now() / 1000));
+      await p.click('form:has(input[value=einrichten]) button');
+      await p.waitForLoadState('load');
+      const codes = await p.locator('ul.codes li').allTextContents();
+      notiere(engine, 'handy', 'codes', 'zehn Wiederherstellungscodes', codes.length === 10, String(codes.length));
+      await pruefeSeite(p, fehler, engine, 'handy', 'codes', null);
+      await p.click('a.knopf');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team', 'eingeloggt mit Name', (await p.textContent('body')).includes('Bea Betreiberin'));
+
+      // Team-Seiten in allen Breiten, Reiter anklicken
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
+        for (const [text, ziel, name] of [['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
+          await p.click(`.team-nav a:has-text("${text}")`);
+          await p.waitForLoadState('load');
+          notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
+          await pruefeSeite(p, fehler, engine, breite, name, null);
+        }
+      }
+
+      // Konto über das Formular anlegen (Auswahlfeld Rolle), Link erscheint
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/team/konten');
+      await p.fill('#name', 'Neu ' + engine); await p.fill('#email', `neu-${engine}@example.org`);
+      await p.selectOption('#rolle', 'betreiber');
+      await p.click('form:has(input[value=anlegen]) button');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team-konten', 'Konto über Formular angelegt, Link angezeigt', (await p.textContent('body')).includes('/einrichten?t='));
+      notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'Betreiber');
+
+      // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen
+      const link = php([path.join(WURZEL, 'server/cli/konto.php'), 'link', 'anna@example.org'], vor.config).trim()
+        .replace(/^https?:\/\/[^/]+/, basis);
+      const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const p2 = await ctx2.newPage();
+      const fehler2 = [];
+      p2.on('console', m => { if (m.type() === 'error') fehler2.push(m.text()); });
+      p2.on('pageerror', e => fehler2.push(String(e)));
+      await pruefeSeite(p2, fehler2, engine, 'handy', 'einrichten-link', link);
+      await p2.fill('#passwort', 'anna-browser-passwort'); await p2.fill('#passwort2', 'anna-browser-passwort');
+      await p2.click('form button');
+      await p2.waitForLoadState('load');
+      notiere(engine, 'handy', 'einrichten-link', 'weiter zur Einrichtung des zweiten Faktors', await p2.isVisible('svg.qr'));
+      await ctx2.close();
+
+      // Ausloggen über den Knopf in der Navigation (Desktop) und Login mit Wiederherstellungscode
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team');
+      await p.click('.nav-gross .nav-ab');
+      await p.waitForLoadState('load');
+      notiere(engine, 'desktop-breit', 'ausloggen', 'ausgeloggt', new URL(p.url()).pathname === '/einloggen' && (await p.textContent('body')).includes('ausgeloggt'));
+      await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
+      await p.click('form:has(input[value=passwort]) button');
+      await p.waitForLoadState('load');
+      await p.fill('#code', codes[0]);
+      await p.click('form:has(input[value=code]) button');
+      await p.waitForLoadState('load');
+      notiere(engine, 'desktop-breit', 'code-login', 'Login mit Wiederherstellungscode', new URL(p.url()).pathname === '/team');
+
+      notiere(engine, '-', '-', 'Engine ' + version, true);
+      await browser.close();
+    }
+  } finally {
+    server.kill();
+  }
+
+  const fehlerZahl = ergebnisse.filter(e => !e.ok).length;
+  const zeilen = ergebnisse.map(e => `${e.ok ? 'ok    ' : 'FEHLER'} ${e.engine.padEnd(8)} ${e.breite.padEnd(15)} ${e.seite.padEnd(16)} ${e.was}${e.ok ? '' : ' – ' + e.info}`);
+  const zusammen = `${ergebnisse.length - fehlerZahl} ok, ${fehlerZahl} Fehler (${ENGINES.length} Engines × ${BREITEN.length} Breiten)`;
+  fs.writeFileSync(path.join(AUS, 'bericht.txt'), zeilen.join('\n') + '\n\n' + zusammen + '\n');
+  console.log('\n' + zusammen + '\nBericht und Bildschirmfotos: ' + AUS);
+  process.exit(fehlerZahl === 0 ? 0 : 1);
+})().catch(e => { console.error(e); process.exit(2); });

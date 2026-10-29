@@ -64,7 +64,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-131, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
 - {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden (nur wo eine Kommandozeile verfügbar ist)"}
 - {id: T-134, ap: AP-3, was: "Notzugang im Browser (O-34)", wie: "falscher Schlüssel oder unbekannte Adresse → gleiche Meldung, nichts geändert; richtiger Schlüssel → zweiter Faktor zurückgesetzt, Link angezeigt, alte Sitzung beendet, Audit-Eintrag; nach 3 Fehlversuchen gesperrt", status: "lokal bestanden"}
-- {id: T-133, ap: AP-3, was: "Team-Seiten im Browser", wie: "Login, Einrichtung mit QR, Codes, Übersicht, Team-Konten, Mein Konto bei 390 und 1280 px; kein seitliches Scrollen, keine Konsolenfehler", status: "lokal bestanden"}
+- {id: T-133, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
 - {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: offen}
@@ -168,7 +168,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-115 | 2026-10-29 | claude-dev | teilweise | /impressum und /datenschutz 200, in der Fußzeile verlinkt; leer → Hinweis; gepflegter Text (Überschrift, mailto-Link) wird angezeigt | Bearbeiten durch Betreiber erst mit AP-5 |
 | T-116 | 2026-10-29 | claude-dev | lokal bestanden | Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 von /assets/fonts (200), Logo als SVG (scharf in jeder Auflösung) | – |
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
-| T-127 bis T-134 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Login-Ablauf im Browser (Playwright) mit echter TOTP-Berechnung, QR-Code sichtbar, 390/1280 px ohne seitliches Scrollen, keine Konsolenfehler | Staging-Prüfung nach dem Merge |
+| T-127 bis T-134 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
 
 ### Noch zu prüfen für AP-1

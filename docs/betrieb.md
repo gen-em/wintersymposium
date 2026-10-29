@@ -88,6 +88,20 @@ php tools/tests/lauf.php
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
 
+**Browser-Durchlauf (R-12)** in Chromium, Firefox und WebKit, je auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px): alle Seiten, Klickwege (Menü, Team-Reiter, Login mit zweitem Faktor, Konto anlegen, Einrichtungslink, Ausloggen), jedes Auswahlfeld, jedes Aufklapp-Element, jedes Popup; dazu seitliches Scrollen, Überstand und Konsolenfehler.
+
+```bash
+bash tools/browser/einrichten.sh
+```
+
+(einmal je Sandbox: MySQL, Bibliotheken für WebKit, Firefox und WebKit in `/opt/ws-browsers`, Chromium dorthin verlinkt; zum Schluss starten alle drei Engines zum Nachweis)
+
+```bash
+node tools/browser/durchlauf.js <Ausgabeordner>
+```
+
+(mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen.
+
 ## 7. Pflegbare Texte
 
 Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie im Betreiber-Bereich (ab AP-5). Erlaubte Auszeichnung:
