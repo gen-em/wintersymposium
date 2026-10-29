@@ -31,7 +31,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } elseif ($aktion === 'codes') {
         if (!rate_erlaubt('zweitfaktor', $kennung)) {
             $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-        } elseif (!totp_anmeldung_pruefen($id, (string)($_POST['code'] ?? ''))['ok']) {
+        } elseif (!totp_anmeldung_pruefen($id, (string)($_POST['totp'] ?? ''))['ok']) {
             rate_misserfolg('zweitfaktor', $kennung);
             $fehler[] = 'Der Code stimmt nicht.';
         } else {
@@ -76,8 +76,8 @@ if ($neueCodes !== null): ?>
         <form method="post" action="/team/profil" class="formular">
             <?= csrf_feld() ?>
             <input type="hidden" name="aktion" value="codes">
-            <label for="code">Neue Wiederherstellungscodes: Code aus der App</label>
-            <input id="code" name="code" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+            <label for="totp">Neue Wiederherstellungscodes: Code aus der App</label>
+            <input id="totp" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
             <button type="submit" class="knopf zweit">Neue Codes erzeugen</button>
         </form>
         <p class="meta klein">Handy gewechselt? Ein Betreiber setzt deinen zweiten Faktor zurück, beim nächsten Einloggen richtest du ihn neu ein.</p>

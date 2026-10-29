@@ -49,7 +49,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/einloggen');
         }
         $kennung = rate_merkmal('konto:' . $k['id']);
-        $code = (string)($_POST['code'] ?? '');
+        $code = (string)($_POST['totp'] ?? '');
         if (!rate_erlaubt('zweitfaktor', $kennung)) {
             $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten und versuche es dann noch einmal.';
         } elseif ($aktion === 'code') {
@@ -117,8 +117,8 @@ if ($halb === null): ?>
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="code">
     <p>Hallo <?= e($halb['name']) ?>. Gib den sechsstelligen Code aus deiner Authenticator-App ein – oder einen deiner Wiederherstellungscodes.</p>
-    <label for="code">Code</label>
-    <input id="code" name="code" type="text" required inputmode="text" autocomplete="one-time-code" maxlength="12" autofocus>
+    <label for="totp">Code</label>
+    <input id="totp" name="totp" type="text" required inputmode="text" autocomplete="one-time-code" maxlength="12" autofocus>
     <button type="submit" class="knopf">Einloggen</button>
 </form>
 <?php else: ?>
@@ -141,8 +141,8 @@ if ($halb === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="einrichten">
-    <label for="code">Code aus der App</label>
-    <input id="code" name="code" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9 ]{6,8}">
+    <label for="totp">Code aus der App</label>
+    <input id="totp" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9 ]{6,8}">
     <button type="submit" class="knopf">Einrichten</button>
 </form>
 <?php endif;
