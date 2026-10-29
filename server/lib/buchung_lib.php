@@ -495,17 +495,29 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
             }
             mail_vorlage_einreihen($a['email'], 'bestaetigt', ['vorname' => $a['vorname'], 'uebersicht' => anm_uebersicht_text($anmId)]);
             $meldung = 'Danke, deine Anmeldung ist bestätigt.';
+            // Konto: gewünscht beim Anmelden → anlegen; vorhandenes bestätigtes Konto → verknüpfen (E-48)
+            $k = konto_per_email($a['email']);
+            if ((int)$a['konto_wunsch'] === 1) {
+                $kontoNeu = tk_anlegen_aus_anmeldung($anmId);
+            } elseif ($k !== null && $k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null) {
+                tk_verknuepfen((int)$k['id']);
+            }
         } elseif ($l['zweck'] === 'email') {
             $neu = (string)$l['neue_email'];
-            if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND id <> ?', [$neu, $anmId]) > 0) {
+            $andererKonto = konto_per_email($neu);
+            if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND id <> ?', [$neu, $anmId]) > 0
+                || ($a['konto_id'] !== null && $andererKonto !== null && (int)$andererKonto['id'] !== (int)$a['konto_id'])) {
                 $meldung = 'Diese Adresse gehört schon zu einer anderen Anmeldung. Deine Adresse bleibt, wie sie war.';
             } else {
                 db_ausfuehren('UPDATE anmeldung SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, db_jetzt(), $anmId]);
+                if ($a['konto_id'] !== null) {
+                    db_ausfuehren('UPDATE konto SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, db_jetzt(), $a['konto_id']]);
+                }
                 audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ': neue E-Mail-Adresse bestätigt');
                 $meldung = 'Deine neue Adresse gilt ab jetzt.';
             }
         }
-        return ['anm' => $anmId, 'zweck' => $l['zweck'], 'meldung' => $meldung];
+        return ['anm' => $anmId, 'zweck' => $l['zweck'], 'meldung' => $meldung, 'konto_neu' => $kontoNeu ?? null];
     });
 }
 
@@ -517,10 +529,12 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
  *   ['art' => 'vorhanden', 'id' => …]   (Adresse schon angemeldet, E-46)
  *   ['art' => 'fehler', 'fehler' => [...]] (Wahl nicht mehr möglich, z. B. Termin voll)
  */
-function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null): array
+function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null, bool $kontoWunsch = false, ?array $konto = null): array
 {
     $jetzt ??= time();
-    return anm_sperre(function () use ($w, $wahl, $newsletter, $jetzt): array {
+    // Eingeloggt mit bestätigtem Konto und gleicher Adresse: keine zweite Bestätigung nötig (AP-4b)
+    $vomKonto = $konto !== null && $konto['email_bestaetigt_am'] !== null && $konto['email'] === $w['email'];
+    return anm_sperre(function () use ($w, $wahl, $newsletter, $jetzt, $kontoWunsch, $konto, $vomKonto): array {
         $vorhanden = anm_per_email($w['email']);
         if ($vorhanden !== null) {
             return ['art' => 'vorhanden', 'id' => (int)$vorhanden['id']];
@@ -538,10 +552,10 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
         $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
         $bis = $jetzt + va_zahl('anmeldung_bestaetigung_h') * 3600;
         db_ausfuehren(
-            "INSERT INTO anmeldung (vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, status, bestaetigen_bis, einwilligung_am, erstellt_am, geaendert_am)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'unbestaetigt', ?, ?, ?, ?)",
-            [$w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null,
-                $w['essen'], $newsletter ? 1 : 0, gmdate('Y-m-d H:i:s', $bis), $jetztDb, $jetztDb, $jetztDb]
+            "INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, konto_wunsch, status, bestaetigen_bis, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [$vomKonto ? (int)$konto['id'] : null, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null,
+                $w['essen'], $newsletter ? 1 : 0, $kontoWunsch && !$vomKonto ? 1 : 0, $vomKonto ? 'bestaetigt' : 'unbestaetigt', $vomKonto ? null : gmdate('Y-m-d H:i:s', $bis), $jetztDb, $jetztDb, $vomKonto ? $jetztDb : null, $jetztDb]
         );
         $id = (int)db()->lastInsertId();
         anm_platz_anlegen($id, 0, $warteliste ? 'warte' : 'fest', $jetzt);
@@ -553,13 +567,17 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
                 anm_platz_anlegen($id, $tid, 'warte', $jetzt);
             }
         }
-        $token = anm_link_erzeugen($id, 'bestaetigen', $bis);
-        mail_vorlage_einreihen($w['email'], 'bestaetigen', [
-            'vorname' => $w['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis)),
-            'uebersicht' => anm_uebersicht_text($id),
-        ]);
+        if ($vomKonto) {
+            mail_vorlage_einreihen($w['email'], 'bestaetigt', ['vorname' => $w['vorname'], 'uebersicht' => anm_uebersicht_text($id)]);
+        } else {
+            $token = anm_link_erzeugen($id, 'bestaetigen', $bis);
+            mail_vorlage_einreihen($w['email'], 'bestaetigen', [
+                'vorname' => $w['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis)),
+                'uebersicht' => anm_uebersicht_text($id),
+            ]);
+        }
         audit_schreiben('anmeldung', 'Anmeldung ' . $id . ' angelegt' . ($warteliste ? ' (Warteliste)' : ''));
-        return ['art' => 'neu', 'id' => $id, 'warteliste' => $warteliste];
+        return ['art' => 'neu', 'id' => $id, 'warteliste' => $warteliste, 'bestaetigt' => $vomKonto];
     });
 }
 
@@ -888,6 +906,10 @@ function anm_einloggen(int $anmId): void
 /** Die Anmeldung dieser Sitzung oder null (gelöscht oder Sitzung beendet). */
 function anm_aktuell(): ?array
 {
+    // Mit Konto eingeloggt: die verknüpfte Anmeldung (AP-4b)
+    if (!isset($_SESSION['anm']) && ($k = tk_aktuell()) !== null && ($va = tk_anmeldung((int)$k['id'])) !== null) {
+        $_SESSION['anm'] = ['id' => (int)$va['id'], 'version' => (int)$va['sitzung_version']];
+    }
     $s = $_SESSION['anm'] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['version'])) {
         return null;
@@ -902,7 +924,7 @@ function anm_aktuell(): ?array
 
 function anm_ausloggen(): void
 {
-    unset($_SESSION['anm']);
+    unset($_SESSION['anm'], $_SESSION['tk'], $_SESSION['tk_pw']);
     sitzung_erneuern();
 }
 

@@ -56,19 +56,23 @@ function seite_kopf(string $titel, array $opt = []): void
         }
         // Teilnehmende nach dem Einmal-Link (E-40); nur wenn schon eine Sitzung besteht
         $tn = !is_array($konto) ? ($opt['teilnehmer'] ?? anm_aus_keks()) : null;
+        $tk = !is_array($konto) && session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
+        if (is_array($tk)) {
+            $punkte[] = ['/konto', 'Mein Konto', '/konto'];
+        }
         $liste = '';
         foreach ($punkte as [$href, $text, $pfad]) {
             $liste .= '<li><a href="' . e($href) . '"' . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
         }
         // Grüner Knopf „Anmelden“, solange die Anmeldung offen ist (E-42); nicht für Angemeldete
-        if (!is_array($tn) && !is_array($konto) && anm_zeitraum() === 'offen') {
+        if (!is_array($tn) && !is_array($konto) && !is_array($tk) && anm_zeitraum() === 'offen') {
             $liste .= '<li><a class="nav-anmelden" href="/anmelden"' . ($aktiv === '/anmelden' ? ' aria-current="page"' : '') . '>Anmelden</a></li>';
         }
         if (is_array($konto)) {
             $liste .= '<li class="nav-person"><span class="nav-name">' . e($konto['name']) . ' <small>' . e(ROLLEN[$konto['rolle']] ?? '') . '</small></span>'
                 . '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="nav-ab">Ausloggen</button></form></li>';
-        } elseif (is_array($tn)) {
-            $liste .= '<li class="nav-person"><span class="nav-name">' . e($tn['vorname'] . ' ' . $tn['nachname']) . '</span>'
+        } elseif (is_array($tn) || is_array($tk)) {
+            $liste .= '<li class="nav-person"><span class="nav-name">' . e(is_array($tn) ? $tn['vorname'] . ' ' . $tn['nachname'] : $tk['name']) . '</span>'
                 . '<form method="post" action="/deine-anmeldung">' . csrf_feld() . '<input type="hidden" name="aktion" value="ausloggen"><button type="submit" class="nav-ab">Ausloggen</button></form></li>';
         }
         // Zwei Darstellungen derselben Liste: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.

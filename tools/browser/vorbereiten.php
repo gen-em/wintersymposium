@@ -71,5 +71,6 @@ echo json_encode([
     'admin_id' => $admin,
     'installations_schluessel' => $konfig['installations_schluessel'],
     'paula_links' => $paula,
+    'lea' => ['email' => 'lea@example.org', 'passwort' => BEISPIEL_PASSWORT],
     'mails' => $ordner . '/var/mails',
 ], JSON_UNESCAPED_SLASHES), "\n";

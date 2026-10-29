@@ -302,6 +302,30 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
       notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
 
+      // ---- Konten für Teilnehmende (AP-4b) ----
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'konto-neu', basis + '/konto/neu');
+        await pruefeSeite(p, fehler, engine, breite, 'konto-passwort-vergessen', basis + '/konto/passwort-vergessen');
+      }
+      // Lea loggt sich im Kasten auf „Deine Anmeldung“ ein
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/deine-anmeldung');
+      await p.fill('#zg-lmail', vor.lea.email); await p.fill('#zg-pw', vor.lea.passwort);
+      await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=einloggen]) button[type=submit]')]);
+      notiere(engine, 'handy', 'konto', 'Login im Kasten → Deine Anmeldung', (await p.textContent('body')).includes('Hallo Lea.') && (await p.textContent('body')).includes('Mit Konto eingeloggt'));
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'konto', basis + '/konto');
+        await pruefeSeite(p, fehler, engine, breite, 'konto-profil', basis + '/konto?aendern=profil');
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-konto', basis + '/deine-anmeldung');
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/konto');
+      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ in der Navigation', await p.isVisible('.nav-gross a[href="/konto"]'));
+      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
+      notiere(engine, 'desktop-breit', 'konto', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
+
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/einloggen');

@@ -431,6 +431,9 @@ fieldset.feld > legend { font-weight: 700; font-size: .95rem; padding: 0; margin
 .warteliste-hinweis { margin-bottom: 16px; border-left-color: var(--rot); }
 .zg-raster { display: grid; gap: 16px; }
 @media (min-width: 760px) { .zg-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
+@media (min-width: 1000px) { .zg-raster.drei-spalten { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.klein-link { font-size: .9rem; align-self: center; color: var(--fg); }
+.schmal-kasten { max-width: 560px; }
 .zg { display: grid; gap: 10px; align-content: start; }
 .zg:first-child { border-top: 3px solid var(--gruen); }
 .zg p { margin: 0; }

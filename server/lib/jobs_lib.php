@@ -25,7 +25,7 @@ function jobs_katalog(): array
         // Bestätigungsfristen, abgelaufene Angebote, Nachrücken (AP-4)
         'anmeldung' => [
             'abstand_s' => 60,
-            'fn' => 'anm_job',
+            'fn' => 'job_anmeldung',
         ],
         // Warteschlange senden (nach anmeldung, damit dessen Mails gleich mitgehen)
         'mail' => [
@@ -107,6 +107,12 @@ function job_aufraeumen(int $jetzt): array
         'fotos' => foto_aufraeumen(),
         'mails' => mail_aufraeumen($jetzt),
     ];
+}
+
+/** Anmeldungen (Fristen, Angebote) und unbestätigte Teilnehmenden-Konten. */
+function job_anmeldung(int $jetzt): array
+{
+    return anm_job($jetzt) + ['konten' => tk_aufraeumen($jetzt)];
 }
 
 /** Fällige Mails senden. */

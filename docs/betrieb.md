@@ -169,7 +169,7 @@ Team-Bereich → „Programm“ (Admin und Betreiber).
 - **Jobs** (Cron alle 5 Minuten): `anmeldung` (Fristen, abgelaufene Angebote, Nachrücken, alte Links) und `mail` (Warteschlange) jede Minute fällig, `aufraeumen` stündlich.
 - **Team:** Reiter „Anmeldungen“ zeigt Zahlen, Workshop-Termine und alle Anmeldungen (nur lesen; Bearbeiten mit AP-5).
 - **Spamschutz:** Honigtopf, Formular mindestens 4 s offen, Rechenaufgabe im Browser (JavaScript nötig), Ratenschutz je Herkunft, Wegwerfadressen. Greift eine Bremse, sieht die Antwort aus wie bei Erfolg.
-- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; sonst E-24).
+- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung und die Konten beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; Konten bleiben, bis die Person oder das Team sie löscht; sonst E-24).
 
 ## 12. Mailversand
 
@@ -183,11 +183,21 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `absender`, `absender_name` | Absender; leer: `anmeldung@<Haupt-Domain>` |
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Rundmails (AP-6) warten auf den nächsten Tag |
-| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 13) |
+| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 14) |
 
 Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an den Browser versendet, spätestens beim nächsten Cron-Lauf. Fehlschläge werden nach 5, 30, 120 und 360 Minuten wiederholt, danach als Fehler gezählt (Team-Bereich, Fehlerprotokoll ohne Empfängeradresse). Nach dem Versand werden Empfänger, Betreff und Text gelöscht (R-02); Einträge verschwinden nach 30 Tagen. Zeitbudget je Versand 5 s.
 
-## 13. Daten: Sicherung, Wiederherstellung, Testdaten
+## 13. Konten für Teilnehmende (AP-4b)
+
+- **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
+- **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Deine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
+- **Einloggen:** ein Login für alle unter `/einloggen` oder im Kasten „Einloggen“ auf „Deine Anmeldung“. Teilnehmende brauchen keinen zweiten Faktor; Team-Konten werden danach nach dem Code gefragt. Passwort mindestens 10 Zeichen (Team 12).
+- **Mein Konto** (`/konto`): Profil (Name, Berufsgruppe, Institution, EFN), neue Adresse (gilt nach Bestätigung, die Anmeldung zieht mit), Passwort ändern, Konto löschen – wahlweise mit oder ohne Anmeldung, mit Passwort bestätigt.
+- **Passwort vergessen** (`/konto/passwort-vergessen`): Link per Mail, 48 h, einmal. Nur für Teilnehmende; Team-Passwörter setzt weiter ein Betreiber zurück.
+- Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.
+- **Testdaten:** Lea (`lea@example.org`) hat ein Konto; das erfundene Test-Passwort steht in `server/testdaten/beispieldaten.php` (`BEISPIEL_PASSWORT`). Nur auf Staging.
+
+## 14. Daten: Sicherung, Wiederherstellung, Testdaten
 
 Team-Bereich → „Daten“ (nur Betreiber, E-47).
 
@@ -198,6 +208,6 @@ Team-Bereich → „Daten“ (nur Betreiber, E-47).
 - **Mail-Umleitung (Staging):** `mail.umleiten_an` in der `config.php` schickt jede Mail an diese Adresse; der eigentliche Empfänger steht im Betreff. Auf Produktion leer lassen.
 - Sicherungen werden nicht automatisch gelöscht; alte über „Löschen“ entfernen.
 
-## 14. Fehlerprotokoll
+## 15. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

@@ -58,7 +58,7 @@ team_seite_kopf($konto, 'Anmeldungen', '/team/anmeldungen');
 <p class="hinweis-leer">Keine Anmeldungen<?= $filter !== 'alle' ? ' in dieser Auswahl' : '' ?>.</p>
 <?php else: ?>
 <div class="tabelle-wrap"><table class="t karten">
-    <thead><tr><th>Nr.</th><th>Name</th><th>Berufsgruppe · Institution</th><th>Status</th><th>Workshops</th><th>Essen</th><th>Angemeldet</th></tr></thead>
+    <thead><tr><th>Nr.</th><th>Name</th><th>Konto</th><th>Berufsgruppe · Institution</th><th>Status</th><th>Workshops</th><th>Essen</th><th>Angemeldet</th></tr></thead>
     <tbody>
     <?php foreach ($zeigen as $a):
         $ws = [];
@@ -75,6 +75,7 @@ team_seite_kopf($konto, 'Anmeldungen', '/team/anmeldungen');
         <tr>
             <td data-titel="Nr." class="mono"><?= sprintf('%04d', $a['id']) ?></td>
             <td data-titel="Name"><?= e($a['vorname'] . ' ' . $a['nachname']) ?><br><span class="meta klein"><?= e($a['email']) ?></span></td>
+            <td data-titel="Konto"><?= $a['konto_id'] !== null ? '<span class="chip ok">ja</span>' : '<span class="meta">nein</span>' ?></td>
             <td data-titel="Beruf"><?= e($a['berufsgruppe']) ?><?= $a['efn'] !== null ? ' <span class="chip offen">EFN</span>' : '' ?><br><span class="meta klein"><?= e($a['institution']) ?></span></td>
             <td data-titel="Status"><?= $a['status'] === 'unbestaetigt' ? '<span class="chip offen">unbestätigt</span>' : '<span class="chip ok">bestätigt</span>' ?><?= $symText !== '' ? '<br><span class="chip wl">' . e($symText) . '</span>' : '' ?></td>
             <td data-titel="Workshops" class="mono klein"><?= e(implode(', ', $ws) ?: '–') ?></td>

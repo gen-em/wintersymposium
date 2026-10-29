@@ -291,6 +291,27 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        7 => [
+            'beschreibung' => 'Konten für Teilnehmende: Bestätigung, Profil, Verknüpfung mit der Anmeldung (AP-4b, E-30)',
+            'sql' => [
+                // Profil der Teilnehmenden; Team-Konten gelten als bestätigt (vom Betreiber angelegt).
+                "ALTER TABLE konto
+                    ADD COLUMN email_bestaetigt_am DATETIME NULL AFTER email,
+                    ADD COLUMN berufsgruppe   VARCHAR(60)  NOT NULL DEFAULT '' AFTER rolle,
+                    ADD COLUMN beruf_sonstige VARCHAR(80)  NOT NULL DEFAULT '' AFTER berufsgruppe,
+                    ADD COLUMN institution    VARCHAR(160) NOT NULL DEFAULT '' AFTER beruf_sonstige,
+                    ADD COLUMN efn            CHAR(15)     NULL AFTER institution",
+                "UPDATE konto SET email_bestaetigt_am = erstellt_am",
+                // Links für Teilnehmenden-Konten: Adresse bestätigen, Passwort, neue Adresse
+                "ALTER TABLE konto_link ADD COLUMN neue_email VARCHAR(254) NULL AFTER zweck",
+                // Anmeldung ↔ Konto (Konto löschen: Verknüpfung fällt weg, Anmeldung bleibt)
+                "ALTER TABLE anmeldung
+                    ADD COLUMN konto_id    INT UNSIGNED NULL AFTER id,
+                    ADD COLUMN konto_wunsch TINYINT(1)  NOT NULL DEFAULT 0 AFTER newsletter,
+                    ADD UNIQUE KEY uq_anmeldung_konto (konto_id),
+                    ADD CONSTRAINT fk_anmeldung_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE SET NULL",
+            ],
+        ],
     ];
 }
 

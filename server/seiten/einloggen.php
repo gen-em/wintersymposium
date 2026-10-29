@@ -2,9 +2,11 @@
 declare(strict_types=1);
 
 /*
- * Einloggen für das Team (AP-3 Schritt 1): Passwort, dann Code aus der
- * Authenticator-App oder ein Wiederherstellungscode. Beim ersten Login wird
- * der zweite Faktor eingerichtet (Pflicht, E-11). Passkeys folgen später (O-14).
+ * Einloggen für alle Konten (E-48): Team (AP-3 Schritt 1) mit Passwort, dann
+ * Code aus der Authenticator-App oder einem Wiederherstellungscode; beim ersten
+ * Login wird der zweite Faktor eingerichtet (Pflicht, E-11). Teilnehmende
+ * (AP-4b) nur mit Passwort, danach weiter zu ihrem Konto (Sitzung 'link').
+ * Passkeys folgen später (O-14).
  */
 
 team_sitzung();
@@ -21,24 +23,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     if ($aktion === 'passwort') {
         $email = trim((string)($_POST['email'] ?? ''));
-        $ip = rate_merkmal_ip();
-        $kennung = rate_merkmal_kennung($email);
-        if (!rate_erlaubt('login_ip', $ip) || !rate_erlaubt('login', $kennung)) {
-            $fehler[] = 'Zu viele Versuche. Bitte warte 15 Minuten und versuche es dann noch einmal.';
-        } else {
-            $beginn = microtime(true);
-            $k = konto_per_email($email);
-            $ok = anmeldung_passwort_ok($k, (string)($_POST['passwort'] ?? '')) && (int)$k['aktiv'] === 1 && konto_ist_team($k);
-            rate_gleiche_dauer($beginn);
-            if ($ok) {
-                rate_erfolg('login', $kennung);
-                anmeldung_halb_setzen($k);
-                umleiten('/einloggen');
-            }
-            rate_misserfolg('login_ip', $ip);
-            rate_misserfolg('login', $kennung);
-            $fehler[] = 'E-Mail-Adresse oder Passwort stimmt nicht.';
+        $r = tk_login_pruefen($email, (string)($_POST['passwort'] ?? ''));
+        if (isset($r['konto']) && konto_ist_team($r['konto'])) {
+            anmeldung_halb_setzen($r['konto']);
+            umleiten('/einloggen');
         }
+        if (isset($r['konto'])) {
+            // Teilnehmende: in die Sitzung der Teilnehmenden wechseln
+            sitzung_wechseln('link');
+            tk_einloggen($r['konto']);
+            umleiten(tk_anmeldung((int)$r['konto']['id']) !== null ? '/deine-anmeldung' : '/konto');
+        }
+        $fehler[] = $r['fehler'];
     } elseif ($aktion === 'abbrechen') {
         anmeldung_halb_verwerfen();
         umleiten('/einloggen');
@@ -98,7 +94,7 @@ if ($halb !== null && !totp_an((int)$halb['id'])) {
 }
 
 seite_kopf('Einloggen', ['nav' => false, 'skripte' => $skripte]);
-echo '<div class="innen seitenkopf"><p class="kicker">Team-Bereich</p><h1 class="titel">Einloggen</h1></div><div class="innen schmal">';
+echo '<div class="innen seitenkopf"><p class="kicker">Konto</p><h1 class="titel">Einloggen</h1></div><div class="innen schmal">';
 echo meldung_html(flash_holen()) . fehler_html($fehler);
 
 if ($halb === null): ?>
@@ -111,7 +107,7 @@ if ($halb === null): ?>
     <input id="passwort" name="passwort" type="password" required autocomplete="current-password">
     <button type="submit" class="knopf">Weiter</button>
 </form>
-<p class="meta klein">Nur für das Team. Passwort vergessen? Ein Betreiber schickt dir einen neuen Link.</p>
+<p class="meta klein">Mit Konto für Teilnehmende oder als Team. <a href="/konto/passwort-vergessen">Passwort vergessen?</a> (Team: ein Betreiber schickt dir einen neuen Link.) Noch kein Konto? Du kannst dich auch ohne <a href="/anmelden">anmelden</a> oder <a href="/konto/neu">ein Konto anlegen</a>.</p>
 <?php elseif ($einrichtung === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>

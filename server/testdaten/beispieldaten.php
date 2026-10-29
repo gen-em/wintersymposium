@@ -11,6 +11,9 @@ declare(strict_types=1);
  * Voraussetzung: server/bootstrap.php ist geladen, die Datenbank installiert.
  */
 
+/** Passwort des Beispielkontos von Lea (erfunden, nur Testdaten). */
+const BEISPIEL_PASSWORT = 'beispiel-lea-2026';
+
 /** Lädt den ganzen Datensatz. Gibt die angelegten IDs je Bereich zurück. */
 function beispieldaten_laden(): array
 {
@@ -116,7 +119,10 @@ function beispieldaten_anmeldungen(): array
         [$ws('WS 01') => $termin('WS 01', '20:30')], [$termin('WS 02', '20:30')], true);
     $tom = $person(['vorname' => 'Tom', 'nachname' => 'Test', 'email' => 'tom@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Universität Teststadt', 'essen' => 'egal'], [], [], false);
     anm_stornieren($max);
+    // Lea hat ein Konto (AP-4b): Login auf Staging mit lea@example.org und diesem erfundenen Test-Passwort
+    $leaKonto = tk_anlegen_aus_anmeldung($lea);
+    konto_passwort_setzen((int)$leaKonto, BEISPIEL_PASSWORT);
     // Mails des Datensatzes nicht versenden (Warteschlange leeren)
     db_ausfuehren('DELETE FROM mail_ausgang');
-    return ['lea' => $lea, 'paula' => $paula, 'tom' => $tom];
+    return ['lea' => $lea, 'paula' => $paula, 'tom' => $tom, 'lea_konto' => (int)$leaKonto];
 }
