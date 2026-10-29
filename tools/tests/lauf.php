@@ -309,6 +309,20 @@ if (!$mitDb) {
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));
     pruefe(count($bl) === 1 && count($bl[0]['kinder']) === 6, 'Workshop-Block mit 5 Terminen und 1 Station');
+    // Einfügen mit Nachrücken (Admin 2026-10-29): 30-min-Pause nach Fall #1 (endet 19:15)
+    $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Eingefügt']);
+    $neuId = programm_punkt_speichern(null, $r, null);
+    $zeit = fn(string $titel) => db_zeile('SELECT TIME_FORMAT(beginn, "%H:%i") AS b, TIME_FORMAT(ende, "%H:%i") AS e FROM programmpunkt WHERE titel = ?', [$titel]);
+    $neu = programm_verschieben('punkt', $neuId, '19:15', null, true);
+    pruefe($neu === '19:15–19:45' && $GLOBALS['programm_nachgerueckt'] === 2 && $zeit('Workshops und offene Stationen') == ['b' => '19:45', 'e' => '21:45'] && $zeit('Abschluss') == ['b' => '21:45', 'e' => '22:15'], 'Einfügen: Block und Abschluss rücken nach hinten');
+    pruefe(db_wert("SELECT MIN(beginn) FROM workshop_termin") === '19:45:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station'") === '19:45:00', 'Block nimmt beim Nachrücken Termine und Station mit');
+    pruefe($zeit('Fall #1') == ['b' => '18:45', 'e' => '19:15'], 'Punkte davor bleiben');
+    $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Ohne Folgen']);
+    $id2 = programm_punkt_speichern(null, $r, null);
+    programm_verschieben('punkt', $id2, '23:00', null, true);
+    pruefe($GLOBALS['programm_nachgerueckt'] === 0, 'Lücke danach: nichts rückt');
+    programm_verwerfen(null);
+    pruefe($zeit('Abschluss') == ['b' => '21:30', 'e' => '22:00'] && $zeit('Eingefügt') === null, 'Verwerfen stellt den Plan wieder her');
 
     abschnitt('Anmeldung: Beispieldaten und Regeln (AP-4)');
     $tid = function (string $k, string $b): int {

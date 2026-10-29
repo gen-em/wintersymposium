@@ -42,9 +42,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/team/programm');
         case 'verschieben':
             $art = (string)($_POST['art'] ?? '') === 'termin' ? 'termin' : 'punkt';
-            $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich);
+            $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich, !empty($_POST['nachruecken']));
+            $nr = (int)($GLOBALS['programm_nachgerueckt'] ?? 0);
             $pid = $art === 'termin' ? (int)db_wert('SELECT punkt_id FROM workshop_termin WHERE id = ?', [(int)($_POST['id'] ?? 0)]) : (int)($_POST['id'] ?? 0);
-            flash_setzen($neu === null ? 'fehler' : 'hinweis', $neu === null ? 'Verschieben ging nicht.' : "Neue Uhrzeit vorgeschlagen: $neu – bitte prüfen. Gespeichert, noch nicht veröffentlicht.");
+            flash_setzen($neu === null ? 'fehler' : 'hinweis', $neu === null ? 'Verschieben ging nicht.' : "Neue Uhrzeit vorgeschlagen: $neu – bitte prüfen." . ($nr > 0 ? ' ' . ($nr === 1 ? 'Ein Punkt rückt' : "$nr Punkte rücken") . ' dahinter nach hinten.' : '') . ' Gespeichert, noch nicht veröffentlicht.');
             umleiten('/team/programm' . ($pid > 0 ? '?id=' . $pid : ''));
         case 'veroeffentlichen':
             $pubFehler = programm_veroeffentlichen($ich);
@@ -144,7 +145,7 @@ if ($st['offen']):
 <div class="pg-raster">
     <div class="kasten pg-plan">
         <p class="unterkopf"><?= e(tag_text(va('veranstaltung_datum'))) ?> · Tagesplan</p>
-        <p class="meta klein">Sortiert nach Uhrzeit. Workshop-Termine und offene Stationen hängen automatisch unter dem Workshop-Block, in dessen Zeit sie liegen. Neue Punkte ohne Uhrzeit stehen oben hell-lila: am Griff ⋮⋮ an ihre Stelle ziehen, die Uhrzeit wird vorgeschlagen.</p>
+        <p class="meta klein">Sortiert nach Uhrzeit. Workshop-Termine und offene Stationen hängen automatisch unter dem Workshop-Block, in dessen Zeit sie liegen. Neue Punkte ohne Uhrzeit stehen oben hell-lila. Am Griff ⋮⋮ zwischen zwei Punkte ziehen – die grüne Linie zeigt, wo: Der Punkt beginnt, wo der darüber endet, und nachfolgende Punkte rücken bis zur nächsten Lücke nach hinten.</p>
         <p class="meta klein">Markiert: <span class="st ges">✎ gespeichert · nicht veröffentlicht</span> <span class="st neu">+ neu</span> – alles ohne Markierung ist veröffentlicht.</p>
         <?php if ($gliederung === []): ?><p class="hinweis-leer">Noch keine Programmpunkte. Lege mit „+ Programmpunkt“ den ersten an.</p><?php endif; ?>
         <ol class="pg-liste" id="pg-liste">
@@ -190,7 +191,7 @@ if ($st['offen']):
         endforeach; ?>
         </ol>
         <form method="post" action="/team/programm" id="verschieben-form" hidden>
-            <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value="">
+            <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value=""><input type="hidden" name="nachruecken" value="1">
         </form>
         <?php foreach ($hinweise as $h): ?><p class="pruef"><span class="chip offen">Hinweis</span> <?= e($h) ?></p><?php endforeach; ?>
     </div>

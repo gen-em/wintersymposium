@@ -368,7 +368,21 @@ function mail_stand(): array
         'fehler' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'fehler'"),
         'heute' => mail_heute_gesendet(),
         'limit' => (int)mail_konfig()['tageslimit'],
+        'letzter_fehler' => db_zeile("SELECT fehler, erstellt_am, versuche FROM mail_ausgang WHERE fehler IS NOT NULL AND status IN ('offen','fehler') ORDER BY id DESC LIMIT 1"),
+        'aelteste_offen' => db_wert("SELECT MIN(erstellt_am) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
+        'absender' => mail_absender(mail_konfig()),
+        'umleiten' => (string)(mail_konfig()['umleiten_an'] ?? ''),
     ];
+}
+
+/** Testmail sofort zustellen (ohne Warteschlange). Gibt null bei Erfolg zurück, sonst den Grund. */
+function mail_testen(string $an): ?string
+{
+    if (!mail_eingerichtet()) {
+        return 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+    }
+    [$betreff, $text] = mail_vorlage('test', []);
+    return mail_zustellen($an, $betreff, $text);
 }
 
 /* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */

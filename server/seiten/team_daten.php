@@ -30,6 +30,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $name = (string)($_POST['name'] ?? '');
     switch ((string)($_POST['aktion'] ?? '')) {
+        case 'testmail':
+            $grund = mail_testen((string)$konto['email']);
+            audit_schreiben('mail', 'Testmail ' . ($grund === null ? 'versendet' : 'fehlgeschlagen: ' . $grund), $ich);
+            flash_setzen($grund === null ? 'ok' : 'fehler', $grund === null
+                ? 'Testmail an ' . $konto['email'] . ' ist beim Mailserver angenommen. Kommt sie nicht an, liegt es beim Empfang (Spam-Ordner, Absender-Einträge der Domain).'
+                : 'Testmail ging nicht raus: ' . $grund);
+            umleiten('/team/daten');
         case 'anlegen':
             $n = sicherung_anlegen('von Hand', $ich);
             flash_setzen('ok', 'Sicherung angelegt: ' . $n);
@@ -77,6 +84,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 $liste = sicherung_liste();
+$ms = mail_stand();
 $codeFeld = fn(string $id) => '<div class="feld"><label for="' . $id . '">Code aus deiner App</label><input id="' . $id . '" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>';
 $groesse = fn(int $b) => $b >= 1048576 ? zahl_text($b / 1048576, 1) . ' MB' : zahl_text(max(1, (int)round($b / 1024))) . ' KB';
 team_seite_kopf($konto, 'Daten', '/team/daten');
@@ -100,6 +108,19 @@ team_seite_kopf($konto, 'Daten', '/team/daten');
         </details>
     </div>
     <?php endif; ?>
+</div>
+
+<div class="kasten abstand-oben">
+    <h2 class="zwischen">Mailversand</h2>
+    <dl class="liste-def">
+        <div><dt>Eingerichtet</dt><dd><?= $ms['eingerichtet'] ? '<span class="chip ok">ja</span> Modus ' . e($ms['modus']) : '<span class="chip wl">nein</span> In der config.php fehlt im Abschnitt mail der Eintrag host.' ?></dd></div>
+        <div><dt>Absender</dt><dd class="mono"><?= e($ms['absender']) ?></dd></div>
+        <?php if ($ms['umleiten'] !== ''): ?><div><dt>Umleitung</dt><dd>Alle Mails gehen an <span class="mono"><?= e($ms['umleiten']) ?></span></dd></div><?php endif; ?>
+        <div><dt>Warteschlange</dt><dd><?= $ms['offen'] ?> offen<?= $ms['aelteste_offen'] !== null ? ' (älteste seit ' . e(datum_zeit_text($ms['aelteste_offen'])) . ')' : '' ?> · <?= $ms['fehler'] ?> endgültig fehlgeschlagen · heute gesendet <?= $ms['heute'] ?></dd></div>
+        <?php if ($ms['letzter_fehler'] !== null): ?><div><dt>Letzter Fehler</dt><dd><span class="mono"><?= e($ms['letzter_fehler']['fehler']) ?></span><br><span class="meta klein">Mail vom <?= e(datum_zeit_text($ms['letzter_fehler']['erstellt_am'])) ?>, <?= (int)$ms['letzter_fehler']['versuche'] ?> Versuche</span></dd></div><?php endif; ?>
+    </dl>
+    <form method="post" action="/team/daten" class="abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="testmail"><button class="knopf zweit" type="submit">Testmail an mich</button></form>
+    <p class="meta klein">Versendet sofort an <?= e($konto['email']) ?> und zeigt den Fehler des Mailservers, falls er die Mail ablehnt. Das Passwort wird nie angezeigt.</p>
 </div>
 
 <h2 class="zwischen abstand-oben">Vorhandene Sicherungen</h2>

@@ -327,6 +327,38 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
     return ['werte' => $w, 'termine' => $termine, 'dozenten' => $dozenten, 'fehler' => $f];
 }
 
+/** Punkte nacheinander im Ablauf; offene Stationen und Workshop-Termine laufen parallel im Block. */
+const PROGRAMM_HAUPTSPUR = ['vortrag', 'fall', 'pause', 'block'];
+
+/**
+ * Nach dem Einfügen (Ziehen zwischen zwei Punkte, Admin 2026-10-29): Punkte
+ * der Hauptspur, die jetzt mit dem eingefügten überlappen, rücken nach hinten,
+ * jeweils direkt an das Ende des vorigen, bis eine Lücke reicht. Dauer bleibt;
+ * ein Block nimmt seine Termine und Stationen mit. Gibt die Zahl zurück.
+ */
+function programm_nachruecken_kette(int $id, string $beginn, string $ende, ?int $kontoId): int
+{
+    $n = 0;
+    $cursor = minuten($ende);
+    $folgende = db_zeilen(
+        "SELECT id, beginn, ende FROM programmpunkt WHERE id <> ? AND beginn IS NOT NULL AND beginn >= ? AND typ IN ('" . implode("','", PROGRAMM_HAUPTSPUR) . "') ORDER BY beginn, id",
+        [$id, $beginn . ':00']
+    );
+    foreach ($folgende as $f) {
+        $b = minuten(hm($f['beginn']));
+        if ($b >= $cursor) {
+            break; // Lücke: ab hier passt der Ablauf wieder
+        }
+        $neu = programm_verschieben('punkt', (int)$f['id'], hm_aus_minuten($cursor), $kontoId);
+        if ($neu === null) {
+            break;
+        }
+        $cursor = minuten(substr($neu, -5));
+        $n++;
+    }
+    return $n;
+}
+
 /** Hinweise ohne Sperre: Raum zur selben Zeit doppelt belegt. */
 function programm_hinweise(array $punkte): array
 {
@@ -415,12 +447,13 @@ function programm_punkt_loeschen(int $id, ?int $kontoId): bool
  * Ein Block nimmt alle Termine und Stationen in seiner Zeit mit. Punkte ohne Uhrzeit
  * bekommen 30 Minuten. Gibt den neuen Zeitraum als Text zurück oder null.
  */
-function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId): ?string
+function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId, bool $nachruecken = false): ?string
 {
     if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $beginn) !== 1) {
         return null;
     }
-    return db_transaktion(function () use ($art, $id, $beginn, $kontoId): ?string {
+    $GLOBALS['programm_nachgerueckt'] = 0;
+    return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken): ?string {
         if ($art === 'termin') {
             $t = db_zeile('SELECT * FROM workshop_termin WHERE id = ?', [$id]);
             if ($t === null) {
@@ -458,6 +491,9 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
         }
         db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [$beginn, $ende, db_jetzt(), $id]);
         audit_schreiben('programm', 'Programmpunkt ' . $id . ' verschoben auf ' . $beginn, $kontoId);
+        if ($nachruecken && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
+            $GLOBALS['programm_nachgerueckt'] = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
+        }
         return "{$beginn}–{$ende}";
     });
 }

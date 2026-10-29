@@ -86,6 +86,8 @@ function seite_fuss(): void
 {
     echo '</main><footer class="fuss"><div class="innen">'
         . '<span>ALLGÄU AKUT – Fortbildung Notfallmedizin</span>'
+        // Version außerhalb der Produktion sichtbar (Admin 2026-10-29), damit klar ist, welcher Stand läuft
+        . (umgebung() !== 'produktion' ? '<span class="version mono">Version ' . e(app_version()) . ' · ' . e(ucfirst(umgebung())) . '</span>' : '')
         . '<nav aria-label="Rechtliches"><ul>'
         . '<li><a href="/impressum">Impressum</a></li>'
         . '<li><a href="/datenschutz">Datenschutz</a></li>'

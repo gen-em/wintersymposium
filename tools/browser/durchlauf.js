@@ -391,17 +391,24 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await Promise.all([p.waitForNavigation(), p.evaluate(([titel]) => {
           const quelle = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes(titel)).querySelector('.griff');
           const ziel = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes('Fall #1'));
+          const r = ziel.getBoundingClientRect();
+          const unten = { clientX: r.left + 20, clientY: r.bottom - 4 }; // untere Hälfte: nach Fall #1 einfügen
           const dt = new DataTransfer();
           quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
-          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
-          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
+          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
         }, ['Pause ' + engine])]);
       } else {
-        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile)]);
+        // Quelle und Ziel gleichzeitig sichtbar: sonst scrollt Playwright nach dem Drücken zum Ziel,
+        // und Chromium beginnt das Ziehen an der alten Mausposition (dort steht dann eine andere Zeile)
+        await p.setViewportSize({ width: 1440, height: 1800 });
+        const box = await zielZeile.boundingBox();
+        // untere Hälfte der Zeile: Einfügen nach Fall #1 (grüne Linie unten)
+        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile, { targetPosition: { x: 20, y: box.height - 4 } })]);
       }
       await p.waitForLoadState('load');
       await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-programm-gezogen.png`), fullPage: true });
-      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45'),
+      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45') && (await p.textContent('body')).includes('2 Punkte rücken dahinter nach hinten'),
         (await p.locator('.meldung').allTextContents()).join(' | ') + ' ' + p.url());
       await p.click('.entwurf-banner summary:has-text("Verwerfen")');
       await p.click('.entwurf-banner button:has-text("Ja, verwerfen")');

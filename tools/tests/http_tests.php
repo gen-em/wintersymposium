@@ -398,6 +398,11 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Sicherung anlegen') && str_contains($r['text'], 'Testdaten laden') && str_contains($r['text'], 'href="/team/daten" aria-current'), 'Seite „Daten“ für Betreiber, Testdaten außerhalb der Produktion');
     pruefe(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'ohne Login kein Zugriff');
     $csrf = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'Mailversand') && str_contains($r['text'], 'Testmail an mich'), 'Kasten Mailversand mit Testmail');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testmail'], $b);
+    $f = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe($r['status'] === 303 && str_contains($f['text'], 'beim Mailserver angenommen') && http_mail_an($tmp, 'betrieb@example.org', 20, 'Diese Mail prüft den Versand') !== '', 'Testmail sofort versendet, Ergebnis angezeigt');
+    pruefe(str_contains($f['text'], 'Version ' . app_version() . ' · Entwicklung'), 'Version in der Fußzeile (außerhalb der Produktion)');
     $alt = glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'anlegen'], $b);
     $dateien = array_values(array_diff(glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [], $alt));

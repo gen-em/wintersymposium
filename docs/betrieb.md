@@ -74,6 +74,8 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
 - Bricht der Schritt „Zustandsdatei auf dem Server sicherstellen“ ab, nennt die Meldung den Grund: Zielordner vom FTP-Login aus nicht erreichbar (curl 9), Anmeldung abgelehnt (curl 67) oder ein anderer curl-Code. In jedem Fall wurde noch nichts übertragen.
 - **Datenbank-Änderungen** (Migrationen) laufen automatisch bei der ersten Anfrage nach einer Auslieferung bzw. beim nächsten Cron-Lauf.
 
+**Version:** Außerhalb der Produktion steht die laufende Version in der Fußzeile jeder Seite (z. B. „Version 0.8.1 · Staging“), im Team-Bereich immer auf der Übersicht.
+
 ## 4. Wartungsmodus
 
 - Einschalten: per FTP eine (leere) Datei `var/wartung.lock` im Zielordner anlegen. Öffentliche Seiten zeigen dann eine Wartungsseite (HTTP 503); Team-Bereich, Health-Endpunkt und Installer bleiben erreichbar; Hintergrundjobs pausieren.
@@ -155,7 +157,7 @@ Team-Bereich → „Programm“ (Admin und Betreiber).
 - **Typen:** Vortrag (VT), Fallbesprechung (FB), Workshop (WS, mit Terminen und Plätzen je Termin), offene Station (ohne Anmeldung), Workshop-Block (nur Zeitfenster), Pause/Info. Das Kürzel wird beim Anlegen vorgeschlagen (z. B. „VT 02“) und ist änderbar.
 - **Workshop-Block:** sammelt im Plan und auf der Startseite alle Workshop-Termine und Stationen, die ganz in seiner Zeit liegen. Termine außerhalb eines Blocks stehen einzeln im Plan.
 - **Speichern ≠ Veröffentlichen:** Gespeichertes steht sofort im Plan, auf der Startseite aber erst nach „Jetzt veröffentlichen“ im roten Banner. „Vorschau“ zeigt die Startseite mit dem Arbeitsstand, „Verwerfen“ stellt den veröffentlichten Stand wieder her (auch Gelöschtes). Punkte ohne Uhrzeit verhindern das Veröffentlichen.
-- **Ziehen:** am Griff ⋮⋮ eine Zeile auf eine andere ziehen → neuer Beginn = Ende der Zielzeile (auf einem Block: dessen Beginn), die Dauer bleibt; ein Block nimmt Termine und Stationen mit. Der Vorschlag ist gespeichert, aber nicht veröffentlicht – Uhrzeit prüfen. Ohne Ziehen geht alles über die Felder Beginn und Ende.
+- **Ziehen:** am Griff ⋮⋮ eine Zeile zwischen zwei andere ziehen; die grüne Linie zeigt, ob davor oder dahinter eingefügt wird. Neuer Beginn = Ende des Punkts darüber (direkt unter einem Workshop-Block: dessen Beginn), die Dauer bleibt. Punkte der Hauptspur (Vorträge, Fälle, Pausen, Workshop-Blöcke samt Inhalt), die sich danach überschneiden würden, rücken nach hinten, bis eine Lücke reicht (Admin 2026-10-29). Alles ist gespeichert, aber nicht veröffentlicht – Uhrzeiten prüfen. Ohne Ziehen geht alles über die Felder Beginn und Ende.
 - **Termine:** „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ den nächsten Termin im Anschluss. Höchstens 12 Termine je Workshop. Plätze lassen sich nicht unter die vergebenen senken (wirkt mit AP-4).
 - **Dozierende:** „Dozierende verwalten“; Foto optional (JPG, PNG oder WebP, höchstens 8 MB), wird quadratisch auf 480 px verkleinert und ohne Metadaten in `var/bilder/` gespeichert. Nur mit Einverständnis der Person. Fotos ohne Zuordnung räumt der Job „aufraeumen“ weg. Ohne die PHP-Erweiterung GD ist der Upload ausgeblendet.
 
@@ -184,6 +186,8 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Rundmails (AP-6) warten auf den nächsten Tag |
 | `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 14) |
+
+**Prüfen:** Team-Bereich → „Daten“ → Kasten „Mailversand“ zeigt, ob der Versand eingerichtet ist, Absender, Warteschlange und den letzten Fehler; „Testmail an mich“ versendet sofort und zeigt die Antwort des Mailservers (ohne Passwort).
 
 Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an den Browser versendet, spätestens beim nächsten Cron-Lauf. Fehlschläge werden nach 5, 30, 120 und 360 Minuten wiederholt, danach als Fehler gezählt (Team-Bereich, Fehlerprotokoll ohne Empfängeradresse). Nach dem Versand werden Empfänger, Betreff und Text gelöscht (R-02); Einträge verschwinden nach 30 Tagen. Zeitbudget je Versand 5 s.
 

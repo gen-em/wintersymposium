@@ -2,6 +2,20 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.8.1] – 2026-10-29
+
+Rückmeldungen des Admins.
+
+### Geändert
+
+- Programm: Ziehen fügt jetzt **zwischen** zwei Punkte ein (grüne Linie zeigt davor oder dahinter). Der Punkt beginnt, wo der darüber endet; nachfolgende Vorträge, Fälle, Pausen und Workshop-Blöcke (samt Terminen und Stationen) rücken nach hinten, bis eine Lücke reicht.
+- Abstand der Zwischentitel auf den Team-Seiten (z. B. „Workshop-Termine“, „Personen“).
+
+### Neu
+
+- Team-Bereich → „Daten“: Kasten „Mailversand“ mit Stand (eingerichtet, Absender, Warteschlange, letzter Fehler) und „Testmail an mich“, die sofort versendet und die Antwort des Mailservers zeigt.
+- Versionsanzeige in der Fußzeile außerhalb der Produktion und auf der Team-Übersicht.
+
 ## [0.8.0] – 2026-10-29
 
 AP-4b: Konten für Teilnehmende (E-48).

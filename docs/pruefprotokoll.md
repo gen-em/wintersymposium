@@ -180,6 +180,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-212, T-201 | 2026-10-29 | claude-dev | lokal bestanden | Nachbesserung: Ziehen fügt zwischen zwei Punkte ein, nachfolgende rücken nach (Block mit Inhalt, Lücke stoppt; Bibliothekstest und Browser-Durchlauf „2 Punkte rücken“); Testmail unter Daten; Versionsanzeige; `lauf.php` 406 ok, 0 Fehler; Browser-Durchlauf 3009 ok, 0 Fehler | Staging: Ziehen mit der Maus, Testmail |
 | T-145 bis T-149 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 398 ok, 0 Fehler (Konten ohne und mit Anmeldung, Bestätigung, Login, Verknüpfung, neue Adresse, Löschen mit Wahl, Aufräumen; HTTP: alle Wege inkl. Team im Kasten); Browser-Durchlauf 3009 ok, 0 Fehler (Konto anlegen, Passwort vergessen, Login im Kasten, Mein Konto, Profil) in 3 Engines × 4 Breiten | Staging |
 | T-201, T-223, T-224 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 362 ok, 0 Fehler (Sicherung und Wiederherstellung, kaputte und neuere Sicherung, Mail-Umleitung, HTTP: Herunterladen mit Code, Testdaten laden und zurück); Browser-Durchlauf 2550 ok, 0 Fehler mit Seite „Daten“ in 3 Engines × 4 Breiten | Staging |
 | T-130 bis T-143 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 342 ok, 0 Fehler (Regeln, Bestätigung, Links, Tausch, Nachrücken, Fristen, Paralleltest, HTTP-Ablauf); Browser-Durchlauf 2376 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Formular mit Sicherheitsprüfung, Mail, Bestätigen, Deine Anmeldung, Workshops und Daten ändern, Angebot mit Tausch-Bestätigung, Ausloggen, Team-Liste); Bildschirmfotos angesehen | Staging mit echtem Mailversand |
@@ -218,6 +219,12 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für die Nachbesserung 0.8.1 (nach Merge auf Staging)
+
+1. Fußzeile: steht „Version 0.8.1 · Staging“?
+2. Team-Bereich → „Daten“ → Kasten „Mailversand“: Was steht bei „Eingerichtet“ und „Letzter Fehler“? Dann „Testmail an mich“ – die Meldung oben nennt entweder „angenommen“ oder den Fehler des Mailservers.
+3. Programm: einen Punkt zwischen zwei andere ziehen → grüne Linie, danach rücken die folgenden Punkte nach.
 
 ### Noch zu prüfen für AP-4b (nach Merge auf Staging)
 
