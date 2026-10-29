@@ -546,6 +546,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-29 | R-12 (Browser-Prüfung in drei Engines und vier Breiten vor jedem PR) neu. |
 | 2026-10-29 | AP-3 Schritt 1: Code-Felder für Bitwarden in Firefox umbenannt (Problem und Lösung eingetragen). |
 | 2026-10-29 | AP-3 Schritt 2 umgesetzt: E-44 (Veranstaltungs-Einstellungen) neu, Status und Ergebnis AP-3. |
+| 2026-10-29 | Prüfprotokoll: doppelt vergebene Nummern der AP-3-Prüfungen (T-130 bis T-136) in T-216 bis T-222 umbenannt (Admin); AP-4 behält T-130 bis T-144. |
 | 2026-10-29 | AP-3 Schritt 3 umgesetzt: E-45 (Programm-Pflege und -Anzeige) neu; AP-3 Status, Ergebnis und Probleme; Beispielprogramm entfernt; Test-Beispieldatensatz (Wunsch des Admins). |
 | 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |

@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.5.1] – 2026-10-29
+
+### Geändert
+
+- Prüfprotokoll: Die AP-3-Prüfungen T-130 bis T-136 hatten dieselben Nummern wie die geplanten AP-4-Prüfungen. Sie heißen jetzt T-216 bis T-222 (T-130→T-216 Sperren und Sitzungen, T-131→T-217 Ratenschutz Login, T-132→T-218 Notweg Kommandozeile, T-133→T-219 Browser-Durchlauf, T-134→T-220 Notzugang im Browser, T-135→T-221 Bitwarden, T-136→T-222 Veranstaltungs-Einstellungen). Ältere Einträge in diesem Changelog nennen noch die alten Nummern.
+
 ## [0.5.0] – 2026-10-29
 
 AP-3 Schritt 3: Programm.
