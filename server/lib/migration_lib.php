@@ -99,11 +99,13 @@ function migration_katalog(): array
             ],
         ],
         3 => [
-            'beschreibung' => 'Startseite: Überschrift der Infokästen passt auch für die Notaufnahme',
+            'beschreibung' => 'Startseite: Überschrift und Zielgruppe der Infokästen überarbeitet',
             'sql' => [
                 // Nur ändern, solange der Startwert noch unverändert ist.
                 "UPDATE inhalt SET text = 'Für alle, die da sind, wenn andere frei haben', geaendert_am = UTC_TIMESTAMP()
                  WHERE schluessel = 'start_infos_titel' AND text = 'Für alle, die nachts den Piepser tragen'",
+                "UPDATE inhalt SET text = REPLACE(text, 'NotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.', 'Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen in Notaufnahmen, RettungssanitäterInnen, Studierende und alle, die sonst interessiert sind. Alle Bereiche, alle Berufsgruppen.'), geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos' AND text LIKE '%NotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.%'",
             ],
         ],
     ];
