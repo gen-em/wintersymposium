@@ -179,9 +179,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       console.log(`== ${engine}`);
       // Jede Engine richtet den zweiten Faktor frisch ein.
       php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
-      const browser = await pw[engine].launch();
+      // Deutsche Oberfläche wie bei den Nutzenden: Datums- und Zeitfelder zeigen dann TT.MM.JJJJ und 24 h.
+      const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'] }
+        : engine === 'firefox' ? { firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': false } } : {});
       const version = browser.version();
-      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
       const p = await ctx.newPage();
       const fehler = [];
       p.on('console', m => { if (m.type() === 'error') fehler.push(m.text()); });
@@ -222,13 +224,30 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
+        for (const [text, ziel, name] of [['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
       }
+
+      // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/team/einstellungen');
+      await p.fill('#veranstaltung_ende', '17:00');
+      await p.click('form.einstellungen button[type=submit]');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team-einstellungen', 'Fehler markiert, Eingabe bleibt', await p.isVisible('#veranstaltung_ende[aria-invalid="true"]') && await p.inputValue('#veranstaltung_ende') === '17:00');
+      await pruefeSeite(p, fehler, engine, 'handy', 'team-einstellungen-fehler', null);
+      await p.fill('#veranstaltung_ende', '22:00');
+      await p.fill('#veranstaltung_ort', 'Ort ' + engine);
+      await p.selectOption('#workshop_pflicht', 'pflicht');
+      await p.click('form.einstellungen button[type=submit]');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team-einstellungen', 'gespeichert, Auswahl übernommen', (await p.textContent('body')).includes('Gespeichert') && await p.inputValue('#workshop_pflicht') === 'pflicht');
+      await p.goto(basis + '/');
+      notiere(engine, 'handy', 'start', 'Startseite zeigt neuen Ort', (await p.textContent('.eckdaten')).includes('Ort ' + engine));
 
       // Konto über das Formular anlegen (Auswahlfeld Rolle), Link erscheint
       await p.setViewportSize({ width: 390, height: 844 });
@@ -243,7 +262,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen
       const link = php([path.join(WURZEL, 'server/cli/konto.php'), 'link', 'anna@example.org'], vor.config).trim()
         .replace(/^https?:\/\/[^/]+/, basis);
-      const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
       const p2 = await ctx2.newPage();
       const fehler2 = [];
       p2.on('console', m => { if (m.type() === 'error') fehler2.push(m.text()); });

@@ -100,7 +100,7 @@ bash tools/browser/einrichten.sh
 node tools/browser/durchlauf.js <Ausgabeordner>
 ```
 
-(mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen.
+(mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen. Die Browser laufen mit deutscher Sprache und Zeitzone Europe/Berlin. **Grenzen:** Firefox der Sandbox hat keine deutsche Sprachdatei und zeigt Datums- und Zeitfelder im US-Format; WebKit unter Linux zeigt bei Uhrzeiten Sekunden. Beides betrifft nur die Darstellung im Testbrowser, nicht die gespeicherten Werte.
 
 ## 7. Pflegbare Texte
 
@@ -133,6 +133,10 @@ HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Sta
 - Sitzungen enden nach 30 Minuten ohne Aktivität sowie bei Passwortwechsel, Sperre, Rollenwechsel und Zurücksetzen des zweiten Faktors.
 - Fremdbestandteil: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, Kazuhiko Arase, MIT; Lizenz in `assets/vendor/LIZENZ-qrcode-generator.txt`), übernommen aus NAdoku.
 
-## 9. Fehlerprotokoll
+## 9. Veranstaltungs-Einstellungen
+
+Team-Bereich → „Einstellungen“ (Admin und Betreiber). Alles, was die Veranstaltung betrifft (R-11): Datum, Zeit, Ort, Kapazität, CME-Angaben, Anmeldezeitraum, Workshop-Limit und -Pflicht, Nachrücken, Stichtage, Berufsgruppen. Zeiten werden in Ortszeit eingegeben. Stichtage gelten bis einschließlich des genannten Tages; leere Stichtage gelten bis zur Veranstaltung. Bis jemand speichert, gelten die Startwerte aus `server/lib/veranstaltung_lib.php`. Änderungen stehen im Audit-Protokoll und erscheinen sofort auf der Startseite. Die Werte zur Anmeldung wirken ab AP-4.
+
+## 10. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

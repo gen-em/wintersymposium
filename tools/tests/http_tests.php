@@ -186,6 +186,25 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'ziel@example.org', 'passwort' => 'x'], $x);
     pruefe(str_contains($r['text'], 'Zu viele Versuche'), 'nach ' . RATE_TOEPFE['login'][0] . ' Fehlversuchen für eine Adresse gesperrt');
 
+    abschnitt('HTTP: Veranstaltungs-Einstellungen (AP-3 Schritt 2)');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'name="veranstaltung_ort"') && str_contains($r['text'], 'name="berufsgruppen"'), 'Einstellungsseite mit allen Feldern');
+    pruefe(str_contains($r['text'], 'value="2026-11-25T00:00"'), 'Anmeldestart in Ortszeit vorbelegt');
+    $form = ['csrf' => http_csrf($r['text'])];
+    foreach (VA_KATALOG as $k => $_) {
+        $form[$k] = va_formularwert($k);
+    }
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['veranstaltung_ende' => '17:00'] + $form, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Nicht gespeichert') && str_contains($r['text'], 'aria-invalid="true"') && str_contains($r['text'], 'value="17:00"'), 'Fehler: markiert, Eingabe bleibt stehen');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['veranstaltung_ort' => 'Klinikum Test', 'veranstaltung_kapazitaet' => '120'] + $form, $b);
+    pruefe($r['status'] === 303 && va('veranstaltung_ort') === 'Klinikum Test', 'gespeichert');
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(str_contains($r['text'], 'Klinikum Test') && str_contains($r['text'], '120 / 120'), 'Startseite zeigt die neuen Werte sofort (T-121)');
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'") == 1, 'Änderung im Audit-Protokoll');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['veranstaltung_ort' => 'Klinikum Test', 'veranstaltung_kapazitaet' => '120'] + $form, "$tmp/kekse-leer.txt");
+    pruefe($r['status'] === 403 || $r['status'] === 303, 'ohne Login nicht speicherbar');
+    db_ausfuehren("DELETE FROM einstellung WHERE schluessel IN ('veranstaltung_ort', 'veranstaltung_kapazitaet')");
+
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
     $r = http_anfrage($basis, 'GET', '/notzugang', $h, [], null, $n);
@@ -350,7 +369,7 @@ function http_tests(string $wurzel, string $tmp): void
         pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
         pruefe(str_contains($html, '<em>Notfallmedizin</em>'), 'Titel aus pflegbarem Text (mit Akzent)');
         pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
-        pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten-Platzhalter mit freien Plätzen');
+        pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten aus den Einstellungen (Startwerte)');
         pruefe(str_contains($html, 'Beispielprogramm') && str_contains($html, 'class="programm"') && str_contains($html, 'Tigerente'), 'Beispielprogramm als Platzhalter sichtbar und gekennzeichnet');
         pruefe(str_contains($html, 'href="/impressum"') && str_contains($html, 'href="/datenschutz"') && str_contains($html, 'Quelltext (AGPL)'), 'Fußzeile mit Impressum, Datenschutz, Quelltext');
         preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);

@@ -35,6 +35,7 @@ const ROUTEN = [
     '/team' => 'team',
     '/team/profil' => 'team_profil',
     '/team/konten' => 'team_konten',
+    '/team/einstellungen' => 'team_einstellungen',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
