@@ -730,7 +730,7 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
 
         <fieldset class="feld"><legend>Mittagessen</legend>
           <div class="wahl" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
-            <label><input type="radio" name="essen" value="f"><span>Fleisch</span></label>
+            <label><input type="radio" name="essen" value="k"><span>Keine speziellen Wünsche</span></label>
             <label><input type="radio" name="essen" value="v" checked><span>Vegetarisch</span></label>
             <label><input type="radio" name="essen" value="k"><span>Kein Essen</span></label>
           </div>
@@ -873,7 +873,7 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
           </table></div>
           <h3 class="zwischen" style="font-size:1.2rem;margin:22px 0 10px">Essen</h3>
           <div class="kacheln" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-            <div class="kachel"><div class="lbl">Fleisch</div><div class="zahl">61</div></div>
+            <div class="kachel"><div class="lbl">Keine speziellen Wünsche</div><div class="zahl">61</div></div>
             <div class="kachel"><div class="lbl">Vegetarisch</div><div class="zahl">58</div></div>
             <div class="kachel"><div class="lbl">Kein Essen</div><div class="zahl">23</div></div>
           </div>
@@ -911,10 +911,10 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
           <thead><tr><th>Name</th><th>Status</th><th>Konto / Rolle</th><th>Workshops</th><th>Essen</th></tr></thead>
           <tbody>
             <tr class="gewaehlt"><td><strong>Lea Beispiel</strong><br><span class="meta" style="font-size:.82rem">lea.beispiel@example.org</span></td><td><span class="chip ok">Angemeldet</span></td><td>Konto</td><td class="mono">WS 01, WS 02 <span class="meta">+2 WL</span></td><td>veg.</td></tr>
-            <tr><td><strong>Tom Beispielmann</strong><br><span class="meta" style="font-size:.82rem">t.b@example.org</span></td><td><span class="chip wl">Nur Warteliste</span></td><td class="meta">ohne Konto</td><td class="mono">– <span class="meta">1 WL</span></td><td>Fleisch</td></tr>
+            <tr><td><strong>Tom Beispielmann</strong><br><span class="meta" style="font-size:.82rem">t.b@example.org</span></td><td><span class="chip wl">Nur Warteliste</span></td><td class="meta">ohne Konto</td><td class="mono">– <span class="meta">1 WL</span></td><td>Keine speziellen Wünsche</td></tr>
             <tr><td><strong>Dr. A. Beispiel</strong><br><span class="meta" style="font-size:.82rem">a.beispiel@example.org</span></td><td><span class="chip ok">Angemeldet</span></td><td><span class="rolle-tag">Admin</span></td><td class="mono">–</td><td>kein</td></tr>
             <tr><td><strong>Kim Beispiel</strong><br><span class="meta" style="font-size:.82rem">kim@example.org</span></td><td><span class="chip offen">Mail nicht bestätigt</span></td><td class="meta">ohne Konto</td><td class="mono">WS 03</td><td>veg.</td></tr>
-            <tr><td><strong>Sam Beispiel</strong><br><span class="meta" style="font-size:.82rem">sam@example.org</span></td><td><span class="chip gesperrt">Konto gesperrt</span></td><td>Konto</td><td class="mono">WS 02</td><td>Fleisch</td></tr>
+            <tr><td><strong>Sam Beispiel</strong><br><span class="meta" style="font-size:.82rem">sam@example.org</span></td><td><span class="chip gesperrt">Konto gesperrt</span></td><td>Konto</td><td class="mono">WS 02</td><td>Keine speziellen Wünsche</td></tr>
           </tbody>
         </table></div>
         <aside class="kasten detail">
@@ -923,7 +923,7 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
           <h4 class="unterkopf">Anmeldung bearbeiten <span class="meta">– auch nach den Stichtagen</span></h4>
           <div class="feld"><label for="p-ws1">WS 01 Atemweg</label><select id="p-ws1"><option>11:15–12:45 · voll (12/12) – überbuchen …</option><option selected>13:45–15:15 · fest</option><option>kein fester Platz</option></select></div>
           <div class="feld"><label for="p-ws2">WS 02 Kleine PatientInnen</label><select id="p-ws2"><option selected>11:15–12:00 · fest</option><option>13:45–14:30</option><option>14:30–15:15</option><option>kein fester Platz</option></select></div>
-          <div class="feld"><label for="p-essen">Essen</label><select id="p-essen"><option>Fleisch</option><option selected>Vegetarisch</option><option>Kein Essen</option></select></div>
+          <div class="feld"><label for="p-essen">Essen</label><select id="p-essen"><option>Keine speziellen Wünsche</option><option selected>Vegetarisch</option><option>Kein Essen</option></select></div>
           <p class="meta" style="font-size:.85rem;margin:0">Warteliste: WS 01 11:15 (Platz 1, Angebot offen) · WS 02 12:00 (Platz 2)</p>
           <div class="aktionen"><button class="knopf" type="button">Speichern</button><button class="knopf zweit" type="button">Einmal-Link senden</button></div>
 
@@ -1002,7 +1002,7 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
 
         <div class="kasten stat">
           <div class="stat-kopf"><h3 class="zwischen">Essen</h3></div>
-          <div class="mini-kacheln"><div><span class="zahl">61</span><span class="lbl">Fleisch</span></div><div><span class="zahl">58</span><span class="lbl">Vegetarisch</span></div><div><span class="zahl">23</span><span class="lbl">Kein Essen</span></div></div>
+          <div class="mini-kacheln"><div><span class="zahl">61</span><span class="lbl">Keine speziellen Wünsche</span></div><div><span class="zahl">58</span><span class="lbl">Vegetarisch</span></div><div><span class="zahl">23</span><span class="lbl">Kein Essen</span></div></div>
           <p class="meta" style="font-size:.82rem;margin:8px 0 0">119 Essen zu bestellen · Essens-Stichtag Mi 13.01.</p>
         </div>
 
@@ -1575,7 +1575,7 @@ table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
     var b = ev.target.closest("[data-person]"); if (!b) return;
     var x = b.getAttribute("data-person").split("|"), name = x[0], bg = x[1] || "–", lea = name === "Lea Beispiel";
     var mail = name.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(" ", ".") + "@example.org";
-    popupAuf('<p class="kicker">Person</p><h2 class="titel" id="popup-titel" style="font-size:1.9rem">' + esc(name) + '</h2><p style="margin:0"><span class="chip ok">Angemeldet</span> ' + (lea ? '<span class="rolle-tag">Konto</span>' : '<span class="meta">ohne Konto</span>') + '</p><dl class="liste-def"><div><dt>Berufsgruppe</dt><dd>' + esc(bg) + "</dd></div><div><dt>Institution</dt><dd>" + (lea ? "Klinikum Kempten, ZNA" : "BRK Oberallgäu") + '</dd></div><div><dt>E-Mail</dt><dd>' + esc(mail) + "</dd></div>" + (bg === "ÄrztIn" ? '<div><dt>EFN</dt><dd class="mono">' + (lea ? "276 xxxx xxxx xxxx 3" : "– nicht angegeben") + "</dd></div>" : "") + '<div><dt>Workshops</dt><dd class="mono">' + (lea ? "WS 01 13:45 · WS 02 11:15<br>WL: WS 01 11:15 (Platz 1)" : "WS 01 11:15") + "</dd></div><div><dt>Essen</dt><dd>" + (lea ? "Vegetarisch" : "Fleisch") + "</dd></div><div><dt>Angemeldet am</dt><dd class=\"mono\">27.11.2026, 21:14</dd></div></dl>" + '<div class="aktionen"><a class="knopf zweit" href="#a-personen" data-link="personen">In „Personen“ bearbeiten</a><button class="knopf zweit" type="button">Einmal-Link senden</button></div>', false);
+    popupAuf('<p class="kicker">Person</p><h2 class="titel" id="popup-titel" style="font-size:1.9rem">' + esc(name) + '</h2><p style="margin:0"><span class="chip ok">Angemeldet</span> ' + (lea ? '<span class="rolle-tag">Konto</span>' : '<span class="meta">ohne Konto</span>') + '</p><dl class="liste-def"><div><dt>Berufsgruppe</dt><dd>' + esc(bg) + "</dd></div><div><dt>Institution</dt><dd>" + (lea ? "Klinikum Kempten, ZNA" : "BRK Oberallgäu") + '</dd></div><div><dt>E-Mail</dt><dd>' + esc(mail) + "</dd></div>" + (bg === "ÄrztIn" ? '<div><dt>EFN</dt><dd class="mono">' + (lea ? "276 xxxx xxxx xxxx 3" : "– nicht angegeben") + "</dd></div>" : "") + '<div><dt>Workshops</dt><dd class="mono">' + (lea ? "WS 01 13:45 · WS 02 11:15<br>WL: WS 01 11:15 (Platz 1)" : "WS 01 11:15") + "</dd></div><div><dt>Essen</dt><dd>" + (lea ? "Vegetarisch" : "Keine speziellen Wünsche") + "</dd></div><div><dt>Angemeldet am</dt><dd class=\"mono\">27.11.2026, 21:14</dd></div></dl>" + '<div class="aktionen"><a class="knopf zweit" href="#a-personen" data-link="personen">In „Personen“ bearbeiten</a><button class="knopf zweit" type="button">Einmal-Link senden</button></div>', false);
   });
   document.getElementById("tw-liste").addEventListener("click", function (ev) { var b = ev.target.closest("[data-tw]"); if (b) { twAktiv = b.getAttribute("data-tw"); twListe(); twDetail(); } });
   twListe(); twDetail();
