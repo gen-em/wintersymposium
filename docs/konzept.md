@@ -16,7 +16,7 @@ termine:
 
 ## 0. Arbeitsweise für die umsetzende Instanz
 
-- Arbeitspakete (AP) in der Reihenfolge ihrer IDs abarbeiten, soweit `abhaengig_von` nichts anderes zulässt. AP-1 bis AP-6 müssen bis zum 2026-11-25 fertig sein, AP-10 bis zum Symposium (E-17).
+- Arbeitspakete (AP) in der Reihenfolge ihrer IDs abarbeiten, soweit `abhaengig_von` nichts anderes zulässt. AP-1 bis AP-6 müssen bis zum 2026-11-25 fertig sein, AP-10 bis zum Symposium (E-17). AP-8 ist entfallen (E-15).
 - Vor Beginn eines AP: Umfang kurz zusammenfassen und vom Admin bestätigen lassen. Offene Punkte (Abschnitt 7), die das AP betreffen, vorher klären.
 - Nach Abschluss jedes AP:
   - im AP-Block dieses Dokuments `status`, `ergebnis` und `probleme` (Problem und Lösung) eintragen,
@@ -38,9 +38,9 @@ termine:
   4. **Mailings**: Rundmails an Teilnehmende
   5. **Newsletter** mit mehreren Listen, auch unabhängig von einer Symposium-Anmeldung
   6. **Teilnahme und Zertifikate**: Anwesenheit erfassen, CME-Teilnahmebescheinigung als PDF zum Herunterladen (E-22)
-  7. **Kaneo** als Team-Werkzeug (eigene Instanz, wie bei Gen-EM)
+  7. **Teamkommunikation** über das bestehende Kaneo von Gen-EM (E-15); kein Bestandteil dieses Repos
 - Design nach dem Erscheinungsbild **Allgäu Akut** (Repo `chodid/zina-branding`), Seitendesign über Mockups (E-23).
-- Nicht Teil dieses Konzepts: Bezahlung, Tickets/QR-Codes, zentraler Login (E-12), Umstellung bestehender Gen-EM-Dienste.
+- Nicht Teil dieses Konzepts: Bezahlung, Tickets/QR-Codes, zentraler Login (E-12), eine eigene Kaneo-Instanz (E-15), Umstellung bestehender Gen-EM-Dienste.
 
 ## 2. Ausgangslage
 
@@ -63,10 +63,8 @@ hosting_app:
   mail:
     smtp: Lima-City, Port 465 (SSL)
     limit: "500 Empfänger je 24 h je SMTP-Postfach (Lima-City-Auskunft)"
-hosting_kaneo:
-  server: Gen-EM-Server (Docker, Caddy; Angaben im privaten Repo gen-em/server-infrastruktur)
-  bestehend: Kaneo mit PostgreSQL und Silo (S3-Speicher) unter team.gen-em.org
-  ressourcen: "RAM laut Gen-EM-Konzept knapp (E-26 dort) → vor AP-8 messen"
+kaneo:
+  bestehend: Kaneo von Gen-EM unter team.gen-em.org (Repo gen-em/server-infrastruktur); wird für das Symposium-Team mitgenutzt (E-15)
 domain: noch keine; Vorschlag wintersymposium.de (O-01, in Arbeit)
 branding:
   quelle: chodid/zina-branding (4 Regeln/Erscheinungsbild.md, 9 Technik/Gestaltungswerte, 9 Technik/farben-und-schriften.json)
@@ -98,8 +96,8 @@ app:
   hintergrund: "Cron ruft einen Job-Endpunkt (CLI oder Token-URL) auf; Mail-Warteschlange, Nachrück-Angebote und -Fristen, Aufräumen, Ablauf von Links, Löschfristen"
   auslieferung: "GitHub Actions → FTPS auf den Lima-City-Webspace (Staging und Produktion, E-28); config.php und Laufzeitordner bleiben unangetastet"
 kaneo:
-  ort: Gen-EM-Server, eigener Stack neben dem bestehenden Kaneo, Subdomain team.<domain> (E-29)
-  login: eigener Kaneo-Login (E-Mail-Code), getrennt von der Webseite (E-12)
+  nutzung: bestehendes Gen-EM-Kaneo (team.gen-em.org), eigener Arbeitsbereich/eigenes Projekt für das Symposium-Team; der Admin lädt ein (E-15)
+  login: Kaneo-Login (E-Mail-Code), getrennt von der Webseite (E-12)
 mail:
   postfaecher: [System-Postfach (Bestätigungen, Links, Nachrücken, Zertifikate), Newsletter-Postfach (Rundmails, Newsletter)]
   versand: Warteschlange mit Prioritäten und Tageslimit je Postfach
@@ -123,9 +121,9 @@ mail:
 | E-12 | Login-Architektur | **getrennte Logins** für Webseite und Kaneo; kein zentraler Anmeldedienst (Keycloak/Pocket ID geprüft und verworfen) | Admin 2026-10-29. Kaneo könnte OIDC (`CUSTOM_OAUTH_*`), ein eigener Anmeldedienst wäre aber zusätzliche Last und Abhängigkeit |
 | E-13 | Mailversand | SMTP über Lima-City; Warteschlange mit **einstellbarem Tageslimit** (Vorschlag 450 je Postfach); **System-Mails vor Rundmails/Newsletter**; zwei Postfächer (System, Newsletter); Wechsel zu einem EU-Versanddienst nur per Konfiguration | Admin 2026-10-29: kein externes Tool, Versand über mehrere Tage verteilen |
 | E-14 | Newsletter | **mehrere Listen** (mindestens „Wintersymposium“ und „Allgäu Akut“); Anmeldung auch ohne Symposium-Anmeldung; Double-Opt-In; Abmeldelink und `List-Unsubscribe`; Häkchen bei der Symposium-Anmeldung freiwillig und nicht vorausgewählt | Admin 2026-10-29; UWG § 7, DSGVO |
-| E-15 | Kaneo | **eigene Instanz** auf dem Gen-EM-Server mit eigenem Branding, soweit Kaneo es zulässt (kein Theme vorgesehen, O-09); Stack per PR in `gen-em/server-infrastruktur` | Admin 2026-10-29 |
+| E-15 | Kaneo | **bestehendes Gen-EM-Kaneo** (team.gen-em.org) wird mitgenutzt: eigener Arbeitsbereich bzw. eigenes Projekt für das Symposium-Team, Einladung durch den Admin; **keine eigene Instanz**, kein eigenes Branding | Admin 2026-10-29 (ersetzt die zuvor gewünschte eigene Instanz, Entscheidung am selben Tag geändert) |
 | E-16 | Verantwortlicher | Philipp Chadid (Impressum, Datenschutzerklärung) | Admin 2026-10-29 |
-| E-17 | Zeitplan | AP-1 bis AP-6 bis **2026-11-25** (Anmeldestart); AP-7 (Newsletter) und AP-8 (Kaneo) danach, AP-8 wird vorgezogen, falls das Team Kaneo früher braucht; AP-10 (Teilnahme, Zertifikate) bis zum **20.01.2027**; AP-9 zuletzt | Admin 2026-10-29 |
+| E-17 | Zeitplan | AP-1 bis AP-6 bis **2026-11-25** (Anmeldestart); AP-7 (Newsletter) danach; AP-10 (Teilnahme, Zertifikate) bis zum **20.01.2027**; AP-9 zuletzt | Admin 2026-10-29 |
 | E-18 | Übernahme aus NAdoku | siehe Tabelle unten | Analyse 2026-10-29 |
 | E-19 | Nachrücken | Freier Platz wird der ersten Person der Warteliste **angeboten**, Annahme über Einmal-Link innerhalb einer **Annahmefrist von 48 h**; bei Ablauf oder Ablehnung geht das Angebot an die nächste Person. Automatische Angebote **bis 14 Tage vor dem Symposium** (letztes Angebot spätestens 16 Tage vorher, damit die Frist vor der Grenze endet); danach nur noch manuell durch das Team. Frist und Grenze in den Veranstaltungs-Einstellungen einstellbar | Admin 2026-10-29. Umgang mit der abgelaufenen Person: O-17 |
 | E-20 | Workshop-Regeln | **Überschneidende Termine gesperrt**; **kein Limit** an Workshops je Person als Standard, Limit in den Veranstaltungs-Einstellungen einstellbar; Workshop-Wahl freiwillig (einstellbar); Gesamtkapazität optional (0 = unbegrenzt) | Admin 2026-10-29 |
@@ -137,7 +135,7 @@ mail:
 | E-26 | Ausgabe der Arbeit | Commit auf Arbeits-Branch und **PR**, der Admin mergt; keine ZIP-Dateien | Admin 2026-10-29 |
 | E-27 | Domains und Absender | **vorerst eine Domain**; in der Betreiberoberfläche **mehrere Hostnamen und Absenderadressen** konfigurierbar, Absender je Zweck (System, Newsletter) und je Newsletter-Liste wählbar | Admin 2026-10-29 |
 | E-28 | Staging | Testumgebung unter `test.<domain>` mit eigener Datenbank und eigenem Webspace-Ordner | Admin 2026-10-29 |
-| E-29 | Kaneo-Subdomain | `team.<domain>` | Admin 2026-10-29 |
+| E-29 | Kaneo-Subdomain | entfallen (E-15: bestehendes Kaneo, keine eigene Subdomain) | Admin 2026-10-29 |
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
@@ -326,20 +324,7 @@ nicht_uebernehmen:
 
 - id: AP-8
   titel: Kaneo-Instanz
-  ziel: "Eigene Kaneo-Instanz für das Symposium-Team auf dem Gen-EM-Server unter team.<domain>"
-  abhaengig_von: [O-01, O-09]
-  repo: gen-em/server-infrastruktur (per PR; Betriebsangaben nur dort, R-10)
-  umfang:
-    - RAM- und Speicherlage des Gen-EM-Servers prüfen, bevor der Stack startet
-    - eigener Stack (Kaneo, PostgreSQL, Anhang-Speicher nach O-09), Caddy-Eintrag, DNS-Eintrag durch den Admin, Secrets per sops
-    - Branding im Rahmen der Kaneo-Möglichkeiten (Name, Arbeitsbereich, Mail-Logo über KANEO_EMAIL_ASSETS_URL)
-    - Registrierung gesperrt, Einladungen; Überwachung in Uptime Kuma, Backup wie beim bestehenden Kaneo
-  abnahmekriterien:
-    - Anmeldung per Mail-Code funktioniert, Selbstregistrierung gesperrt
-    - bestehende Dienste laufen unverändert, RAM-Auslastung im Rahmen
-  status: offen
-  ergebnis: null
-  probleme: []
+  status: entfallen   # E-15: bestehendes Gen-EM-Kaneo wird mitgenutzt; Einladung des Teams durch den Admin
 
 - id: AP-10
   titel: Teilnahme und Zertifikate
@@ -382,7 +367,7 @@ nicht_uebernehmen:
 - {id: O-06, thema: Fortbildungspunkte, status: "entschieden → E-22; Details O-16"}
 - {id: O-07, thema: Akzentfarbe und Logo, status: "entschieden → E-23; Logo-Dateien O-20"}
 - {id: O-08, thema: Löschfristen, status: "entschieden → E-24; CME-Frist O-18"}
-- {id: O-09, thema: Kaneo, frage: "eigener Silo-Speicher oder eigener Bucket im bestehenden Silo; reicht der RAM?", hinweis: "Subdomain entschieden (E-29); Kaneo hat kein Theme", zustaendig: Umsetzung + Admin, benoetigt_fuer: AP-8, status: offen}
+- {id: O-09, thema: Kaneo, status: "entfallen → E-15 (bestehendes Kaneo)"}
 - {id: O-10, thema: Repo-Sichtbarkeit, status: "entschieden → E-25; Umschalten auf öffentlich macht der Admin, sobald dieses Konzept gemergt ist"}
 - {id: O-11, thema: Ausgabe der Arbeit, status: "entschieden → E-26"}
 - {id: O-12, thema: Newsletter-Absender, status: "entschieden → E-27"}
@@ -400,11 +385,10 @@ nicht_uebernehmen:
 
 | ID | Risiko | Umgang |
 |---|---|---|
-| K-01 | Zeitplan: knapp 4 Wochen bis zum Anmeldestart | Newsletter, Kaneo und Zertifikate nach dem Start; Umfang von AP-1 bis AP-6 nicht ausweiten; Mockup-Freigabe (AP-2) zügig |
+| K-01 | Zeitplan: knapp 4 Wochen bis zum Anmeldestart | Newsletter und Zertifikate nach dem Start; Umfang von AP-1 bis AP-6 nicht ausweiten; Mockup-Freigabe (AP-2) zügig |
 | K-02 | Mail-Limit 500 Empfänger/24 h je Postfach | Tageslimit, Prioritäten, zwei Postfächer; Wechsel zu EU-Versanddienst vorbereitet |
 | K-03 | Lima-City-Botschutz kann automatisierte Tests und ggf. Formular-POSTs blockieren | beim Hoster für die Domain klären; echte Anmeldungen vor dem Start mit verschiedenen Browsern testen |
 | K-04 | Zustellbarkeit (SPF/DKIM/DMARC der neuen Domain) | DNS-Einträge mit der Domain einrichten und prüfen (AP-6) |
-| K-05 | RAM auf dem Gen-EM-Server knapp | Messung vor AP-8 |
 | K-06 | Ein Team-Mitglied verliert den zweiten Faktor | Wiederherstellungscodes; Betreiber kann den Faktor zurücksetzen |
 | K-07 | Nachrück-Kette mit 48-h-Fristen ist langsam: bei n Absagen dauert die Vergabe bis zu n × 48 h | Team kann jederzeit manuell vergeben; Frist einstellbar; Angebot wird bei Ablehnung sofort weitergegeben |
 | K-08 | Öffentliches Repo: versehentlich eingecheckte Interna | R-10; Prüfung vor jedem PR; Secrets nur in config.php und GitHub-Secrets |
@@ -430,4 +414,5 @@ nicht_uebernehmen:
 | Datum | Änderung |
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
+| 2026-10-29 | Kaneo: E-15 geändert auf Mitnutzung des bestehenden Gen-EM-Kaneo; AP-8 entfallen, E-29 und O-09 entfallen, K-05 gestrichen. |
 | 2026-10-29 | Antworten des Admins eingearbeitet: E-19 bis E-29 (Nachrücken mit Annahmefrist, Workshop-Regeln, Anmeldefelder, CME mit Zertifikat, Mockups und Lila/Rot, Löschfristen, Repo öffentlich, PR, mehrere Domains/Absender, Staging, Kaneo-Subdomain); R-10 und R-11 neu; AP-2 mit Mockup-Halt, AP-3 um Veranstaltungs-Einstellungen, AP-4 um Nachrück-Angebote und EFN, AP-5 um Betreiber-Einstellungen erweitert; AP-10 (Teilnahme und Zertifikate) neu; O-03 bis O-08 und O-10 bis O-13 entschieden, O-15 bis O-20 neu; K-07, K-08 neu; Hosting-Interna nach R-10 entfernt. |

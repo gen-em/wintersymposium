@@ -20,7 +20,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-158 |
 | AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
-| AP-8 | Kaneo-Instanz | offen | – | T-180 bis T-184 |
+| AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
 | AP-9 | Abschluss und Datenschutz | offen | – | T-200 bis T-204 |
 
@@ -98,12 +98,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-173, ap: AP-7, was: "Verzahnung mit Symposium-Anmeldung", wie: "Häkchen gesetzt → nach Bestätigung in Liste; nicht gesetzt → nicht in Liste", status: offen}
 - {id: T-174, ap: AP-7, was: "Versand über Tage", wie: "Liste größer als Tageslimit → Rest am Folgetag, Protokoll zeigt Fortschritt", status: offen}
 
-# AP-8 Kaneo-Instanz (Ergebnisse ohne Hosting-Interna, R-10)
-- {id: T-180, ap: AP-8, was: "RAM vor dem Start", wie: "Beszel: freier RAM und Swap-Nutzung der letzten 7 Tage", status: offen}
-- {id: T-181, ap: AP-8, was: "Stack gesund", wie: "docker compose ps: alle Container healthy; host/check.sh", status: offen}
-- {id: T-182, ap: AP-8, was: "Login per Mail-Code, Registrierung gesperrt", wie: "Einladung annehmen; Registrierungsseite verweigert", status: offen}
-- {id: T-183, ap: AP-8, was: "Bestehende Dienste unverändert", wie: "Uptime Kuma ohne Ausfälle, RAM nach 24 h im Rahmen", status: offen}
-- {id: T-184, ap: AP-8, was: "Backup und Überwachung", wie: "Dump der neuen DB im Backup; Uptime-Kuma-Monitor angelegt", status: offen}
+# AP-8 Kaneo-Instanz: entfallen (E-15), T-180 bis T-184 gestrichen
 
 # AP-10 Teilnahme und Zertifikate
 - {id: T-190, ap: AP-10, was: "Anwesenheit erfassen", wie: "Liste auf dem Handy: suchen, Haken setzen, Massenaktion mit Ausnahmen; Audit-Eintrag", status: offen}
