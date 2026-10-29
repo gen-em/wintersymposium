@@ -93,5 +93,6 @@ function job_aufraeumen(int $jetzt): array
     return [
         'sitzungen' => sitzung_aufraeumen(),
         'rate_limit' => rate_aufraeumen($jetzt),
+        'konto_links' => konto_link_aufraeumen($jetzt),
     ];
 }

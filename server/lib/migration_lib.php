@@ -114,6 +114,55 @@ function migration_katalog(): array
                  WHERE schluessel = 'start_infos' AND text LIKE '%Nichts. Mittagessen inklusive (Fleisch oder vegetarisch).%'",
             ],
         ],
+        4 => [
+            'beschreibung' => 'Eine Konten-Tabelle mit Rollen (E-42/O-28), zweiter Faktor, Einrichtungslinks',
+            'sql' => [
+                // Teilnehmende (AP-4b), Admin und Betreiber in einer Tabelle.
+                // Zweiter Faktor: Geheimnis versiegelt (krypto_lib), eingeschaltet erst mit totp_seit.
+                // sitzung_version steigt bei Passwortwechsel, Sperre und Rollenwechsel: alte Sitzungen enden.
+                "CREATE TABLE konto (
+                    id               INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    email            VARCHAR(254) NOT NULL,
+                    name             VARCHAR(120) NOT NULL,
+                    passwort_hash    VARCHAR(255) NULL,
+                    rolle            ENUM('teilnehmend','admin','betreiber') NOT NULL DEFAULT 'teilnehmend',
+                    aktiv            TINYINT(1)   NOT NULL DEFAULT 1,
+                    totp_geheimnis   VARCHAR(255) NULL,
+                    totp_seit        DATETIME     NULL,
+                    totp_schritt     BIGINT       NULL,
+                    sitzung_version  INT UNSIGNED NOT NULL DEFAULT 1,
+                    letzte_anmeldung DATETIME     NULL,
+                    erstellt_am      DATETIME     NOT NULL,
+                    geaendert_am     DATETIME     NOT NULL,
+                    UNIQUE KEY uq_konto_email (email),
+                    KEY ix_konto_rolle (rolle)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Bisherige Team-Konten mit gleicher id übernehmen (audit.konto_id bleibt gültig).
+                "INSERT INTO konto (id, email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am)
+                 SELECT id, email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am FROM team_konto",
+                "DROP TABLE team_konto",
+                "CREATE TABLE konto_code (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    konto_id    INT UNSIGNED NOT NULL,
+                    hash        VARCHAR(255) NOT NULL,
+                    benutzt_am  DATETIME     NULL,
+                    KEY ix_konto_code_konto (konto_id),
+                    CONSTRAINT fk_konto_code_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Einrichtungs- bzw. Passwort-Links: nur der Hash des Tokens (R-02).
+                "CREATE TABLE konto_link (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    konto_id    INT UNSIGNED NOT NULL,
+                    token_hash  CHAR(64)     NOT NULL,
+                    zweck       VARCHAR(16)  NOT NULL,
+                    gueltig_bis DATETIME     NOT NULL,
+                    erstellt_am DATETIME     NOT NULL,
+                    UNIQUE KEY uq_konto_link_token (token_hash),
+                    KEY ix_konto_link_konto (konto_id),
+                    CONSTRAINT fk_konto_link_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

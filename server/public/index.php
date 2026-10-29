@@ -28,6 +28,12 @@ const ROUTEN = [
     '/health' => 'health',
     '/impressum' => 'impressum',
     '/datenschutz' => 'datenschutz',
+    '/einloggen' => 'einloggen',
+    '/ausloggen' => 'ausloggen',
+    '/einrichten' => 'einrichten',
+    '/team' => 'team',
+    '/team/profil' => 'team_profil',
+    '/team/konten' => 'team_konten',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

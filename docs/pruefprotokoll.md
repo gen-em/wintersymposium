@@ -15,7 +15,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 |---|---|---|---|---|
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
-| AP-3 | Programm und Veranstaltungs-Einstellungen | offen | – | T-120 bis T-126 |
+| AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 umgesetzt, Staging offen | lokal T-127 bis T-133, T-150, T-151, T-153, T-154 | Staging: Schritt 1 (siehe unten); T-120 bis T-126 mit Schritt 2 und 3 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
@@ -57,6 +57,13 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-124, ap: AP-3, was: "Workshop-Limit und Pflicht einstellbar", wie: "Limit 1 setzen → zweiter Workshop abgelehnt; Pflicht an → Anmeldung ohne Workshop abgelehnt; beides aus → frei", status: offen}
 - {id: T-125, ap: AP-3, was: "Nachrück-Einstellungen wirken", wie: "Annahmefrist auf 1 h setzen → Angebot läuft nach 1 h ab; Grenze auf heute setzen → keine automatischen Angebote", status: offen}
 - {id: T-126, ap: AP-3, was: "Stichtage einstellbar (E-31)", wie: "Stichtage für Workshop, Essen, Storno getrennt setzen; Anzeige auf Startseite und in der Anmeldung stimmt", status: offen}
+- {id: T-127, ap: AP-3, was: "Alte Team-Konten übernommen", wie: "Migration 4 auf einem Stand mit team_konto: gleiche id, Rolle, ohne zweiten Faktor; team_konto entfernt", status: "lokal bestanden"}
+- {id: T-128, ap: AP-3, was: "Einrichtungslink", wie: "Betreiber legt Konto an → Link einmal angezeigt; Passwort setzen; Link danach ungültig; nach 72 h abgelaufen; nur Hash gespeichert", status: "lokal bestanden"}
+- {id: T-129, ap: AP-3, was: "Rollenwechsel nur mit eigenem Code (E-41)", wie: "falscher Code → abgelehnt; richtiger → Rolle geändert, Sitzung des Kontos beendet", status: "lokal bestanden"}
+- {id: T-130, ap: AP-3, was: "Sperren und Sitzungen", wie: "gesperrtes Konto kommt nicht rein; eigenes Konto nicht sperrbar; letzter Betreiber bleibt", status: "lokal bestanden"}
+- {id: T-131, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
+- {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden; auf Lima-City offen (O-34)"}
+- {id: T-133, ap: AP-3, was: "Team-Seiten im Browser", wie: "Login, Einrichtung mit QR, Codes, Übersicht, Team-Konten, Mein Konto bei 390 und 1280 px; kein seitliches Scrollen, keine Konsolenfehler", status: "lokal bestanden"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
 - {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: offen}
@@ -83,11 +90,11 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-149, ap: AP-4b, was: "Profil übernimmt Berufsgruppe/Institution, Konto löschen", wie: "Werte aus der Anmeldung im Profil, Änderung wirkt auf die Anmeldung; Konto löschen → Login weg, Anmeldung nach Regel E-24/O-21", status: offen}
 
 # AP-5 Team-Bereich
-- {id: T-150, ap: AP-5, was: "Login ohne zweiten Faktor verweigert", wie: "Konto ohne TOTP/Passkey → nach Passwort Zwang zur Einrichtung, kein Zugriff", status: offen}
-- {id: T-151, ap: AP-5, was: "TOTP", wie: "Einrichten per QR, Code gültig, Wiederholung desselben Codes abgelehnt", status: offen}
+- {id: T-150, ap: AP-5, was: "Login ohne zweiten Faktor verweigert", wie: "Konto ohne TOTP/Passkey → nach Passwort Zwang zur Einrichtung, kein Zugriff", status: "lokal bestanden (mit AP-3 vorgezogen)"}
+- {id: T-151, ap: AP-5, was: "TOTP", wie: "Einrichten per QR, Code gültig, Wiederholung desselben Codes abgelehnt", status: "lokal bestanden (mit AP-3 vorgezogen)"}
 - {id: T-152, ap: AP-5, was: "Passkey", wie: "Registrieren und anmelden auf Handy und Desktop", status: offen}
-- {id: T-153, ap: AP-5, was: "Wiederherstellungscodes", wie: "Login mit Code; Code danach ungültig", status: offen}
-- {id: T-154, ap: AP-5, was: "Rollen", wie: "Admin ruft Konten-, Betreiber-Einstellungs- und Rechtstext-Seiten auf → verweigert", status: offen}
+- {id: T-153, ap: AP-5, was: "Wiederherstellungscodes", wie: "Login mit Code; Code danach ungültig", status: "lokal bestanden (mit AP-3 vorgezogen)"}
+- {id: T-154, ap: AP-5, was: "Rollen", wie: "Admin ruft Konten-, Betreiber-Einstellungs- und Rechtstext-Seiten auf → verweigert", status: "teilweise (AP-3): Admin sieht keine Team-Konten; Betreiber-Einstellungen und Rechtstexte mit AP-5"}
 - {id: T-155, ap: AP-5, was: "Statistik-Seite stimmt", wie: "Alle Kennzahlen (Workshops, Warteliste, offene Angebote, Essen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter, Konten) gegen SQL-Abfragen prüfen; Diagramme und Export je Ansicht", status: offen}
 - {id: T-156, ap: AP-5, was: "Export", wie: "CSV öffnet in Excel korrekt (UTF-8 mit BOM, Umlaute); CME-Liste enthält nur Name und EFN", status: offen}
 - {id: T-157, ap: AP-5, was: "Audit-Protokoll", wie: "Änderung durch Team erzeugt Eintrag mit Zeit, Konto, Art", status: offen}
@@ -160,6 +167,8 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-115 | 2026-10-29 | claude-dev | teilweise | /impressum und /datenschutz 200, in der Fußzeile verlinkt; leer → Hinweis; gepflegter Text (Überschrift, mailto-Link) wird angezeigt | Bearbeiten durch Betreiber erst mit AP-5 |
 | T-116 | 2026-10-29 | claude-dev | lokal bestanden | Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 von /assets/fonts (200), Logo als SVG (scharf in jeder Auflösung) | – |
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
+| T-127 bis T-133 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 188 ok, 0 Fehler; Login-Ablauf im Browser (Playwright) mit echter TOTP-Berechnung, QR-Code sichtbar, 390/1280 px ohne seitliches Scrollen, keine Konsolenfehler | Staging-Prüfung nach dem Merge |
+| T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
 
 ### Noch zu prüfen für AP-1
 
@@ -172,3 +181,14 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 ### Noch zu prüfen für AP-2
 
 1. T-115: Impressum und Datenschutz durch den Betreiber bearbeiten, sobald AP-5 umgesetzt ist.
+
+### Noch zu prüfen für AP-3 Schritt 1 (nach Merge auf Staging)
+
+1. `https://test.winter-notfallsymposium.de/einloggen` (oder Fußzeile → „Team“) mit dem Betreiber-Konto aus der Installation: Passwort eingeben → Seite zum Einrichten des zweiten Faktors mit QR-Code.
+2. QR-Code mit der Authenticator-App scannen, Code eingeben → zehn Wiederherstellungscodes erscheinen. Im Passwortmanager speichern.
+3. Team-Bereich öffnet sich; oben rechts stehen Name, Rolle und „Ausloggen“.
+4. Ausloggen, wieder einloggen: Nach dem Passwort wird nur noch der Code gefragt. Den Code von eben gleich noch einmal eingeben → abgelehnt; den nächsten Code → drin.
+5. „Team-Konten“ → zweites Konto (z. B. zweiter Betreiber) anlegen → Link kopieren, in einem privaten Fenster öffnen, Passwort setzen, zweiten Faktor einrichten.
+6. Mit dem zweiten Konto „Team-Konten“ öffnen: als Admin → „Kein Zugriff“; als Betreiber → sichtbar.
+7. Einmal mit einem Wiederherstellungscode einloggen → Hinweis „Übrig: 9“.
+

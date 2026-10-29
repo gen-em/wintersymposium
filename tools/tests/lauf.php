@@ -125,6 +125,31 @@ pruefe(install_pruefen(['passwort' => 'kurz', 'passwort2' => 'kurz'] + $gut) !==
 pruefe(install_pruefen(['email' => 'kein-at'] + $gut) !== [], 'E-Mail ungültig');
 pruefe(install_pruefen(['weitere_hosts' => 'böse/host'] + $gut) !== [], 'Host ungültig');
 
+abschnitt('Zweiter Faktor (RFC 6238) und Versiegeln');
+$rfc = '12345678901234567890';
+pruefe(totp_code($rfc, 59, 8) === '94287082', 'RFC 6238: T=59');
+pruefe(totp_code($rfc, 1111111109, 8) === '07081804', 'RFC 6238: T=1111111109');
+pruefe(totp_code($rfc, 2000000000, 8) === '69279037', 'RFC 6238: T=2000000000');
+pruefe(totp_base32('foobar') === 'MZXW6YTBOI', 'Base32 (RFC 4648)');
+$jetzt = 1_900_000_000;
+$c = totp_code($rfc, $jetzt);
+pruefe(totp_code_passt($rfc, $c, $jetzt, null) === totp_schritt($jetzt), 'aktueller Code passt');
+pruefe(totp_code_passt($rfc, $c, $jetzt + 30, null) !== null, 'ein Schritt Toleranz');
+pruefe(totp_code_passt($rfc, $c, $jetzt + 90, null) === null, 'drei Schritte später abgelehnt');
+pruefe(totp_code_passt($rfc, $c, $jetzt, totp_schritt($jetzt)) === null, 'derselbe Schritt kein zweites Mal');
+pruefe(totp_code_passt($rfc, '12a456', $jetzt, null) === null, 'keine Ziffern abgelehnt');
+$codes = totp_codes_erzeugen();
+pruefe(count($codes) === TOTP_CODES && count(array_unique($codes)) === TOTP_CODES, 'zehn verschiedene Wiederherstellungscodes');
+pruefe(totp_code_normieren(strtolower(totp_code_anzeige($codes[0]))) === $codes[0], 'Code mit Leerzeichen und klein erkannt');
+pruefe(totp_code_normieren('ABCD-EFG0') === null, 'Code mit 0 abgelehnt');
+pruefe(str_starts_with(totp_otpauth($rfc, 'a@b.de', 'Wintersymposium'), 'otpauth://totp/Wintersymposium:a%40b.de?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'), 'otpauth-Adresse');
+$p = versiegeln('geheim', 'totp|1');
+pruefe(str_starts_with($p, KRYPTO_PRAEFIX) && !str_contains($p, 'geheim'), 'versiegelt, kein Klartext');
+pruefe(oeffnen($p, 'totp|1') === 'geheim', 'öffnen mit gleichem Zweck');
+pruefe(oeffnen($p, 'totp|2') === null, 'anderer Zweck (anderes Konto) öffnet nicht');
+pruefe(oeffnen(substr($p, 0, -4) . 'AAAA', 'totp|1') === null, 'beschädigtes Paket öffnet nicht');
+pruefe(passwort_regel_fehler('kurz', 'kurz') !== null && passwort_regel_fehler(str_repeat('a', 12), str_repeat('a', 12)) === null, 'Passwortregeln');
+
 /* ---- Mit Datenbank --------------------------------------------------------- */
 
 if (!$mitDb) {
@@ -139,8 +164,20 @@ if (!$mitDb) {
     pruefe(migration_ist() === 0, 'leere Datenbank');
 
     abschnitt('Migrationen');
+    // Stand vor AP-3 nachbauen (Schritte 1–3) mit einem Team-Konto, dann den Rest anwenden.
+    migration_tabelle_anlegen();
+    foreach ([1, 2, 3] as $nr) {
+        foreach (migration_katalog()[$nr]['sql'] as $sql) {
+            db()->exec($sql);
+        }
+        db_ausfuehren('INSERT INTO schema_migration (nr, beschreibung, angewendet_am) VALUES (?, ?, ?)', [$nr, 'test', db_jetzt()]);
+    }
+    db_ausfuehren("INSERT INTO team_konto (id, email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am) VALUES (7, 'alt@example.org', 'Alt', 'h', 'betreiber', 1, ?, ?)", [db_jetzt(), db_jetzt()]);
     $neu = migration_anwenden();
-    pruefe($neu === array_keys(migration_katalog()), 'alle Schritte angewendet');
+    pruefe($neu === array_values(array_filter(array_keys(migration_katalog()), fn($n) => $n > 3)), 'restliche Schritte angewendet');
+    $alt = db_zeile('SELECT id, rolle, totp_seit FROM konto WHERE email = ?', ['alt@example.org']);
+    pruefe($alt !== null && (int)$alt['id'] === 7 && $alt['rolle'] === 'betreiber' && $alt['totp_seit'] === null, 'Team-Konto mit gleicher id in konto übernommen, ohne zweiten Faktor');
+    pruefe(!db_tabelle_da('team_konto'), 'team_konto entfernt');
     pruefe(migration_anwenden() === [], 'zweiter Lauf wendet nichts an');
     pruefe(migration_ist() === migration_soll(), 'Stand = Soll');
     $zeit = (string)db_wert('SELECT @@session.time_zone');
@@ -178,6 +215,33 @@ if (!$mitDb) {
     pruefe(rate_aufraeumen($t0 + 100000) >= 1, 'Aufräumen entfernt alte Einträge');
     pruefe(strlen(rate_merkmal_ip()) === 64 && !str_contains(rate_merkmal_ip(), '.'), 'Merkmal ist Hash, keine IP');
 
+    abschnitt('Konten und Links');
+    $kid = konto_anlegen('Test Admin', ' Admin@Example.org ', 'admin');
+    pruefe(konto_per_email('admin@example.org')['id'] == $kid, 'E-Mail normiert gespeichert');
+    pruefe(konto_eingabe_fehler('X', 'admin@example.org', 'admin') !== [], 'doppelte E-Mail abgelehnt');
+    $t0 = 1_900_000_000;
+    $tok = konto_link_erzeugen($kid, 'einrichten', null, $t0);
+    pruefe(db_wert('SELECT token_hash FROM konto_link WHERE konto_id = ?', [$kid]) === hash('sha256', $tok), 'nur Hash des Links gespeichert');
+    pruefe(konto_link_finden($tok, $t0 + 60) !== null, 'Link gültig');
+    pruefe(konto_link_finden($tok, $t0 + KONTO_LINK_GUELTIG_S + 1) === null, 'Link nach 72 h abgelaufen');
+    $tok2 = konto_link_erzeugen($kid, 'passwort', null, $t0);
+    pruefe(konto_link_finden($tok, $t0) === null && konto_link_finden($tok2, $t0) !== null, 'neuer Link ersetzt alten');
+    pruefe(konto_link_aufraeumen($t0 + KONTO_LINK_GUELTIG_S + 1) === 1, 'abgelaufene Links aufgeräumt');
+    $roh = totp_einrichtung_beginnen($kid);
+    pruefe(!totp_an($kid) && totp_zustand($kid)['angefangen'], 'Einrichtung begonnen, noch nicht an');
+    pruefe(totp_einrichtung_abschliessen($kid, '000000', $t0) === null || totp_code($roh, $t0) === '000000', 'falscher Code richtet nicht ein');
+    $codes = totp_einrichtung_abschliessen($kid, totp_code($roh, $t0), $t0);
+    pruefe(is_array($codes) && totp_an($kid) && totp_zustand($kid)['codes_offen'] === 10, 'eingerichtet, zehn Codes');
+    pruefe(!totp_anmeldung_pruefen($kid, totp_code($roh, $t0), $t0)['ok'], 'Einrichtungscode gilt nicht noch einmal');
+    pruefe(totp_anmeldung_pruefen($kid, totp_code($roh, $t0 + 30), $t0 + 30)['ok'], 'nächster Code gilt');
+    $r = totp_anmeldung_pruefen($kid, $codes[3], $t0 + 60);
+    pruefe($r['ok'] && $r['art'] === 'code' && $r['codes_offen'] === 9, 'Wiederherstellungscode gilt einmal');
+    pruefe(!totp_anmeldung_pruefen($kid, $codes[3], $t0 + 60)['ok'], 'derselbe Wiederherstellungscode kein zweites Mal');
+    $v = (int)konto_laden($kid)['sitzung_version'];
+    totp_zuruecksetzen($kid, 'test');
+    pruefe(!totp_an($kid) && totp_zustand($kid)['codes_offen'] === 0 && (int)konto_laden($kid)['sitzung_version'] === $v + 1, 'Zurücksetzen: Faktor aus, Codes weg, Sitzungen beendet');
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$kid]);
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');
@@ -209,7 +273,7 @@ if (!$mitDb) {
     http_tests($wurzel, $tmp);
 }
 
-aufraeumen_tmp($tmp);
+if (getenv("WS_TEST_BEHALTEN") !== "1") { aufraeumen_tmp($tmp); } else { echo "Testordner: $tmp\n"; }
 
 $n = count($GLOBALS['t_fehler']);
 echo "\n" . $GLOBALS['t_ok'] . " ok, $n Fehler\n";

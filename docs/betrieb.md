@@ -14,10 +14,12 @@ Diese Anleitung enthält keine Zugangsdaten, Kontonamen oder Hosting-Interna (R-
 server/                 → wird in den Zielordner der Umgebung übertragen
   public/               → Webroot (die Domain zeigt hierher, E-34)
     index.php           → einziger Einstieg, leitet alle Seiten
-    assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/
+    assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/,
+                          qr.js und vendor/qrcode.js (QR-Code für den zweiten Faktor, MIT)
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
   cli/jobs.php          → Job-Einstieg für den Cron auf der Kommandozeile
+  cli/konto.php         → Notweg für Team-Konten (Link erzeugen, zweiten Faktor zurücksetzen)
   config.example.php    → Vorlage; die echte config.php liegt nur auf dem Webspace
   var/                  → Laufzeitordner, legt die App selbst an (Sitzungen,
                           install.lock, wartung.lock, Logs); wird nie ausgeliefert
@@ -49,6 +51,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - als URL-Aufruf: `https://<domain>/jobs?token=<jobs_token>`, oder
    - auf der Kommandozeile: `php <Zielordner>/cli/jobs.php`
 7. **Prüfen:** `https://<domain>/health?token=<health_token>` zeigt JSON mit `"status": "ok"` und nach dem ersten Cron-Lauf eine Zeit unter `jobs.letzter_lauf`.
+8. **Einloggen:** `https://<domain>/einloggen` mit dem Betreiber aus Schritt 5; beim ersten Mal den zweiten Faktor mit einer Authenticator-App einrichten und die Wiederherstellungscodes sichern (Abschnitt 8).
 
 ## 3. Auslieferung (GitHub Actions)
 
@@ -100,6 +103,21 @@ Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (
 
 HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Startseite (`start_infos`) werden an `##`-Überschriften getrennt: je Überschrift ein Kasten.
 
-## 8. Fehlerprotokoll
+## 8. Team-Login und Konten
+
+- **Einloggen:** `/einloggen` (Link „Team“ in der Fußzeile). Passwort, dann Code aus einer Authenticator-App (TOTP) oder ein Wiederherstellungscode. Beim ersten Login wird der zweite Faktor eingerichtet (QR-Code oder Schlüssel zum Abtippen); danach erscheinen zehn Wiederherstellungscodes **einmal**.
+- **Neues Team-Mitglied:** Betreiber → Team-Bereich → „Team-Konten“ → Name, E-Mail, Rolle → der Einrichtungslink wird einmal angezeigt. Weitergeben (persönlich oder über einen sicheren Weg); er gilt 72 Stunden und einmal. Dort setzt die Person ihr Passwort und richtet den zweiten Faktor ein.
+- **Passwort vergessen:** Betreiber erzeugt unter „Team-Konten“ einen Passwort-Link (gleicher Weg).
+- **Handy weg:** mit einem Wiederherstellungscode einloggen und unter „Mein Konto“ neue Codes erzeugen; oder ein Betreiber setzt den zweiten Faktor zurück, beim nächsten Login wird er neu eingerichtet.
+- **Rollen:** Admin (Programm, Einstellungen, Anmeldungen …), Betreiber (zusätzlich Team-Konten und Technik). Rolle ändern verlangt den eigenen Code; das eigene Konto lässt sich dort nicht ändern, und es bleibt immer ein aktiver Betreiber. **Empfehlung: mindestens zwei Betreiber.**
+- **Notweg** (einziger Betreiber hat Handy und Codes verloren), nur mit Kommandozeile auf dem Server:
+  - `php <Zielordner>/cli/konto.php liste`
+  - `php <Zielordner>/cli/konto.php zweitfaktor <email>` (zweiten Faktor zurücksetzen)
+  - `php <Zielordner>/cli/konto.php link <email>` (neuer Passwort-Link, wird ausgegeben)
+- **Achtung beim Tausch von `geheimnis` in config.php:** Das Geheimnis des zweiten Faktors ist damit versiegelt. Nach einem Tausch lassen sich die Codes aus der App nicht mehr prüfen; Wiederherstellungscodes gelten weiter, danach den zweiten Faktor neu einrichten.
+- Sitzungen enden nach 30 Minuten ohne Aktivität sowie bei Passwortwechsel, Sperre, Rollenwechsel und Zurücksetzen des zweiten Faktors.
+- Fremdbestandteil: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, Kazuhiko Arase, MIT; Lizenz in `assets/vendor/LIZENZ-qrcode-generator.txt`), übernommen aus NAdoku.
+
+## 9. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).
