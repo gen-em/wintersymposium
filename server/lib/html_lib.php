@@ -87,6 +87,7 @@ function team_reiter(array $konto, string $aktiv): string
 {
     $reiter = [
         ['/team', 'Übersicht'],
+        ['/team/programm', 'Programm'],
         ['/team/einstellungen', 'Einstellungen'],
         ['/team/profil', 'Mein Konto'],
     ];

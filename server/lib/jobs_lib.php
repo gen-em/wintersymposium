@@ -94,5 +94,6 @@ function job_aufraeumen(int $jetzt): array
         'sitzungen' => sitzung_aufraeumen(),
         'rate_limit' => rate_aufraeumen($jetzt),
         'konto_links' => konto_link_aufraeumen($jetzt),
+        'fotos' => foto_aufraeumen(),
     ];
 }

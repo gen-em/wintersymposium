@@ -22,8 +22,11 @@ server/                 → wird in den Zielordner der Umgebung übertragen
   cli/konto.php         → Notweg für Team-Konten (Link erzeugen, zweiten Faktor zurücksetzen)
   config.example.php    → Vorlage; die echte config.php liegt nur auf dem Webspace
   var/                  → Laufzeitordner, legt die App selbst an (Sitzungen,
-                          install.lock, wartung.lock, Logs); wird nie ausgeliefert
+                          install.lock, wartung.lock, Logs, bilder/ mit den
+                          Fotos der Dozierenden); wird nie ausgeliefert
 tools/tests/            → Testlauf (lokal und im Prüf-Workflow)
+tools/browser/          → Browser-Durchlauf (R-12)
+tools/testdaten/        → Test-Beispieldatensatz (erfundene Daten, wächst je AP)
 ```
 
 Zielordner auf dem Webspace (E-32):
@@ -100,7 +103,9 @@ bash tools/browser/einrichten.sh
 node tools/browser/durchlauf.js <Ausgabeordner>
 ```
 
-(mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen. Die Browser laufen mit deutscher Sprache und Zeitzone Europe/Berlin. **Grenzen:** Firefox der Sandbox hat keine deutsche Sprachdatei und zeigt Datums- und Zeitfelder im US-Format; WebKit unter Linux zeigt bei Uhrzeiten Sekunden. Beides betrifft nur die Darstellung im Testbrowser, nicht die gespeicherten Werte.
+(mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen. Die Browser laufen mit deutscher Sprache und Zeitzone Europe/Berlin. **Grenzen:** Chromium und Firefox der Sandbox zeigen Datums- und Zeitfelder trotz deutscher Sprache im US-Format (12 h mit AM/PM); WebKit unter Linux zeigt bei Uhrzeiten Sekunden. Beides betrifft nur die Darstellung im Testbrowser, nicht die gespeicherten Werte; Felder sind so breit, dass auch das längere US-Format hineinpasst. Natives Ziehen (Drag and Drop) kann Playwright in WebKit unter Linux nicht auslösen; dort löst der Durchlauf dieselben Ereignisse im Browser aus.
+
+**Test-Beispieldatensatz:** `tools/testdaten/beispieldaten.php` legt erfundene Daten an (bisher: zwei Dozierende und ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops und einer Station, Pausen). Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
 
 ## 7. Pflegbare Texte
 
@@ -137,6 +142,17 @@ HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Sta
 
 Team-Bereich → „Einstellungen“ (Admin und Betreiber). Alles, was die Veranstaltung betrifft (R-11): Datum, Zeit, Ort, Kapazität, CME-Angaben, Anmeldezeitraum, Workshop-Limit und -Pflicht, Nachrücken, Stichtage, Berufsgruppen. Zeiten werden in Ortszeit eingegeben. Stichtage gelten bis einschließlich des genannten Tages; leere Stichtage gelten bis zur Veranstaltung. Bis jemand speichert, gelten die Startwerte aus `server/lib/veranstaltung_lib.php`. Änderungen stehen im Audit-Protokoll und erscheinen sofort auf der Startseite. Die Werte zur Anmeldung wirken ab AP-4.
 
-## 10. Fehlerprotokoll
+## 10. Programm
+
+Team-Bereich → „Programm“ (Admin und Betreiber).
+
+- **Typen:** Vortrag (VT), Fallbesprechung (FB), Workshop (WS, mit Terminen und Plätzen je Termin), offene Station (ohne Anmeldung), Workshop-Block (nur Zeitfenster), Pause/Info. Das Kürzel wird beim Anlegen vorgeschlagen (z. B. „VT 02“) und ist änderbar.
+- **Workshop-Block:** sammelt im Plan und auf der Startseite alle Workshop-Termine und Stationen, die ganz in seiner Zeit liegen. Termine außerhalb eines Blocks stehen einzeln im Plan.
+- **Speichern ≠ Veröffentlichen:** Gespeichertes steht sofort im Plan, auf der Startseite aber erst nach „Jetzt veröffentlichen“ im roten Banner. „Vorschau“ zeigt die Startseite mit dem Arbeitsstand, „Verwerfen“ stellt den veröffentlichten Stand wieder her (auch Gelöschtes). Punkte ohne Uhrzeit verhindern das Veröffentlichen.
+- **Ziehen:** am Griff ⋮⋮ eine Zeile auf eine andere ziehen → neuer Beginn = Ende der Zielzeile (auf einem Block: dessen Beginn), die Dauer bleibt; ein Block nimmt Termine und Stationen mit. Der Vorschlag ist gespeichert, aber nicht veröffentlicht – Uhrzeit prüfen. Ohne Ziehen geht alles über die Felder Beginn und Ende.
+- **Termine:** „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ den nächsten Termin im Anschluss. Höchstens 12 Termine je Workshop. Plätze lassen sich nicht unter die vergebenen senken (wirkt mit AP-4).
+- **Dozierende:** „Dozierende verwalten“; Foto optional (JPG, PNG oder WebP, höchstens 8 MB), wird quadratisch auf 480 px verkleinert und ohne Metadaten in `var/bilder/` gespeichert. Nur mit Einverständnis der Person. Fotos ohne Zuordnung räumt der Job „aufraeumen“ weg. Ohne die PHP-Erweiterung GD ist der Upload ausgeblendet.
+
+## 11. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

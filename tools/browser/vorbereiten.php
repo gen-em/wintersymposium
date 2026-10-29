@@ -4,7 +4,8 @@ declare(strict_types=1);
 /*
  * Vorbereitung für den Browser-Durchlauf (tools/browser/durchlauf.js):
  * leere Testdatenbank, Installation mit festen Testkonten, Konfiguration in
- * einem eigenen Ordner. Gibt JSON aus. Nur für die Testdatenbank – sie wird
+ * einem eigenen Ordner, dazu der Test-Beispieldatensatz
+ * (tools/testdaten/beispieldaten.php). Gibt JSON aus. Nur für die Testdatenbank – sie wird
  * geleert! (Umgebungsvariablen WS_TEST_DB_* wie bei lauf.php.)
  *
  *   php tools/browser/vorbereiten.php <ordner>
@@ -50,6 +51,10 @@ db()->exec('SET FOREIGN_KEY_CHECKS = 1');
 $pw = 'browser-test-passwort';
 install_ausfuehren('127.0.0.1', ['name' => 'Bea Betreiberin', 'email' => 'betrieb@example.org', 'passwort' => $pw, 'weitere_hosts' => 'localhost']);
 $admin = konto_anlegen('Anna Admin', 'anna@example.org', 'admin');
+
+// Test-Beispieldatensatz (wächst mit jedem Arbeitspaket)
+require dirname(__DIR__) . '/testdaten/beispieldaten.php';
+beispieldaten_laden();
 
 echo json_encode([
     'config' => $ordner . '/config.php',
