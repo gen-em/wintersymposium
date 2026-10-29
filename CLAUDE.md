@@ -14,6 +14,7 @@ Verbindliche Quelle ist [`docs/konzept.md`](docs/konzept.md) (Entscheidungen E-x
 - Aufbau, Einrichtung, Auslieferung und Tests: [`docs/betrieb.md`](docs/betrieb.md). Webroot ist `server/public/`.
 - Gestaltung: freigegebene Mockups in [`docs/mockups/`](docs/mockups/index.html) (Variante A, E-36) sind Vorlage für jede neue Seite; CSS in `server/public/assets/site.css`.
 - Vor jedem PR: `php tools/tests/lauf.php` mit Testdatenbank (Umgebungsvariablen `WS_TEST_DB_*`); neue Funktionen bekommen Tests dort.
+- **Browser-Prüfung vor jedem PR (R-12):** jede Funktion in Chromium, Firefox und WebKit (Safari-Engine) auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px) prüfen – Darstellung, Klickwege, Auswahlfelder, Aufklapp-Elemente, Popups, Konsolenfehler. Einrichtung je Sandbox `bash tools/browser/einrichten.sh`, Lauf `node tools/browser/durchlauf.js` (Testdatenbank wie oben). Neue Seiten und Abläufe dort ergänzen; Ergebnis mit Zahl in PR und Prüfprotokoll. Bildschirmfotos ansehen, nicht nur die Zahl. Der Admin soll möglichst wenig selbst testen müssen.
 
 ## Regeln
 

@@ -179,4 +179,66 @@ a.knopf { color: var(--auf-akz); }
 .fuss nav ul { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
 .fuss a { color: var(--fg); }
 
+/* ---- Einloggen und Team-Bereich (Mockup: Team, E-41) ---- */
+.schmal { max-width: 640px; }
+.formular .knopf { margin-top: 14px; justify-self: start; }
+.abbrechen { margin-top: 18px; }
+.meldung.ok { border-left-color: var(--gruen); }
+.meldung.hinweis { border-left-color: var(--meta); }
+.meldung a { color: var(--fg); }
+.codes { list-style: none; margin: 14px 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 420px; }
+.codes li { background: var(--flaeche); border: 1px solid var(--linie); padding: 8px 12px; font-size: 1.05rem; letter-spacing: .06em; }
+.einrichtung { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 18px 0; }
+.qr { width: 200px; height: 200px; }
+.qr-grund { fill: var(--weiss); }
+.qr-modul { fill: var(--nachtblau); }
+.schluessel { font-size: 1.05rem; letter-spacing: .04em; word-break: break-all; margin: 4px 0; }
+.umbruch { word-break: break-all; }
+.knopf.klein { min-height: 36px; padding: 6px 14px; font-size: .88rem; }
+.team-kopf { padding-top: 30px; padding-bottom: 16px; }
+.team-kopf .titel { font-size: clamp(2rem, 7vw, 3.4rem); }
+.team-nav { display: flex; overflow-x: auto; background: var(--flaeche); border: 1px solid var(--linie); border-bottom: 3px solid var(--gruen); margin-bottom: 18px; }
+.team-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--fg); text-decoration: none; border-bottom: 3px solid transparent; }
+.team-nav a[aria-current="page"] { color: var(--akz); border-bottom-color: var(--akz); background: var(--bg); }
+.kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
+.kachel { background: var(--flaeche); border: 1px solid var(--linie); padding: 14px 16px; }
+.kachel p { margin: 6px 0 0; }
+.kachel .zahl { font-family: var(--f-mono); font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.kachel .lbl, .angaben dt { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .76rem; color: var(--meta); }
+.angaben { display: grid; gap: 8px; margin: 0 0 16px; }
+.angaben dd { margin: 0; font-family: var(--f-mono); }
+.team-raster { display: grid; gap: 26px; }
+@media (min-width: 900px) { .team-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.team-raster .zwischen { font-size: 1.25rem; margin-bottom: 10px; }
+.tabelle-wrap { overflow-x: auto; border: 1px solid var(--linie); background: var(--flaeche); }
+table.t { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .92rem; }
+table.t th, table.t td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--linie); }
+table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; color: var(--meta); }
+.aktionen-zelle .knopf { white-space: nowrap; }
+/* Tabellen mit Klasse .karten: unter 960 px jede Zeile als Karte, statt seitlich zu scrollen */
+@media (max-width: 959px) {
+    table.t.karten { min-width: 0; }
+    table.t.karten thead { display: none; }
+    table.t.karten, table.t.karten tbody, table.t.karten tr, table.t.karten td { display: block; width: 100%; }
+    table.t.karten tr { padding: 10px 0; border-bottom: 1px solid var(--linie); }
+    table.t.karten td { border: 0; padding: 4px 14px; }
+    table.t.karten td[data-label]:not([data-label="Name"])::before { content: attr(data-label); display: block; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; color: var(--meta); }
+    .tabelle-wrap:has(table.karten) { overflow-x: visible; }
+}
+.aktionen-zelle { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+.aktionen-zelle form { margin: 0; }
+.rolle-wechsel > summary { cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; color: var(--akz); font-weight: 700; font-size: .88rem; }
+.rolle-wechsel .formular { min-width: 240px; margin-top: 6px; }
+.chip { white-space: nowrap; display: inline-block; font-family: var(--f-mono); font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 2px 8px; color: var(--nachtblau); }
+.chip.ok { background: var(--gruen); }
+.chip.offen { background: transparent; color: var(--fg); border: 1px dashed var(--meta); }
+.chip.gesperrt { background: var(--meta); color: var(--bg); }
+.nav-person { display: flex; align-items: stretch; border: 1px solid var(--akz); }
+.nav-person .nav-name { padding: 8px 12px; color: var(--akz); text-transform: none; letter-spacing: 0; }
+.nav-person .nav-name small { color: var(--meta); font-weight: 400; }
+.nav-person form { margin: 0; display: flex; }
+.nav-ab { font: 700 .8rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; background: var(--akz); color: var(--auf-akz); border: 0; padding: 0 12px; min-height: 40px; cursor: pointer; }
+.menue .nav-person { margin-top: 10px; border-top: 1px solid var(--akz); }
+.menue .nav-person .nav-name { flex: 1; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

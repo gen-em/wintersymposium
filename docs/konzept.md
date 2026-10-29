@@ -3,8 +3,8 @@ dokument: konzept
 projekt: wintersymposium
 repo: gen-em/wintersymposium
 stand: 2026-10-29
-phase: umsetzung   # AP-1 und AP-2 auf Staging abgenommen, offene Punkte der Mockup-Runde geklärt (E-42), als Nächstes AP-3
-status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-42 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
+phase: umsetzung   # AP-1 und AP-2 auf Staging abgenommen; AP-3 Schritt 1 (Team-Login) umgesetzt, als Nächstes Schritt 2 (Einstellungen)
+status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-42 vom Admin bestätigt (2026-10-29), E-43 aus der Umsetzung von AP-3 Schritt 1; offene Punkte in Abschnitt 7
 version: null   # Konzept ohne Version; die Repo-Version legt die Umsetzung fest (Datei VERSION)
 verantwortlich: Philipp Chadid
 termine:
@@ -153,6 +153,7 @@ mail:
 | E-40 | Öffentliche Seiten und Einstieg | Eckdaten-Band mit Datum, Zeit, Ort, CME und **freien Plätzen „X / Y“** (Gesamtkapazität aus den Einstellungen). Programm mit **Popups** für Workshops (Termin, Plätze, Beschreibung, Anmelden) und Vorträge (Dozierende); Workshop-Blöcke als Zeitraster auf dem Desktop, als Liste auf dem Handy. **Einstiegsseite** „Deine Anmeldung“: neu anmelden / Einmal-Link per Mail / Login mit Konto (Team nutzt denselben Login + zweiten Faktor). Nach dem Erkennen zeigt die Navigation Name (und Rolle) und „Ausloggen“ statt „Einloggen“ (E-42). Auf „Deine Anmeldung“: Fristen direkt an den jeweiligen Knöpfen, eigener Kasten „Deine Daten“ zum Bearbeiten | Admin 2026-10-29 (Mockup-Kommentare) |
 | E-41 | Team-Bereich | Reiter: Übersicht, Statistik, Personen, Workshops, Programm, Mailings, Newsletter, Teilnahme, Einstellungen, Betrieb (nur Betreiber). **Personen**: Suche/Filter, Anmeldung bearbeiten (auch nach Stichtagen), Einmal-Link/Passwort-Link senden, sperren, **Rollenwechsel nur nach Bestätigung mit dem eigenen zweiten Faktor**, Gefahrenzone (Storno, Konto löschen). **Workshops**: je Termin Teilnehmende und Warteliste bearbeiten (entfernen, auf Warteliste, verschieben, Platz vergeben); Personen nur aus vorhandenen Anmeldungen wählbar; **Überbuchen nur mit aktiver Bestätigung** (auch über „Personen“). **Statistik**: Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen, Newsletter; Exporte zentral in einer Export-Kachel. **Mailings**: Editor mit Bildern (**selbst gehostet, in die Mail eingebettet**), eingeschränktes HTML (Liste erlaubter Elemente), Vorschau, Testmail, Planen; Archiv gesendeter Mails (Text, Auswahl und Empfängerliste, E-42). **Teilnahme**: PDF-Listen – Unterschriftenliste (EFN-Spalte mit Barcode bzw. Feld für Etikett nur bei der Liste „Nur ÄrztInnen“), Teilnehmenden- und Wartelisten je Termin, Sortierung wählbar | Admin 2026-10-29 (Mockup-Kommentare) |
 | E-42 | Klärungen aus der Mockup-Runde | **Nachrücken bei Überschneidung** (O-23): Auf die Warteliste eines Termins darf man auch, wenn er sich mit einem eigenen festen Termin überschneidet; beim Annehmen des Angebots zeigt die App, welcher Termin dafür storniert wird, und führt das erst nach aktiver Bestätigung aus (wie im Mockup); der frei gewordene Platz geht sofort ans Nachrücken. **Statusfarben** (O-24): Grün = Platz bestätigt, Rot = Warteliste – bewusste Ausnahme von der Markenregel „keine Ampelfarben“, immer mit Text. **Anmelde-Knopf** (O-25, O-26): „Jetzt anmelden“ und der Knopf „Anmelden“ in der Navigation sind grün (Ausnahme von „Grün nur als Erkennungszeichen“); „Anmelden“ heißt nur die Anmeldung zum Symposium, das Einloggen ins Konto heißt durchgehend „Einloggen“ (Navigation nach dem Erkennen: „Abmelden“ → „Ausloggen“). **Daten nach dem Symposium** (O-27): Name und EFN bleiben änderbar. **Konten** (O-28): eine gemeinsame Konten-Tabelle mit Rollen (Teilnehmende, Admin, Betreiber) statt getrennter Team-Konten; Umbau mit AP-4b/AP-5. **Mailings und Newsletter** (O-29): ein gemeinsamer Editor unter „Mailings“ mit Wahl der Empfänger (Angemeldete, Warteliste, Workshop-Termin, Newsletter-Liste); Reiter „Newsletter“ verwaltet nur Listen und Abonnierende (Double-Opt-In). **EFN-Barcode** (O-30): Code 128, Inhalt `*EFN*` (Sternchen davor und dahinter, wie in der bewährten Tabellen-Vorlage des Admins), Klartext darunter; die App erzeugt den Barcode selbst, ohne externen Dienst (E-06). **Anwesenheit** (O-31): Standard „anwesend“ für alle mit festem Platz; das Team trägt nur Ausnahmen „nicht erschienen“ ein; Nachweis bleibt die Unterschriftenliste. **Empfängerliste** (O-32): Zu jeder gesendeten Rundmail wird die Liste der einzelnen EmpfängerInnen gespeichert (Nachweis bei Rückfragen); Löschfrist wie die übrigen Anmeldedaten nach E-24 (O-33) | Admin 2026-10-29 |
+| E-43 | Team-Login (AP-3 Schritt 1) | **Ablauf:** Passwort, dann Code aus der Authenticator-App (TOTP, 30 s, 6 Stellen) oder ein Wiederherstellungscode; beim ersten Login Pflicht-Einrichtung mit QR-Code und Schlüssel zum Abtippen, danach zehn Wiederherstellungscodes (nur einmal angezeigt, nur als Hash gespeichert). Kein Code gilt zweimal. Passkeys später (O-14). **Schlüssel für das TOTP-Geheimnis:** per HKDF aus dem vorhandenen `geheimnis` in config.php abgeleitet, kein zusätzlicher Eintrag; wer das Geheimnis tauscht, muss den zweiten Faktor aller Team-Konten neu einrichten (Wiederherstellungscodes gelten weiter). **Neue Team-Mitglieder:** Ein Betreiber legt das Konto an und bekommt einen Einrichtungslink angezeigt (72 h gültig, einmal benutzbar), den er selbst weitergibt, solange es keinen Mailversand gibt (AP-6). Derselbe Weg dient als Passwort-Reset. **Team-Konten (nur Betreiber):** Link erzeugen, zweiten Faktor zurücksetzen, sperren, Rolle ändern (mit eigenem Code, E-41); das eigene Konto nicht, und es bleibt immer ein aktiver Betreiber. Passwortwechsel, Sperre, Rollenwechsel und Zurücksetzen beenden alle Sitzungen des Kontos. **Notzugang** (O-34): `/notzugang` im Browser mit dem Installationsschlüssel aus config.php und der Adresse eines Betreiber-Kontos setzt dessen zweiten Faktor zurück und zeigt einen Passwort-Link (3 Versuche je Stunde, Audit, nicht verlinkt); zusätzlich `php cli/konto.php` für Server mit Kommandozeile. Ein Betreiber reicht (Admin 2026-10-29). **Adressen:** `/einloggen`, `/team`, `/team/profil` („Mein Konto“), `/team/konten`; Link „Team“ in der Fußzeile | Umsetzung 2026-10-29 (AP-3 Schritt 1) |
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
@@ -204,6 +205,7 @@ nicht_uebernehmen:
 | R-09 | Alle Texte der Oberfläche und Mails auf Deutsch; Ton nach zina-branding (`4 Regeln/Erscheinungsbild.md`). |
 | R-10 | Öffentliches Repo (E-25): keine Kontonamen, IP-Adressen, Serverpfade, Postfach-Logins oder Hosting-Interna in Code, Doku, Commits, PR-Texten und Issues; Domain und öffentliche Absenderadressen dürfen genannt werden. Betriebsangaben gehören in das private Repo `gen-em/server-infrastruktur` oder zum Admin. Alles Umgebungsspezifische liegt in `config.php`. |
 | R-11 | Alles, was die Veranstaltung betrifft (Fristen, Limits, Kapazitäten, Zeiträume), ist eine Einstellung in der Oberfläche, kein fester Wert im Code. |
+| R-12 | Browser-Prüfung vor jedem PR (Admin 2026-10-29): jede Funktion wird in der Sandbox in **Chromium, Firefox und WebKit** (Safari-Engine) auf **Handy (390 px), Tablet (768 px), schmalem Desktop (1024 px) und breitem Desktop (1440 px)** geprüft – Darstellung (kein seitliches Scrollen, nichts ragt aus dem Fenster), Klickwege, **Auswahlfelder** (jede Option), **Aufklapp-Elemente** und **Popups**, keine Konsolenfehler. Werkzeug: `tools/browser/durchlauf.js`; neue Seiten und Abläufe werden dort ergänzt, das Ergebnis (Zahl) steht im PR und im Prüfprotokoll. Ziel: Fehler vor der Auslieferung finden, damit der Admin möglichst wenig selbst testen muss. Grenze: WebKit ist nicht Safari; ein echtes iPhone bleibt eine Stichprobe des Admins. |
 
 ## 6. Arbeitspakete
 
@@ -296,9 +298,19 @@ nicht_uebernehmen:
     - Änderungen erscheinen sofort auf der Startseite
     - Plätze können nicht unter die Zahl bereits vergebener Plätze gesenkt werden (Warnung; Überhang bleibt bestehen)
     - jede Einstellung wirkt nachweislich (Prüfprotokoll)
-  status: offen
-  ergebnis: null
-  probleme: []
+    - "Schritt 1: ohne zweiten Faktor kein Zugriff auf den Team-Bereich; Admin sieht keine Team-Konten"
+  schritte:
+    - {nr: 1, titel: "Konten und Team-Login", status: "umgesetzt, Staging offen"}
+    - {nr: 2, titel: "Veranstaltungs-Einstellungen", status: offen}
+    - {nr: 3, titel: "Programm", status: offen}
+  status: "in Arbeit (Schritt 1 umgesetzt)"
+  ergebnis: "Schritt 1: Tabelle konto mit Rollen ersetzt team_konto (Migration 4, Konten mit gleicher id übernommen); Login mit Passwort und Pflicht-TOTP inkl. Einrichtung per QR-Code, Wiederherstellungscodes, Wiederholungsschutz; Einrichtungs-/Passwortlinks; Team-Bereich mit Übersicht, Mein Konto, Team-Konten (Betreiber); Rollenwechsel mit eigenem Code; Ratenschutz für Login und Codes; Notzugang mit Installationsschlüssel und Notweg auf der Kommandozeile; Login-Seiten von der Wartung ausgenommen. Details E-43"
+  probleme:
+    - {problem: "Kein Mailversand vor AP-6, neue Team-Mitglieder brauchen trotzdem einen Weg ins Konto", loesung: "Einrichtungslink wird dem Betreiber einmal angezeigt; er gibt ihn selbst weiter (E-43)"}
+    - {problem: "NAdoku versiegelt mit eigenem Serverschlüssel in config.php; ein weiterer Eintrag hätte die Einrichtung auf Staging und Produktion erschwert", loesung: "Schlüssel per HKDF aus dem vorhandenen geheimnis abgeleitet (E-43)"}
+    - {problem: "Bliebe der einzige Betreiber ohne Handy und Codes, käme niemand mehr in den Team-Bereich", loesung: "Notzugang im Browser mit dem Installationsschlüssel (O-34, E-43), dazu cli/konto.php für Server mit Kommandozeile"}
+    - {problem: "Aktionen-Spalte der Konten-Tabelle sprang aus der Tabelle (Zelle als Flexbox)", loesung: "Flexbox in ein inneres Element verlegt; im Browser bei 390 und 1280 px geprüft"}
+    - {problem: "Konten-Tabelle auf Tablet und Handy rechts abgeschnitten (Knöpfe halb verdeckt); der erste Browser-Durchlauf nahm scrollbare Tabellen von der Prüfung aus und sah es nicht, gefunden beim Ansehen der Bildschirmfotos", loesung: "Tabellen mit Klasse .karten unter 960 px als Karten; der Durchlauf prüft Tabellen jetzt mit (verdecktes Seitwärts-Scrollen ist ein Fehler); Gegenprobe ohne Karten meldet den Fehler in allen Engines"}
 
 - id: AP-4
   titel: Anmeldung, Einmal-Links, Warteliste und Nachrücken
@@ -349,7 +361,7 @@ nicht_uebernehmen:
   ziel: "Team meldet sich sicher an, sieht Überblick und Statistik und verwaltet Anmeldungen"
   abhaengig_von: [AP-4, O-14]
   umfang:
-    - "Team-Login und Rollen: mit AP-3 vorgezogen; hier nur noch, was AP-3 offen lässt (siehe AP-3 ergebnis)"
+    - "Team-Login und Rollen: mit AP-3 Schritt 1 vorgezogen (E-43); hier noch Passkeys (O-14) und die Anbindung an Mails (Einladung, Reset per Mail mit AP-6)"
     - Übersicht (Startseite des Team-Bereichs): Kennzahlen, offene Aufgaben (manuelle Vergabe nach der Nachrück-Grenze, Mail-Fehler)
     - "Statistik-Seite (Admin 2026-10-29): alles einsehbar – Anmeldungen gesamt und Verlauf, je Workshop-Termin (belegt/frei/Warteliste/offene Angebote), Essenszahlen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter-Listen, Konten, Anwesenheit (nach AP-10); Diagramme, Filter nach Status, Export jeder Ansicht"
     - Anmeldungen suchen, ansehen, ändern, stornieren, manuell anlegen, Plätze von der Warteliste manuell vergeben – auch nach den Stichtagen (E-31)
@@ -453,7 +465,7 @@ nicht_uebernehmen:
 - {id: O-11, thema: Ausgabe der Arbeit, status: "entschieden → E-26"}
 - {id: O-12, thema: Newsletter-Absender, status: "entschieden → E-27"}
 - {id: O-13, thema: Staging, status: "entschieden → E-28"}
-- {id: O-14, thema: Passkey, frage: "passkey_lib aus NAdoku anpassen oder kleine WebAuthn-Bibliothek (AGPL-kompatibel) nutzen?", zustaendig: Umsetzung, benoetigt_fuer: AP-5, status: offen}
+- {id: O-14, thema: Passkey, frage: "passkey_lib aus NAdoku anpassen oder kleine WebAuthn-Bibliothek (AGPL-kompatibel) nutzen?", zustaendig: Umsetzung, benoetigt_fuer: AP-5, status: "zurückgestellt: erst nur TOTP, Passkeys später (Admin 2026-10-29)"}
 - {id: O-15, thema: Berufsgruppen, status: "entschieden → E-21"}
 - {id: O-16, thema: CME-Meldeweg, frage: "Meldung an die Kammer elektronisch (EIV) oder per Liste? Entscheidet, welchen Export AP-10 liefert", hinweis: "Zertifikat-Layout liefert der Admin (E-22)", zustaendig: Admin, benoetigt_fuer: AP-10, status: offen (nicht eilig)}
 - {id: O-17, thema: Abgelaufenes Nachrück-Angebot, status: "entschieden → E-19 (ans Ende der Liste, mit Mail)"}
@@ -473,6 +485,7 @@ nicht_uebernehmen:
 - {id: O-31, thema: "Anwesenheit", frage: "Admin: Anwesenheit eigentlich nicht erfassen („wer angemeldet ist, war da“). Vorschlag: Standard anwesend, das Team trägt nur Ausnahmen „nicht erschienen“ ein, Nachweis bleibt die Unterschriftenliste. Annehmen (E-22 anpassen) oder ganz ohne Ausnahmen?", zustaendig: Admin, benoetigt_fuer: AP-10, status: "entschieden (Admin 2026-10-29, E-42)"}
 - {id: O-32, thema: "Empfängerliste von Rundmails", frage: "Gesendete Mails werden ohne Empfängerliste archiviert (R-02). Wird die Liste für Rückfragen gebraucht? Dann R-02 anpassen und Löschfrist festlegen", zustaendig: Admin, benoetigt_fuer: AP-6, status: "entschieden (Admin 2026-10-29, E-42)"}
 - {id: O-33, thema: "Löschfrist der Empfängerlisten", frage: "Vorschlag: Empfängerliste einer Rundmail zusammen mit den Anmeldedaten nach E-24 behandeln (bei Anmeldungen ohne Konto nach 14 Monaten entfernen, sonst mit dem Konto); Anzahl und Auswahl bleiben im Archiv. Einverstanden oder andere Frist?", zustaendig: Admin, benoetigt_fuer: AP-6, status: "entschieden (Admin 2026-10-29): wie vorgeschlagen"}
+- {id: O-34, thema: "Notweg ohne Betreiber", frage: "Gibt es im Lima-City-Tarif SSH oder eine andere Möglichkeit, `php cli/konto.php` auf dem Webspace auszuführen? Wenn nicht: zweiten Betreiber Pflicht machen, oder einen Notweg über den Installationsschlüssel aus config.php im Browser bauen?", zustaendig: Admin, benoetigt_fuer: "AP-3 (vor dem Produktivstart)", status: "entschieden (Admin 2026-10-29): Notzugang im Browser mit dem Installationsschlüssel; ein Betreiber reicht, kein Zwang zu zwei"}
 ```
 
 ## 8. Bekannte Risiken und Einschränkungen
@@ -483,7 +496,7 @@ nicht_uebernehmen:
 | K-02 | Mail-Limit 500 Empfänger/24 h je Postfach | Tageslimit, Prioritäten, zwei Postfächer; Wechsel zu EU-Versanddienst vorbereitet |
 | K-03 | Lima-City-Botschutz kann automatisierte Tests und ggf. Formular-POSTs blockieren | beim Hoster für die Domain klären; echte Anmeldungen vor dem Start mit verschiedenen Browsern testen |
 | K-04 | Zustellbarkeit (SPF/DKIM/DMARC der neuen Domain) | DNS-Einträge mit der Domain einrichten und prüfen (AP-6) |
-| K-06 | Ein Team-Mitglied verliert den zweiten Faktor | Wiederherstellungscodes; Betreiber kann den Faktor zurücksetzen |
+| K-06 | Ein Team-Mitglied verliert den zweiten Faktor | Wiederherstellungscodes; Betreiber kann den Faktor zurücksetzen; Notzugang mit dem Installationsschlüssel (O-34) |
 | K-07 | Nachrück-Kette mit 48-h-Fristen ist langsam: bei n Absagen dauert die Vergabe bis zu n × 48 h | Team kann jederzeit manuell vergeben; Frist einstellbar; Angebot wird bei Ablehnung sofort weitergegeben |
 | K-08 | Öffentliches Repo: versehentlich eingecheckte Interna | R-10; Prüfung vor jedem PR; Secrets nur in config.php und GitHub-Secrets |
 
@@ -516,6 +529,9 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-29 | Team-Login aus AP-5 in AP-3 vorgezogen; O-33 entschieden; Symposium als Abendveranstaltung 18:00–22:00 (Abschnitt 1); Infotexte der Startseite überarbeitet. |
 | 2026-10-29 | E-10: Essenswahl „keine speziellen Wünsche / vegetarisch / kein Essen“ (Snacks statt Mittagessen); E-42: Anmelde-Knopf in der Navigation grün. |
 | 2026-10-29 | Beispielprogramm auf der Startseite bis AP-3 (Wunsch des Admins); Hinweis zum Entfernen in AP-3. |
+| 2026-10-29 | AP-3 Schritt 1 umgesetzt: E-43 (Team-Login) neu; AP-3 mit Schritten und Ergebnis; O-14 zurückgestellt (erst TOTP); O-34 (Notweg) neu. |
+| 2026-10-29 | O-34 entschieden: Notzugang im Browser mit dem Installationsschlüssel, ein Betreiber reicht (E-43 ergänzt). |
+| 2026-10-29 | R-12 (Browser-Prüfung in drei Engines und vier Breiten vor jedem PR) neu. |
 | 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |

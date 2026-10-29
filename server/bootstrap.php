@@ -21,6 +21,10 @@ require __DIR__ . '/lib/migration_lib.php';
 require __DIR__ . '/lib/wartung_lib.php';
 require __DIR__ . '/lib/jobs_lib.php';
 require __DIR__ . '/lib/install_lib.php';
+require __DIR__ . '/lib/krypto_lib.php';
+require __DIR__ . '/lib/totp_lib.php';
+require __DIR__ . '/lib/konto_lib.php';
+require __DIR__ . '/lib/anmeldung_lib.php';
 
 date_default_timezone_set('UTC');
 mb_internal_encoding('UTF-8');

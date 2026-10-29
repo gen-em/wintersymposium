@@ -28,7 +28,7 @@ if ($maengel !== []) {
 migration_anwenden();
 
 // Schon installiert, nur die Sperrdatei fehlt: Sperre wiederherstellen.
-if ((int)db_wert('SELECT COUNT(*) FROM team_konto') > 0) {
+if ((int)db_wert('SELECT COUNT(*) FROM konto') > 0) {
     @file_put_contents(install_sperrdatei(), gmdate('c') . " wiederhergestellt\n");
     audit_schreiben('installation', 'install.lock fehlte und wurde neu angelegt');
     seite_meldung(200, 'Bereits installiert', 'Die Installation ist schon erfolgt. Die Sperre des Installers wurde wiederhergestellt.');
@@ -67,7 +67,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             echo '<div class="innen seitenkopf"><h1 class="titel">Installation abgeschlossen</h1></div><div class="innen text">'
                 . '<p>Datenbank angelegt, Haupt-Host <strong>' . e($host) . '</strong> eingetragen, '
                 . 'erster Betreiber angelegt. Der Installer ist jetzt gesperrt.</p>'
-                . '<p>Die Anmeldung für das Team folgt mit dem Team-Bereich.</p></div>';
+                . '<p>Als Nächstes <a href="/einloggen">einloggen</a> und den zweiten Faktor mit einer Authenticator-App einrichten.</p></div>';
             seite_fuss();
             exit;
         }

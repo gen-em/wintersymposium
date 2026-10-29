@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  * Legt die Tabellen an, trägt den Haupt-Host (und weitere Hosts) ein und
  * legt den ersten Betreiber an. Danach sperrt install.lock im
- * Laufzeitordner den Installer dauerhaft. Gibt es schon ein Team-Konto,
+ * Laufzeitordner den Installer dauerhaft. Gibt es schon ein Konto,
  * verweigert der Installer die Arbeit auch ohne Sperrdatei.
  */
 
@@ -81,8 +81,8 @@ function install_ausfuehren_gesperrt(string $hauptHost, array $e): void
         throw new RuntimeException('Die Installation ist schon erfolgt.');
     }
     migration_anwenden();
-    if ((int)db_wert('SELECT COUNT(*) FROM team_konto') > 0) {
-        throw new RuntimeException('Es gibt bereits ein Team-Konto; die Installation ist schon erfolgt.');
+    if ((int)db_wert('SELECT COUNT(*) FROM konto') > 0) {
+        throw new RuntimeException('Es gibt bereits ein Konto; die Installation ist schon erfolgt.');
     }
     db_transaktion(function () use ($hauptHost, $e): void {
         host_anlegen($hauptHost, true);
@@ -90,18 +90,7 @@ function install_ausfuehren_gesperrt(string $hauptHost, array $e): void
             host_anlegen($h, false);
         }
         $jetzt = db_jetzt();
-        db_ausfuehren(
-            "INSERT INTO team_konto (email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am)
-             VALUES (?, ?, ?, 'betreiber', 1, ?, ?)",
-            [
-                mb_strtolower(trim((string)$e['email'])),
-                trim((string)$e['name']),
-                password_hash((string)$e['passwort'], PASSWORD_DEFAULT),
-                $jetzt,
-                $jetzt,
-            ]
-        );
-        $kontoId = (int)db()->lastInsertId();
+        $kontoId = konto_anlegen((string)$e['name'], (string)$e['email'], 'betreiber', (string)$e['passwort']);
         einstellung_setzen('installiert_am', $jetzt);
         audit_schreiben('installation', 'Installation abgeschlossen, Haupt-Host ' . $hauptHost, $kontoId);
     });

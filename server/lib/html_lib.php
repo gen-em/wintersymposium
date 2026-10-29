@@ -18,7 +18,9 @@ function e(mixed $wert): string
 /**
  * Seitenkopf mit Logo und Navigation.
  * $opt: 'akzent' => 'lila'|'rot', 'aktiv' => Pfad des aktiven Menüpunkts,
- *       'nav' => false für Seiten ohne Navigation (Installer, Fehler).
+ *       'nav' => false für Seiten ohne Navigation (Installer, Fehler),
+ *       'konto' => angemeldetes Konto (zeigt Name und „Ausloggen“, E-40/E-42),
+ *       'skripte' => Liste eigener Skripte unter /assets/.
  */
 function seite_kopf(string $titel, array $opt = []): void
 {
@@ -38,6 +40,7 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         . '<meta name="theme-color" content="#001E3A">'
+        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', $opt['skripte'] ?? []))
         . '</head><body class="akzent-' . $akzent . '">'
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'
@@ -48,9 +51,17 @@ function seite_kopf(string $titel, array $opt = []): void
     if ($nav) {
         // Weitere Menüpunkte (Workshops, Anmeldung, Deine Anmeldung) kommen mit AP-3/AP-4.
         $punkte = [['/#programm', 'Programm', '/']];
+        $konto = $opt['konto'] ?? null;
+        if (is_array($konto)) {
+            $punkte[] = ['/team', 'Team-Bereich', '/team'];
+        }
         $liste = '';
         foreach ($punkte as [$href, $text, $pfad]) {
             $liste .= '<li><a href="' . e($href) . '"' . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
+        }
+        if (is_array($konto)) {
+            $liste .= '<li class="nav-person"><span class="nav-name">' . e($konto['name']) . ' <small>' . e(ROLLEN[$konto['rolle']] ?? '') . '</small></span>'
+                . '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="nav-ab">Ausloggen</button></form></li>';
         }
         // Zwei Darstellungen derselben Liste: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.
         echo '<nav aria-label="Hauptnavigation"><ul class="nav-liste nav-gross">' . $liste . '</ul>'
@@ -67,7 +78,58 @@ function seite_fuss(): void
         . '<li><a href="/impressum">Impressum</a></li>'
         . '<li><a href="/datenschutz">Datenschutz</a></li>'
         . '<li><a href="' . e(QUELLTEXT_URL) . '" rel="noopener">Quelltext (AGPL)</a></li>'
+        . '<li><a href="/einloggen">Team</a></li>'
         . '</ul></nav></div></footer></body></html>';
+}
+
+/** Reiter des Team-Bereichs (Mockup E-41); in AP-3 die ersten drei, weitere folgen. */
+function team_reiter(array $konto, string $aktiv): string
+{
+    $reiter = [
+        ['/team', 'Übersicht'],
+        ['/team/profil', 'Mein Konto'],
+    ];
+    if ($konto['rolle'] === 'betreiber') {
+        $reiter[] = ['/team/konten', 'Team-Konten'];
+    }
+    $h = '<nav class="team-nav" aria-label="Team-Bereich">';
+    foreach ($reiter as [$pfad, $text]) {
+        $h .= '<a href="' . e($pfad) . '"' . ($pfad === $aktiv ? ' aria-current="page"' : '') . '>' . e($text) . '</a>';
+    }
+    return $h . '</nav>';
+}
+
+/** Kopf einer Team-Seite: Rahmen, Titel, Reiter, Meldung aus der Umleitung. */
+function team_seite_kopf(array $konto, string $titel, string $aktiv, array $opt = []): void
+{
+    seite_kopf($titel, $opt + ['konto' => $konto, 'aktiv' => '/team']);
+    echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div></div>'
+        . '<div class="innen">' . team_reiter($konto, $aktiv) . meldung_html(flash_holen());
+}
+
+function team_seite_fuss(): void
+{
+    echo '</div>';
+    seite_fuss();
+}
+
+/** Meldung (ok, fehler, hinweis) als HTML; null → ''. */
+function meldung_html(?array $m): string
+{
+    if ($m === null) {
+        return '';
+    }
+    $ton = in_array($m['ton'] ?? '', ['ok', 'fehler', 'hinweis'], true) ? $m['ton'] : 'hinweis';
+    return '<div class="meldung ' . $ton . '" role="' . ($ton === 'fehler' ? 'alert' : 'status') . '">' . e($m['text']) . '</div>';
+}
+
+/** Fehlerliste als HTML. */
+function fehler_html(array $fehler): string
+{
+    if ($fehler === []) {
+        return '';
+    }
+    return '<div class="meldung fehler" role="alert"><ul>' . implode('', array_map(fn($f) => '<li>' . e($f) . '</li>', $fehler)) . '</ul></div>';
 }
 
 /** Eine einfache Meldungsseite mit Statuscode. */

@@ -22,6 +22,12 @@ const RATE_TOEPFE = [
     'installation' => [5, 900, 900],
     'health'       => [10, 600, 600],
     'jobs'         => [10, 600, 600],
+    // Team-Login: je Herkunft großzügig, je Konto streng
+    'login_ip'     => [30, 900, 900],
+    'login'        => [5, 900, 900],
+    'zweitfaktor'  => [5, 900, 900],
+    'einrichten'   => [10, 900, 900],
+    'notzugang'    => [3, 3600, 3600],
 ];
 
 function rate_grenze(string $topf): array

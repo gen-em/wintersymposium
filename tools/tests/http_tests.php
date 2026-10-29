@@ -46,6 +46,175 @@ function http_csrf(string $html): string
     return preg_match('/name="csrf" value="([0-9a-f]{64})"/', $html, $m) === 1 ? $m[1] : '';
 }
 
+function base32_dekodieren(string $b32): string
+{
+    $abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $bits = '';
+    foreach (str_split(strtoupper($b32)) as $z) {
+        $bits .= str_pad(decbin(strpos($abc, $z)), 5, '0', STR_PAD_LEFT);
+    }
+    $roh = '';
+    foreach (str_split($bits, 8) as $b) {
+        if (strlen($b) === 8) {
+            $roh .= chr(bindec($b));
+        }
+    }
+    return $roh;
+}
+
+/** Geheimnis aus der Einrichtungsseite (otpauth-Adresse im QR-Code). */
+function http_totp_geheimnis(string $html): ?string
+{
+    return preg_match('/secret=([A-Z2-7]+)/', $html, $m) === 1 ? base32_dekodieren($m[1]) : null;
+}
+
+function team_login_tests(string $basis, string $h, string $tmp, string $wurzel): void
+{
+    $b = "$tmp/kekse-betreiber.txt";
+    $pw = 'ein-langes-passwort';
+
+    abschnitt('HTTP: Team-Login (AP-3 Schritt 1)');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/einloggen', 'Team-Bereich ohne Login → Einloggen');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'name="passwort"'), 'Login-Formular');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'betrieb@example.org', 'passwort' => 'falsch-falsch'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'oder Passwort stimmt nicht'), 'falsches Passwort abgelehnt');
+    $r2 = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'niemand@example.org', 'passwort' => 'falsch-falsch'], $b);
+    pruefe(str_contains($r2['text'], 'oder Passwort stimmt nicht'), 'unbekannte Adresse: gleiche Meldung (R-03)');
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'Betrieb@Example.org', 'passwort' => $pw], $b);
+    pruefe($r['status'] === 303, 'richtiges Passwort → weiter zum zweiten Faktor');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 303, 'nur Passwort reicht nicht für den Team-Bereich');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
+    $roh = http_totp_geheimnis($r['text']);
+    pruefe($r['status'] === 200 && $roh !== null && str_contains($r['text'], 'data-qr="otpauth://totp/'), 'Einrichtung mit QR-Code und Schlüssel');
+    pruefe(str_contains($r['text'], '/assets/vendor/qrcode.js') && str_contains($r['text'], '/assets/qr.js'), 'QR-Skripte lokal eingebunden');
+    $r2 = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
+    pruefe(http_totp_geheimnis($r2['text']) === $roh, 'Neuladen behält das Geheimnis');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'einrichten', 'code' => '000000'], $b);
+    pruefe(str_contains($r['text'], 'Der Code stimmt nicht'), 'falscher Einrichtungscode abgelehnt');
+    $code1 = totp_code((string)$roh, time());
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'einrichten', 'code' => $code1], $b);
+    preg_match_all('/<li class="mono">([A-Z2-9]{4} [A-Z2-9]{4})<\/li>/', $r['text'], $m);
+    $codes = $m[1];
+    pruefe($r['status'] === 200 && count($codes) === 10, 'eingerichtet, zehn Wiederherstellungscodes angezeigt');
+    pruefe(db_wert("SELECT COUNT(*) FROM konto_code WHERE hash LIKE '$%'") == 10 && !str_contains((string)db_wert('SELECT totp_geheimnis FROM konto'), totp_base32((string)$roh)), 'Codes nur als Hash, Geheimnis versiegelt');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Erste Betreiberin') && str_contains($r['text'], 'Ausloggen'), 'Team-Bereich mit Name und Ausloggen (E-40)');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Neues Team-Konto'), 'Team-Konten für Betreiber');
+
+    abschnitt('HTTP: Team-Konto anlegen und einrichten');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'anlegen', 'name' => 'Anna Admin', 'email' => 'anna@example.org', 'rolle' => 'admin'], $b);
+    pruefe($r['status'] === 303, 'Konto angelegt');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    $link = preg_match('#/einrichten\?t=([A-Za-z0-9_-]+)#', $r['text'], $m) === 1 ? $m[1] : '';
+    pruefe($link !== '' && str_contains($r['text'], 'Einrichtung offen'), 'Einrichtungslink einmal angezeigt');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe(!str_contains($r['text'], '/einrichten?t='), 'Link beim Neuladen nicht mehr sichtbar');
+    $a = "$tmp/kekse-admin.txt";
+    $r = http_anfrage($basis, 'GET', '/einrichten?t=falsch' . str_repeat('x', 40), $h, [], null, $a);
+    pruefe($r['status'] === 404, 'falscher Link abgelehnt');
+    $r = http_anfrage($basis, 'GET', '/einrichten?t=' . $link, $h, [], null, $a);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Anna Admin'), 'Einrichtungsseite');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/einrichten', $h, [], ['csrf' => $csrf, 't' => $link, 'passwort' => 'kurz', 'passwort2' => 'kurz'], $a);
+    pruefe(str_contains($r['text'], 'mindestens'), 'zu kurzes Passwort abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/einrichten', $h, [], ['csrf' => $csrf, 't' => $link, 'passwort' => 'anna-ihr-passwort', 'passwort2' => 'anna-ihr-passwort'], $a);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/einloggen', 'Passwort gesetzt → zweiten Faktor einrichten');
+    $r = http_anfrage($basis, 'GET', '/einrichten?t=' . $link, $h, [], null, "$tmp/kekse-x.txt");
+    pruefe($r['status'] === 404, 'Link gilt nur einmal');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $a);
+    $rohA = http_totp_geheimnis($r['text']);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'einrichten', 'code' => totp_code((string)$rohA, time())], $a);
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $a);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Anna Admin'), 'Admin eingeloggt');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $a);
+    pruefe($r['status'] === 403, 'Admin sieht keine Team-Konten (E-11)');
+    pruefe(!str_contains(http_anfrage($basis, 'GET', '/team', $h, [], null, $a)['text'], 'href="/team/konten"'), 'Reiter Team-Konten für Admin ausgeblendet');
+
+    abschnitt('HTTP: Rollenwechsel, Sperre, Sitzungen');
+    $annaId = (int)db_wert("SELECT id FROM konto WHERE email = 'anna@example.org'");
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'rolle', 'id' => $annaId, 'rolle' => 'betreiber', 'code' => '000000'], $b);
+    pruefe(str_contains($r['text'], 'Die Rolle wurde nicht geändert') && db_wert('SELECT rolle FROM konto WHERE id = ?', [$annaId]) === 'admin', 'Rollenwechsel ohne gültigen eigenen Code abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'rolle', 'id' => $annaId, 'rolle' => 'betreiber', 'code' => totp_code((string)$roh, time() + 30)], $b);
+    pruefe($r['status'] === 303 && db_wert('SELECT rolle FROM konto WHERE id = ?', [$annaId]) === 'betreiber', 'Rollenwechsel mit eigenem Code (E-41)');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $a);
+    pruefe($r['status'] === 303, 'Rollenwechsel beendet die Sitzung des Kontos');
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'sperren', 'id' => $annaId], $b);
+    pruefe(db_wert('SELECT aktiv FROM konto WHERE id = ?', [$annaId]) == 0, 'Konto gesperrt');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $a);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'anna@example.org', 'passwort' => 'anna-ihr-passwort'], $a);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'stimmt nicht'), 'gesperrtes Konto kommt nicht rein');
+    $ich = (int)db_wert("SELECT id FROM konto WHERE email = 'betrieb@example.org'");
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'sperren', 'id' => $ich], $b);
+    pruefe(db_wert('SELECT aktiv FROM konto WHERE id = ?', [$ich]) == 1 && str_contains($r['text'], 'eigenes Konto'), 'eigenes Konto nicht sperrbar');
+
+    abschnitt('HTTP: Ausloggen, Wiederholungsschutz, Wiederherstellungscode');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $b);
+    pruefe($r['status'] === 303, 'ausgeloggt');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 303, 'danach kein Zugriff');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
+    $csrf = http_csrf($r['text']);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'betrieb@example.org', 'passwort' => $pw], $b);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Authenticator-App ein') && !str_contains($r['text'], 'data-qr'), 'zweites Login fragt nur den Code');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'code', 'code' => totp_code((string)$roh, time() + 30)], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code stimmt nicht'), 'schon benutzter Code gilt nicht noch einmal');
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'code', 'code' => strtolower($codes[0])], $b);
+    pruefe($r['status'] === 303, 'Wiederherstellungscode öffnet');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Wiederherstellungscode benutzt') && str_contains($r['text'], 'Übrig: 9'), 'Hinweis auf benutzten Code');
+
+    abschnitt('HTTP: Ratenschutz Login');
+    $x = "$tmp/kekse-rate.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $x);
+    $csrf = http_csrf($r['text']);
+    for ($i = 0; $i < RATE_TOEPFE['login'][0]; $i++) {
+        http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'ziel@example.org', 'passwort' => 'falsch-' . $i], $x);
+    }
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'ziel@example.org', 'passwort' => 'x'], $x);
+    pruefe(str_contains($r['text'], 'Zu viele Versuche'), 'nach ' . RATE_TOEPFE['login'][0] . ' Fehlversuchen für eine Adresse gesperrt');
+
+    abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
+    $n = "$tmp/kekse-not.txt";
+    $r = http_anfrage($basis, 'GET', '/notzugang', $h, [], null, $n);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Installationsschlüssel'), 'Notzugang erreichbar');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => 'falsch', 'email' => 'betrieb@example.org'], $n);
+    pruefe(str_contains($r['text'], 'stimmt nicht') && db_wert("SELECT totp_seit FROM konto WHERE email = 'betrieb@example.org'") !== null, 'falscher Schlüssel: nichts zurückgesetzt');
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'niemand@example.org'], $n);
+    pruefe(str_contains($r['text'], 'stimmt nicht'), 'unbekannte Adresse: gleiche Meldung');
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'betrieb@example.org'], $n);
+    $notlink = preg_match('#/einrichten\?t=([A-Za-z0-9_-]+)#', $r['text'], $m) === 1 ? $m[1] : '';
+    pruefe($notlink !== '' && db_wert("SELECT totp_seit FROM konto WHERE email = 'betrieb@example.org'") === null, 'richtiger Schlüssel: zweiter Faktor zurückgesetzt, Link angezeigt');
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'notzugang'") == 1, 'Notzugang im Audit-Protokoll');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 303, 'alte Sitzung des Kontos beendet');
+    for ($i = 0; $i < RATE_TOEPFE['notzugang'][0]; $i++) {
+        http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => 'falsch', 'email' => 'x@example.org'], $n);
+    }
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'betrieb@example.org'], $n);
+    pruefe(str_contains($r['text'], 'Zu viele Versuche') && !str_contains($r['text'], '/einrichten?t='), 'nach drei Fehlversuchen gesperrt, auch mit richtigem Schlüssel');
+
+    abschnitt('Notweg auf der Kommandozeile');
+    $aus = [];
+    exec('WS_CONFIG=' . escapeshellarg("$tmp/config.php") . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$wurzel/server/cli/konto.php") . ' zweitfaktor anna@example.org 2>&1', $aus, $code);
+    pruefe($code === 0 && db_wert('SELECT totp_seit FROM konto WHERE id = ?', [$annaId]) === null, 'zweiten Faktor zurückgesetzt');
+    $aus = [];
+    exec('WS_CONFIG=' . escapeshellarg("$tmp/config.php") . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$wurzel/server/cli/konto.php") . ' link anna@example.org 2>&1', $aus, $code);
+    pruefe($code === 0 && str_contains(implode('', $aus), '/einrichten?t='), 'neuen Link erzeugt');
+}
+
 function http_tests(string $wurzel, string $tmp): void
 {
     $port = 18000 + random_int(0, 999);
@@ -93,10 +262,10 @@ function http_tests(string $wurzel, string $tmp): void
         abschnitt('HTTP: Installation (T-100)');
         $r = http_anfrage($basis, 'POST', '/install', $h, [], ['csrf' => $csrf, 'schluessel' => 'falsch'] + $form, $keks);
         pruefe($r['status'] === 200 && str_contains($r['text'], 'Installationsschlüssel ist falsch'), 'falscher Schlüssel abgelehnt');
-        pruefe(db_wert('SELECT COUNT(*) FROM team_konto') == 0, 'kein Konto angelegt');
+        pruefe(db_wert('SELECT COUNT(*) FROM konto') == 0, 'kein Konto angelegt');
         $r = http_anfrage($basis, 'POST', '/install', $h, [], ['csrf' => $csrf] + $form, $keks);
         pruefe($r['status'] === 200 && str_contains($r['text'], 'Installation abgeschlossen'), 'Installation abgeschlossen');
-        $konto = db_zeile('SELECT email, rolle, passwort_hash FROM team_konto');
+        $konto = db_zeile('SELECT email, rolle, passwort_hash FROM konto');
         pruefe($konto !== null && $konto['rolle'] === 'betreiber' && $konto['email'] === 'betrieb@example.org', 'erster Betreiber angelegt');
         pruefe($konto !== null && password_verify('ein-langes-passwort', $konto['passwort_hash']), 'Passwort nur als Hash');
         pruefe(db_wert("SELECT haupt FROM host WHERE name = 'ws.test'") == 1, 'Haupt-Host eingetragen');
@@ -106,7 +275,7 @@ function http_tests(string $wurzel, string $tmp): void
         $r = http_anfrage($basis, 'GET', '/install', $h);
         pruefe($r['status'] === 404, 'Installer danach gesperrt (404)');
         $r = http_anfrage($basis, 'POST', '/install', $h, [], ['csrf' => $csrf] + $form, $keks);
-        pruefe($r['status'] === 404 && db_wert('SELECT COUNT(*) FROM team_konto') == 1, 'zweite Installation per POST unmöglich');
+        pruefe($r['status'] === 404 && db_wert('SELECT COUNT(*) FROM konto') == 1, 'zweite Installation per POST unmöglich');
 
         abschnitt('HTTP: Kopfzeilen (T-101)');
         $r = http_anfrage($basis, 'GET', '/', $h);
@@ -200,6 +369,8 @@ function http_tests(string $wurzel, string $tmp): void
         inhalt_setzen('impressum', "## Angaben\nPhilipp Chadid\n\nKontakt: [admin@winter-notfallsymposium.de](mailto:admin@winter-notfallsymposium.de)");
         $r = http_anfrage($basis, 'GET', '/impressum', $h);
         pruefe(str_contains($r['text'], '<h2>Angaben</h2>') && str_contains($r['text'], 'href="mailto:admin@winter-notfallsymposium.de"'), 'Impressum zeigt gepflegten Text');
+
+        team_login_tests($basis, $h, $tmp, $wurzel);
     } finally {
         proc_terminate($proc);
         proc_close($proc);
