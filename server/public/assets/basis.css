@@ -1,0 +1,27 @@
+/* Schlichter Rahmen bis zum Design aus AP-2 (Allgäu Akut, Mockups). */
+:root {
+    --nachtblau: #001E3A;
+    --lila: #B48CFF;
+    --weiss: #FFFFFF;
+    --fehler: #FF5A5F;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+    background: var(--nachtblau);
+    color: var(--weiss);
+}
+.rahmen { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem; }
+h1 { color: var(--lila); }
+a { color: var(--lila); }
+.formular { display: flex; flex-direction: column; gap: .4rem; }
+.formular label { margin-top: .6rem; }
+.formular input, .formular textarea, .formular button {
+    font: inherit; min-height: 44px; padding: .5rem .7rem; border-radius: 6px; border: 1px solid #8090a8;
+}
+.formular button {
+    margin-top: 1rem; background: var(--lila); color: var(--nachtblau); border: 0; font-weight: 700; cursor: pointer;
+}
+.meldung.fehler { border-left: 4px solid var(--fehler); padding: .5rem 1rem; background: rgba(255, 90, 95, .12); }

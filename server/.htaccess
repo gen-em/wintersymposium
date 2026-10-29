@@ -1,0 +1,9 @@
+# Dieser Ordner ist NICHT der Webroot. Die Domain zeigt auf public/.
+# Falls die Zuordnung doch auf diesen Ordner zeigt, bleibt alles gesperrt
+# (Bibliotheken, config.php, Laufzeitordner var/).
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Deny from all
+</IfModule>

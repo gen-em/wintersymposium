@@ -3,8 +3,8 @@ dokument: konzept
 projekt: wintersymposium
 repo: gen-em/wintersymposium
 stand: 2026-10-29
-phase: konzept
-status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-31 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
+phase: umsetzung   # AP-1 umgesetzt (Abnahme auf Staging offen)
+status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-35 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
 version: null   # Konzept ohne Version; die Repo-Version legt die Umsetzung fest (Datei VERSION)
 verantwortlich: Philipp Chadid
 termine:
@@ -74,7 +74,7 @@ branding:
   quelle: chodid/zina-branding (4 Regeln/Erscheinungsbild.md, 9 Technik/Gestaltungswerte, 9 Technik/farben-und-schriften.json)
   farben: {nachtblau: "#001E3A", markenblau: "#003C71", lila: "#B48CFF", signalrot: "#FF5A5F", kva_gruen: "#B5BD00"}
   schriften: {titel: Anton, zwischenueberschrift: Antonio, text: Tajawal, zahlen: IBM Plex Mono}
-  logo: "vorhanden: Bildzeichen und Logo (gestapelt, Lila/Rot/Nachtblau/Weiß, SVG und PNG) unter `1 Logo/` im Branch `claude/zina-off-label-designsystem` des Branding-Repos; noch nicht auf main (O-20)"
+  logo: "vorhanden: Bildzeichen und Logo (gestapelt, Lila/Rot/Nachtblau/Weiß, SVG und PNG) auf main des Branding-Repos unter `1 Logo/` (O-20 erledigt)"
   regel: "ein Akzent je Medium: Lila für Vortrag/Journal Club, Signalrot für Workshop/Fallbesprechung"
 vorlage_code:
   repo: gen-em/einsatzdoku-luftrettung (NAdoku, PHP/MySQL, AGPL-3.0)
@@ -98,7 +98,7 @@ app:
     veranstaltung: "Anmeldezeitraum, Gesamtkapazität, Workshop-Limit je Person, Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist, Grenze für automatisches Nachrücken (E-19, E-20); Stichtage für Workshop-Änderung, Essens-Änderung und Storno (E-31); Veranstaltungsinfos inkl. CME-Angaben (E-22)"
     betreiber: "Hostnamen, Absenderadressen je Zweck/Liste, SMTP-Postfächer, Tageslimit je Postfach (E-13, E-27)"
   hintergrund: "Cron ruft einen Job-Endpunkt (CLI oder Token-URL) auf; Mail-Warteschlange, Nachrück-Angebote und -Fristen, Aufräumen, Ablauf von Links, Löschfristen"
-  auslieferung: "GitHub Actions → FTPS auf den Lima-City-Webspace (E-32): Staging und Produktion in getrennten Ordnern; config.php und Laufzeitordner bleiben unangetastet"
+  auslieferung: "GitHub Actions → FTPS auf den Lima-City-Webspace (E-32, E-35): Push auf main → Staging, Tag → Produktion, getrennte Ordner; Webroot ist der Unterordner public/ (E-34); config.php und Laufzeitordner var/ bleiben unangetastet"
 kaneo:
   nutzung: bestehendes Gen-EM-Kaneo (team.gen-em.org), eigener Arbeitsbereich/eigenes Projekt für das Symposium-Team; der Admin lädt ein (E-15)
   login: Kaneo-Login (E-Mail-Code), getrennt von der Webseite (E-12)
@@ -117,11 +117,11 @@ mail:
 | E-04 | Repo und Lizenz | `gen-em/wintersymposium`, **AGPL-3.0**; Code aus NAdoku darf übernommen werden | Admin 2026-10-29 (alleiniger Urheber von NAdoku) |
 | E-05 | Domain | **`winter-notfallsymposium.de`**, angelegt im Gen-EM-Konto bei Lima-City; Staging unter `test.winter-notfallsymposium.de` (E-28) | Admin 2026-10-29 (O-01 entschieden) |
 | E-06 | Design-Grundlage | Erscheinungsbild Allgäu Akut (Farben, Schriften, Logo); Schriften selbst ausgeliefert, kein CDN | zina-branding |
-| E-07 | Teilnehmende | **kein Konto, kein Login**; Verwaltung über Einmal-Links per Mail; Token nur als Hash gespeichert, mit Ablauf | Admin 2026-10-29; Muster aus NAdoku (Reset-Token, Token gegen Sitzung tauschen) |
+| E-07 | Teilnehmende | **kein Konto nötig**: Verwaltung über Einmal-Links per Mail; Token nur als Hash gespeichert, mit Ablauf. Ein Konto ist optional (E-30) | Admin 2026-10-29; Muster aus NAdoku (Reset-Token, Token gegen Sitzung tauschen). Präzisiert 2026-10-29: ursprünglich „kein Konto, kein Login“, durch E-30 ergänzt |
 | E-08 | Programm | frei konfigurierbar: Zeitfenster mit beliebigen, auch unterschiedlichen/überlappenden Zeiten; Workshops; Termine je Workshop; Plätze je Termin; Gesamtkapazität | Admin 2026-10-29 (Planungsstand: ca. 3 Workshops, 5 Zeitfenster) |
 | E-09 | Warteliste | Warteliste **je Workshop-Termin** (und für die Gesamtkapazität, falls gesetzt) mit Nachrücken nach E-19 | Admin 2026-10-29 |
 | E-10 | Essen | Auswahl **Fleisch / vegetarisch / kein Essen**; keine Allergien, kein Freitext | Admin 2026-10-29; keine Gesundheitsdaten (Datensparsamkeit) |
-| E-11 | Rollen | **Teilnehmende** (ohne Konto), **Admin** (Programm, Einstellungen der Veranstaltung, Anmeldungen, Mailings, Newsletter, Teilnahme), **Betreiber** (zusätzlich Team-Konten, Domains/Absender, SMTP, Rechtstexte, Backups); Admin und Betreiber nur mit **Passwort + TOTP oder Passkey** | Admin 2026-10-29 |
+| E-11 | Rollen | **Teilnehmende** (ohne Konto per Einmal-Link oder mit optionalem Konto nach E-30, ohne zweiten Faktor), **Admin** (Programm, Einstellungen der Veranstaltung, Anmeldungen, Mailings, Newsletter, Teilnahme), **Betreiber** (zusätzlich Team-Konten, Domains/Absender, SMTP, Rechtstexte, Backups); Admin und Betreiber nur mit **Passwort + TOTP oder Passkey** | Admin 2026-10-29 |
 | E-12 | Login-Architektur | **getrennte Logins** für Webseite und Kaneo; kein zentraler Anmeldedienst (Keycloak/Pocket ID geprüft und verworfen) | Admin 2026-10-29. Kaneo könnte OIDC (`CUSTOM_OAUTH_*`), ein eigener Anmeldedienst wäre aber zusätzliche Last und Abhängigkeit |
 | E-13 | Mailversand | SMTP über Lima-City; Warteschlange mit **einstellbarem Tageslimit** (Vorschlag 450 je Postfach); **System-Mails vor Rundmails/Newsletter**; zwei Postfächer: `anmeldung@` (System) und `newsletter@` (Newsletter, Rundmails), dazu `admin@` als Weiterleitung an den Admin (Reply-To, Impressum); Wechsel zu einem EU-Versanddienst nur per Konfiguration | Admin 2026-10-29: kein externes Tool, Versand über mehrere Tage verteilen; Postfächer angelegt (O-02 erledigt) |
 | E-14 | Newsletter | **mehrere Listen** (mindestens „Wintersymposium“ und „Allgäu Akut“); Anmeldung auch ohne Symposium-Anmeldung; Double-Opt-In; Abmeldelink und `List-Unsubscribe`; Häkchen bei der Symposium-Anmeldung freiwillig und nicht vorausgewählt | Admin 2026-10-29; UWG § 7, DSGVO |
@@ -141,9 +141,11 @@ mail:
 | E-28 | Staging | Testumgebung unter `test.<domain>` mit eigener Datenbank und eigenem Webspace-Ordner | Admin 2026-10-29 |
 | E-29 | Kaneo-Subdomain | entfallen (E-15: bestehendes Kaneo, keine eigene Subdomain) | Admin 2026-10-29 |
 | E-30 | Optionales Konto für Teilnehmende | Registrierung **möglich, nicht nötig**: Konto mit E-Mail und Passwort (kein zweiter Faktor, der bleibt Admin/Betreiber), Passwort-Zurücksetzen per Mail. Profil: E-Mail (neue Adresse erst nach Bestätigung gültig), Passwort, Berufsgruppe, Institution, EFN, Anmeldung, Workshops, Essen, Newsletter. Konto kann **beim Anmelden, nachträglich über den Einmal-Link oder ohne Symposium-Anmeldung** (z. B. nur Newsletter) angelegt werden. Ohne Konto bleibt alles über Einmal-Links erreichbar | Admin 2026-10-29 |
-| E-32 | Auslieferung (FTP) | GitHub-Secrets `FTP_SERVER`, `FTP_USER`, `FTP_PASSWORD` sind im Repo angelegt (Werte nur dort). Zielordner auf dem Webspace: `/wintersymposium/staging` (erreichbar als `test.winter-notfallsymposium.de`) und `/wintersymposium/produktiv` (`winter-notfallsymposium.de`). Vorschlag für AP-1: Push auf `main` → Staging automatisch; Produktion nur über ein Tag oder einen manuell gestarteten Lauf mit Freigabe durch den Admin (GitHub-Environment „produktiv“). Ein FTP-Zugang für beide Ziele; Laufzeitordner und `config.php` je Ziel auf der Ausnahmeliste | Admin 2026-10-29 (Secrets und Ordner angelegt) |
+| E-32 | Auslieferung (FTP) | GitHub-Secrets `FTP_SERVER`, `FTP_USER`, `FTP_PASSWORD` sind im Repo angelegt (Werte nur dort). Zielordner auf dem Webspace: `/wintersymposium/staging` (erreichbar als `test.winter-notfallsymposium.de`) und `/wintersymposium/produktiv` (`winter-notfallsymposium.de`). Push auf `main` → Staging automatisch; Produktion über ein Tag (E-35). Ein FTP-Zugang für beide Ziele; Laufzeitordner und `config.php` je Ziel auf der Ausnahmeliste | Admin 2026-10-29 (Secrets und Ordner angelegt) |
 | E-33 | Plan B Konten | Reicht die Zeit für AP-4b nicht bis zum 25.11., startet die Anmeldung ohne Konten (nur Einmal-Links); Konten folgen direkt danach und werden nachträglich über den Einmal-Link angelegt | Admin 2026-10-29 (bestätigt) |
 | E-31 | Stichtage für Teilnehmende | In den Veranstaltungs-Einstellungen getrennte Stichtage, ab denen Teilnehmende (mit Konto und per Einmal-Link) nichts mehr ändern können: **Anmeldeschluss**, **Workshop-Änderungen**, **Essens-Änderungen**, **Storno**. Das Team kann danach weiterhin alles ändern; die Oberfläche zeigt den Stichtag an | Admin 2026-10-29 |
+| E-34 | Webroot | Die Domains zeigen auf den Unterordner **`public/`** des jeweiligen Zielordners (`/wintersymposium/staging/public`, `/wintersymposium/produktiv/public`). Bibliotheken, `config.php` und der Laufzeitordner `var/` liegen außerhalb des Webroots; zusätzlich sperrt eine `.htaccess` den Zielordner, falls die Zuordnung doch auf ihn zeigt | Admin 2026-10-29 |
+| E-35 | Freigabe Produktion | Produktion wird über ein **Tag `vX.Y.Z`** ausgeliefert (Admin ist Tags gewohnt). Der Lauf bricht ab, wenn das Tag nicht zur Datei `VERSION` passt oder nicht auf `main` liegt. Environment „produktiv“ in GitHub; ein Pflicht-Prüfer dort ist optional | Admin 2026-10-29 (ersetzt den Vorschlag „manueller Lauf“ aus E-32) |
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
@@ -209,16 +211,35 @@ nicht_uebernehmen:
     - Sitzungen, CSRF, Sicherheits-Header/CSP, Ratenschutz-Kern, Audit-Tabelle, Wartungsmodus, Health-Endpunkt
     - Job-Rahmen mit Cron-Auslöser
     - Grundlage für mehrere Hostnamen (E-27): erlaubte Hosts in der DB, Basis-URL je Anfrage
-    - "Auslieferung per GitHub Actions (FTPS) nach E-32: Secrets FTP_SERVER/FTP_USER/FTP_PASSWORD, Ziele /wintersymposium/staging und /wintersymposium/produktiv, Ausnahmeliste (config.php, install.lock, Laufzeitordner); Freigabeweg für Produktion festlegen"
+    - "Auslieferung per GitHub Actions (FTPS) nach E-32: Secrets FTP_SERVER/FTP_USER/FTP_PASSWORD, Ziele /wintersymposium/staging und /wintersymposium/produktiv, Ausnahmeliste (config.php, install.lock, Laufzeitordner); Freigabe Produktion per Tag (E-35)"
   nadoku_bausteine: [konfig_lib, transaktion_lib, format_lib, session_lib (CSRF/Flash), sitzung_lib, kopfzeilen_lib, ratelimit_lib (Kern), jobs_lib (Rahmen), migration_lib/install (Muster)]
   abnahmekriterien:
     - Installer legt Datenbank und ersten Betreiber an und sperrt sich danach
     - HTTPS mit gültigem Zertifikat; Sicherheits-Header gesetzt (CSP, HSTS, nosniff, Referrer-Policy)
     - Cron-Job läuft nachweislich
     - Auslieferung aus GitHub überschreibt config.php nicht; Staging und Produktion getrennt
-  status: offen
-  ergebnis: null
-  probleme: []
+  status: umgesetzt   # Code im PR; Abnahme auf Staging (T-100 bis T-110) nach Einrichtung durch den Admin offen
+  ergebnis:
+    - "Struktur: server/ (Webroot server/public/ mit einzigem Einstieg index.php, lib/, seiten/, cli/), tools/tests/, docs/betrieb.md (Einrichtung, Auslieferung, Wartung, Tests)"
+    - "config.php (Vorlage config.example.php): DB-Zugang, geheimnis, installations_schluessel, jobs_token, health_token – alle geheimen Werte nur dort (R-01); WS_CONFIG nur für Tests auf der Kommandozeile"
+    - "DB-Schicht (PDO, keine emulierten Prepares, Sitzungszeitzone UTC, strenger sql_mode), db_transaktion verschachtelungsfest, Migrationskatalog mit MySQL-Sperre; Migrationen laufen beim Installieren und automatisch bei der ersten Anfrage bzw. dem nächsten Cron-Lauf nach einer Auslieferung"
+    - "Tabellen: einstellung, host, team_konto (ohne zweiten Faktor; kommt mit AP-5), audit, rate_limit, job, schema_migration"
+    - "Installer /install: verlangt den Installationsschlüssel aus config.php, legt Tabellen, Haupt-Host (= aufgerufener Host), weitere Hosts und den ersten Betreiber an, schreibt var/install.lock; danach 404. Gibt es schon ein Team-Konto, wird nur die Sperre wiederhergestellt"
+    - "Sitzungen in var/sitzungen, PHP-eigenes Aufräumen aus, 30 min Leerlauf-Ablauf, Aufräumen durch den Job; CSRF für alle POSTs"
+    - "Kopfzeilen: CSP mit Nonce (nur eigene Quellen), HSTS ein Jahr ohne includeSubDomains (nur über HTTPS), nosniff, Referrer-Policy, X-Frame-Options, COOP/CORP, Permissions-Policy; HTTPS-Zwang in .htaccess und PHP (POST über HTTP abgelehnt)"
+    - "Hosts (E-27): erlaubt sind nur Einträge der Tabelle host; fremder Host → 421; Basis-URL je Anfrage, auf der Kommandozeile der Haupt-Host"
+    - "Ratenschutz-Kern: Fehlversuche je Topf (installation, health, jobs) und HMAC-Hash der IP, Sperre nach Grenze, rate_gleiche_dauer; Grenzen sind technische Sicherheitswerte im Code (keine Veranstaltungseinstellung, R-11 nicht betroffen)"
+    - "Wartung: var/wartung.lock → 503 mit Retry-After für öffentliche Seiten; /team, /health, /install ausgenommen; Jobs pausieren"
+    - "Health /health mit Token (Kopfzeile oder Parameter), sonst 404; JSON mit Version, Umgebung, Schema-Stand, Wartung, letztem Job-Lauf"
+    - "Jobs: Katalog mit Mindestabstand je Job, MySQL-Sperre gegen parallele Läufe, Zeitstempel jobs_letzter_lauf bei jedem Aufruf; Auslöser cli/jobs.php oder /jobs?token=…; erster Job aufraeumen (Sitzungsdateien, Ratenschutz)"
+    - "Auslieferung (E-32, E-35): Workflow Auslieferung – Prüfung, dann FTPS-Abgleich von server/; main → staging, Tag vX.Y.Z → produktiv (Tag = VERSION und auf main, sonst Abbruch vor jeder Übertragung); Ausnahmeliste config.php und var/; Zustandsdatei wird vorab angelegt, falls sie fehlt"
+    - "Workflow Prüfung (bei jedem PR und vor jeder Auslieferung): php -l aller Dateien und tools/tests/lauf.php gegen MySQL 8.4"
+  probleme:
+    - {problem: "Bei NAdoku brach die FTP-Deploy-Action gegen diesen Hoster mit ECONNRESET ab, solange die Zustandsdatei auf dem Server fehlte (die Action deutet den Abbruch als Erstauslieferung und arbeitet mit toter Verbindung weiter)", loesung: "Vor dem Abgleich prüft ein curl-Schritt per SIZE auf dem Steuerkanal, ob die Datei da ist, und legt nur dann eine leere an; eine vorhandene wird nie überschrieben"}
+    - {problem: "Ein Team-Login gibt es erst mit AP-5; T-108 verlangt „Team-Login weiter möglich“", loesung: "Der Wartungsmodus nimmt /team bereits aus (getestet); der Login-Teil von T-108 wird nach AP-5 geprüft"}
+    - {problem: "Eine Regel „Punktdateien sperren“ hätte auch /.well-known/ gesperrt, über das Zertifikate ausgestellt werden können", loesung: ".well-known ist in der .htaccess ausgenommen"}
+    - {problem: "In der Arbeitsumgebung gibt es MySQL nur als 8.0, auf dem Webspace läuft 8.4", loesung: "Lokal gegen 8.0 getestet; der Prüf-Workflow testet gegen MySQL 8.4"}
+    - {problem: "Bei der Vorab-Prüfung wurde die Reihenfolge im Änderungsprotokoll (Abschnitt 11) für einen Widerspruch gehalten", loesung: "War keiner: unter der Erstfassung steht der neueste Eintrag zuerst; Hinweis über der Tabelle ergänzt"}
 
 - id: AP-2
   titel: Design-Mockups und öffentliche Seiten
@@ -230,6 +251,7 @@ nicht_uebernehmen:
     - Seitenrahmen mit Logo, Navigation, Fußzeile mit Impressum, Datenschutz und Quelltext-Link (E-25)
     - Startseite mit frei pflegbaren Infotexten (Ort, Anfahrt, Ablauf, CME-Hinweis) und Programm aus der Programm-Konfiguration (AP-3)
     - Rechtstexte Impressum und Datenschutz (pflegbar durch Betreiber)
+    - "Suchmaschinen: bis zum Anmeldestart tragen alle Seiten noindex (seit AP-1); für Produktion zum Start aufheben, Staging behält noindex"
   nadoku_bausteine: [rechtstexte_lib, rechtstext_seite]
   abnahmekriterien:
     - Mockups vom Admin freigegeben
@@ -399,7 +421,7 @@ nicht_uebernehmen:
 - {id: O-05, thema: Anmeldefelder, status: "entschieden → E-21"}
 - {id: O-06, thema: Fortbildungspunkte, status: "entschieden → E-22; Details O-16"}
 - {id: O-07, thema: Akzentfarbe und Logo, status: "entschieden → E-23; Logo-Dateien O-20"}
-- {id: O-08, thema: Löschfristen, status: "teilweise entschieden → E-24; Frist ohne Konto wieder offen → O-21"}
+- {id: O-08, thema: Löschfristen, status: "entschieden → E-24 (Frist ohne Konto über O-21 entschieden)"}
 - {id: O-09, thema: Kaneo, status: "entfallen → E-15 (bestehendes Kaneo)"}
 - {id: O-10, thema: Repo-Sichtbarkeit, status: "entschieden → E-25; Admin schaltet nach dem Merge des Konzepts auf öffentlich (2026-10-29)"}
 - {id: O-11, thema: Ausgabe der Arbeit, status: "entschieden → E-26"}
@@ -410,10 +432,10 @@ nicht_uebernehmen:
 - {id: O-16, thema: CME-Meldeweg, frage: "Meldung an die Kammer elektronisch (EIV) oder per Liste? Entscheidet, welchen Export AP-10 liefert", hinweis: "Zertifikat-Layout liefert der Admin (E-22)", zustaendig: Admin, benoetigt_fuer: AP-10, status: offen (nicht eilig)}
 - {id: O-17, thema: Abgelaufenes Nachrück-Angebot, status: "entschieden → E-19 (ans Ende der Liste, mit Mail)"}
 - {id: O-18, thema: Aufbewahrung CME-Nachweise, status: "entschieden → E-24 (solange das Konto besteht, sonst 10 Jahre)"}
-- {id: O-19, thema: PDF-Erzeugung, frage: "Der Admin liefert den Zertifikat-Entwurf; die App setzt Name, Datum, ggf. EFN darauf. Technik je nach Entwurfsformat: PDF-Vorlage → Import und Überlagerung (z. B. FPDF + FPDI, beide MIT-/LGPL-kompatibel, ohne Composer in vendor/); SVG-/PNG-Vorlage → eigener minimaler PDF-Writer. Entwurf als PDF mit eingebetteten Schriften und freiem Feld für den Namen erbeten", zustaendig: Umsetzung (Entwurf: Admin), benoetigt_fuer: AP-10, status: offen}
+- {id: O-19, thema: PDF-Erzeugung, frage: "Der Admin liefert den Zertifikat-Entwurf; die App setzt Name, Datum, ggf. EFN darauf. Technik je nach Entwurfsformat: PDF-Vorlage → Import und Überlagerung (z. B. FPDF + FPDI, beide MIT-/LGPL-kompatibel, ohne Composer in vendor/); SVG-/PNG-Vorlage → eigener minimaler PDF-Writer. Entwurf als PDF mit eingebetteten Schriften und freiem Feld für den Namen erbeten", zustaendig: "Umsetzung (Entwurf: Admin)", benoetigt_fuer: AP-10, status: offen}
 - {id: O-20, thema: Logo-Dateien, status: "erledigt (Admin 2026-10-29): Logo liegt auf main des Branding-Repos unter 1 Logo/"}
 - {id: O-21, thema: Löschfrist ohne Konto, status: "entschieden → E-24 (14 Monate, Anonymisierung)"}
-- {id: O-22, thema: Lima-City-Einrichtung, frage: "Subdomain test.winter-notfallsymposium.de → Ordner staging, Hauptdomain → Ordner produktiv (Zuordnung im Lima-City-Konto); je eine MySQL-Datenbank mit eigenem Benutzer für Staging und Produktion; Cron-Aufruf des Job-Endpunkts; Datenbank-Zugangsdaten kommen nur in die config.php auf dem Webspace", zustaendig: Admin, benoetigt_fuer: AP-1, status: in Arbeit (Admin 2026-10-29)}
+- {id: O-22, thema: Lima-City-Einrichtung, frage: "Subdomain test.winter-notfallsymposium.de → Ordner staging/public, Hauptdomain → Ordner produktiv/public (Zuordnung im Lima-City-Konto, E-34); je eine MySQL-Datenbank mit eigenem Benutzer für Staging und Produktion; Cron-Aufruf des Job-Endpunkts; Datenbank-Zugangsdaten kommen nur in die config.php auf dem Webspace", zustaendig: Admin, benoetigt_fuer: AP-1, status: in Arbeit (Admin 2026-10-29)}
 ```
 
 ## 8. Bekannte Risiken und Einschränkungen
@@ -437,6 +459,7 @@ nicht_uebernehmen:
 - [ ] Team-Konten mit zweitem Faktor eingerichtet
 - [ ] Backup der Datenbank eingerichtet und Wiederherstellung einmal geprüft
 - [ ] Testdaten gelöscht
+- [ ] Suchmaschinen-Sperre (noindex) auf Produktion aufgehoben (AP-2)
 
 ## 10. Spätere Ausbaustufen
 
@@ -446,9 +469,12 @@ nicht_uebernehmen:
 
 ## 11. Änderungsprotokoll des Konzepts
 
+Unter der Erstfassung steht der neueste Eintrag zuerst.
+
 | Datum | Änderung |
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
+| 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |
 | 2026-10-29 | E-32 (Auslieferung: Secrets, Zielordner staging/produktiv, Zuordnung der Domains), E-33 (Plan B Konten bestätigt), O-22 (Lima-City-Einrichtung) neu; O-10 Repo wird öffentlich. |
 | 2026-10-29 | Domain winter-notfallsymposium.de und Postfächer eingetragen (E-05, E-13; O-01, O-02 erledigt); E-24: Anmeldungen ohne Konto nach 14 Monaten anonymisieren (O-21); Zertifikat-Entwurf kommt vom Admin (E-22, O-19); Logo auf main (O-20 erledigt); R-10 präzisiert. |
 | 2026-10-29 | Konzeptanpassung Admin: E-30 (optionales Konto mit Profil), E-31 (Stichtage für Teilnehmende), AP-4b (Konten) neu, AP-5 um Statistik-Seite erweitert; Antworten eingearbeitet: E-21 Berufsgruppen (O-15), E-22 EFN freiwillig und nur Ärztin/Arzt (O-16 verengt), E-19 abgelaufenes Angebot ans Listenende (O-17), E-24 Konten bleiben, CME 10 Jahre (O-18), O-21 Löschfrist ohne Konto neu; O-20 Logo-Branch benannt. |
