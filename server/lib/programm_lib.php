@@ -193,10 +193,10 @@ function programm_gliederung(array $punkte): array
     return $liste;
 }
 
-/** Belegte Plätze eines Termins. Bis zur Anmeldung (AP-4) gibt es keine. */
+/** Vergebene Plätze eines Termins (feste Plätze und offene Nachrück-Angebote, AP-4). */
 function termin_belegt(int $terminId): int
 {
-    return 0;
+    return $terminId > 0 ? anm_belegt($terminId) : 0;
 }
 
 /** Vorschlag für das nächste freie Kürzel eines Typs (z. B. „VT 03“). */
@@ -482,18 +482,40 @@ function programm_vor_veroeffentlichen(array $punkte): array
 /** Arbeitsstand veröffentlichen. Gibt eine Fehlerliste zurück (leer = veröffentlicht). */
 function programm_veroeffentlichen(?int $kontoId): array
 {
-    $punkte = programm_arbeitsstand();
-    $f = programm_vor_veroeffentlichen($punkte);
-    if ($f !== []) {
-        return $f;
-    }
-    db_ausfuehren(
-        'INSERT INTO programm_stand (id, daten, veroeffentlicht_am, veroeffentlicht_von) VALUES (1, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE daten = VALUES(daten), veroeffentlicht_am = VALUES(veroeffentlicht_am), veroeffentlicht_von = VALUES(veroeffentlicht_von)',
-        [json_encode($punkte, JSON_UNESCAPED_UNICODE), db_jetzt(), $kontoId]
-    );
-    audit_schreiben('programm', 'Programm veröffentlicht (' . count($punkte) . ' Punkte)', $kontoId);
-    return [];
+    // Unter der Platzsperre: zwischen Prüfung und Veröffentlichen bucht niemand (R-04)
+    return anm_sperre(function () use ($kontoId): array {
+        $punkte = programm_arbeitsstand();
+        $f = programm_vor_veroeffentlichen($punkte);
+        // Termine mit vergebenen Plätzen müssen bleiben, mit mindestens so vielen Plätzen
+        $neu = [];
+        foreach ($punkte as $p) {
+            foreach ($p['termine'] as $t) {
+                $neu[(int)$t['id']] = (int)$t['plaetze'];
+            }
+        }
+        foreach (db_zeilen("SELECT termin_id, COUNT(*) AS n FROM platz WHERE termin_id <> 0 AND status IN ('fest','angebot') GROUP BY termin_id") as $b) {
+            $tid = (int)$b['termin_id'];
+            if (!isset($neu[$tid])) {
+                $f[] = 'Ein Workshop-Termin mit ' . $b['n'] . ' vergebenen Plätzen fehlt im Arbeitsstand. Zuerst die Personen umbuchen.';
+            } elseif ($neu[$tid] < (int)$b['n']) {
+                $f[] = 'Ein Workshop-Termin hat ' . $neu[$tid] . ' Plätze, aber schon ' . $b['n'] . ' vergeben.';
+            }
+        }
+        if ($f !== []) {
+            return $f;
+        }
+        db_ausfuehren(
+            'INSERT INTO programm_stand (id, daten, veroeffentlicht_am, veroeffentlicht_von) VALUES (1, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE daten = VALUES(daten), veroeffentlicht_am = VALUES(veroeffentlicht_am), veroeffentlicht_von = VALUES(veroeffentlicht_von)',
+            [json_encode($punkte, JSON_UNESCAPED_UNICODE), db_jetzt(), $kontoId]
+        );
+        // Wartelisten entfallener Termine aufräumen
+        $platz = $neu === [] ? '0' : implode(',', array_keys($neu));
+        $weg = db_ausfuehren("DELETE FROM platz WHERE termin_id <> 0 AND termin_id NOT IN ($platz)")->rowCount();
+        anm_workshops(true);
+        audit_schreiben('programm', 'Programm veröffentlicht (' . count($punkte) . ' Punkte' . ($weg > 0 ? ", $weg Wartelisten-Einträge entfallener Termine entfernt" : '') . ')', $kontoId);
+        return [];
+    });
 }
 
 /** Arbeitsstand auf den veröffentlichten Stand zurücksetzen. */

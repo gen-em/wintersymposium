@@ -218,6 +218,79 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        6 => [
+            'beschreibung' => 'Anmeldung: Anmeldungen, Plätze und Wartelisten, Einmal-Links, Mail-Warteschlange (AP-4)',
+            'sql' => [
+                // Eine Anmeldung je Adresse. Storno und verfallene Bestätigung löschen die Zeile (R-02).
+                "CREATE TABLE anmeldung (
+                    id              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    vorname         VARCHAR(80)  NOT NULL,
+                    nachname        VARCHAR(80)  NOT NULL,
+                    email           VARCHAR(190) NOT NULL,
+                    berufsgruppe    VARCHAR(60)  NOT NULL,
+                    beruf_sonstige  VARCHAR(80)  NOT NULL DEFAULT '',
+                    institution     VARCHAR(160) NOT NULL,
+                    efn             CHAR(15)     NULL,
+                    essen           ENUM('egal','vegetarisch','kein') NOT NULL,
+                    newsletter      TINYINT(1)   NOT NULL DEFAULT 0,
+                    status          ENUM('unbestaetigt','bestaetigt') NOT NULL,
+                    bestaetigen_bis DATETIME     NULL,
+                    einwilligung_am DATETIME     NOT NULL,
+                    sitzung_version INT UNSIGNED NOT NULL DEFAULT 1,
+                    erstellt_am     DATETIME     NOT NULL,
+                    bestaetigt_am   DATETIME     NULL,
+                    geaendert_am    DATETIME     NOT NULL,
+                    UNIQUE KEY uq_anmeldung_email (email),
+                    KEY ix_anmeldung_status (status, bestaetigen_bis)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Plätze: termin_id 0 = Platz beim Symposium, sonst ein Workshop-Termin aus dem
+                // veröffentlichten Programm (ohne Fremdschlüssel, weil „Verwerfen“ die Termine neu anlegt).
+                // fest = Platz, warte = Warteliste (Reihenfolge nach seit, id), angebot = Nachrück-Angebot (E-19).
+                "CREATE TABLE platz (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    anmeldung_id INT UNSIGNED NOT NULL,
+                    termin_id    INT UNSIGNED NOT NULL DEFAULT 0,
+                    workshop_id  INT UNSIGNED NOT NULL DEFAULT 0,
+                    status       ENUM('fest','warte','angebot') NOT NULL,
+                    seit         DATETIME     NOT NULL,
+                    angebot_bis  DATETIME     NULL,
+                    UNIQUE KEY uq_platz_anmeldung_termin (anmeldung_id, termin_id),
+                    KEY ix_platz_termin (termin_id, status, seit, id),
+                    KEY ix_platz_angebot (status, angebot_bis),
+                    CONSTRAINT fk_platz_anmeldung FOREIGN KEY (anmeldung_id) REFERENCES anmeldung (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Einmal-Links: nur der Hash (R-02); beim Benutzen gelöscht.
+                "CREATE TABLE anmeldung_link (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    anmeldung_id INT UNSIGNED NOT NULL,
+                    token_hash   CHAR(64)     NOT NULL,
+                    zweck        ENUM('bestaetigen','zugang','email') NOT NULL,
+                    neue_email   VARCHAR(190) NULL,
+                    gueltig_bis  DATETIME     NOT NULL,
+                    erstellt_am  DATETIME     NOT NULL,
+                    UNIQUE KEY uq_anmeldung_link_token (token_hash),
+                    KEY ix_anmeldung_link_anmeldung (anmeldung_id),
+                    KEY ix_anmeldung_link_gueltig (gueltig_bis),
+                    CONSTRAINT fk_anmeldung_link_anmeldung FOREIGN KEY (anmeldung_id) REFERENCES anmeldung (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Warteschlange: nach dem Versand werden an, betreff, text geleert (R-02).
+                "CREATE TABLE mail_ausgang (
+                    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    an                VARCHAR(190) NOT NULL,
+                    betreff           VARCHAR(250) NOT NULL,
+                    text              MEDIUMTEXT   NOT NULL,
+                    prio              TINYINT UNSIGNED NOT NULL,
+                    status            ENUM('offen','sendet','gesendet','fehler') NOT NULL,
+                    versuche          TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                    naechster_versuch DATETIME     NOT NULL,
+                    erstellt_am       DATETIME     NOT NULL,
+                    gesendet_am       DATETIME     NULL,
+                    fehler            VARCHAR(250) NULL,
+                    KEY ix_mail_ausgang_faellig (status, prio, naechster_versuch),
+                    KEY ix_mail_ausgang_gesendet (gesendet_am)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

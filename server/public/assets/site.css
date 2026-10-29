@@ -381,3 +381,90 @@ table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: u
 .menue .nav-person .nav-name { flex: 1; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- Anmeldung (AP-4; Mockups „Anmelden“, „Wie willst du rein?“, „Deine Anmeldung“) ---- */
+.nav-liste a.nav-anmelden { display: inline-flex; align-items: center; min-height: 36px; padding: 4px 14px; border-radius: 999px; background: var(--gruen); color: var(--nachtblau); }
+.nav-liste a.nav-anmelden[aria-current="page"] { color: var(--nachtblau); box-shadow: inset 0 0 0 2px var(--nachtblau); }
+.menue .nav-liste a.nav-anmelden { display: inline-flex; margin: 10px 0 4px; border-top: 0; padding: 4px 18px; }
+.held-knoepfe { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 18px; }
+.form-kopf { padding-top: 40px; padding-bottom: 10px; }
+.form-kopf .titel { font-size: clamp(2.3rem, 8vw, 4.6rem); }
+.form-kopf .text { margin: 10px 0 0; }
+.stichtage { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--f-mono); font-size: .8rem; color: var(--meta); margin-top: 12px; }
+.form { display: grid; gap: 20px; max-width: 760px; }
+fieldset.feld { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.feld > legend { font-weight: 700; font-size: .95rem; padding: 0; margin-bottom: 6px; }
+.feld label .meta, fieldset.feld legend .meta { font-weight: 400; }
+.wahl { display: grid; gap: 8px; }
+.wahl-reihe { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.wahl label { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--linie); background: var(--flaeche); font-weight: 400; min-height: 44px; cursor: pointer; }
+.wahl label:has(input:checked) { border-color: var(--akz); box-shadow: inset 4px 0 0 var(--akz); }
+.wahl label:has(input:focus-visible) { outline: 2px solid var(--akz); outline-offset: 2px; }
+.wahl input[type=radio], .wahl input[type=checkbox] { margin-top: 3px; width: 18px; height: 18px; min-height: 0; padding: 0; flex: none; accent-color: var(--lila); }
+.wahl .rechts { margin-left: auto; text-align: right; font-family: var(--f-mono); font-size: .8rem; color: var(--meta); white-space: nowrap; }
+.wahl label.gesperrt { opacity: .55; cursor: not-allowed; }
+.wahl .grund { display: block; font-size: .8rem; color: var(--meta); }
+.wahl .grund:empty { display: none; }
+.wahl .zeit-chip { font-family: var(--f-mono); font-size: .9rem; }
+.wahl label.wl-zeile { border-style: dashed; border-color: var(--rot); }
+.wahl label.wl-zeile:has(input:checked) { box-shadow: none; }
+.wahl label.wl-zeile:has(input:focus-visible) { outline: 2px solid var(--rot); outline-offset: 2px; }
+.wl-toggle { font-family: var(--f-mono); font-size: .75rem; font-weight: 700; padding: 4px 10px; border: 1.5px solid var(--rot); border-radius: 999px; white-space: nowrap; align-self: center; color: var(--fg); }
+.wahl .rechts.wl-toggle { color: var(--fg); }
+.wl-zeile.an .wl-toggle { background: var(--rot); color: var(--nachtblau); }
+.ws-gruppe { display: grid; gap: 6px; padding-top: 6px; }
+.ws-gruppe + .ws-gruppe { border-top: 1px solid var(--linie); padding-top: 14px; margin-top: 8px; }
+.ws-gruppe > .kopfzeile { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ws-gruppe .unterkopf { margin: 6px 0 0; }
+.unterkopf .meta { text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 400; }
+.haken-liste { gap: 12px; }
+.haken { display: flex; gap: 10px; align-items: flex-start; font-size: .95rem; font-weight: 400; }
+.feld .haken { font-weight: 400; }
+.haken input[type=checkbox] { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--lila); }
+.haken a { color: var(--fg); }
+.honig { display: none; }
+.absenden { display: grid; gap: 8px; justify-items: start; }
+.zustand:empty { display: none; }
+.zustand.fehlertext { color: var(--rot); font-weight: 700; }
+.danke { max-width: 640px; display: grid; gap: 10px; margin-top: 18px; border-top: 3px solid var(--gruen); }
+.danke p { margin: 0; }
+.warteliste-hinweis { margin-bottom: 16px; border-left-color: var(--rot); }
+.zg-raster { display: grid; gap: 16px; }
+@media (min-width: 760px) { .zg-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
+.zg { display: grid; gap: 10px; align-content: start; }
+.zg:first-child { border-top: 3px solid var(--gruen); }
+.zg p { margin: 0; }
+.zg .knopf { justify-self: start; }
+.zg-form { display: grid; gap: 10px; }
+.status-band { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 14px 18px; margin-top: 16px; background: var(--flaeche); border: 1px solid var(--linie); }
+.status-band .sticker { transform: rotate(-2deg); }
+.raster { display: grid; gap: 18px; }
+@media (min-width: 900px) { .raster { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
+.spalte { display: grid; gap: 18px; min-width: 0; }
+.klein-zwischen { font-size: 1.2rem; margin-bottom: 8px; }
+.angebot { border: 2px solid var(--akz); background: var(--flaeche); padding: 18px 20px; display: grid; gap: 10px; }
+.angebot p { margin: 0; }
+.angebot .uhr { font-family: var(--f-mono); font-size: 1.3rem; }
+.liste-def { display: grid; gap: 0; margin: 0; }
+.liste-def > div { display: grid; grid-template-columns: minmax(90px, 130px) minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--linie); }
+.liste-def dt { color: var(--meta); font-size: .9rem; }
+.liste-def dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.liste-def .chip { margin-top: 4px; white-space: normal; }
+.ersetzt { display: grid; gap: 6px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--linie); border-left: 4px solid var(--rot); }
+.ersetzt .kicker { color: var(--fg); }
+.tausch-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.tausch-zeile .alt { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--rot); color: var(--meta); }
+.tausch-zeile .neu { font-weight: 700; padding: 1px 8px; background: var(--gruen); color: var(--nachtblau); }
+.tausch-bestaetigen { display: grid; gap: 10px; border-top: 1px solid var(--linie); padding-top: 12px; }
+.tausch-bestaetigen .kicker { color: var(--fg); }
+.tausch { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tausch li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.aktionen.abstand { margin-top: 14px; }
+.aktion-frist { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.frist { font-family: var(--f-mono); font-size: .74rem; color: var(--meta); padding-left: 14px; margin: 0; }
+.frist b { color: var(--fg); font-weight: 700; }
+.knopf.gesperrt { opacity: .5; cursor: not-allowed; }
+form.inline { display: inline; }
+.link-knopf { all: unset; cursor: pointer; text-decoration: underline; font-weight: 700; color: var(--fg); }
+.link-knopf:focus-visible { outline: 2px solid var(--akz); outline-offset: 2px; }
+.klein-knopf { min-height: 36px; padding: 6px 14px; font-size: .88rem; }

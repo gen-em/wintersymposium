@@ -54,7 +54,12 @@ $admin = konto_anlegen('Anna Admin', 'anna@example.org', 'admin');
 
 // Test-Beispieldatensatz (wächst mit jedem Arbeitspaket)
 require dirname(__DIR__) . '/testdaten/beispieldaten.php';
-beispieldaten_laden();
+$bd = beispieldaten_laden();
+// Je Engine ein Zugangslink für Paula (offenes Nachrück-Angebot mit Tausch)
+$paula = [];
+for ($i = 0; $i < 3; $i++) {
+    $paula[] = '/link?t=' . anm_link_erzeugen($bd['anmeldungen']['paula'], 'zugang', time() + 86400);
+}
 
 echo json_encode([
     'config' => $ordner . '/config.php',
@@ -62,4 +67,6 @@ echo json_encode([
     'betreiber' => 'betrieb@example.org',
     'admin_id' => $admin,
     'installations_schluessel' => $konfig['installations_schluessel'],
+    'paula_links' => $paula,
+    'mails' => $ordner . '/var/mails',
 ], JSON_UNESCAPED_SLASHES), "\n";

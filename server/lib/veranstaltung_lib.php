@@ -18,8 +18,8 @@ declare(strict_types=1);
 const VA_GRUPPEN = [
     'veranstaltung' => ['Veranstaltung', 'Erscheint in den Eckdaten auf der Startseite.'],
     'cme' => ['Fortbildungspunkte (CME)', 'Die Anzeige erscheint auf der Startseite; Punkte, Kammer und Nummer brauchen Bescheinigung und Meldung (AP-10).'],
-    'anmeldung' => ['Anmeldung', 'Wirkt mit dem Anmeldeformular (AP-4).'],
-    'nachruecken' => ['Warteliste und Nachrücken', 'Wirkt mit dem Nachrücken (AP-4, E-19).'],
+    'anmeldung' => ['Anmeldung', 'Zeitraum und Regeln des Anmeldeformulars.'],
+    'nachruecken' => ['Warteliste und Nachrücken', 'Ein frei gewordener Platz wird der ersten Person der Warteliste angeboten (E-19).'],
     'stichtage' => ['Stichtage für Teilnehmende', 'Bis einschließlich dieses Tages können Teilnehmende selbst ändern; danach nur noch das Team (E-31). Leer: bis zur Veranstaltung.'],
     'listen' => ['Auswahllisten', 'Je Zeile ein Eintrag; die Reihenfolge gilt im Formular.'],
 ];
@@ -40,6 +40,7 @@ const VA_KATALOG = [
     'cme_veranstaltungsnummer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Veranstaltungsnummer (VNR)', 'start' => '', 'max' => 40],
     'anmeldung_start' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldung ab', 'start' => '2026-11-24 23:00:00', 'pflicht' => true],
     'anmeldung_ende' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldeschluss', 'start' => '', 'hilfe' => 'Leer: bis zum Beginn der Veranstaltung.'],
+    'anmeldung_bestaetigung_h' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Bestätigungsfrist (Stunden)', 'start' => '48', 'min' => 1, 'max' => 168, 'hilfe' => 'So lange hält eine neue Anmeldung ihre Plätze, bis die Person den Link in der Mail anklickt. Danach verfällt sie und die Plätze gehen an die Warteliste.'],
     'workshop_limit' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Workshops je Person (höchstens)', 'start' => '0', 'min' => 0, 'max' => 20, 'hilfe' => '0 = kein Limit (E-20).'],
     'workshop_pflicht' => ['gruppe' => 'anmeldung', 'typ' => 'auswahl', 'titel' => 'Workshop-Wahl', 'start' => 'freiwillig', 'optionen' => ['freiwillig' => 'freiwillig', 'pflicht' => 'Pflicht (mindestens ein Workshop)']],
     'nachrueck_frist_h' => ['gruppe' => 'nachruecken', 'typ' => 'zahl', 'titel' => 'Annahmefrist für ein Angebot (Stunden)', 'start' => '48', 'min' => 1, 'max' => 336],
@@ -216,8 +217,8 @@ function va_eckdaten(): array
     }
     $kap = va_zahl('veranstaltung_kapazitaet');
     if ($kap > 0) {
-        // Bis zur Anmeldung (AP-4) gibt es keine belegten Plätze.
-        $eck[] = ['Freie Plätze', $kap . ' / ' . $kap];
+        // Belegt: feste Plätze und offene Angebote, auch unbestätigte Anmeldungen (E-40, E-46)
+        $eck[] = ['Freie Plätze', max(0, $kap - anm_belegt(0)) . ' / ' . $kap];
     }
     return $eck;
 }

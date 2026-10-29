@@ -15,15 +15,18 @@ server/                 → wird in den Zielordner der Umgebung übertragen
   public/               → Webroot (die Domain zeigt hierher, E-34)
     index.php           → einziger Einstieg, leitet alle Seiten
     assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/,
-                          qr.js und vendor/qrcode.js (QR-Code für den zweiten Faktor, MIT)
+                          qr.js und vendor/qrcode.js (QR-Code für den zweiten Faktor, MIT),
+                          anmelden.js, pow.js und pow-worker.js (Anmeldung, Spamschutz)
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
+  daten/                → wegwerfdomains.txt (Spamschutz, Quelle: disposable-email-domains)
   cli/jobs.php          → Job-Einstieg für den Cron auf der Kommandozeile
   cli/konto.php         → Notweg für Team-Konten (Link erzeugen, zweiten Faktor zurücksetzen)
   config.example.php    → Vorlage; die echte config.php liegt nur auf dem Webspace
   var/                  → Laufzeitordner, legt die App selbst an (Sitzungen,
                           install.lock, wartung.lock, Logs, bilder/ mit den
-                          Fotos der Dozierenden); wird nie ausgeliefert
+                          Fotos der Dozierenden, mails/ nur im Test-Modus 'datei');
+                          wird nie ausgeliefert
 tools/tests/            → Testlauf (lokal und im Prüf-Workflow)
 tools/browser/          → Browser-Durchlauf (R-12)
 tools/testdaten/        → Test-Beispieldatensatz (erfundene Daten, wächst je AP)
@@ -49,6 +52,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `umgebung`: `staging` bzw. `produktion`
    - `db`: Zugangsdaten aus Schritt 2
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
+   - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
 6. **Cron einrichten:** im Lima-City-Konto einen Cronjob alle 5 Minuten anlegen, entweder
    - als URL-Aufruf: `https://<domain>/jobs?token=<jobs_token>`, oder
@@ -105,7 +109,7 @@ node tools/browser/durchlauf.js <Ausgabeordner>
 
 (mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen. Die Browser laufen mit deutscher Sprache, deutscher Umgebung (`LANG=de_DE.UTF-8` für den Browserprozess, bei Firefox mit Übernahme der Systemeinstellung) und Zeitzone Europe/Berlin; nur so zeigen Datums- und Zeitfelder TT.MM.JJJJ und 24 h – die Spracheinstellung allein ergibt in Chromium und Firefox das US-Format mit AM/PM. Auf den Bildschirmfotos das Format mit ansehen. **Grenzen:** WebKit unter Linux zeigt bei Uhrzeiten Sekunden (19:30:00), auch mit `step="60"`; Safari auf iPhone und Mac hat eigene Zeitfelder. Das betrifft nur die Darstellung im Testbrowser, nicht die gespeicherten Werte. Natives Ziehen (Drag and Drop) kann Playwright in WebKit unter Linux nicht auslösen; dort löst der Durchlauf dieselben Ereignisse im Browser aus.
 
-**Test-Beispieldatensatz:** `tools/testdaten/beispieldaten.php` legt erfundene Daten an (bisher: zwei Dozierende und ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops und einer Station, Pausen). Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
+**Test-Beispieldatensatz:** `tools/testdaten/beispieldaten.php` legt erfundene Daten an: Einstellungen relativ zu heute (Veranstaltung in 60 Tagen, Anmeldung offen), zwei Dozierende, ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops (ein Termin mit nur 2 Plätzen) und einer Station, Pausen, dazu Anmeldungen: drei bestätigte mit Workshops, eine unbestätigte, ein voller Termin mit Warteliste und ein offenes Nachrück-Angebot mit Tausch. Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
 
 ## 7. Pflegbare Texte
 
@@ -153,6 +157,33 @@ Team-Bereich → „Programm“ (Admin und Betreiber).
 - **Termine:** „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ den nächsten Termin im Anschluss. Höchstens 12 Termine je Workshop. Plätze lassen sich nicht unter die vergebenen senken (wirkt mit AP-4).
 - **Dozierende:** „Dozierende verwalten“; Foto optional (JPG, PNG oder WebP, höchstens 8 MB), wird quadratisch auf 480 px verkleinert und ohne Metadaten in `var/bilder/` gespeichert. Nur mit Einverständnis der Person. Fotos ohne Zuordnung räumt der Job „aufraeumen“ weg. Ohne die PHP-Erweiterung GD ist der Upload ausgeblendet.
 
-## 11. Fehlerprotokoll
+## 11. Anmeldung (AP-4)
+
+- **Ablauf:** `/anmelden` → Mail mit Bestätigungslink → erst der Klick macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze (Einstellung „Bestätigungsfrist“, Start 48 h, so lange wie der Link gilt); danach löscht der Job sie und die Plätze gehen ans Nachrücken.
+- **„Deine Anmeldung“** (`/deine-anmeldung`): Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse); nach dem Link Übersicht, Workshops, Essen und Daten ändern, stornieren, Nachrück-Angebote annehmen oder ablehnen. Einmal-Links gelten 48 Stunden und einmal; erst der Klick auf „Weiter“ auf der Link-Seite verbraucht sie. Danach endet die Sitzung nach 30 min ohne Aktivität.
+- **Stichtage** (Einstellungen): nach dem Tag sind Workshops, Essen bzw. Storno für Teilnehmende gesperrt; die Seite zeigt den Stichtag am Knopf.
+- **Plätze:** je Workshop ein fester Termin, keine Überschneidungen, Warteliste für volle Termine (auch überschneidend). Ist das Symposium voll, kommt die Person auf dessen Warteliste und wählt Workshops erst nach dem Nachrücken. Plätze beziehen sich auf das veröffentlichte Programm; ein Termin mit vergebenen Plätzen lässt sich nicht löschen oder verkleinern.
+- **Nachrücken:** Wird ein Platz frei, bekommt die erste bestätigte Person der Warteliste ein Angebot per Mail (Annahmefrist aus den Einstellungen). Lässt sie es verstreichen, kommt sie ans Ende der Liste und das Angebot geht weiter. Ab der Grenze (Tage vor der Veranstaltung) keine automatischen Angebote mehr; dann vergibt das Team (AP-5).
+- **Jobs** (Cron alle 5 Minuten): `anmeldung` (Fristen, abgelaufene Angebote, Nachrücken, alte Links) und `mail` (Warteschlange) jede Minute fällig, `aufraeumen` stündlich.
+- **Team:** Reiter „Anmeldungen“ zeigt Zahlen, Workshop-Termine und alle Anmeldungen (nur lesen; Bearbeiten mit AP-5).
+- **Spamschutz:** Honigtopf, Formular mindestens 4 s offen, Rechenaufgabe im Browser (JavaScript nötig), Ratenschutz je Herkunft, Wegwerfadressen. Greift eine Bremse, sieht die Antwort aus wie bei Erfolg.
+- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; sonst E-24).
+
+## 12. Mailversand
+
+Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`):
+
+| Schlüssel | Bedeutung |
+|---|---|
+| `modus` | `smtp`; `datei` nur für Tests (Mails als Datei in `var/mails/`) |
+| `host`, `port`, `verschluesselung` | SMTP-Server des Hosters; `ssl` (meist Port 465) oder `starttls` (meist 587) |
+| `benutzer`, `passwort` | Zugang des Postfachs `anmeldung@` – nur hier, nie im Repo |
+| `absender`, `absender_name` | Absender; leer: `anmeldung@<Haupt-Domain>` |
+| `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
+| `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Rundmails (AP-6) warten auf den nächsten Tag |
+
+Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an den Browser versendet, spätestens beim nächsten Cron-Lauf. Fehlschläge werden nach 5, 30, 120 und 360 Minuten wiederholt, danach als Fehler gezählt (Team-Bereich, Fehlerprotokoll ohne Empfängeradresse). Nach dem Versand werden Empfänger, Betreff und Text gelöscht (R-02); Einträge verschwinden nach 30 Tagen. Zeitbudget je Versand 5 s.
+
+## 13. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

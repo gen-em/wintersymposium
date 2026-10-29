@@ -6,12 +6,13 @@ declare(strict_types=1);
  * Sitzungszeitzone UTC (R-07).
  */
 
-function db(): PDO
+function db(bool $neu = false): PDO
 {
     static $pdo = null;
-    if ($pdo instanceof PDO) {
+    if ($pdo instanceof PDO && !$neu) {
         return $pdo;
     }
+    // $neu: eigene Verbindung, z. B. in einem abgespaltenen Testprozess (Paralleltest)
     $dsn = sprintf(
         'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
         (string)konfig('db.host', 'localhost'),

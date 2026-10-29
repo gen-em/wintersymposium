@@ -2,6 +2,30 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.6.0] – 2026-10-29
+
+AP-4: Anmeldung, Einmal-Links, Warteliste und Nachrücken.
+
+### Neu
+
+- Anmeldung unter `/anmelden`: Vorname, Nachname, E-Mail, Berufsgruppe, Klinik/Institution, EFN (nur bei ÄrztInnen, freiwillig, mit Prüfziffer), Essen, Workshop-Wahl, Newsletter-Wunsch, Einwilligung. Workshop-Wahl wie im Mockup: je Workshop ein fester Termin, überschneidende Termine sofort gesperrt (mit Grund), volle Termine auf die Warteliste, Limit und Pflicht aus den Einstellungen. Ist das Symposium voll, geht die Anmeldung auf dessen Warteliste.
+- Bestätigung per Mail: Erst der Klick auf den Link macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze; neue Einstellung „Bestätigungsfrist“ (Start 48 h, Admin), danach verfällt sie.
+- „Deine Anmeldung“ (`/deine-anmeldung`): Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse), Übersicht mit Status und Wartelisten-Platz, Workshops, Essen und Daten ändern (neue Adresse erst nach Bestätigung), stornieren. Stichtage stehen am jeweiligen Knopf und sperren nach Ablauf.
+- Einmal-Links: 48 Stunden gültig, einmal benutzbar, nur als Hash gespeichert; erst der Klick auf „Weiter“ verbraucht sie (Mail-Scanner entwerten sie nicht).
+- Wartelisten je Workshop-Termin und für das Symposium; Nachrücken mit Angebot per Mail, Annahmefrist, Weitergabe ans Listenende bei Ablauf und Grenze vor der Veranstaltung. Überschneidet sich ein Angebot mit einem festen Termin oder betrifft es denselben Workshop, zeigt die Seite den Tausch und führt ihn erst nach Bestätigung aus.
+- Gleiche Adresse zweimal: keine zweite Anmeldung; die Adresse bekommt den Link zur bestehenden.
+- Spamschutz an den öffentlichen Formularen: Honigtopf, Mindestdauer, Rechenaufgabe im Browser (aus NAdoku), Ratenschutz, Liste von Wegwerfadressen.
+- Mailversand (Grundlage aus AP-6 vorgezogen): SMTP mit TLS oder STARTTLS, Warteschlange mit Priorität, Tageslimit und Wiederholungen, Vorlagen für alle Anmelde-Mails; Versand direkt nach der Antwort und per Job; Inhalt und Empfänger nach dem Versand gelöscht. Konfiguration in `config.php` (Abschnitt `mail`).
+- Jobs `anmeldung` (Fristen, Angebote, Nachrücken) und `mail` (Warteschlange).
+- Startseite: „Jetzt anmelden“ und „Anmeldung ändern“, freie Plätze „X / Y“ aus den Anmeldungen; Navigation mit grünem „Anmelden“, „Deine Anmeldung“ und nach dem Link Name und „Ausloggen“. Workshop-Popups mit freien Plätzen, Wartenden und Knopf zur Anmeldung.
+- Team-Reiter „Anmeldungen“ (nur lesen): Zahlen, Workshop-Termine mit Belegung und Warteliste, alle Anmeldungen mit Filter; Hinweis auf der Übersicht, wenn der Mailversand nicht eingerichtet ist.
+- Test-Beispieldatensatz um Einstellungen (relativ zu heute) und Anmeldungen erweitert; Tests für Regeln, Links, Tausch, Nachrücken, Fristen, Paralleltest (20 gleichzeitige Anmeldungen auf 1 Platz) und den Ablauf über HTTP; Browser-Durchlauf mit Anmeldung, Mail, Bestätigung, Ändern, Angebot und Tausch.
+
+### Geändert
+
+- Programm: Belegte Plätze kommen aus den Anmeldungen. Veröffentlichen lehnt ab, wenn ein Termin mit vergebenen Plätzen fehlt oder zu klein ist, und entfernt Wartelisten entfallener Termine.
+- Beispielprogramm im Testdatensatz: Termin WS 02 20:30 hat 2 Plätze (für Warteliste und Nachrücken).
+
 ## [0.5.1] – 2026-10-29
 
 ### Geändert

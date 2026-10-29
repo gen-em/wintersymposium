@@ -28,6 +28,10 @@ const RATE_TOEPFE = [
     'zweitfaktor'  => [5, 900, 900],
     'einrichten'   => [10, 900, 900],
     'notzugang'    => [3, 3600, 3600],
+    // Anmeldung und Link per Mail (AP-4): jede Absendung zählt
+    'anmelden'     => [60, 3600, 3600],
+    'link_ip'      => [10, 3600, 3600],
+    'link_ziel'    => [3, 3600, 3600],
 ];
 
 function rate_grenze(string $topf): array

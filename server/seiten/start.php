@@ -27,6 +27,7 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
     </dl>
     <?php endif; ?>
     <?php if ($anmeldungHinweis !== ''): ?><p class="mono meta klein anmeldung-ab"><?= e($anmeldungHinweis) ?></p><?php endif; ?>
+    <?php if (anm_zeitraum() === 'offen'): ?><div class="held-knoepfe"><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a><a class="knopf zweit" href="/deine-anmeldung">Anmeldung ändern</a></div><?php endif; ?>
 </div>
 
 <?php $infos = text_abschnitte(inhalt('start_infos')); if ($infos !== []): ?>

@@ -16,7 +16,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
 | AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-129, T-150, T-151, T-153, T-154, T-210 bis T-222 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
-| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
+| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-143 | Staging (siehe unten), echter Mailversand; T-144 mit AP-5 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
 | AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
@@ -75,21 +75,21 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-219, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
-- {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: offen}
-- {id: T-131, ap: AP-4, was: "Spamschutz", wie: "Honeypot gefüllt, Formular unter 4 s, ohne Proof-of-Work → stille Ablehnung mit gleicher Antwort", status: offen}
-- {id: T-132, ap: AP-4, was: "Wegwerfadresse abgelehnt", wie: "Anmeldung mit Domain aus wegwerfdomains.txt", status: offen}
-- {id: T-133, ap: AP-4, was: "Pflichtfelder, Berufsgruppen und EFN", wie: "Ohne Berufsgruppe/Institution → Fehler; Sonstige zeigt Freitext; EFN-Feld nur bei Ärztin/Arzt sichtbar; leer erlaubt; falsche Prüfziffer → Fehler; gültige EFN → angenommen", status: offen}
-- {id: T-134, ap: AP-4, was: "Einmal-Link anfordern", wie: "Bekannte und unbekannte Adresse → gleiche Antwort, gleiche Dauer (±); Mail nur bei bekannter", status: offen}
-- {id: T-135, ap: AP-4, was: "Einmal-Link: Ablauf und Einmalverwendung", wie: "Link zweimal öffnen; Link nach Ablauf öffnen", status: offen}
-- {id: T-136, ap: AP-4, was: "Eigene Anmeldung ändern und stornieren", wie: "Workshop und Essen ändern, EFN nachtragen, dann stornieren; Mails kommen an", status: offen}
-- {id: T-137, ap: AP-4, was: "Letzter Platz bei gleichzeitigen Anmeldungen", wie: "Skript mit 20 parallelen Anmeldungen auf 1 freien Platz → genau 1 Platz, 19 Warteliste", status: offen}
-- {id: T-138, ap: AP-4, was: "Nachrück-Angebot nach Storno", wie: "Storno eines Platzes → erste Person der Warteliste erhält Angebot per Mail; Annahme über Link → Platz; Platz ist währenddessen für andere gesperrt", status: offen}
-- {id: T-139, ap: AP-4, was: "Angebot läuft ab oder wird abgelehnt", wie: "Frist verstreichen lassen bzw. ablehnen → Angebot geht an die nächste Person; abgelaufene Person steht am Ende der Warteliste und hat eine Mail; Mails kommen an", status: offen}
-- {id: T-140, ap: AP-4, was: "Grenze für automatisches Nachrücken", wie: "Symposium-Datum testweise auf in 10 Tagen setzen → Storno erzeugt kein Angebot, Team sieht offenen Platz zur manuellen Vergabe", status: offen}
-- {id: T-141, ap: AP-4, was: "Überschneidende Termine gesperrt", wie: "Zwei Termine im selben Zeitfenster wählen → Ablehnung mit Hinweis", status: offen}
-- {id: T-142, ap: AP-4, was: "Token nur als Hash in der DB", wie: "Datenbank: Spalte enthält sha256, nicht den Link-Wert", status: offen}
-- {id: T-143, ap: AP-4, was: "Stichtage sperren Teilnehmende", wie: "Stichtag Workshop auf gestern setzen → Workshop-Änderung per Einmal-Link gesperrt mit Hinweis, Essen noch änderbar; Storno-Stichtag → Storno gesperrt", status: offen}
-- {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: offen}
+- {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: "lokal bestanden (HTTP: Mail mit Link, Klick bestätigt; Job löscht unbestätigte nach der Frist, Plätze gehen ans Nachrücken)"}
+- {id: T-131, ap: AP-4, was: "Spamschutz", wie: "Honeypot gefüllt, Formular unter 4 s, ohne Proof-of-Work → stille Ablehnung mit gleicher Antwort", status: "lokal bestanden (Honigtopf, Formular unter 4 s, ohne gelöste Rechenaufgabe: gleiche Antwort, nichts angelegt)"}
+- {id: T-132, ap: AP-4, was: "Wegwerfadresse abgelehnt", wie: "Anmeldung mit Domain aus wegwerfdomains.txt", status: "lokal bestanden (mailinator.com: gleiche Antwort, nichts angelegt)"}
+- {id: T-133, ap: AP-4, was: "Pflichtfelder, Berufsgruppen und EFN", wie: "Ohne Berufsgruppe/Institution → Fehler; Sonstige zeigt Freitext; EFN-Feld nur bei Ärztin/Arzt sichtbar; leer erlaubt; falsche Prüfziffer → Fehler; gültige EFN → angenommen", status: "lokal bestanden (Felder am Feld markiert; EFN- und Sonstige-Feld im Browser je Berufsgruppe; EFN-Prüfziffer nach Luhn)"}
+- {id: T-134, ap: AP-4, was: "Einmal-Link anfordern", wie: "Bekannte und unbekannte Adresse → gleiche Antwort, gleiche Dauer (±); Mail nur bei bekannter", status: "lokal bestanden (gleiche Antwort, Dauer innerhalb 0,3 s; Mail nur an bekannte Adresse)"}
+- {id: T-135, ap: AP-4, was: "Einmal-Link: Ablauf und Einmalverwendung", wie: "Link zweimal öffnen; Link nach Ablauf öffnen", status: "lokal bestanden (zweiter Klick und abgelaufener Link: „Link abgelaufen“; bloßes Öffnen verbraucht nicht)"}
+- {id: T-136, ap: AP-4, was: "Eigene Anmeldung ändern und stornieren", wie: "Workshop und Essen ändern, EFN nachtragen, dann stornieren; Mails kommen an", status: "lokal bestanden (Essen, Workshop-Termin, neue Adresse mit Bestätigung, Storno; Mails im Datei-Modus)"}
+- {id: T-137, ap: AP-4, was: "Letzter Platz bei gleichzeitigen Anmeldungen", wie: "Skript mit 20 parallelen Anmeldungen auf 1 freien Platz → genau 1 Platz, 19 Warteliste", status: "lokal bestanden (20 Prozesse gleichzeitig: genau 1 Platz, 19 Warteliste)"}
+- {id: T-138, ap: AP-4, was: "Nachrück-Angebot nach Storno", wie: "Storno eines Platzes → erste Person der Warteliste erhält Angebot per Mail; Annahme über Link → Platz; Platz ist währenddessen für andere gesperrt", status: "lokal bestanden (Angebot an die erste bestätigte Person, Platz bleibt reserviert, Annehmen mit Tausch-Bestätigung)"}
+- {id: T-139, ap: AP-4, was: "Angebot läuft ab oder wird abgelehnt", wie: "Frist verstreichen lassen bzw. ablehnen → Angebot geht an die nächste Person; abgelaufene Person steht am Ende der Warteliste und hat eine Mail; Mails kommen an", status: "lokal bestanden (Ablauf per Job: Person ans Listenende, Mail; Ablehnen gibt den Platz frei)"}
+- {id: T-140, ap: AP-4, was: "Grenze für automatisches Nachrücken", wie: "Symposium-Datum testweise auf in 10 Tagen setzen → Storno erzeugt kein Angebot, Team sieht offenen Platz zur manuellen Vergabe", status: "lokal bestanden (keine automatischen Angebote nach der Grenze); manuelle Vergabe durch das Team mit AP-5"}
+- {id: T-141, ap: AP-4, was: "Überschneidende Termine gesperrt", wie: "Zwei Termine im selben Zeitfenster wählen → Ablehnung mit Hinweis", status: "lokal bestanden (Server lehnt ab; im Browser sofort gesperrt mit Grund)"}
+- {id: T-142, ap: AP-4, was: "Token nur als Hash in der DB", wie: "Datenbank: Spalte enthält sha256, nicht den Link-Wert", status: "lokal bestanden"}
+- {id: T-143, ap: AP-4, was: "Stichtage sperren Teilnehmende", wie: "Stichtag Workshop auf gestern setzen → Workshop-Änderung per Einmal-Link gesperrt mit Hinweis, Essen noch änderbar; Storno-Stichtag → Storno gesperrt", status: "lokal bestanden für Workshops (Knopf gesperrt mit Hinweis, Änderung abgelehnt); Essen und Storno gleich gebaut, auf Staging nachprüfen"}
+- {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: "offen: Team-Bearbeitung kommt mit AP-5"}
 
 # AP-4b Konten für Teilnehmende
 - {id: T-145, ap: AP-4b, was: "Konto beim Anmelden und nachträglich", wie: "Anmeldung mit „Konto anlegen“ → Bestätigung → Login zeigt Anmeldung; Anmeldung ohne Konto → Einmal-Link → Konto anlegen → Anmeldung im Profil", status: offen}
@@ -178,6 +178,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-130 bis T-143 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 342 ok, 0 Fehler (Regeln, Bestätigung, Links, Tausch, Nachrücken, Fristen, Paralleltest, HTTP-Ablauf); Browser-Durchlauf 2376 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Formular mit Sicherheitsprüfung, Mail, Bestätigen, Deine Anmeldung, Workshops und Daten ändern, Angebot mit Tausch-Bestätigung, Ausloggen, Team-Liste); Bildschirmfotos angesehen | Staging mit echtem Mailversand |
 | T-120, T-121, T-210 bis T-215 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 271 ok, 0 Fehler; Browser-Durchlauf 1563 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Programm-Pflege, Dozierende, Vorschau, Startseite mit Popups, Zeitraster und Liste); Bildschirmfotos angesehen, dabei Termintabelle, Kästchen und Skala korrigiert; Datums- und Zeitfelder in Chromium und Firefox nach Korrektur der Browser-Umgebung im deutschen Format (19:30, 20.01.2027) | Staging nach dem Merge |
 | T-121, T-222 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 221 ok, 0 Fehler; Browser-Durchlauf 978 ok, 0 Fehler (Einstellungen: Fehler markiert, Speichern, Auswahl, neuer Ort auf der Startseite, in Chromium, Firefox, WebKit) | Staging nach dem Merge |
 
@@ -213,6 +214,15 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-4 (nach Merge auf Staging)
+
+1. Mailversand einrichten: in der `config.php` auf Staging den Abschnitt `mail` aus `config.example.php` übernehmen und Host, Benutzer und Passwort des Postfachs `anmeldung@` eintragen (Werte nur dort). Team-Bereich → Übersicht: Die rote Meldung „Mailversand nicht eingerichtet“ ist weg.
+2. Team-Bereich → Einstellungen: „Anmeldung ab“ auf heute setzen (für den Test), „Bestätigungsfrist“ ansehen. Startseite: grüner Knopf „Jetzt anmelden“, in der Navigation „Anmelden“.
+3. Mit einer eigenen Adresse anmelden (ÄrztIn mit EFN, ein Workshop). Die Mail kommt an (auch Spam-Ordner prüfen) und der Link bestätigt die Anmeldung. Danach „Deine Anmeldung“: Essen ändern, Workshop wechseln – je eine Mail.
+4. Abmelden (Ausloggen), dann „Deine Anmeldung“ → „Link schicken“ mit deiner Adresse → Link kommt; mit einer unbekannten Adresse kommt nichts.
+5. Auf dem iPhone (Safari) dasselbe Formular einmal absenden (Sicherheitsprüfung rechnet im Browser).
+6. Zum Schluss stornieren und „Anmeldung ab“ wieder auf den echten Start (25.11.2026 00:00) stellen.
 
 ### Noch zu prüfen für AP-3 Schritt 3 (nach Merge auf Staging)
 

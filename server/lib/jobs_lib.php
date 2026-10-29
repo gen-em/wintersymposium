@@ -22,6 +22,16 @@ function jobs_katalog(): array
             'abstand_s' => 3600,
             'fn' => 'job_aufraeumen',
         ],
+        // Bestätigungsfristen, abgelaufene Angebote, Nachrücken (AP-4)
+        'anmeldung' => [
+            'abstand_s' => 60,
+            'fn' => 'anm_job',
+        ],
+        // Warteschlange senden (nach anmeldung, damit dessen Mails gleich mitgehen)
+        'mail' => [
+            'abstand_s' => 60,
+            'fn' => 'job_mail',
+        ],
     ];
 }
 
@@ -95,5 +105,12 @@ function job_aufraeumen(int $jetzt): array
         'rate_limit' => rate_aufraeumen($jetzt),
         'konto_links' => konto_link_aufraeumen($jetzt),
         'fotos' => foto_aufraeumen(),
+        'mails' => mail_aufraeumen($jetzt),
     ];
+}
+
+/** Fällige Mails senden. */
+function job_mail(int $jetzt): array
+{
+    return mail_senden_faellige(40, 30.0, $jetzt);
 }
