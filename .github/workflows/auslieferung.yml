@@ -7,6 +7,8 @@ name: Auslieferung
 # werden weder hochgeladen noch gelöscht.
 #
 # Secrets (Repo): FTP_SERVER, FTP_USER, FTP_PASSWORD.
+# Die Zielpfade gelten vom FTP-Login aus: der Zugang landet im Ordner
+# wintersymposium des Webspace und sieht dort staging/ und produktiv/.
 
 on:
   push:
@@ -41,10 +43,10 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "ZIEL=/wintersymposium/produktiv/" >> "$GITHUB_ENV"
+            echo "ZIEL=/produktiv/" >> "$GITHUB_ENV"
             echo "Ziel: Produktion"
           else
-            echo "ZIEL=/wintersymposium/staging/" >> "$GITHUB_ENV"
+            echo "ZIEL=/staging/" >> "$GITHUB_ENV"
             echo "Ziel: Staging"
           fi
 
@@ -77,15 +79,27 @@ jobs:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        # Die Ausgabe nennt nur curl-Codes und Pfade aus diesem Workflow, keine
+        # Server-Meldungen und keine Ordnerlisten: die Logs sind öffentlich (R-10).
         run: |
+          # Ohne -e: Fehlercodes werden unten selbst ausgewertet.
+          set +e
           set -uo pipefail
           datei="${ZIEL}.ftp-deploy-sync-state.json"
           zugang() { printf 'user = "%s:%s"\n' "$FTP_USER" "$FTP_PASSWORD"; }
-          zugang | curl --config - --silent --show-error --ssl-reqd --head "ftp://${FTP_SERVER}${datei}" > /dev/null 2>&1
+          zugang | curl --config - --silent --ssl-reqd --head "ftp://${FTP_SERVER}${datei}" > /dev/null 2>&1
           rc=$?
           if [ "$rc" -eq 0 ]; then
             echo "Zustandsdatei vorhanden."
             exit 0
+          fi
+          if [ "$rc" -eq 9 ]; then
+            echo "::error::Zielordner ${ZIEL} ist vom FTP-Login aus nicht erreichbar (curl 9). Ordner anlegen oder Zielpfad im Workflow prüfen. Abbruch vor jeder Änderung."
+            exit 1
+          fi
+          if [ "$rc" -eq 67 ]; then
+            echo "::error::FTP-Anmeldung abgelehnt (curl 67). Secrets FTP_USER/FTP_PASSWORD prüfen. Abbruch vor jeder Änderung."
+            exit 1
           fi
           if [ "$rc" -ne 19 ] && [ "$rc" -ne 78 ]; then
             echo "::error::Zustand der Zustandsdatei nicht feststellbar (curl $rc). Abbruch vor jeder Änderung."
@@ -93,7 +107,12 @@ jobs:
           fi
           ms=$(( $(date +%s) * 1000 ))
           printf '{"description":"DO NOT DELETE THIS FILE. Used by FTP-Deploy-Action.","version":"1.0.0","generatedTime":%s,"data":[]}\n' "$ms" > /tmp/zustand.json
-          zugang | curl --config - --silent --show-error --ssl-reqd --ftp-create-dirs -T /tmp/zustand.json "ftp://${FTP_SERVER}${datei}"
+          zugang | curl --config - --silent --ssl-reqd -T /tmp/zustand.json "ftp://${FTP_SERVER}${datei}" > /dev/null 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::Leere Zustandsdatei konnte nicht angelegt werden (curl $rc). Abbruch vor jeder Änderung."
+            exit 1
+          fi
           echo "Leere Zustandsdatei angelegt (erster Abgleich überträgt alles)."
 
       - name: server/ per FTPS abgleichen

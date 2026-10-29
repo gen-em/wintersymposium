@@ -35,7 +35,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: "teilweise lokal (Ablage, Aufräumen); Ablauf nach 30 min auf Staging offen"}
 - {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "11-mal /health mit falschem Token → danach auch mit richtigem Token 404 für 10 min; nach Ablauf wieder 200", status: "lokal bestanden (Bibliothek); auf Staging über /health offen"}
 - {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Lima-City-Cron ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: "lokal bestanden (CLI und URL); Lima-City-Cron offen"}
-- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "offen (erst nach Merge und Einrichtung)"}
+- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "erster Lauf abgebrochen (Zielpfad), nach 0.1.1 erneut prüfen"}
 - {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET /health mit Kopfzeile X-Health-Token oder ?token= liefert 200 und JSON (status ok, Schema ist = soll); ohne Token 404", status: "lokal bestanden; Staging offen"}
 - {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "var/wartung.lock per FTP anlegen → Startseite 503 mit Hinweisseite, /health meldet wartung: true, Team-Login weiter möglich (ab AP-5); Datei löschen → wieder 200", status: "lokal bestanden ohne Login-Teil; Login-Teil nach AP-5"}
 - {id: T-109, ap: AP-1, was: "Lima-City-Botschutz", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: "offen"}
@@ -142,11 +142,12 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-105 | 2026-10-29 | claude-dev | lokal bestanden | /jobs?token=… → status ok, Auslöser url; cli/jobs.php → Exitcode 0, Auslöser cli; Mindestabstand je Job eingehalten, Zeitstempel bei jedem Aufruf | Lima-City-Cron offen |
 | T-107 | 2026-10-29 | claude-dev | lokal bestanden | ohne/falsches Token 404; mit Token 200, JSON, Schema ist = soll | – |
 | T-108 | 2026-10-29 | claude-dev | lokal bestanden (ohne Login) | wartung.lock → 503 mit Retry-After; /health meldet wartung: true; /team nicht 503; Jobs pausieren | Team-Login erst ab AP-5 |
+| T-106 | 2026-10-29 | claude-dev | nicht bestanden (erster Lauf) | Lauf „Auslieferung“ nach Merge von 0.1.0: Prüfung grün (MySQL 8.4, 88 ok), Abgleich abgebrochen mit curl 9 vor jeder Übertragung | Zielpfad falsch (FTP-Login landet schon in wintersymposium); in 0.1.1 auf /staging/ und /produktiv/ korrigiert, erneut prüfen |
 | T-110 | 2026-10-29 | claude-dev | lokal bestanden | fremder Host → 421; weiterer Host aus dem Installer → 200; Groß-/Kleinschreibung und Port egal | Basis-URL in Mails erst mit AP-6 prüfbar |
 
 ### Noch zu prüfen für AP-1 (Admin, auf Staging nach Einrichtung laut `docs/betrieb.md` Abschnitt 2)
 
-1. T-106: PR mergen → im Reiter *Actions* läuft „Auslieferung“ grün durch; per FTP im Ordner `staging` liegen `public/`, `lib/` usw.; `config.php` und `var/` unverändert (Größe/Datum vorher/nachher); `produktiv` unverändert.
+1. T-106: PR mit 0.1.1 mergen → im Reiter *Actions* läuft „Auslieferung“ grün durch; per FTP im Ordner `staging` liegen `public/`, `lib/` usw.; `config.php` und `var/` unverändert (Größe/Datum vorher/nachher); `produktiv` unverändert.
 2. T-100: `https://test.winter-notfallsymposium.de/install` → Installation → zweiter Aufruf 404.
 3. T-101: `curl -sI https://test.winter-notfallsymposium.de/` → CSP, Strict-Transport-Security, X-Content-Type-Options, Referrer-Policy, X-Frame-Options vorhanden; `curl -sI http://…/` → 301 auf https.
 4. T-107 und T-104: `/health?token=…` → JSON mit status ok; elfmal mit falschem Token, dann mit richtigem → 404; nach 10 min wieder 200.
@@ -155,5 +156,5 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 7. T-110: `curl -sI -H 'Host: fremd.example' https://test.winter-notfallsymposium.de/` → 421 (kann je nach Hoster vorher abgefangen werden; dann ist das Ergebnis ebenfalls in Ordnung).
 8. T-103: im Browser `/install` vor der Installation öffnen, 31 min warten, absenden → „Sitzung abgelaufen“ (403). Alternativ nach AP-5 mit dem Team-Login.
 9. T-109: Installer-Formular im Browser absenden; falls 403 vom Hoster statt der App-Antwort kommt, Botschutz beim Hoster klären (K-03).
-10. Produktion: Tag `v0.1.0` setzen (docs/betrieb.md Abschnitt 3) → Lauf nach `produktiv`; einmal mit absichtlich falschem Tag (z. B. `v0.0.9`) prüfen, dass der Lauf vor der Übertragung abbricht (Tag danach in GitHub löschen).
+10. Produktion: Tag `v0.1.1` setzen (docs/betrieb.md Abschnitt 3) → Lauf nach `produktiv`; einmal mit absichtlich falschem Tag (z. B. `v0.0.9`) prüfen, dass der Lauf vor der Übertragung abbricht (Tag danach in GitHub löschen).
 
