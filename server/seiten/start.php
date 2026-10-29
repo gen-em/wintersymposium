@@ -26,9 +26,10 @@ if ($datum !== null && $datum !== '') {
 if ($eck === []) {
     // Vorübergehender Platzhalter auf Wunsch des Admins (Mockup-Kommentar
     // 2026-10-29), bis die Einstellungen aus AP-3 und die Platzzählung aus
-    // AP-4 stehen; dann entfernen. Zeit und Ort folgen, sobald sie feststehen.
+    // AP-4 stehen; dann entfernen. Ort folgt, sobald er feststeht.
     $eck = [
         ['Datum', tag_text('2027-01-20')],
+        ['Zeit', '18:00–22:00'],
         ['CME', 'Punkte beantragt'],
         ['Freie Plätze', '240 / 240'],
     ];

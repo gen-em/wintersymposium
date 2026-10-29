@@ -8,11 +8,12 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 - Konzept: offene Punkte O-23 bis O-32 aus der Mockup-Runde entschieden und als E-42 eingetragen (Nachrücken bei Überschneidung, Statusfarben, grüner Anmelde-Knopf, „Anmelden“/„Einloggen“, Konten mit Rollen, Mailings und Newsletter, EFN-Barcode Code 128, Anwesenheit nur mit Ausnahmen, Empfängerliste im Mail-Archiv); R-02, E-22, E-40 und E-41 angepasst; O-33 (Löschfrist der Empfängerlisten) neu.
 - Prüfprotokoll: AP-2 auf Staging abgenommen.
+- Konzept: Team-Login (Konten-Tabelle mit Rollen, Passwort, zweiter Faktor) aus AP-5 in AP-3 vorgezogen; O-33 entschieden; Symposium als Abendveranstaltung 18:00–22:00 eingetragen.
 - Startseite: Überschrift der Infokästen „Für alle, die da sind, wenn andere frei haben“ statt „… den Piepser tragen“ (passt für Notaufnahme und Rettungsdienst, Nächte und Wochenenden); Migration 3 ändert den Text, solange er noch nicht bearbeitet wurde. Mockup angepasst.
-- Startseite: Infokasten „Für wen“ mit neuer Aufzählung der Zielgruppen (Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen in Notaufnahmen, RettungssanitäterInnen, Studierende und alle Interessierten); ebenfalls über Migration 3.
+- Startseite: Infokasten „Für wen“ mit neuer Aufzählung der Zielgruppen (Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen, RettungssanitäterInnen, Studierende und alle Interessierten); ebenfalls über Migration 3.
 - Startseite: Infokasten „Wie“ beschreibt die Abendveranstaltung (erst Vorträge, dann Bier, Snacks, Workshops und offene Stationen); ebenfalls über Migration 3.
 - Startseite: Infokasten „Was es kostet“: nichts, dazu Snacks, Bier und Alkoholfreies (statt Mittagessen); ebenfalls über Migration 3.
-- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, CME beantragt, freie Plätze 240 / 240; Zeit und Ort folgen), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
+- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, 18:00–22:00, CME beantragt, freie Plätze 240 / 240; Ort folgt), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
 
 ## [0.2.0] – 2026-10-29
 
