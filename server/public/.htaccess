@@ -1,0 +1,32 @@
+# Webroot der Webseite.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# Kein Options/DirectoryIndex: nicht jeder Webspace erlaubt das (Fehler 500).
+# Ordner und / laufen ohnehin über index.php (keine Verzeichnislisten).
+
+RewriteEngine On
+
+# HTTPS erzwingen (zusätzlich prüft index.php)
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Punktdateien nie ausliefern (außer .well-known für Zertifikate)
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+# Alles, was keine vorhandene Datei ist, an den Einstieg
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L,QSA]
+
+# Andere PHP-Dateien als index.php gibt es hier nicht; sicherheitshalber sperren
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+<Files "index.php">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+</Files>

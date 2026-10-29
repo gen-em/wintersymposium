@@ -1,0 +1,6 @@
+# Umgebungsspezifisch, nie ins Repo (R-01, R-10)
+server/config.php
+# Laufzeitdaten (Sitzungen, Sperrdateien, Logs)
+server/var/
+# Wird bei der Auslieferung aus VERSION erzeugt
+server/VERSION

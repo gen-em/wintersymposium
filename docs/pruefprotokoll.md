@@ -13,9 +13,9 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 
 | AP | Titel | Status | Geprüft | Offen |
 |---|---|---|---|---|
-| AP-1 | Grundgerüst und Auslieferung | offen | – | T-100 bis T-110 |
+| AP-1 | Grundgerüst und Auslieferung | umgesetzt, Staging-Abnahme offen | lokal: T-100 bis T-105, T-107, T-108, T-110 (Teile) | auf Staging: T-100 bis T-110 |
 | AP-2 | Design-Mockups und öffentliche Seiten | offen | – | T-111 bis T-116 |
-| AP-3 | Programm und Veranstaltungs-Einstellungen | offen | – | T-120 bis T-125 |
+| AP-3 | Programm und Veranstaltungs-Einstellungen | offen | – | T-120 bis T-126 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
@@ -29,17 +29,17 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 
 ```yaml
 # AP-1 Grundgerüst und Auslieferung
-- {id: T-100, ap: AP-1, was: "Installer legt DB und ersten Betreiber an, sperrt sich danach (install.lock)", wie: "Installation auf Staging; zweiter Aufruf von install.php muss 403/404 liefern", status: offen}
-- {id: T-101, ap: AP-1, was: "HTTPS und Sicherheits-Header", wie: "curl -sI https://<domain>/ – CSP, HSTS, X-Content-Type-Options, Referrer-Policy, X-Frame-Options vorhanden", status: offen}
-- {id: T-102, ap: AP-1, was: "CSRF-Schutz", wie: "POST ohne/mit falschem Token wird abgelehnt", status: offen}
-- {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: offen}
-- {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "n+1 Fehlversuche von einer IP → Sperre, nach Fenster wieder frei", status: offen}
-- {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Lima-City-Cron ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: offen}
-- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: offen}
-- {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET mit Token liefert 200 und JSON; ohne Token 404", status: offen}
-- {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "wartung.lock anlegen → 503 mit Hinweisseite, Team-Login weiter möglich", status: offen}
-- {id: T-109, ap: AP-1, was: "Lima-City-Botschutz", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: offen}
-- {id: T-110, ap: AP-1, was: "Mehrere Hostnamen (E-27)", wie: "Aufruf über nicht erlaubten Host → Ablehnung; erlaubter Host → richtige Basis-URL in Links und Mails", status: offen}
+- {id: T-100, ap: AP-1, was: "Installer legt DB und ersten Betreiber an, sperrt sich danach (install.lock)", wie: "Installation auf Staging über /install (docs/betrieb.md Abschnitt 2); zweiter Aufruf von /install muss 404 liefern; var/install.lock liegt im Zielordner", status: "lokal bestanden; Staging offen"}
+- {id: T-101, ap: AP-1, was: "HTTPS und Sicherheits-Header", wie: "curl -sI https://<domain>/ – CSP, HSTS, X-Content-Type-Options, Referrer-Policy, X-Frame-Options vorhanden", status: "lokal bestanden (ohne HTTPS/HSTS); Staging offen"}
+- {id: T-102, ap: AP-1, was: "CSRF-Schutz", wie: "POST ohne/mit falschem Token wird abgelehnt", status: "lokal bestanden; Staging offen"}
+- {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: "teilweise lokal (Ablage, Aufräumen); Ablauf nach 30 min auf Staging offen"}
+- {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "11-mal /health mit falschem Token → danach auch mit richtigem Token 404 für 10 min; nach Ablauf wieder 200", status: "lokal bestanden (Bibliothek); auf Staging über /health offen"}
+- {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Lima-City-Cron ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: "lokal bestanden (CLI und URL); Lima-City-Cron offen"}
+- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "offen (erst nach Merge und Einrichtung)"}
+- {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET /health mit Kopfzeile X-Health-Token oder ?token= liefert 200 und JSON (status ok, Schema ist = soll); ohne Token 404", status: "lokal bestanden; Staging offen"}
+- {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "var/wartung.lock per FTP anlegen → Startseite 503 mit Hinweisseite, /health meldet wartung: true, Team-Login weiter möglich (ab AP-5); Datei löschen → wieder 200", status: "lokal bestanden ohne Login-Teil; Login-Teil nach AP-5"}
+- {id: T-109, ap: AP-1, was: "Lima-City-Botschutz", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: "offen"}
+- {id: T-110, ap: AP-1, was: "Mehrere Hostnamen (E-27)", wie: "Aufruf über nicht erlaubten Host → Ablehnung; erlaubter Host → richtige Basis-URL in Links und Mails", status: "lokal bestanden; Staging offen"}
 
 # AP-2 Design-Mockups und öffentliche Seiten
 - {id: T-111, ap: AP-2, was: "Mockups vom Admin freigegeben", wie: "Freigabe im Chat/PR mit Datum festhalten", status: offen}
@@ -130,7 +130,30 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 
 ## 3. Ergebnisse
 
-Noch keine Prüfungen durchgeführt.
+Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ bei jedem PR gegen MySQL 8.4). Die lokalen Ergebnisse unten stammen aus einer Arbeitsumgebung mit PHP 8.3 und MySQL 8.0 über den eingebauten PHP-Server (HTTP, kein HTTPS); sie ersetzen die Prüfung auf Staging nicht.
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
+| T-100 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` → „Installation abgeschlossen“, „Installer danach gesperrt (404)“, „zweite Installation per POST unmöglich“; falscher Schlüssel legt kein Konto an | – |
+| T-101 | 2026-10-29 | claude-dev | lokal bestanden (Teil) | CSP mit Nonce (je Anfrage neu), nosniff, Referrer-Policy, X-Frame-Options, kein X-Powered-By | HSTS und HTTPS-Umleitung nur über HTTPS prüfbar → Staging |
+| T-102 | 2026-10-29 | claude-dev | lokal bestanden | POST /install ohne Token → 403, mit falschem Token → 403 | – |
+| T-103 | 2026-10-29 | claude-dev | lokal bestanden (Teil) | Ablage unter var/sitzungen; Aufräumen löscht nur Dateien älter als 40 min | Ablauf nach 30 min Leerlauf auf Staging prüfen |
+| T-104 | 2026-10-29 | claude-dev | lokal bestanden (Bibliothek) | 9 Fehlversuche erlaubt, 10. sperrt, nach Sperrdauer frei; Merkmal ist Hash, keine IP | über HTTP auf Staging prüfen |
+| T-105 | 2026-10-29 | claude-dev | lokal bestanden | /jobs?token=… → status ok, Auslöser url; cli/jobs.php → Exitcode 0, Auslöser cli; Mindestabstand je Job eingehalten, Zeitstempel bei jedem Aufruf | Lima-City-Cron offen |
+| T-107 | 2026-10-29 | claude-dev | lokal bestanden | ohne/falsches Token 404; mit Token 200, JSON, Schema ist = soll | – |
+| T-108 | 2026-10-29 | claude-dev | lokal bestanden (ohne Login) | wartung.lock → 503 mit Retry-After; /health meldet wartung: true; /team nicht 503; Jobs pausieren | Team-Login erst ab AP-5 |
+| T-110 | 2026-10-29 | claude-dev | lokal bestanden | fremder Host → 421; weiterer Host aus dem Installer → 200; Groß-/Kleinschreibung und Port egal | Basis-URL in Mails erst mit AP-6 prüfbar |
+
+### Noch zu prüfen für AP-1 (Admin, auf Staging nach Einrichtung laut `docs/betrieb.md` Abschnitt 2)
+
+1. T-106: PR mergen → im Reiter *Actions* läuft „Auslieferung“ grün durch; per FTP im Ordner `staging` liegen `public/`, `lib/` usw.; `config.php` und `var/` unverändert (Größe/Datum vorher/nachher); `produktiv` unverändert.
+2. T-100: `https://test.winter-notfallsymposium.de/install` → Installation → zweiter Aufruf 404.
+3. T-101: `curl -sI https://test.winter-notfallsymposium.de/` → CSP, Strict-Transport-Security, X-Content-Type-Options, Referrer-Policy, X-Frame-Options vorhanden; `curl -sI http://…/` → 301 auf https.
+4. T-107 und T-104: `/health?token=…` → JSON mit status ok; elfmal mit falschem Token, dann mit richtigem → 404; nach 10 min wieder 200.
+5. T-105: Cron einrichten; nach einigen Minuten zeigt `/health` unter `jobs.letzter_lauf` eine aktuelle Zeit.
+6. T-108: `var/wartung.lock` anlegen → Startseite 503; löschen → 200.
+7. T-110: `curl -sI -H 'Host: fremd.example' https://test.winter-notfallsymposium.de/` → 421 (kann je nach Hoster vorher abgefangen werden; dann ist das Ergebnis ebenfalls in Ordnung).
+8. T-103: im Browser `/install` vor der Installation öffnen, 31 min warten, absenden → „Sitzung abgelaufen“ (403). Alternativ nach AP-5 mit dem Team-Login.
+9. T-109: Installer-Formular im Browser absenden; falls 403 vom Hoster statt der App-Antwort kommt, Botschutz beim Hoster klären (K-03).
+10. Produktion: Tag `v0.1.0` setzen (docs/betrieb.md Abschnitt 3) → Lauf nach `produktiv`; einmal mit absichtlich falschem Tag (z. B. `v0.0.9`) prüfen, dass der Lauf vor der Übertragung abbricht (Tag danach in GitHub löschen).
+

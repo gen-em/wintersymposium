@@ -1,0 +1,114 @@
+name: Auslieferung
+
+# E-32: Push auf main → Staging; Tag vX.Y.Z → Produktion.
+# Vor jedem Abgleich läuft die Prüfung. Übertragen wird der Inhalt von
+# server/ per FTPS; config.php und der Laufzeitordner var/ (Sitzungen,
+# install.lock, wartung.lock, Logs) stehen auf der Ausnahmeliste und
+# werden weder hochgeladen noch gelöscht.
+#
+# Secrets (Repo): FTP_SERVER, FTP_USER, FTP_PASSWORD.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  pruefung:
+    uses: ./.github/workflows/pruefung.yml
+
+  ausliefern:
+    needs: pruefung
+    runs-on: ubuntu-24.04
+    # Environment "produktiv" für Tags. Wer zusätzlich eine Freigabe vor dem
+    # Abgleich will, trägt in GitHub unter Settings → Environments →
+    # produktiv einen Pflicht-Prüfer ein.
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'produktiv' || 'staging' }}
+    concurrency:
+      group: auslieferung-${{ startsWith(github.ref, 'refs/tags/') && 'produktiv' || 'staging' }}
+      # Nie abbrechen: ein halber Abgleich hinterlässt eine Zustandsdatei,
+      # nach der der nächste Lauf Änderungen übersieht.
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ziel bestimmen
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "ZIEL=/wintersymposium/produktiv/" >> "$GITHUB_ENV"
+            echo "Ziel: Produktion"
+          else
+            echo "ZIEL=/wintersymposium/staging/" >> "$GITHUB_ENV"
+            echo "Ziel: Staging"
+          fi
+
+      - name: Tag prüfen (nur Produktion)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::Tag $tag passt nicht zur Datei VERSION ($version). Erwartet: v$version"
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Der Tag $tag zeigt auf einen Commit, der nicht auf main liegt. Produktion nur von main."
+            exit 1
+          fi
+          echo "Tag $tag passt zu VERSION und liegt auf main."
+
+      - name: VERSION in server/ legen
+        run: cp VERSION server/VERSION
+
+      - name: Zustandsdatei auf dem Server sicherstellen
+        # Fehlt die Zustandsdatei, bricht die Deploy-Action bei diesem Hoster
+        # mit ECONNRESET ab (Erfahrung aus NAdoku). Daher vorher prüfen
+        # (SIZE auf dem Steuerkanal, keine Datenverbindung) und nur, wenn sie
+        # fehlt, eine leere anlegen. Eine vorhandene wird nie überschrieben.
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -uo pipefail
+          datei="${ZIEL}.ftp-deploy-sync-state.json"
+          zugang() { printf 'user = "%s:%s"\n' "$FTP_USER" "$FTP_PASSWORD"; }
+          zugang | curl --config - --silent --show-error --ssl-reqd --head "ftp://${FTP_SERVER}${datei}" > /dev/null 2>&1
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "Zustandsdatei vorhanden."
+            exit 0
+          fi
+          if [ "$rc" -ne 19 ] && [ "$rc" -ne 78 ]; then
+            echo "::error::Zustand der Zustandsdatei nicht feststellbar (curl $rc). Abbruch vor jeder Änderung."
+            exit 1
+          fi
+          ms=$(( $(date +%s) * 1000 ))
+          printf '{"description":"DO NOT DELETE THIS FILE. Used by FTP-Deploy-Action.","version":"1.0.0","generatedTime":%s,"data":[]}\n' "$ms" > /tmp/zustand.json
+          zugang | curl --config - --silent --show-error --ssl-reqd --ftp-create-dirs -T /tmp/zustand.json "ftp://${FTP_SERVER}${datei}"
+          echo "Leere Zustandsdatei angelegt (erster Abgleich überträgt alles)."
+
+      - name: server/ per FTPS abgleichen
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./server/
+          server-dir: ${{ env.ZIEL }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            config.php
+            var/**
+            var/

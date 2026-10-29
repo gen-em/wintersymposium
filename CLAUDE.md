@@ -9,6 +9,11 @@ Verbindliche Quelle ist [`docs/konzept.md`](docs/konzept.md) (Entscheidungen E-x
 - Anleitungen in nummerierten Schritten; nach einem Schritt, dessen Ergebnis die nächsten bestimmt, anhalten und auf die Rückmeldung warten.
 - Der Admin arbeitet mit GitHub Desktop (kein git auf der Kommandozeile).
 
+## Technik
+
+- Aufbau, Einrichtung, Auslieferung und Tests: [`docs/betrieb.md`](docs/betrieb.md). Webroot ist `server/public/`.
+- Vor jedem PR: `php tools/tests/lauf.php` mit Testdatenbank (Umgebungsvariablen `WS_TEST_DB_*`); neue Funktionen bekommen Tests dort.
+
 ## Regeln
 
 - **Öffentliches Repo (E-25, R-10):** keine Zugangsdaten, Kontonamen, IP-Adressen, Serverpfade oder Hosting-Interna in Code, Doku, Commits, PR-Texten oder Issues. Domain und öffentliche Absenderadressen (anmeldung@, newsletter@) dürfen genannt werden, Passwörter und Postfach-Logins nie. Umgebungsspezifisches nur in `config.php` (nie im Repo) und in GitHub-Secrets.

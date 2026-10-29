@@ -1,0 +1,53 @@
+name: Prüfung
+
+# Läuft bei jedem PR und wird von der Auslieferung vor jedem Abgleich
+# aufgerufen: Syntaxprüfung aller PHP-Dateien und der Testlauf gegen
+# MySQL 8.4 (wie auf dem Webspace).
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: nur-fuer-den-test
+          MYSQL_DATABASE: ws_test
+          MYSQL_USER: ws
+          MYSQL_PASSWORD: nur-fuer-den-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pnur-fuer-den-test"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP-Version und Erweiterungen
+        run: |
+          php -v
+          php -m | grep -E -i '^(pdo_mysql|mbstring|curl|openssl|sodium)$'
+
+      - name: Syntax aller PHP-Dateien
+        run: |
+          fehler=0
+          while IFS= read -r -d '' f; do
+            php -l "$f" > /dev/null || fehler=1
+          done < <(find server tools -name '*.php' -print0)
+          exit $fehler
+
+      - name: Testlauf
+        env:
+          WS_TEST_DB_HOST: 127.0.0.1
+          WS_TEST_DB_PORT: 3306
+          WS_TEST_DB_NAME: ws_test
+          WS_TEST_DB_USER: ws
+          WS_TEST_DB_PASS: nur-fuer-den-test
+        run: php tools/tests/lauf.php
