@@ -21,6 +21,7 @@ AP-3 Schritt 3: Programm.
 
 - Test zum Wiederholungsschutz der Einmalcodes schlug zufällig fehl, wenn zwischen zwei Aufrufen eine 30-Sekunden-Grenze lag (Fehler im Test, nicht in der Anwendung).
 - Kästchen in Formularfeldern bekamen die Maße der Textfelder.
+- Browser-Durchlauf: Chromium und Firefox zeigten Datums- und Zeitfelder im US-Format (AM/PM), weil nur die Sprache, nicht die Umgebung des Browserprozesses deutsch war. Jetzt mit `LANG=de_DE.UTF-8`; die Bildschirmfotos zeigen 24 h und TT.MM.JJJJ.
 
 ### Entfernt
 

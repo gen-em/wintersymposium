@@ -186,8 +186,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Jede Engine richtet den zweiten Faktor frisch ein.
       php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
       // Deutsche Oberfläche wie bei den Nutzenden: Datums- und Zeitfelder zeigen dann TT.MM.JJJJ und 24 h.
-      const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'] }
-        : engine === 'firefox' ? { firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': false } } : {});
+      // Die Sprache allein reicht nicht: Chromium und Firefox formatieren die Felder nach der Umgebung
+      // des Browserprozesses (LANG), Firefox nur, wenn er die Systemeinstellung übernehmen darf.
+      const deUmgebung = { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de_DE:de', LC_ALL: 'de_DE.UTF-8' };
+      const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'], env: deUmgebung }
+        : engine === 'firefox' ? { env: deUmgebung, firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': true } }
+        : { env: deUmgebung });
       const version = browser.version();
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
       const p = await ctx.newPage();
