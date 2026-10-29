@@ -2,7 +2,7 @@
 
 Webseite für das Wintersymposium der Fortbildungsreihe **ALLGÄU AKUT – Fortbildung Notfallmedizin**: Infos und Programm, Anmeldung mit Warteliste (Verwaltung über Einmal-Links oder ein optionales Konto), Team-Bereich mit Statistik und Verwaltung, Rundmails, Newsletter, Teilnahmezertifikate. Teamkommunikation läuft über das bestehende Kaneo von Gen-EM.
 
-**Stand:** Grundgerüst und Auslieferung (AP-1) umgesetzt; öffentliche Seiten, Anmeldung und Team-Bereich folgen. Version in [`VERSION`](VERSION), Änderungen in [`CHANGELOG.md`](CHANGELOG.md).
+**Stand:** Grundgerüst (AP-1) und Erscheinungsbild mit öffentlichen Seiten (AP-2) umgesetzt; Programm, Anmeldung und Team-Bereich folgen. Gestaltungsvorlage: [`docs/mockups/`](docs/mockups/index.html). Version in [`VERSION`](VERSION), Änderungen in [`CHANGELOG.md`](CHANGELOG.md).
 
 - Konzept (Entscheidungen E-xx, Regeln R-xx, Arbeitspakete AP-x, offene Punkte O-xx): [`docs/konzept.md`](docs/konzept.md)
 - Prüfprotokoll (geplante und durchgeführte Prüfungen T-xxx): [`docs/pruefprotokoll.md`](docs/pruefprotokoll.md)

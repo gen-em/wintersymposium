@@ -171,8 +171,33 @@ function http_tests(string $wurzel, string $tmp): void
         abschnitt('HTTP: Sonstiges');
         $r = http_anfrage($basis, 'GET', '/gibtesnicht', $h);
         pruefe($r['status'] === 404, 'unbekannte Seite 404');
-        $r = http_anfrage($basis, 'GET', '/assets/basis.css', $h);
-        pruefe($r['status'] === 200, 'Stylesheet ausgeliefert');
+        $r = http_anfrage($basis, 'GET', '/assets/site.css', $h);
+        pruefe($r['status'] === 200 && str_contains($r['text'], '--lila'), 'Stylesheet mit Design-Tokens ausgeliefert');
+
+        abschnitt('HTTP: Öffentliche Seiten und Erscheinungsbild (T-112 bis T-116, lokal)');
+        $r = http_anfrage($basis, 'GET', '/', $h);
+        $html = $r['text'];
+        pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
+        pruefe(str_contains($html, '<em>Notfallmedizin</em>'), 'Titel aus pflegbarem Text (mit Akzent)');
+        pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
+        pruefe(str_contains($html, 'href="/impressum"') && str_contains($html, 'href="/datenschutz"') && str_contains($html, 'Quelltext (AGPL)'), 'Fußzeile mit Impressum, Datenschutz, Quelltext');
+        preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
+        $fremd = array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/'));
+        pruefe($fremd === [], 'keine externen Ressourcen (nur Quelltext-Link nach GitHub)');
+        pruefe(!str_contains(file_get_contents($wurzel . '/server/public/assets/site.css'), 'http'), 'CSS ohne externe Adressen');
+        foreach (['Anton-Regular', 'Antonio-Bold', 'Tajawal-Regular', 'IBMPlexMono-Regular'] as $font) {
+            $r = http_anfrage($basis, 'GET', '/assets/fonts/' . $font . '.woff2', $h);
+            pruefe($r['status'] === 200 && strlen($r['text']) > 10000, "Schrift $font ausgeliefert");
+        }
+        $r = http_anfrage($basis, 'GET', '/favicon.svg', $h);
+        pruefe($r['status'] === 200, 'Favicon ausgeliefert');
+        foreach (['/impressum' => 'Impressum', '/datenschutz' => 'Datenschutz'] as $pf => $titel) {
+            $r = http_anfrage($basis, 'GET', $pf, $h);
+            pruefe($r['status'] === 200 && str_contains($r['text'], $titel) && str_contains($r['text'], 'wird gerade erstellt'), "$titel erreichbar (noch leer)");
+        }
+        inhalt_setzen('impressum', "## Angaben\nPhilipp Chadid\n\nKontakt: [admin@winter-notfallsymposium.de](mailto:admin@winter-notfallsymposium.de)");
+        $r = http_anfrage($basis, 'GET', '/impressum', $h);
+        pruefe(str_contains($r['text'], '<h2>Angaben</h2>') && str_contains($r['text'], 'href="mailto:admin@winter-notfallsymposium.de"'), 'Impressum zeigt gepflegten Text');
     } finally {
         proc_terminate($proc);
         proc_close($proc);

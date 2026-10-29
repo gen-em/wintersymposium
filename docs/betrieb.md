@@ -14,7 +14,7 @@ Diese Anleitung enthält keine Zugangsdaten, Kontonamen oder Hosting-Interna (R-
 server/                 → wird in den Zielordner der Umgebung übertragen
   public/               → Webroot (die Domain zeigt hierher, E-34)
     index.php           → einziger Einstieg, leitet alle Seiten
-    assets/             → CSS, später Schriften, Bilder, Skripte
+    assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
   cli/jobs.php          → Job-Einstieg für den Cron auf der Kommandozeile
@@ -85,6 +85,21 @@ php tools/tests/lauf.php
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
 
-## 7. Fehlerprotokoll
+## 7. Pflegbare Texte
+
+Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie im Betreiber-Bereich (ab AP-5). Erlaubte Auszeichnung:
+
+| Schreibweise | Ergebnis |
+|---|---|
+| Leerzeile | neuer Absatz |
+| `## Überschrift` / `### Überschrift` | Zwischenüberschrift |
+| `- Punkt` | Aufzählung |
+| `**fett**` | fett |
+| `*Akzent*` | hervorgehoben (im Titel der Startseite in Lila) |
+| `[Text](https://…)`, `[Text](mailto:…)` | Link (nur https und mailto) |
+
+HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Startseite (`start_infos`) werden an `##`-Überschriften getrennt: je Überschrift ein Kasten.
+
+## 8. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

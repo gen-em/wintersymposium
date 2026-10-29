@@ -14,7 +14,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP | Titel | Status | Geprüft | Offen |
 |---|---|---|---|---|
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
-| AP-2 | Design-Mockups und öffentliche Seiten | offen | – | T-111 bis T-116 |
+| AP-2 | Design-Mockups und öffentliche Seiten | umgesetzt, Staging offen | T-111; lokal T-112 bis T-116 | auf Staging: T-112 bis T-116; T-115 Pflege mit AP-5 |
 | AP-3 | Programm und Veranstaltungs-Einstellungen | offen | – | T-120 bis T-126 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
@@ -42,12 +42,12 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-110, ap: AP-1, was: "Mehrere Hostnamen (E-27)", wie: "Aufruf über nicht erlaubten Host → Ablehnung; erlaubter Host → richtige Basis-URL in Links und Mails", status: "bestanden (Staging 2026-10-29; fremder Host vom Hoster mit 404 abgewiesen)"}
 
 # AP-2 Design-Mockups und öffentliche Seiten
-- {id: T-111, ap: AP-2, was: "Mockups vom Admin freigegeben", wie: "Freigabe im Chat/PR mit Datum festhalten", status: offen}
-- {id: T-112, ap: AP-2, was: "Startseite auf Handy und Desktop", wie: "Browser-Prüfung 360 px, 768 px, 1280 px; kein horizontales Scrollen", status: offen}
-- {id: T-113, ap: AP-2, was: "Kontraste WCAG AA", wie: "Prüfwerkzeug (z. B. axe) auf Startseite und Anmeldeformular; Lila und Signalrot auf Nachtblau und Weiß", status: offen}
-- {id: T-114, ap: AP-2, was: "Keine externen Ressourcen", wie: "Netzwerkanalyse im Browser: nur eigene Domain", status: offen}
-- {id: T-115, ap: AP-2, was: "Impressum, Datenschutz, Quelltext-Link erreichbar und pflegbar", wie: "Links in Fußzeile; Änderung durch Betreiber sichtbar", status: offen}
-- {id: T-116, ap: AP-2, was: "Schriften und Logo korrekt ausgeliefert", wie: "Anton, Antonio, Tajawal, IBM Plex Mono laden lokal (woff2); Logo scharf auf Retina", status: offen}
+- {id: T-111, ap: AP-2, was: "Mockups vom Admin freigegeben", wie: "Freigabe im Chat/PR mit Datum festhalten", status: "bestanden (Freigabe 2026-10-29)"}
+- {id: T-112, ap: AP-2, was: "Startseite auf Handy und Desktop", wie: "Browser-Prüfung 360 px, 768 px, 1280 px; kein horizontales Scrollen", status: "lokal bestanden (390 und 1280 px); Staging offen"}
+- {id: T-113, ap: AP-2, was: "Kontraste WCAG AA", wie: "Prüfwerkzeug (z. B. axe) auf Startseite und Anmeldeformular; Lila und Signalrot auf Nachtblau und Weiß", status: "bestanden (Kontraste berechnet, alle Paare AA); Prüfwerkzeug auf Staging optional"}
+- {id: T-114, ap: AP-2, was: "Keine externen Ressourcen", wie: "Netzwerkanalyse im Browser: nur eigene Domain", status: "lokal bestanden (automatischer Test); Staging offen"}
+- {id: T-115, ap: AP-2, was: "Impressum, Datenschutz, Quelltext-Link erreichbar und pflegbar", wie: "Links in Fußzeile; Änderung durch Betreiber sichtbar", status: "teilweise: erreichbar und verlinkt; Pflege durch Betreiber mit AP-5"}
+- {id: T-116, ap: AP-2, was: "Schriften und Logo korrekt ausgeliefert", wie: "Anton, Antonio, Tajawal, IBM Plex Mono laden lokal (woff2); Logo scharf auf Retina", status: "lokal bestanden; Staging offen"}
 
 # AP-3 Programm und Veranstaltungs-Einstellungen
 - {id: T-120, ap: AP-3, was: "Zeitfenster mit freien, überlappenden Zeiten anlegbar", wie: "Zwei überlappende Zeitfenster anlegen, Darstellung prüfen", status: offen}
@@ -153,6 +153,12 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-110 | 2026-10-29 | claude-dev | bestanden | `curl -H 'Host: fremd.example' https://test.winter-notfallsymposium.de/` → 404 vom Hoster (Anfrage erreicht die App nicht); erlaubter Host 200 | – |
 | T-109 | 2026-10-29 | claude-dev | teilweise | `curl -X POST https://test.winter-notfallsymposium.de/` → 200 von der App, kein 403 vom Hoster | Formular-POST im Browser mit AP-4 |
 | – | 2026-10-29 | claude-dev | bestanden | interne Dateien: /config.php und /.htaccess → 403, /lib/db_lib.php und /index.php direkt → 404, /assets/basis.css → 200 | – |
+| T-111 | 2026-10-29 | admin | bestanden | Mockups (Variante A) nach Kommentarrunde freigegeben: „Mockups sind freigegeben“; abgelegt in docs/mockups/ | Varianten B/C verworfen (E-36) |
+| T-112 | 2026-10-29 | claude-dev | lokal bestanden | Startseite im Browser (Playwright) bei 390 px und 1280 px: kein horizontales Scrollen (scrollWidth = Breite), Menü auf dem Handy aufklappbar | 360 und 768 px auf Staging nachprüfen |
+| T-113 | 2026-10-29 | claude-dev | bestanden | WCAG-Kontraste berechnet: Weiß/Nachtblau 16,8; Lila/Nachtblau 6,5; Lila/Fläche 5,6; Meta/Fläche 6,5; Nachtblau auf Lila 6,5; Nachtblau auf Grün 8,2; Rot/Nachtblau 5,5 – alle ≥ 4,5 | – |
+| T-114 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php`: keine src/href auf fremde Hosts außer Quelltext-Link nach GitHub, CSS ohne externe Adressen | im Browser-Netzwerkreiter auf Staging bestätigen |
+| T-115 | 2026-10-29 | claude-dev | teilweise | /impressum und /datenschutz 200, in der Fußzeile verlinkt; leer → Hinweis; gepflegter Text (Überschrift, mailto-Link) wird angezeigt | Bearbeiten durch Betreiber erst mit AP-5 |
+| T-116 | 2026-10-29 | claude-dev | lokal bestanden | Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 von /assets/fonts (200), Logo als SVG (scharf in jeder Auflösung) | – |
 
 ### Noch zu prüfen für AP-1
 
@@ -161,3 +167,11 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 3. T-108: Team-Login während der Wartung – mit AP-5.
 4. T-102 und T-109: Formular-POST im Browser – mit dem Anmeldeformular aus AP-4.
 5. T-104 über HTTP (optional): elfmal `/health?token=falsch`, dann mit richtigem Token → 404; nach 10 min wieder 200.
+
+### Noch zu prüfen für AP-2 (nach Merge auf Staging)
+
+1. T-112: `https://test.winter-notfallsymposium.de/` auf dem Handy und am Rechner öffnen (Fensterbreite etwa 360, 768, 1280 px): kein seitliches Scrollen, Menü auf dem Handy klappt auf.
+2. T-114: Browser-Entwicklerwerkzeuge → Netzwerk → Seite neu laden: alle Anfragen gehen an test.winter-notfallsymposium.de.
+3. T-116: Schriften sichtbar (Titel in Anton, Text in Tajawal), Logo scharf.
+4. T-115: Fußzeile → Impressum und Datenschutz öffnen; Hinweis „wird gerade erstellt“, bis die Texte im Betreiber-Bereich (AP-5) eingetragen sind.
+

@@ -106,6 +106,17 @@ pruefe(konfig_maengel() === [] || !$mitDb, 'Test-Konfiguration vollständig');
 pruefe(umgebung() === 'entwicklung', 'Umgebung gelesen');
 pruefe(preg_match('/^\d+\.\d+\.\d+$/', app_version()) === 1, 'VERSION lesbar (' . app_version() . ')');
 
+abschnitt('Textauszeichnung (pflegbare Texte)');
+pruefe(text_inline('Ein **fetter** und *betonter* Satz') === 'Ein <strong>fetter</strong> und <em>betonter</em> Satz', 'fett und betont');
+pruefe(text_inline('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;', 'HTML wird maskiert');
+pruefe(str_contains(text_inline('[Kammer](https://www.blaek.de)'), '<a href="https://www.blaek.de" rel="noopener">Kammer</a>'), 'https-Link');
+pruefe(!str_contains(text_inline('[x](javascript:alert(1))'), '<a '), 'javascript-Link abgelehnt');
+pruefe(!str_contains(text_inline('[x](http://example.org)'), '<a '), 'http-Link (ohne s) abgelehnt');
+pruefe(text_zu_html("## Titel\n\nZeile 1\nZeile 2\n\n- a\n- b") === "<h2>Titel</h2>\n<p>Zeile 1<br>Zeile 2</p>\n<ul><li>a</li><li>b</li></ul>", 'Absätze, Überschrift, Liste');
+$abs = text_abschnitte("## Für wen\nAlle.\n## Wie\nSo.");
+pruefe(count($abs) === 2 && $abs[1]['titel'] === 'Wie' && $abs[1]['text'] === 'So.', 'Abschnitte für Infokästen');
+pruefe(tag_text('2027-01-20') === 'Mi 20.01.2027', 'Wochentag zum Datum');
+
 abschnitt('Installer-Eingaben');
 $gut = ['name' => 'Test', 'email' => 'a@b.de', 'passwort' => str_repeat('x', 12), 'passwort2' => str_repeat('x', 12), 'weitere_hosts' => "www.beispiel.de\n"];
 pruefe(install_pruefen($gut) === [], 'gültige Eingabe');
