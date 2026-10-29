@@ -115,13 +115,13 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 # AP-10 Teilnahme und Zertifikate
 - {id: T-190, ap: AP-10, was: "Anwesenheit erfassen", wie: "Liste auf dem Handy: suchen, Haken setzen, Massenaktion mit Ausnahmen; Audit-Eintrag", status: offen}
 - {id: T-191, ap: AP-10, was: "Kein Zertifikat ohne Anwesenheit", wie: "Einmal-Link einer nicht anwesenden Person → kein Download; nach Erfassung → Download", status: offen}
-- {id: T-192, ap: AP-10, was: "PDF-Inhalt und Darstellung", wie: "Name mit Umlauten, Datum, Punkte, Kammer-Nummer korrekt; öffnet in Acrobat, Browser, Handy", status: offen}
+- {id: T-192, ap: AP-10, was: "PDF-Inhalt und Darstellung", wie: "Entwurf des Admins unverändert, Name mit Umlauten und Datum an der richtigen Stelle; öffnet in Acrobat, Browser, Handy", status: offen}
 - {id: T-193, ap: AP-10, was: "Freischaltung und Mail", wie: "Freischalten → Mail „Zertifikat verfügbar“ mit Einmal-Link; vor Freischaltung kein Download", status: offen}
 - {id: T-194, ap: AP-10, was: "CME-Export", wie: "Export enthält nur anwesende Personen mit Name und EFN", status: offen}
 - {id: T-195, ap: AP-10, was: "Zertifikat nicht fälschbar über fremden Link", wie: "Einmal-Link einer anderen Person liefert nur deren Zertifikat; manipulierte IDs → 404", status: offen}
 
 # AP-9 Abschluss und Datenschutz
-- {id: T-200, ap: AP-9, was: "Automatische Löschung", wie: "Anmeldung ohne Konto mit altem Datum → vom Job anonymisiert nach O-21; Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre (E-24)", status: offen}
+- {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Symposium länger als 14 Monate her → vom Job anonymisiert (E-24); Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre", status: offen}
 - {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "DB-Dump auf Staging einspielen, Anmeldung aufrufbar", status: offen}
 - {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Konto anlegen → Änderung → Stichtag → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen (eine mit, eine ohne Konto)", status: offen}
 - {id: T-203, ap: AP-9, was: "Checkliste Anmeldestart", wie: "Konzept Abschnitt 9 vollständig abgehakt", status: offen}
