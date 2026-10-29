@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.1.1] – 2026-10-29
+
+### Behoben
+
+- Auslieferung: Zielpfade vom FTP-Login aus sind `/staging/` und `/produktiv/` (der Zugang landet bereits im Ordner `wintersymposium`); der erste Lauf war mit curl 9 abgebrochen, ohne etwas zu übertragen.
+- Auslieferung: Der Schritt „Zustandsdatei sicherstellen“ wertet curl-Fehler jetzt selbst aus (lief vorher mit `bash -e` und stieg ohne Erklärung aus) und meldet verständlich: Zielordner nicht erreichbar, Anmeldung abgelehnt oder anderer Code. Keine Server-Meldungen im öffentlichen Log.
+
 ## [0.1.0] – 2026-10-29
 
 AP-1 Grundgerüst und Auslieferung.

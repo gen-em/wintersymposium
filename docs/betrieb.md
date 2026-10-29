@@ -26,10 +26,12 @@ tools/tests/            → Testlauf (lokal und im Prüf-Workflow)
 
 Zielordner auf dem Webspace (E-32):
 
-| Umgebung | Ordner | Domain zeigt auf |
-|---|---|---|
-| Staging | `/wintersymposium/staging` | `/wintersymposium/staging/public` (`test.winter-notfallsymposium.de`) |
-| Produktion | `/wintersymposium/produktiv` | `/wintersymposium/produktiv/public` (`winter-notfallsymposium.de`) |
+| Umgebung | Ordner im Webspace | Pfad vom FTP-Login aus | Domain zeigt auf |
+|---|---|---|---|
+| Staging | `/wintersymposium/staging` | `/staging` | `/wintersymposium/staging/public` (`test.winter-notfallsymposium.de`) |
+| Produktion | `/wintersymposium/produktiv` | `/produktiv` | `/wintersymposium/produktiv/public` (`winter-notfallsymposium.de`) |
+
+Der FTP-Zugang der Auslieferung landet direkt im Ordner `wintersymposium` und sieht dort `staging` und `produktiv`; der Workflow verwendet deshalb `/staging/` und `/produktiv/`.
 
 ## 2. Ersteinrichtung je Umgebung
 
@@ -50,13 +52,14 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
 
 ## 3. Auslieferung (GitHub Actions)
 
-- **Staging:** jeder Push auf `main` (also jeder gemergte PR) → Prüfung → Abgleich nach `/wintersymposium/staging`.
-- **Produktion:** ein Tag `vX.Y.Z` → Prüfung → Abgleich nach `/wintersymposium/produktiv`. Der Tag muss genau der Datei `VERSION` entsprechen (`v` + Inhalt) und auf einem Commit von `main` liegen, sonst bricht der Lauf ab, bevor etwas übertragen wird.
+- **Staging:** jeder Push auf `main` (also jeder gemergte PR) → Prüfung → Abgleich nach `/wintersymposium/staging` (FTP-Pfad `/staging/`).
+- **Produktion:** ein Tag `vX.Y.Z` → Prüfung → Abgleich nach `/wintersymposium/produktiv` (FTP-Pfad `/produktiv/`). Der Tag muss genau der Datei `VERSION` entsprechen (`v` + Inhalt) und auf einem Commit von `main` liegen, sonst bricht der Lauf ab, bevor etwas übertragen wird.
   - Mit GitHub Desktop: Branch `main` auswählen und aktualisieren („Fetch/Pull origin“) → Reiter *History* → Rechtsklick auf den obersten Commit → *Create Tag…* → Name `v` + Version (z. B. `v0.1.0`) → *Push origin* (überträgt den Tag).
   - Optional: In GitHub unter *Settings → Environments → produktiv* einen Pflicht-Prüfer eintragen; dann wartet der Lauf vor dem Abgleich auf die Freigabe. Das Environment legt GitHub beim ersten Tag-Lauf selbst an.
 - **Nie übertragen und nie gelöscht:** `config.php`, `var/` (Sitzungen, Sperrdateien, Logs).
 - Die Secrets `FTP_SERVER`, `FTP_USER`, `FTP_PASSWORD` sind im Repo hinterlegt.
 - Die Zustandsdatei `.ftp-deploy-sync-state.json` im Zielordner (außerhalb von `public/`) merkt sich den übertragenen Stand. **Nicht löschen**, sonst überträgt der nächste Lauf alles neu. Fehlt sie, legt der Lauf vorher eine leere an.
+- Bricht der Schritt „Zustandsdatei auf dem Server sicherstellen“ ab, nennt die Meldung den Grund: Zielordner vom FTP-Login aus nicht erreichbar (curl 9), Anmeldung abgelehnt (curl 67) oder ein anderer curl-Code. In jedem Fall wurde noch nichts übertragen.
 - **Datenbank-Änderungen** (Migrationen) laufen automatisch bei der ersten Anfrage nach einer Auslieferung bzw. beim nächsten Cron-Lauf.
 
 ## 4. Wartungsmodus
