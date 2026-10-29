@@ -150,7 +150,10 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   // Abgeschnittenes oder verdecktes Seitwärts-Scrollen in jedem Rahmen mit overflow (Tabellen, Kästen, Popups):
   // Inhalt breiter als der Rahmen. Ausnahmen: .scroll-erlaubt und bewusst gekürzter Text (text-overflow: ellipsis).
   const abgeschnitten = await p.evaluate(() => [...document.body.querySelectorAll('*')].filter(w => {
-    if (!w.checkVisibility || !w.checkVisibility() || w.closest('.scroll-erlaubt')) return false;
+    // .sr: nur für Screenreader, absichtlich auf 1 px beschnitten
+    // Eingabefelder: langer Text scrollt im Feld, das ist gewollt
+    if (w.matches('input, textarea, select')) return false;
+    if (!w.checkVisibility || !w.checkVisibility() || w.closest('.scroll-erlaubt') || w.closest('.sr')) return false;
     const st = getComputedStyle(w);
     if (st.overflowX === 'visible' || st.textOverflow === 'ellipsis') return false;
     return w.scrollWidth > w.clientWidth + 1;
@@ -350,13 +353,27 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Anmeldungen', '/team/anmeldungen', 'team-anmeldungen'], ['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Daten', '/team/daten', 'team-daten']]) {
+        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
       }
+
+      // AP-5: ausgewählte Person, voller Termin, Person anlegen
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'team-person', basis + '/team/personen?a=' + vor.lea_id);
+        await pruefeSeite(p, fehler, engine, breite, 'team-person-neu', basis + '/team/personen?neu=1');
+        await pruefeSeite(p, fehler, engine, breite, 'team-termin', basis + '/team/workshops?t=' + vor.voll_termin);
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/personen');
+      await p.fill('#suche', 'paula'); await Promise.all([p.waitForNavigation(), p.click('.filterzeile button[type=submit]')]);
+      notiere(engine, 'desktop-breit', 'team-personen', 'Suche findet Paula', (await p.locator('table.personen tbody tr').count()) === 1 && (await p.textContent('table.personen')).includes('Paula Probe'));
+      await Promise.all([p.waitForNavigation(), p.click('table.personen a:has-text("Paula Probe")')]);
+      notiere(engine, 'desktop-breit', 'team-personen', 'Auswahl zeigt Angebot und Aktionen', (await p.textContent('.detail')).includes('Platz frei für dich') && await p.isVisible('.detail button:has-text("Platz geben")'));
 
       // Programm: Punkt bearbeiten (Formular, Termine), Dozierende, Vorschau in allen Breiten
       for (const [breite, w, h] of BREITEN) {

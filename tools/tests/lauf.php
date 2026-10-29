@@ -493,6 +493,100 @@ if (!$mitDb) {
     pruefe($n >= 1 && konto_per_email('unbestaetigt@example.org') === null && konto_laden($teamId) !== null, "unbestätigte Konten nach 48 h gelöscht, Team-Konten nicht ($n)");
     db_ausfuehren('DELETE FROM konto WHERE id = ?', [$teamId]);
 
+    abschnitt('Team-Bereich (AP-5)');
+    $GLOBALS['ws_team_konto'] = null;
+    $ws = fn(string $k) => (int)array_values(array_filter(anm_workshops(true), fn($w) => $w['kuerzel'] === $k))[0]['id'];
+    $tt = function (string $k, string $b): int {
+        foreach (anm_workshops() as $w) {
+            foreach ($w['termine'] as $t) {
+                if ($w['kuerzel'] === $k && $t['beginn'] === $b) {
+                    return (int)$t['id'];
+                }
+            }
+        }
+        return 0;
+    };
+    $dt = ['vorname' => 'Theo', 'nachname' => 'Team', 'email' => 'theo@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'];
+    $m0 = (int)db_wert('SELECT COUNT(*) FROM mail_ausgang');
+    $t1 = team_anlegen($dt, false, true);
+    pruefe(isset($t1['id']) && anm_laden($t1['id'])['status'] === 'bestaetigt' && anm_symposium_status($t1['id']) === 'fest' && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $m0 + 1, 'Person anlegen: sofort bestätigt, Platz, Mail');
+    pruefe(isset(team_anlegen($dt, false, true)['fehler']), 'gleiche Adresse: abgelehnt');
+    $kapAlt = va('veranstaltung_kapazitaet');
+    einstellung_setzen('veranstaltung_kapazitaet', (string)anm_belegt(0));
+    $t2 = team_anlegen(['vorname' => 'Wanda', 'email' => 'wanda@example.org'] + $dt, false, false);
+    $t3 = team_anlegen(['vorname' => 'Uwe', 'email' => 'uwe@example.org'] + $dt, true, false);
+    pruefe($t2['warteliste'] === true && anm_symposium_status($t2['id']) === 'warte' && $t3['warteliste'] === false && anm_belegt(0) > (int)va('veranstaltung_kapazitaet'), 'Symposium voll: Warteliste, mit Bestätigung überbucht');
+    pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $m0 + 1, '„ohne Mail“: keine Mail');
+    einstellung_setzen('veranstaltung_kapazitaet', $kapAlt);
+    $voll = $tt('WS 02', '20:30');
+    while (anm_frei($voll) > 0) {
+        $x = team_anlegen(['vorname' => 'Fill', 'email' => 'fill' . anm_belegt($voll) . '@example.org'] + $dt, true, false);
+        team_platz_geben($x['id'], $voll, true, false);
+    }
+    $r = team_platz_geben($t1['id'], $voll, false, false);
+    pruefe(isset($r['frage']) && str_contains($r['frage'][0], 'überbucht'), 'Platz geben in vollem Termin: fragt nach');
+    $r = team_platz_geben($t1['id'], $voll, true, false);
+    pruefe(isset($r['ok']) && anm_frei($voll) === 0 && anm_belegt($voll) > anm_kapazitaet($voll), 'mit Bestätigung überbucht');
+    $r = team_platz_geben($t1['id'], $tt('WS 02', '19:30'), false, false);
+    pruefe(isset($r['frage']) && str_contains(implode(' ', $r['frage']), 'storniert'), 'gleicher Workshop: Tausch wird angekündigt');
+    team_platz_geben($t1['id'], $tt('WS 02', '19:30'), true, false);
+    $pl = array_column(anm_plaetze($t1['id']), 'status', 'termin_id');
+    pruefe(($pl[$tt('WS 02', '19:30')] ?? '') === 'fest' && !isset($pl[$voll]), 'nach Bestätigung: Tausch ausgeführt');
+    pruefe(isset(team_platz_geben($t2['id'], $voll, true, false)['fehler']), 'Workshop nur mit Platz beim Symposium');
+    einstellung_setzen('workshop_limit', '1');
+    pruefe(anm_workshops_setzen($t3['id'], ['fest' => [$ws('WS 01') => $tt('WS 01', '19:30'), $ws('WS 02') => $tt('WS 02', '20:30')], 'warte' => []], null, true, true, false) === [], 'Team: ohne Workshop-Limit, mit Überbuchen');
+    einstellung_setzen('workshop_limit', '0');
+    // Warteliste: Angebot von Hand, Entfernen lässt nachrücken
+    $wl = team_anlegen(['vorname' => 'Wilma', 'email' => 'wilma@example.org'] + $dt, false, false);
+    db_ausfuehren("INSERT INTO platz (anmeldung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, 'warte', ?)", [$wl['id'], $voll, $ws('WS 02'), db_jetzt()]);
+    $wlPlatz = (int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$wl['id'], $voll]);
+    pruefe(team_angebot($wlPlatz) !== null, 'Angebot ohne freien Platz abgelehnt');
+    $fest = db_zeilen("SELECT id FROM platz WHERE termin_id = ? AND status = 'fest' ORDER BY id", [$voll]);
+    foreach (array_slice($fest, 0, count($fest) - (int)anm_kapazitaet($voll) + 1) as $f) {
+        team_platz_entfernen((int)$f['id'], false);
+    }
+    pruefe(db_wert('SELECT status FROM platz WHERE id = ?', [$wlPlatz]) === 'angebot', 'Platz entfernen: Nachrücken bietet ihn an');
+    // Daten durch das Team: neue Adresse gilt sofort, doppelte abgelehnt
+    $f = team_anm_daten($t1['id'], ['email' => 'theo.neu@example.org'] + $dt, false);
+    pruefe($f === [] && anm_laden($t1['id'])['email'] === 'theo.neu@example.org', 'Team ändert Adresse sofort');
+    pruefe(isset(team_anm_daten($t1['id'], ['email' => 'wanda@example.org'] + $dt, false)['email']), 'Adresse einer anderen Anmeldung abgelehnt');
+    // Personenliste und Filter
+    tk_registrieren('Nur Konto', 'nurkonto@example.org');
+    $ps = team_personen();
+    $nk = array_values(array_filter($ps, fn($p) => $p['email'] === 'nurkonto@example.org'));
+    pruefe(count($nk) === 1 && $nk[0]['art'] === 'konto' && team_filter_passt($nk[0], 'unbestaetigt') && !team_filter_passt($nk[0], 'angemeldet'), 'Personen: Konto ohne Anmeldung in der Liste');
+    pruefe(count(array_filter($ps, fn($p) => team_filter_passt($p, 'warteliste') && $p['email'] === 'wanda@example.org')) === 1 && team_suche_passt($nk[0], 'NURKONTO') && !team_suche_passt($nk[0], 'zzz'), 'Filter Warteliste, Suche ohne Groß-/Kleinschreibung');
+    // Aufgaben nach der Grenze
+    $datum = va('veranstaltung_datum');
+    einstellung_setzen('veranstaltung_datum', gmdate('Y-m-d', time() + 5 * 86400));
+    einstellung_setzen('veranstaltung_kapazitaet', (string)(anm_belegt(0) + 1));
+    $auf = team_aufgaben();
+    pruefe(count(array_filter($auf, fn($a) => $a['art'] === 'Manuell' && $a['link'] === '/team/workshops?t=0' && str_contains($a['text'], 'vorbei'))) === 1, 'Zu erledigen: freier Platz nach der Grenze');
+    einstellung_setzen('veranstaltung_datum', $datum);
+    einstellung_setzen('veranstaltung_kapazitaet', $kapAlt);
+    // CSV und Export
+    $csv = csv_text(['A', 'B'], [['=SUMME(1)', 'Müller; "x"']]);
+    pruefe(str_starts_with($csv, "\u{FEFF}\"A\";\"B\"\r\n") && str_contains($csv, "\"'=SUMME(1)\";\"Müller; \"\"x\"\"\""), 'CSV: BOM, Semikolon, Formeln entschärft');
+    $ex = export_erzeugen('teilnehmende');
+    pruefe($ex !== null && str_contains($ex['text'], 'Theo') && str_ends_with($ex['datei'], '.csv'), 'Export Teilnehmende');
+    $ex = export_erzeugen('cme');
+    pruefe($ex !== null && !str_contains($ex['text'], 'Theo'), 'CME-Liste nur ÄrztInnen');
+    pruefe(export_erzeugen('unbekannt') === null && export_erzeugen('termin', '', 999999) === null, 'unbekannter Export: nichts');
+    $sd = stat_daten();
+    pruefe($sd['angemeldet'] === (int)db_wert("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status = 'fest' WHERE a.status = 'bestaetigt'") && array_sum($sd['berufsgruppen']) === $sd['bestaetigt'] && stat_daten('StudentIn')['bestaetigt'] <= $sd['bestaetigt'], 'Statistik stimmt mit der Datenbank (mit Filter)');
+    pruefe(str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="50"') && str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="100"'), 'Balken als SVG-Attribut (keine Inline-Stile)');
+    // Rolle vergeben (Teilnehmende → Team)
+    $nkId = (int)konto_per_email('nurkonto@example.org')['id'];
+    pruefe(team_rolle_vergeben($nkId, 'admin') && konto_laden($nkId)['rolle'] === 'admin' && str_contains((string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'nurkonto@example.org' ORDER BY id DESC LIMIT 1"), '/einrichten?t='), 'Rolle vergeben: Admin, Mail mit Einrichtungslink (ohne Passwort)');
+    pruefe(!team_rolle_vergeben($nkId, 'betreiber'), 'nur Teilnehmende lassen sich ins Team holen');
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$nkId]);
+    // Hosts und Absender
+    host_anlegen('www.beispiel.test');
+    pruefe(host_aendern('www.beispiel.test', 'aus', null) && !host_erlaubt('www.beispiel.test'), 'weiteren Host abschalten');
+    einstellung_setzen('mail_absender', 'team@example.org');
+    pruefe(mail_absender(mail_konfig()) === 'team@example.org', 'Absender aus der Einstellung vor config.php');
+    einstellung_setzen('mail_absender', null);
+
     abschnitt('Sicherung und Wiederherstellung (E-47)');
     $zahl = fn(string $t) => (int)db_wert("SELECT COUNT(*) FROM `$t`");
     $vorher = ['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')];

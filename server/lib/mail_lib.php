@@ -53,6 +53,11 @@ function mail_konfig(): array
 /** Absender: aus der Konfiguration, sonst anmeldung@ der Haupt-Domain (E-13). */
 function mail_absender(array $c): string
 {
+    // Einstellung im Team-Bereich (Betrieb, E-27/AP-5) vor config.php
+    $a = trim((string)(einstellung('mail_absender') ?? ''));
+    if ($a !== '') {
+        return $a;
+    }
     $a = trim((string)$c['absender']);
     return $a !== '' ? $a : 'anmeldung@' . (host_haupt() ?? 'localhost');
 }
@@ -250,7 +255,7 @@ function mail_nachricht(array $c, string $an, string $betreff, string $text): st
     $absender = mail_absender($c);
     $domain = substr(strrchr($absender, '@') ?: '@localhost', 1);
     $kopf = [
-        'From: ' . mb_encode_mimeheader((string)$c['absender_name'], 'UTF-8', 'Q') . ' <' . $absender . '>',
+        'From: ' . mb_encode_mimeheader(trim((string)(einstellung('mail_absender_name') ?? '')) ?: (string)$c['absender_name'], 'UTF-8', 'Q') . ' <' . $absender . '>',
         'To: <' . $an . '>',
         'Subject: ' . mb_encode_mimeheader(trim(preg_replace('/[\r\n]+/', ' ', $betreff) ?? ''), 'UTF-8', 'Q'),
         'Date: ' . date(DATE_RFC2822),
@@ -454,6 +459,11 @@ function mail_vorlage(string $name, array $d): array
             return ['Neues Passwort für dein Konto beim Wintersymposium',
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link'] . "\n\nEr gilt bis " . $d['gueltig']
                 . " und nur einmal.\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
+        case 'team_rolle':
+            return ['Du bist jetzt im Team des Wintersymposiums',
+                $hallo . 'du hast jetzt die Rolle „' . $d['rolle'] . '“ im Team-Bereich. Einloggen kannst du dich unter ' . url('/einloggen')
+                . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : ". Lege vorher über diesen Link dein Passwort fest (gilt 72 Stunden):\n\n" . $d['link'] . "\n\n")
+                . " Beim ersten Login richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy).\n\nDas warst nicht du? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'test':
             return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }

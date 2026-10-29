@@ -30,6 +30,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $name = (string)($_POST['name'] ?? '');
     switch ((string)($_POST['aktion'] ?? '')) {
+        case 'host_neu':
+            try {
+                host_anlegen((string)($_POST['host'] ?? ''));
+                audit_schreiben('host', 'Host ' . (string)$_POST['host'] . ' hinzugefügt', $ich);
+                flash_setzen('ok', 'Hostname hinzugefügt. Die Domain muss beim Hoster auf diesen Ordner zeigen.');
+            } catch (InvalidArgumentException) {
+                flash_setzen('fehler', 'Das ist kein gültiger Hostname (z. B. www.winter-notfallsymposium.de).');
+            }
+            umleiten('/team/daten');
+        case 'host_haupt':
+        case 'host_aus':
+            flash_setzen(host_aendern((string)($_POST['host'] ?? ''), $_POST['aktion'] === 'host_haupt' ? 'haupt' : 'aus', $ich) ? 'ok' : 'fehler', 'Gespeichert.');
+            umleiten('/team/daten');
+        case 'absender':
+            $adr = trim((string)($_POST['mail_absender'] ?? ''));
+            $nam = trim(preg_replace('/\s+/u', ' ', (string)($_POST['mail_absender_name'] ?? '')) ?? '');
+            if ($adr !== '' && mail_adresse($adr) === null) {
+                flash_setzen('fehler', 'Die Absenderadresse ist keine gültige Adresse.');
+            } else {
+                einstellung_setzen('mail_absender', $adr === '' ? null : mail_adresse($adr));
+                einstellung_setzen('mail_absender_name', $nam === '' ? null : mb_substr($nam, 0, 80));
+                audit_schreiben('mail', 'Absender geändert: ' . ($adr ?: 'aus config.php'), $ich);
+                flash_setzen('ok', 'Absender gespeichert. Prüf ihn mit „Testmail an mich“.');
+            }
+            umleiten('/team/daten');
         case 'testmail':
             $grund = mail_testen((string)$konto['email']);
             audit_schreiben('mail', 'Testmail ' . ($grund === null ? 'versendet' : 'fehlgeschlagen: ' . $grund), $ich);
@@ -87,7 +112,7 @@ $liste = sicherung_liste();
 $ms = mail_stand();
 $codeFeld = fn(string $id) => '<div class="feld"><label for="' . $id . '">Code aus deiner App</label><input id="' . $id . '" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>';
 $groesse = fn(int $b) => $b >= 1048576 ? zahl_text($b / 1048576, 1) . ' MB' : zahl_text(max(1, (int)round($b / 1024))) . ' KB';
-team_seite_kopf($konto, 'Daten', '/team/daten');
+team_seite_kopf($konto, 'Betrieb', '/team/daten');
 ?>
 <?= fehler_html($fehler) ?>
 <div class="team-raster">
@@ -123,6 +148,33 @@ team_seite_kopf($konto, 'Daten', '/team/daten');
     <p class="meta klein">Versendet sofort an <?= e($konto['email']) ?> und zeigt den Fehler des Mailservers, falls er die Mail ablehnt. Das Passwort wird nie angezeigt.</p>
 </div>
 
+<div class="team-raster abstand-oben">
+    <div class="kasten">
+        <h2 class="zwischen">Hostnamen</h2>
+        <p class="meta klein">Unter diesen Namen antwortet die Webseite. Links in Mails nutzen den Haupt-Host (E-27).</p>
+        <ul class="team-liste">
+        <?php foreach (host_liste(true) as $hz): ?>
+            <li><span class="mono"><?= e($hz['name']) ?></span> <?= (int)$hz['haupt'] === 1 ? '<span class="chip ok">Haupt-Host</span>' : '' ?>
+                <?php if ((int)$hz['haupt'] !== 1): ?><span class="zellen-aktionen">
+                    <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="host_haupt"><input type="hidden" name="host" value="<?= e($hz['name']) ?>"><button class="knopf zweit klein-knopf" type="submit">Zum Haupt-Host</button></form>
+                    <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="host_aus"><input type="hidden" name="host" value="<?= e($hz['name']) ?>"><button class="knopf zweit klein-knopf" type="submit">Abschalten</button></form>
+                </span><?php endif; ?></li>
+        <?php endforeach; ?>
+        </ul>
+        <form method="post" action="/team/daten" class="form abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="host_neu">
+            <div class="feld"><label for="host">Weiterer Hostname</label><input id="host" name="host" type="text" placeholder="www.winter-notfallsymposium.de" autocomplete="off"></div>
+            <div><button class="knopf zweit" type="submit">Hinzufügen</button></div></form>
+    </div>
+    <div class="kasten">
+        <h2 class="zwischen">Absender</h2>
+        <p class="meta klein">Absender der System-Mails (Anmeldung, Links, Angebote). Leer: aus der config.php. Die Adresse muss zum Postfach passen, über das versendet wird – sonst lehnt der Mailserver ab.</p>
+        <form method="post" action="/team/daten" class="form"><?= csrf_feld() ?><input type="hidden" name="aktion" value="absender">
+            <div class="feld"><label for="mail_absender">Absenderadresse</label><input id="mail_absender" name="mail_absender" type="email" value="<?= e((string)(einstellung('mail_absender') ?? '')) ?>" placeholder="<?= e(mail_absender(mail_konfig())) ?>"></div>
+            <div class="feld"><label for="mail_absender_name">Absendername</label><input id="mail_absender_name" name="mail_absender_name" type="text" maxlength="80" value="<?= e((string)(einstellung('mail_absender_name') ?? '')) ?>" placeholder="<?= e((string)mail_konfig()['absender_name']) ?>"></div>
+            <div><button class="knopf zweit" type="submit">Speichern</button></div></form>
+    </div>
+</div>
+
 <h2 class="zwischen abstand-oben">Vorhandene Sicherungen</h2>
 <?php if ($liste === []): ?>
 <p class="hinweis-leer">Noch keine Sicherung.</p>
@@ -132,10 +184,10 @@ team_seite_kopf($konto, 'Daten', '/team/daten');
     <tbody>
     <?php foreach ($liste as $i => $s): $k = $s['kopf']; ?>
         <tr>
-            <td data-titel="Angelegt" class="mono"><?= $k !== null ? e(datum_zeit_text($k['erstellt'])) : '–' ?><br><span class="meta klein"><?= e($s['name']) ?></span></td>
-            <td data-titel="Anlass"><?= $k !== null ? e($k['anlass']) . '<br><span class="meta klein">Version ' . e($k['version']) . '</span>' : '<span class="chip wl">nicht lesbar</span>' ?></td>
-            <td data-titel="Größe" class="mono"><?= e($groesse($s['groesse'])) ?></td>
-            <td data-titel="Aktionen"><div class="zellen-aktionen">
+            <td data-label="Angelegt" class="mono"><?= $k !== null ? e(datum_zeit_text($k['erstellt'])) : '–' ?><br><span class="meta klein"><?= e($s['name']) ?></span></td>
+            <td data-label="Anlass"><?= $k !== null ? e($k['anlass']) . '<br><span class="meta klein">Version ' . e($k['version']) . '</span>' : '<span class="chip wl">nicht lesbar</span>' ?></td>
+            <td data-label="Größe" class="mono"><?= e($groesse($s['groesse'])) ?></td>
+            <td data-label="Aktionen"><div class="zellen-aktionen">
                 <details class="bestaetigen"><summary class="knopf zweit klein-knopf">Herunterladen</summary>
                     <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="herunterladen"><input type="hidden" name="name" value="<?= e($s['name']) ?>">
                         <p>Die Datei enthält personenbezogene Daten. Nur verschlüsselt aufbewahren.</p>

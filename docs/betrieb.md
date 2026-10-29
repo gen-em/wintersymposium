@@ -185,13 +185,25 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `absender`, `absender_name` | Absender; leer: `anmeldung@<Haupt-Domain>` |
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Rundmails (AP-6) warten auf den nächsten Tag |
-| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 14) |
+| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 15) |
 
-**Prüfen:** Team-Bereich → „Daten“ → Kasten „Mailversand“ zeigt, ob der Versand eingerichtet ist, Absender, Warteschlange und den letzten Fehler; „Testmail an mich“ versendet sofort und zeigt die Antwort des Mailservers (ohne Passwort).
+**Prüfen:** Team-Bereich → „Betrieb“ → Kasten „Mailversand“ zeigt, ob der Versand eingerichtet ist, Absender, Warteschlange und den letzten Fehler; „Testmail an mich“ versendet sofort und zeigt die Antwort des Mailservers (ohne Passwort).
 
 Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an den Browser versendet, spätestens beim nächsten Cron-Lauf. Fehlschläge werden nach 5, 30, 120 und 360 Minuten wiederholt, danach als Fehler gezählt (Team-Bereich, Fehlerprotokoll ohne Empfängeradresse). Nach dem Versand werden Empfänger, Betreff und Text gelöscht (R-02); Einträge verschwinden nach 30 Tagen. Zeitbudget je Versand 5 s.
 
-## 13. Konten für Teilnehmende (AP-4b)
+## 13. Team-Bereich (AP-5)
+
+Reiter: Übersicht, Personen, Workshops, Programm, Statistik, Einstellungen, Texte, Protokoll, Mein Konto; für Betreiber zusätzlich Team-Konten und Betrieb (E-49).
+
+- **Übersicht:** Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste – nach der Grenze manuell vergeben –, Mail-Fehler, Angebote, die in 24 h ablaufen, unveröffentlichtes Programm), Workshop-Termine, Essen.
+- **Personen:** Suche und Filter (Angemeldet, Warteliste, Mail nicht bestätigt, Mit Konto, Team). Eine Person auswählen: Daten, Essen und Workshops ändern – auch nach den Stichtagen und ohne Workshop-Limit. Volle Termine nur mit „Überbuchen bestätigen“. Plätze, Wartelisten und Angebote: „Platz geben“ (fragt bei Überbuchen oder Tausch nach), „Angebot schicken“, „Entfernen“. „Einmal-Link senden“, „+ Person anlegen“ (gilt sofort als bestätigt). Konto: Passwort-Link, sperren, löschen (mit Wahl), Rolle vergeben (nur Betreiber, mit Code). Jede Änderung schickt der Person eine Mail, außer „ohne Mail“ ist angekreuzt; alles steht im Protokoll.
+- **Workshops:** Symposium und alle Termine mit Belegung; ein Termin zeigt Teilnehmende und Warteliste in Reihenfolge, mit denselben Aktionen und der Liste als CSV.
+- **Statistik:** Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** als CSV (Semikolon, UTF-8 mit BOM, öffnet direkt in Excel): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der ÄrztInnen), Statistik. Exporte stehen im Protokoll.
+- **Texte:** Startseite (alle im Team); Impressum und Datenschutz nur Betreiber.
+- **Protokoll:** alle Einträge, Filter nach Art, Suche (z. B. „Anmeldung 12“).
+- **Betrieb** (Betreiber): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender der System-Mails (vor config.php), Sicherung, Testdaten (nur Staging).
+
+## 14. Konten für Teilnehmende (AP-4b)
 
 - **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
 - **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Deine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
@@ -201,9 +213,9 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 - Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.
 - **Testdaten:** Lea (`lea@example.org`) hat ein Konto; das erfundene Test-Passwort steht in `server/testdaten/beispieldaten.php` (`BEISPIEL_PASSWORT`). Nur auf Staging.
 
-## 14. Daten: Sicherung, Wiederherstellung, Testdaten
+## 15. Betrieb: Sicherung, Wiederherstellung, Testdaten
 
-Team-Bereich → „Daten“ (nur Betreiber, E-47).
+Team-Bereich → „Betrieb“ (nur Betreiber, E-47; bis 0.8 „Daten“).
 
 - **Sicherung anlegen:** alle Tabellen und die Fotos der Dozierenden als gzip-Datei in `var/sicherungen/` (nie über das Web erreichbar). Ohne Inhalt bleiben Ratenschutz und Mail-Warteschlange.
 - **Herunterladen** und **Wiederherstellen** verlangen den eigenen Code aus der App. Heruntergeladene Sicherungen enthalten personenbezogene Daten und Passwort-Hashes: verschlüsselt aufbewahren.
@@ -212,6 +224,6 @@ Team-Bereich → „Daten“ (nur Betreiber, E-47).
 - **Mail-Umleitung (Staging):** `mail.umleiten_an` in der `config.php` schickt jede Mail an diese Adresse; der eigentliche Empfänger steht im Betreff. Auf Produktion leer lassen.
 - Sicherungen werden nicht automatisch gelöscht; alte über „Löschen“ entfernen.
 
-## 15. Fehlerprotokoll
+## 16. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

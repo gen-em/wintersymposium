@@ -16,9 +16,9 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
 | AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-129, T-150, T-151, T-153, T-154, T-210 bis T-222 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
-| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-143 | Staging (siehe unten), echter Mailversand; T-144 mit AP-5 |
+| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-144; Mailversand auf Staging (Admin 2026-10-29) | Staging (siehe unten) |
 | AP-4b | Konten für Teilnehmende | umgesetzt, Staging offen | lokal T-145 bis T-149 | Staging (siehe unten); Newsletter-Teil mit AP-7 |
-| AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
+| AP-5 | Team-Bereich | umgesetzt, Staging offen | lokal T-150, T-151, T-153, T-155 bis T-159; T-154 im Code | Staging (siehe unten); T-152 Passkey mit O-14 |
 | AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
@@ -89,7 +89,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-141, ap: AP-4, was: "Überschneidende Termine gesperrt", wie: "Zwei Termine im selben Zeitfenster wählen → Ablehnung mit Hinweis", status: "lokal bestanden (Server lehnt ab; im Browser sofort gesperrt mit Grund)"}
 - {id: T-142, ap: AP-4, was: "Token nur als Hash in der DB", wie: "Datenbank: Spalte enthält sha256, nicht den Link-Wert", status: "lokal bestanden"}
 - {id: T-143, ap: AP-4, was: "Stichtage sperren Teilnehmende", wie: "Stichtag Workshop auf gestern setzen → Workshop-Änderung per Einmal-Link gesperrt mit Hinweis, Essen noch änderbar; Storno-Stichtag → Storno gesperrt", status: "lokal bestanden für Workshops (Knopf gesperrt mit Hinweis, Änderung abgelehnt); Essen und Storno gleich gebaut, auf Staging nachprüfen"}
-- {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: "offen: Team-Bearbeitung kommt mit AP-5"}
+- {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: "lokal bestanden (Team ändert Essen nach dem Stichtag, Mail „vom Team“; Workshops ohne Limit und mit Überbuchen)"}
 
 # AP-4b Konten für Teilnehmende
 - {id: T-145, ap: AP-4b, was: "Konto beim Anmelden und nachträglich", wie: "Anmeldung mit „Konto anlegen“ → Bestätigung → Login zeigt Anmeldung; Anmeldung ohne Konto → Einmal-Link → Konto anlegen → Anmeldung im Profil", status: "lokal bestanden (Häkchen → nach dem Link Konto + Passwort festlegen; „Konto anlegen“ aus „Deine Anmeldung“; Anmeldung verknüpft)"}
@@ -103,12 +103,12 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-151, ap: AP-5, was: "TOTP", wie: "Einrichten per QR, Code gültig, Wiederholung desselben Codes abgelehnt", status: "lokal bestanden (mit AP-3 vorgezogen)"}
 - {id: T-152, ap: AP-5, was: "Passkey", wie: "Registrieren und anmelden auf Handy und Desktop", status: offen}
 - {id: T-153, ap: AP-5, was: "Wiederherstellungscodes", wie: "Login mit Code; Code danach ungültig", status: "lokal bestanden (mit AP-3 vorgezogen)"}
-- {id: T-154, ap: AP-5, was: "Rollen", wie: "Admin ruft Konten-, Betreiber-Einstellungs- und Rechtstext-Seiten auf → verweigert", status: "teilweise (AP-3): Admin sieht keine Team-Konten; Betreiber-Einstellungen und Rechtstexte mit AP-5"}
-- {id: T-155, ap: AP-5, was: "Statistik-Seite stimmt", wie: "Alle Kennzahlen (Workshops, Warteliste, offene Angebote, Essen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter, Konten) gegen SQL-Abfragen prüfen; Diagramme und Export je Ansicht", status: offen}
-- {id: T-156, ap: AP-5, was: "Export", wie: "CSV öffnet in Excel korrekt (UTF-8 mit BOM, Umlaute); CME-Liste enthält nur Name und EFN", status: offen}
-- {id: T-157, ap: AP-5, was: "Audit-Protokoll", wie: "Änderung durch Team erzeugt Eintrag mit Zeit, Konto, Art", status: offen}
-- {id: T-158, ap: AP-5, was: "Betreiber-Einstellungen: Hostnamen und Absender", wie: "Zweiten Hostnamen und Absender anlegen → Mails tragen den gewählten Absender; Host wird akzeptiert (T-110)", status: offen}
-- {id: T-159, ap: AP-5, was: "Konten der Teilnehmenden im Team-Bereich", wie: "Konto suchen, mit Anmeldung verknüpfen, Reset auslösen, sperren → Login verweigert", status: offen}
+- {id: T-154, ap: AP-5, was: "Rollen", wie: "Admin ruft Konten-, Betreiber-Einstellungs- und Rechtstext-Seiten auf → verweigert", status: "im Code: Betrieb und Team-Konten nur Betreiber, Rechtstexte unter „Texte“ nur Betreiber, Rollen nur Betreiber; mit einem Admin-Konto auf Staging durchklicken"}
+- {id: T-155, ap: AP-5, was: "Statistik-Seite stimmt", wie: "Alle Kennzahlen (Workshops, Warteliste, offene Angebote, Essen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter, Konten) gegen SQL-Abfragen prüfen; Diagramme und Export je Ansicht", status: "lokal bestanden (Kennzahlen gegen SQL, Filter Berufsgruppe; Balken und Verlauf als SVG, Tabellenansicht)"}
+- {id: T-156, ap: AP-5, was: "Export", wie: "CSV öffnet in Excel korrekt (UTF-8 mit BOM, Umlaute); CME-Liste enthält nur Name und EFN", status: "lokal bestanden (Semikolon, UTF-8 mit BOM, Formeln entschärft; CME-Liste nur ÄrztInnen mit Name, Berufsgruppe, EFN – Kammerformat mit AP-10); in Excel beim Admin offen"}
+- {id: T-157, ap: AP-5, was: "Audit-Protokoll", wie: "Änderung durch Team erzeugt Eintrag mit Zeit, Konto, Art", status: "lokal bestanden (Team-Änderungen mit Konto, Exporte, Texte; Seite „Protokoll“ mit Filter und Suche)"}
+- {id: T-158, ap: AP-5, was: "Betreiber-Einstellungen: Hostnamen und Absender", wie: "Zweiten Hostnamen und Absender anlegen → Mails tragen den gewählten Absender; Host wird akzeptiert (T-110)", status: "lokal bestanden (Host hinzufügen, abschalten, Haupt-Host; Absender aus der Einstellung vor config.php); Absender auf Staging mit Testmail prüfen"}
+- {id: T-159, ap: AP-5, was: "Konten der Teilnehmenden im Team-Bereich", wie: "Konto suchen, mit Anmeldung verknüpfen, Reset auslösen, sperren → Login verweigert", status: "lokal bestanden (Personen: Filter „Mit Konto“, Passwort-Link, sperren, löschen mit Wahl, Rolle vergeben mit Code und Einrichtungslink)"}
 
 # AP-6 Mailversand und Rundmails
 - {id: T-160, ap: AP-6, was: "SMTP-Versand über Lima-City", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: offen}
@@ -180,6 +180,8 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-144, T-155 bis T-159 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 455 ok, 0 Fehler (Team-Bibliothek: anlegen, überbuchen, Tausch, Angebot, Entfernen mit Nachrücken, Daten, Liste, Aufgaben, CSV, Statistik, Rolle, Hosts, Absender; HTTP: alle Seiten, Person anlegen/ändern ohne und mit Mail, nach dem Stichtag, Einmal-Link, Export, Texte, Protokoll, Storno); Browser-Durchlauf 3765 ok, 0 Fehler mit allen neuen Reitern, ausgewählter Person, Termin, Person anlegen | Staging |
+| – | 2026-10-29 | admin | bestanden | Mailversand auf Staging: Mails kommen an | – |
 | T-212, T-201 | 2026-10-29 | claude-dev | lokal bestanden | Nachbesserung: Ziehen fügt zwischen zwei Punkte ein, nachfolgende rücken nach (Block mit Inhalt, Lücke stoppt; Bibliothekstest und Browser-Durchlauf „2 Punkte rücken“); Testmail unter Daten; Versionsanzeige; `lauf.php` 406 ok, 0 Fehler; Browser-Durchlauf 3009 ok, 0 Fehler | Staging: Ziehen mit der Maus, Testmail |
 | T-145 bis T-149 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 398 ok, 0 Fehler (Konten ohne und mit Anmeldung, Bestätigung, Login, Verknüpfung, neue Adresse, Löschen mit Wahl, Aufräumen; HTTP: alle Wege inkl. Team im Kasten); Browser-Durchlauf 3009 ok, 0 Fehler (Konto anlegen, Passwort vergessen, Login im Kasten, Mein Konto, Profil) in 3 Engines × 4 Breiten | Staging |
 | T-201, T-223, T-224 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 362 ok, 0 Fehler (Sicherung und Wiederherstellung, kaputte und neuere Sicherung, Mail-Umleitung, HTTP: Herunterladen mit Code, Testdaten laden und zurück); Browser-Durchlauf 2550 ok, 0 Fehler mit Seite „Daten“ in 3 Engines × 4 Breiten | Staging |
@@ -219,6 +221,16 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-5 (nach Merge auf Staging)
+
+1. Testdaten laden (Betrieb → Testdaten). Übersicht: Kennzahlen, „Zu erledigen“, Workshop-Termine, Essen.
+2. Personen: nach „paula“ suchen, auswählen → Angebot sichtbar; „Platz geben“ → Nachfrage zum Tausch → bestätigen. Eine Person mit „+ Person anlegen“ anlegen (deine Adresse) → Mail kommt.
+3. Workshops: den vollen Termin WS 02 20:30 öffnen → Teilnehmende und Warteliste; „Platz geben“ fragt nach dem Überbuchen.
+4. Statistik: Zahlen plausibel, Filter Berufsgruppe; jede CSV einmal in Excel öffnen (Umlaute, Spalten).
+5. Texte: Sticker auf der Startseite ändern; Impressum und Datenschutz eintragen (nur als Betreiber sichtbar).
+6. Mit einem Admin-Konto (nicht Betreiber): „Betrieb“ und „Team-Konten“ fehlen, unter „Texte“ fehlen Impressum und Datenschutz (T-154).
+7. Betrieb: Absender ansehen, „Testmail an mich“.
 
 ### Noch zu prüfen für die Nachbesserung 0.8.1 (nach Merge auf Staging)
 
