@@ -4,8 +4,7 @@ declare(strict_types=1);
 /*
  * Startseite (AP-2). Texte aus der Tabelle inhalt (pflegbar, AP-5).
  * Eckdaten (Datum, Zeit, Ort, CME, freie Plätze) kommen aus den
- * Veranstaltungs-Einstellungen von AP-3 und erscheinen erst, wenn sie
- * gesetzt sind. Das Programm folgt mit AP-3; bis dahin ein Hinweis.
+ * Veranstaltungs-Einstellungen von AP-3; bis dahin ein fester Platzhalter. Das Programm folgt mit AP-3; bis dahin ein Hinweis.
  */
 
 $eck = [];
@@ -23,6 +22,17 @@ if ($datum !== null && $datum !== '') {
             $eck[] = [$label, $w];
         }
     }
+}
+if ($eck === []) {
+    // Vorübergehender Platzhalter auf Wunsch des Admins (Mockup-Kommentar
+    // 2026-10-29), bis die Einstellungen aus AP-3 und die Platzzählung aus
+    // AP-4 stehen; dann entfernen. Ort folgt, sobald er feststeht.
+    $eck = [
+        ['Datum', tag_text('2027-01-20')],
+        ['Zeit', '08:30–16:30'],
+        ['CME', 'Punkte beantragt'],
+        ['Freie Plätze', '240 / 240'],
+    ];
 }
 
 seite_kopf('Start', ['aktiv' => '/']);

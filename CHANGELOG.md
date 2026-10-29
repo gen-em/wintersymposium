@@ -4,12 +4,12 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 ## [0.2.1] – 2026-10-29
 
-Nur Dokumentation.
-
 ### Geändert
 
 - Konzept: offene Punkte O-23 bis O-32 aus der Mockup-Runde entschieden und als E-42 eingetragen (Nachrücken bei Überschneidung, Statusfarben, grüner Anmelde-Knopf, „Anmelden“/„Einloggen“, Konten mit Rollen, Mailings und Newsletter, EFN-Barcode Code 128, Anwesenheit nur mit Ausnahmen, Empfängerliste im Mail-Archiv); R-02, E-22, E-40 und E-41 angepasst; O-33 (Löschfrist der Empfängerlisten) neu.
 - Prüfprotokoll: AP-2 auf Staging abgenommen.
+- Startseite: Überschrift der Infokästen „Für alle, die nachts Dienst haben“ statt „… den Piepser tragen“ (passt auch für die Notaufnahme); Migration 3 ändert den Text, solange er noch nicht bearbeitet wurde. Mockup angepasst.
+- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, 08:30–16:30, CME beantragt, freie Plätze 240 / 240), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
 
 ## [0.2.0] – 2026-10-29
 

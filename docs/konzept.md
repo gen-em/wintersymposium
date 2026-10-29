@@ -289,6 +289,7 @@ nicht_uebernehmen:
     - Datenmodell Veranstaltung, Zeitfenster (Beginn/Ende frei, auch überlappend), Workshop, Workshop-Termin (Zeitfenster, Raum, Plätze), Programmpunkte ohne Anmeldung (Vorträge, Pausen)
     - "Veranstaltungs-Einstellungen (R-11): Anmeldezeitraum (Start 2026-11-25, Ende einstellbar), Gesamtkapazität (0 = unbegrenzt), Workshop-Limit je Person (0 = keins), Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist (48 h), Grenze für automatisches Nachrücken (14 Tage vor dem Symposium), Stichtage für Workshop-Änderung, Essens-Änderung und Storno (E-31), Berufsgruppen-Liste (E-21), Veranstaltungsinfos mit CME-Angaben (E-22)"
     - Regel: überschneidende Termine gesperrt (E-20)
+    - "Platzhalter entfernen: Eckdaten der Startseite sind bis dahin fest im Code (start.php, Wunsch des Admins 2026-10-29) und kommen dann aus den Einstellungen; freie Plätze aus der Platzzählung (AP-4)"
     - "Ergänzt durch die Mockups: Programm-Modell, Typen, Dozierende, Workshop-Blöcke, Entwurf/Veröffentlichen, Team-Reiter „Programm“ (E-39); freie Plätze X/Y auf der Startseite (E-40)"
   abnahmekriterien:
     - Änderungen erscheinen sofort auf der Startseite
@@ -511,7 +512,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
 | 2026-10-29 | AP-2 umgesetzt: Mockups (Variante A) freigegeben und in docs/mockups/ abgelegt; E-36 bis E-41 (Gestaltung, Sprache, Workshop-Termine und Warteliste, Programm-Modell, öffentliche Seiten und Einstieg, Team-Bereich) aus den Mockup-Kommentaren; E-21 auf Binnen-I; Hinweise in AP-3 bis AP-10; offene Punkte O-23 bis O-32. |
-| 2026-10-29 | AP-2 auf Staging abgenommen; offene Punkte O-23 bis O-32 entschieden und in E-42 zusammengefasst; E-22 (Anwesenheit), E-40 (Einloggen/Ausloggen), E-41 und R-02 (Empfängerliste im Mail-Archiv) angepasst; O-33 (Löschfrist der Empfängerlisten) neu. |
+| 2026-10-29 | AP-2 auf Staging abgenommen; offene Punkte O-23 bis O-32 entschieden und in E-42 zusammengefasst; E-22 (Anwesenheit), E-40 (Einloggen/Ausloggen), E-41 und R-02 (Empfängerliste im Mail-Archiv) angepasst; O-33 (Löschfrist der Empfängerlisten) neu; Eckdaten-Platzhalter auf der Startseite bis AP-3 (Hinweis in AP-3); Überschrift der Infokästen „Für alle, die nachts Dienst haben“. |
 | 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |

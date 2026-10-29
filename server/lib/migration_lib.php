@@ -98,6 +98,14 @@ function migration_katalog(): array
                     ('datenschutz', '', UTC_TIMESTAMP())",
             ],
         ],
+        3 => [
+            'beschreibung' => 'Startseite: Überschrift der Infokästen passt auch für die Notaufnahme',
+            'sql' => [
+                // Nur ändern, solange der Startwert noch unverändert ist.
+                "UPDATE inhalt SET text = 'Für alle, die nachts Dienst haben', geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos_titel' AND text = 'Für alle, die nachts den Piepser tragen'",
+            ],
+        ],
     ];
 }
 
