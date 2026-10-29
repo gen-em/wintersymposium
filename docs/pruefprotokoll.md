@@ -35,7 +35,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: offen}
 - {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "n+1 Fehlversuche von einer IP → Sperre, nach Fenster wieder frei", status: offen}
 - {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Lima-City-Cron ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: offen}
-- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions", wie: "Push → FTPS-Sync auf Staging; Tag → Produktion; config.php, install.lock und Laufzeitordner bleiben unverändert (Prüfsumme vorher/nachher)", status: offen}
+- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: offen}
 - {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET mit Token liefert 200 und JSON; ohne Token 404", status: offen}
 - {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "wartung.lock anlegen → 503 mit Hinweisseite, Team-Login weiter möglich", status: offen}
 - {id: T-109, ap: AP-1, was: "Lima-City-Botschutz", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: offen}
