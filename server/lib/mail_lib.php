@@ -368,7 +368,21 @@ function mail_stand(): array
         'fehler' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'fehler'"),
         'heute' => mail_heute_gesendet(),
         'limit' => (int)mail_konfig()['tageslimit'],
+        'letzter_fehler' => db_zeile("SELECT fehler, erstellt_am, versuche FROM mail_ausgang WHERE fehler IS NOT NULL AND status IN ('offen','fehler') ORDER BY id DESC LIMIT 1"),
+        'aelteste_offen' => db_wert("SELECT MIN(erstellt_am) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
+        'absender' => mail_absender(mail_konfig()),
+        'umleiten' => (string)(mail_konfig()['umleiten_an'] ?? ''),
     ];
+}
+
+/** Testmail sofort zustellen (ohne Warteschlange). Gibt null bei Erfolg zurück, sonst den Grund. */
+function mail_testen(string $an): ?string
+{
+    if (!mail_eingerichtet()) {
+        return 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+    }
+    [$betreff, $text] = mail_vorlage('test', []);
+    return mail_zustellen($an, $betreff, $text);
 }
 
 /* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */
@@ -428,6 +442,18 @@ function mail_vorlage(string $name, array $d): array
             return ['Bitte bestätige deine neue Adresse',
                 $hallo . "du willst deine Anmeldung zum Wintersymposium auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'konto_bestaetigen':
+            return ['Bitte bestätige dein Konto beim Wintersymposium',
+                $hallo . "danke für dein Konto. Bestätige deine Adresse über diesen Link, danach legst du dein Passwort fest:\n\n" . $d['link']
+                . "\n\nDer Link gilt bis " . $d['gueltig'] . ".\n\nDu hast kein Konto angelegt? Dann ignoriere diese Mail; ohne Bestätigung wird es gelöscht." . mail_gruss()];
+        case 'konto_vorhanden':
+            return ['Du hast schon ein Konto beim Wintersymposium',
+                $hallo . "für diese Adresse gibt es schon ein Konto. Einloggen kannst du dich unter " . url('/einloggen')
+                . ". Passwort vergessen? Unter " . url('/konto/passwort-vergessen') . " schicken wir dir einen Link.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'konto_passwort':
+            return ['Neues Passwort für dein Konto beim Wintersymposium',
+                $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link'] . "\n\nEr gilt bis " . $d['gueltig']
+                . " und nur einmal.\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
         case 'test':
             return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }

@@ -2,6 +2,39 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.8.1] – 2026-10-29
+
+Rückmeldungen des Admins.
+
+### Geändert
+
+- Programm: Ziehen fügt jetzt **zwischen** zwei Punkte ein (grüne Linie zeigt davor oder dahinter). Der Punkt beginnt, wo der darüber endet; nachfolgende Vorträge, Fälle, Pausen und Workshop-Blöcke (samt Terminen und Stationen) rücken nach hinten, bis eine Lücke reicht.
+- Abstand der Zwischentitel auf den Team-Seiten (z. B. „Workshop-Termine“, „Personen“).
+
+### Neu
+
+- Team-Bereich → „Daten“: Kasten „Mailversand“ mit Stand (eingerichtet, Absender, Warteschlange, letzter Fehler) und „Testmail an mich“, die sofort versendet und die Antwort des Mailservers zeigt.
+- Versionsanzeige in der Fußzeile außerhalb der Produktion und auf der Team-Übersicht.
+
+## [0.8.0] – 2026-10-29
+
+AP-4b: Konten für Teilnehmende (E-48).
+
+### Neu
+
+- Konto anlegen auf drei Wegen: Häkchen beim Anmelden (Passwort nach dem Bestätigungslink), „Konto anlegen?“ auf „Deine Anmeldung“, oder ohne Anmeldung unter `/konto/neu` mit Bestätigung per Mail (Spamschutz wie die Anmeldung).
+- Ein Login für alle: `/einloggen` und Kasten „Einloggen“ auf „Deine Anmeldung“ (wie im Mockup). Teilnehmende ohne zweiten Faktor, Team-Konten weiter zum Code.
+- „Mein Konto“ (`/konto`): Passwort festlegen und ändern (mindestens 10 Zeichen), Profil, neue Adresse (gilt nach Bestätigung, Anmeldung zieht mit), Konto löschen mit Wahl, ob die Anmeldung bleibt.
+- „Passwort vergessen“ per Mail-Link (48 h, einmal).
+- Bestätigte Konten und Anmeldungen mit gleicher Adresse werden verknüpft; eingeloggt anmelden ohne zweite Bestätigung, Angaben vorausgefüllt.
+- Navigation mit „Mein Konto“; Team-Liste „Anmeldungen“ mit Spalte Konto.
+- Job räumt unbestätigte Konten nach 48 h auf.
+- Testdaten: Lea hat ein Konto (erfundenes Test-Passwort).
+
+### Geändert
+
+- `/einloggen` ist der Login für alle Konten (vorher nur Team).
+
 ## [0.7.0] – 2026-10-29
 
 Sicherung, Wiederherstellung und Testdaten (E-47).

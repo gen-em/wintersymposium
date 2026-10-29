@@ -64,6 +64,26 @@ function sitzung_starten(string $art): void
     $_SESSION['_zuletzt'] = $jetzt;
 }
 
+/**
+ * Zur anderen Sitzungsart wechseln (gemeinsamer Login, E-48): z. B. nach dem
+ * Passwort auf /einloggen für ein Teilnehmenden-Konto von 'team' zu 'link'.
+ */
+function sitzung_wechseln(string $art): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        if (($_SESSION['_art'] ?? '') === $art) {
+            return;
+        }
+        session_write_close();
+        $_SESSION = [];
+        // Sonst nähme session_start() die ID der alten Sitzung mit
+        $name = SITZUNG_ARTEN[$art]['name'];
+        $id = is_string($_COOKIE[$name] ?? null) && preg_match('/^[A-Za-z0-9,-]{22,256}$/', $_COOKIE[$name]) === 1 ? $_COOKIE[$name] : session_create_id();
+        session_id($id);
+    }
+    sitzung_starten($art);
+}
+
 /** Neue Sitzungs-ID nach Login oder Rechtewechsel. */
 function sitzung_erneuern(): void
 {

@@ -44,6 +44,10 @@ const ROUTEN = [
     '/anmelden' => 'anmelden',
     '/link' => 'link',
     '/deine-anmeldung' => 'deine_anmeldung',
+    '/konto' => 'konto',
+    '/konto/neu' => 'konto_neu',
+    '/konto/link' => 'konto_link',
+    '/konto/passwort-vergessen' => 'konto_passwort_vergessen',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

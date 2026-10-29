@@ -302,6 +302,30 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
       notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
 
+      // ---- Konten für Teilnehmende (AP-4b) ----
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'konto-neu', basis + '/konto/neu');
+        await pruefeSeite(p, fehler, engine, breite, 'konto-passwort-vergessen', basis + '/konto/passwort-vergessen');
+      }
+      // Lea loggt sich im Kasten auf „Deine Anmeldung“ ein
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/deine-anmeldung');
+      await p.fill('#zg-lmail', vor.lea.email); await p.fill('#zg-pw', vor.lea.passwort);
+      await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=einloggen]) button[type=submit]')]);
+      notiere(engine, 'handy', 'konto', 'Login im Kasten → Deine Anmeldung', (await p.textContent('body')).includes('Hallo Lea.') && (await p.textContent('body')).includes('Mit Konto eingeloggt'));
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'konto', basis + '/konto');
+        await pruefeSeite(p, fehler, engine, breite, 'konto-profil', basis + '/konto?aendern=profil');
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-konto', basis + '/deine-anmeldung');
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/konto');
+      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ in der Navigation', await p.isVisible('.nav-gross a[href="/konto"]'));
+      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
+      notiere(engine, 'desktop-breit', 'konto', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
+
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/einloggen');
@@ -367,17 +391,24 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await Promise.all([p.waitForNavigation(), p.evaluate(([titel]) => {
           const quelle = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes(titel)).querySelector('.griff');
           const ziel = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes('Fall #1'));
+          const r = ziel.getBoundingClientRect();
+          const unten = { clientX: r.left + 20, clientY: r.bottom - 4 }; // untere Hälfte: nach Fall #1 einfügen
           const dt = new DataTransfer();
           quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
-          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
-          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
+          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
         }, ['Pause ' + engine])]);
       } else {
-        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile)]);
+        // Quelle und Ziel gleichzeitig sichtbar: sonst scrollt Playwright nach dem Drücken zum Ziel,
+        // und Chromium beginnt das Ziehen an der alten Mausposition (dort steht dann eine andere Zeile)
+        await p.setViewportSize({ width: 1440, height: 1800 });
+        const box = await zielZeile.boundingBox();
+        // untere Hälfte der Zeile: Einfügen nach Fall #1 (grüne Linie unten)
+        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile, { targetPosition: { x: 20, y: box.height - 4 } })]);
       }
       await p.waitForLoadState('load');
       await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-programm-gezogen.png`), fullPage: true });
-      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45'),
+      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45') && (await p.textContent('body')).includes('2 Punkte rücken dahinter nach hinten'),
         (await p.locator('.meldung').allTextContents()).join(' | ') + ' ' + p.url());
       await p.click('.entwurf-banner summary:has-text("Verwerfen")');
       await p.click('.entwurf-banner button:has-text("Ja, verwerfen")');

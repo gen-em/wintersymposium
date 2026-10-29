@@ -314,6 +314,82 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
 }
 
+/** Konten für Teilnehmende (AP-4b): anlegen, bestätigen, Passwort, Login, Löschen. $teamPw: Passwort der Betreiberin. */
+function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw): void
+{
+    abschnitt('HTTP: Konten für Teilnehmende (AP-4b)');
+    $k = "$tmp/kekse-konto.txt";
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/deine-anmeldung', 'Mein Konto nur eingeloggt');
+    $r = http_anfrage($basis, 'GET', '/konto/neu', $h, [], null, $k);
+    preg_match('/name="pow_aufgabe" value="([0-9a-f]{64})"/', $r['text'], $m);
+    $r = http_anfrage($basis, 'POST', '/konto/neu', $h, [], ['csrf' => http_csrf($r['text']), 'vorname' => 'Karla', 'nachname' => 'Konto', 'email' => 'karla@example.org', 'einwilligung' => '1',
+        'zeit' => spam_stempel(time() - 10), 'pow_aufgabe' => $m[1] ?? '', 'pow_loesung' => http_pow($m[1] ?? ''), 'website' => ''], $k);
+    pruefe(str_contains($r['text'], 'Schau in dein Postfach') && konto_per_email('karla@example.org')['email_bestaetigt_am'] === null, 'Konto ohne Anmeldung angelegt, unbestätigt');
+    preg_match('~(/konto/link\?t=[A-Za-z0-9_-]{40,60})~', http_mail_an($tmp, 'karla@example.org', 20, 'Bestätige deine Adresse'), $ml);
+    $r = http_anfrage($basis, 'GET', $ml[1] ?? '/konto/link', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Adresse bestätigen'), 'Link-Seite: erst Klick bestätigt');
+    $r = http_anfrage($basis, 'POST', '/konto/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($ml[1] ?? '', 14)], $k);
+    pruefe($r['status'] === 303 && konto_per_email('karla@example.org')['email_bestaetigt_am'] !== null, 'Adresse bestätigt');
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Passwort festlegen') && !str_contains($r['text'], 'Dein Profil'), 'danach: Passwort festlegen');
+    $c = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'passwort_setzen', 'passwort' => '123456789', 'passwort2' => '123456789'], $k);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'mindestens 10 Zeichen'), 'Passwort unter 10 Zeichen abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'passwort_setzen', 'passwort' => 'karlas-passwort', 'passwort2' => 'karlas-passwort'], $k);
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Dein Profil') && str_contains($r['text'], 'href="/konto" aria-current'), 'Passwort gespeichert, Profil, „Mein Konto“ in der Navigation');
+    $c = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'profil', 'vorname' => 'Karla', 'nachname' => 'Konto', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA', 'efn' => '802760012345673'], $k);
+    pruefe($r['status'] === 303 && konto_per_email('karla@example.org')['efn'] === '802760012345673', 'Profil ohne Anmeldung speichern (EFN)');
+    http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $c, 'aktion' => 'ausloggen'], $k);
+    pruefe(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k)['status'] === 303, 'Ausloggen');
+    // Login über /einloggen (gemeinsamer Login, E-48)
+    $k2 = "$tmp/kekse-konto2.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k2);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'karla@example.org', 'passwort' => 'karlas-passwort'], $k2);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/konto' && str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k2)['text'], 'Hallo Karla.'), 'Login unter /einloggen führt Teilnehmende zu „Mein Konto“');
+    // Login im Kasten auf „Deine Anmeldung“
+    $k3 = "$tmp/kekse-konto3.txt";
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    pruefe(str_contains($r['text'], 'Mit Konto') && str_contains($r['text'], 'Passwort vergessen?'), 'Einstieg mit drittem Kasten „Einloggen“');
+    $c3 = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $c3, 'aktion' => 'einloggen', 'email' => 'karla@example.org', 'passwort' => 'falsch-falsch'], $k3);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'E-Mail-Adresse oder Passwort stimmt nicht'), 'falsches Passwort: Meldung');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $c3, 'aktion' => 'einloggen', 'email' => 'karla@example.org', 'passwort' => 'karlas-passwort'], $k3);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/konto', 'Login im Kasten');
+    $k4 = "$tmp/kekse-konto4.txt";
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k4);
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'einloggen', 'email' => 'betrieb@example.org', 'passwort' => $teamPw], $k4);
+    $r2 = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k4);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/einloggen' && str_contains($r2['text'], 'Authenticator-App'), 'Team im Kasten: weiter zum zweiten Faktor');
+    // Passwort vergessen
+    $r = http_anfrage($basis, 'GET', '/konto/passwort-vergessen', $h, [], null, $k4);
+    $r = http_anfrage($basis, 'POST', '/konto/passwort-vergessen', $h, [], ['csrf' => http_csrf($r['text']), 'email' => 'karla@example.org', 'website' => ''], $k4);
+    pruefe($r['status'] === 303 && http_mail_an($tmp, 'karla@example.org', 20, 'neues Passwort fest') !== '', 'Passwort vergessen: Link per Mail');
+    // Häkchen „Konto anlegen“ beim Anmelden
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 60));
+    $k5 = "$tmp/kekse-konto5.txt";
+    $r = http_anmelden($basis, $h, $k5, ['vorname' => 'Hanna', 'nachname' => 'Haken', 'email' => 'hanna@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'essen' => 'egal', 'konto' => '1']);
+    preg_match('~(/link\?t=[0-9a-f]{48})~', http_mail_an($tmp, 'hanna@example.org', 20, 'Sie gilt erst'), $mh);
+    $r = http_anfrage($basis, 'GET', $mh[1] ?? '/link', $h, [], null, $k5);
+    $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($mh[1] ?? '', 8)], $k5);
+    $hk = konto_per_email('hanna@example.org');
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/konto' && $hk !== null && db_wert('SELECT konto_id FROM anmeldung WHERE email = ?', ['hanna@example.org']) == $hk['id'], 'Häkchen beim Anmelden: nach dem Link Konto angelegt und verknüpft');
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k5);
+    pruefe(str_contains($r['text'], 'Passwort festlegen'), 'und gleich Passwort festlegen');
+    $c5 = http_csrf($r['text']);
+    http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'passwort_setzen', 'passwort' => 'hannas-passwort', 'passwort2' => 'hannas-passwort'], $k5);
+    $r = http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, "$tmp/kekse-betreiber.txt");
+    pruefe(preg_match('~Hanna Haken.*?chip ok">ja~s', $r['text']) === 1, 'Team-Liste: Spalte Konto');
+    $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'loeschen', 'passwort' => 'falsch', 'anmeldung' => 'behalten'], $k5);
+    pruefe(str_contains($r['text'], 'Das Passwort stimmt nicht') && konto_per_email('hanna@example.org') !== null, 'Löschen nur mit Passwort');
+    $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'loeschen', 'passwort' => 'hannas-passwort', 'anmeldung' => 'behalten'], $k5);
+    pruefe($r['status'] === 303 && konto_per_email('hanna@example.org') === null && db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ?', ['hanna@example.org']) == 1, 'Konto gelöscht, Anmeldung bleibt (Wahl)');
+    db_ausfuehren("DELETE FROM anmeldung WHERE email = 'hanna@example.org'");
+    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+}
+
 /** Sicherung, Wiederherstellung, Testdaten (E-47); $codes: zwei unbenutzte Wiederherstellungscodes. */
 function daten_http_tests(string $basis, string $h, string $tmp, string $b, array $codes): void
 {
@@ -322,6 +398,11 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Sicherung anlegen') && str_contains($r['text'], 'Testdaten laden') && str_contains($r['text'], 'href="/team/daten" aria-current'), 'Seite „Daten“ für Betreiber, Testdaten außerhalb der Produktion');
     pruefe(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'ohne Login kein Zugriff');
     $csrf = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'Mailversand') && str_contains($r['text'], 'Testmail an mich'), 'Kasten Mailversand mit Testmail');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testmail'], $b);
+    $f = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe($r['status'] === 303 && str_contains($f['text'], 'beim Mailserver angenommen') && http_mail_an($tmp, 'betrieb@example.org', 20, 'Diese Mail prüft den Versand') !== '', 'Testmail sofort versendet, Ergebnis angezeigt');
+    pruefe(str_contains($f['text'], 'Version ' . app_version() . ' · Entwicklung'), 'Version in der Fußzeile (außerhalb der Produktion)');
     $alt = glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'anlegen'], $b);
     $dateien = array_values(array_diff(glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [], $alt));
@@ -333,9 +414,9 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     $erste = strtok((string)@gzdecode($r['text']), "\n");
     pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/gzip' && str_contains((string)$erste, '"art":"kopf"'), 'Herunterladen mit Code: gzip mit Kopfzeile');
     pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
-    $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert('SELECT COUNT(*) FROM konto')];
+    $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'")];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
-    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 8 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert('SELECT COUNT(*) FROM konto') === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 8 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
     $vorTest = '';
     foreach (sicherung_liste() as $s) {
@@ -489,6 +570,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
 
     programm_http_tests($basis, $h, $tmp, $b);
     anmeldung_http_tests($basis, $h, $tmp, $b);
+    konto_http_tests($basis, $h, $tmp, $pw);
     daten_http_tests($basis, $h, $tmp, $b, [$codes[5], $codes[6]]);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');

@@ -17,7 +17,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
 | AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-129, T-150, T-151, T-153, T-154, T-210 bis T-222 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-143 | Staging (siehe unten), echter Mailversand; T-144 mit AP-5 |
-| AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
+| AP-4b | Konten für Teilnehmende | umgesetzt, Staging offen | lokal T-145 bis T-149 | Staging (siehe unten); Newsletter-Teil mit AP-7 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
 | AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
@@ -92,11 +92,11 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: "offen: Team-Bearbeitung kommt mit AP-5"}
 
 # AP-4b Konten für Teilnehmende
-- {id: T-145, ap: AP-4b, was: "Konto beim Anmelden und nachträglich", wie: "Anmeldung mit „Konto anlegen“ → Bestätigung → Login zeigt Anmeldung; Anmeldung ohne Konto → Einmal-Link → Konto anlegen → Anmeldung im Profil", status: offen}
-- {id: T-146, ap: AP-4b, was: "Konto ohne Symposium-Anmeldung", wie: "Konto nur mit Newsletter anlegen; später Anmeldung aus dem Profil heraus", status: offen}
-- {id: T-147, ap: AP-4b, was: "E-Mail-Änderung mit Bestätigung", wie: "Neue Adresse eintragen → alte bleibt gültig bis Bestätigung; nach Bestätigung gehen Mails an die neue; Newsletter zieht mit", status: offen}
-- {id: T-148, ap: AP-4b, was: "Login, Passwort vergessen, Ratenschutz, kein 2FA-Zwang", wie: "Falsches Passwort n-mal → Sperre; Reset-Link einmalig; Login ohne zweiten Faktor möglich", status: offen}
-- {id: T-149, ap: AP-4b, was: "Profil übernimmt Berufsgruppe/Institution, Konto löschen", wie: "Werte aus der Anmeldung im Profil, Änderung wirkt auf die Anmeldung; Konto löschen → Login weg, Anmeldung nach Regel E-24/O-21", status: offen}
+- {id: T-145, ap: AP-4b, was: "Konto beim Anmelden und nachträglich", wie: "Anmeldung mit „Konto anlegen“ → Bestätigung → Login zeigt Anmeldung; Anmeldung ohne Konto → Einmal-Link → Konto anlegen → Anmeldung im Profil", status: "lokal bestanden (Häkchen → nach dem Link Konto + Passwort festlegen; „Konto anlegen“ aus „Deine Anmeldung“; Anmeldung verknüpft)"}
+- {id: T-146, ap: AP-4b, was: "Konto ohne Symposium-Anmeldung", wie: "Konto nur mit Newsletter anlegen; später Anmeldung aus dem Profil heraus", status: "lokal bestanden (/konto/neu mit Spamschutz, Bestätigung, Passwort; Anmelden mit Konto ohne zweite Bestätigung); Newsletter mit AP-7"}
+- {id: T-147, ap: AP-4b, was: "E-Mail-Änderung mit Bestätigung", wie: "Neue Adresse eintragen → alte bleibt gültig bis Bestätigung; nach Bestätigung gehen Mails an die neue; Newsletter zieht mit", status: "lokal bestanden (Konto und Anmeldung ziehen mit); Newsletter mit AP-7"}
+- {id: T-148, ap: AP-4b, was: "Login, Passwort vergessen, Ratenschutz, kein 2FA-Zwang", wie: "Falsches Passwort n-mal → Sperre; Reset-Link einmalig; Login ohne zweiten Faktor möglich", status: "lokal bestanden (Login unter /einloggen und im Kasten, Ratenschutz wie Team, Passwort-vergessen-Link einmalig, kein zweiter Faktor; Team im Kasten → zweiter Faktor)"}
+- {id: T-149, ap: AP-4b, was: "Profil übernimmt Berufsgruppe/Institution, Konto löschen", wie: "Werte aus der Anmeldung im Profil, Änderung wirkt auf die Anmeldung; Konto löschen → Login weg, Anmeldung nach Regel E-24/O-21", status: "lokal bestanden (Profil aus der Anmeldung, Änderung wirkt auf beide; Löschen mit Wahl: Anmeldung behalten oder stornieren, Admin 2026-10-29)"}
 
 # AP-5 Team-Bereich
 - {id: T-150, ap: AP-5, was: "Login ohne zweiten Faktor verweigert", wie: "Konto ohne TOTP/Passkey → nach Passwort Zwang zur Einrichtung, kein Zugriff", status: "lokal bestanden (mit AP-3 vorgezogen)"}
@@ -180,6 +180,8 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-212, T-201 | 2026-10-29 | claude-dev | lokal bestanden | Nachbesserung: Ziehen fügt zwischen zwei Punkte ein, nachfolgende rücken nach (Block mit Inhalt, Lücke stoppt; Bibliothekstest und Browser-Durchlauf „2 Punkte rücken“); Testmail unter Daten; Versionsanzeige; `lauf.php` 406 ok, 0 Fehler; Browser-Durchlauf 3009 ok, 0 Fehler | Staging: Ziehen mit der Maus, Testmail |
+| T-145 bis T-149 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 398 ok, 0 Fehler (Konten ohne und mit Anmeldung, Bestätigung, Login, Verknüpfung, neue Adresse, Löschen mit Wahl, Aufräumen; HTTP: alle Wege inkl. Team im Kasten); Browser-Durchlauf 3009 ok, 0 Fehler (Konto anlegen, Passwort vergessen, Login im Kasten, Mein Konto, Profil) in 3 Engines × 4 Breiten | Staging |
 | T-201, T-223, T-224 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 362 ok, 0 Fehler (Sicherung und Wiederherstellung, kaputte und neuere Sicherung, Mail-Umleitung, HTTP: Herunterladen mit Code, Testdaten laden und zurück); Browser-Durchlauf 2550 ok, 0 Fehler mit Seite „Daten“ in 3 Engines × 4 Breiten | Staging |
 | T-130 bis T-143 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 342 ok, 0 Fehler (Regeln, Bestätigung, Links, Tausch, Nachrücken, Fristen, Paralleltest, HTTP-Ablauf); Browser-Durchlauf 2376 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Formular mit Sicherheitsprüfung, Mail, Bestätigen, Deine Anmeldung, Workshops und Daten ändern, Angebot mit Tausch-Bestätigung, Ausloggen, Team-Liste); Bildschirmfotos angesehen | Staging mit echtem Mailversand |
 | T-120, T-121, T-210 bis T-215 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 271 ok, 0 Fehler; Browser-Durchlauf 1563 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Programm-Pflege, Dozierende, Vorschau, Startseite mit Popups, Zeitraster und Liste); Bildschirmfotos angesehen, dabei Termintabelle, Kästchen und Skala korrigiert; Datums- und Zeitfelder in Chromium und Firefox nach Korrektur der Browser-Umgebung im deutschen Format (19:30, 20.01.2027) | Staging nach dem Merge |
@@ -217,6 +219,20 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für die Nachbesserung 0.8.1 (nach Merge auf Staging)
+
+1. Fußzeile: steht „Version 0.8.1 · Staging“?
+2. Team-Bereich → „Daten“ → Kasten „Mailversand“: Was steht bei „Eingerichtet“ und „Letzter Fehler“? Dann „Testmail an mich“ – die Meldung oben nennt entweder „angenommen“ oder den Fehler des Mailservers.
+3. Programm: einen Punkt zwischen zwei andere ziehen → grüne Linie, danach rücken die folgenden Punkte nach.
+
+### Noch zu prüfen für AP-4b (nach Merge auf Staging)
+
+1. Testdaten laden (Team-Bereich → Daten). Auf „Deine Anmeldung“ im Kasten „Einloggen“ mit `lea@example.org` und dem Test-Passwort aus `server/testdaten/beispieldaten.php` einloggen → Leas Anmeldung, in der Navigation „Mein Konto“.
+2. Ausloggen. Mit einer eigenen Adresse anmelden und „Konto anlegen“ ankreuzen → Link in der Mail → Passwort festlegen (mindestens 10 Zeichen) → Ausloggen → unter `/einloggen` mit Adresse und Passwort einloggen.
+3. „Passwort vergessen?“ ausprobieren: Mail kommt, Link setzt ein neues Passwort.
+4. Als Team unter „Deine Anmeldung“ im Kasten einloggen → es geht weiter zum Code aus der App.
+5. „Mein Konto“ → „Konto löschen“: einmal mit „Anmeldung behalten“ (Anmeldung bleibt in der Team-Liste, Spalte Konto „nein“).
 
 ### Noch zu prüfen für Sicherung und Testdaten (nach Merge auf Staging)
 

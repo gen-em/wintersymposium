@@ -27,7 +27,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         flash_setzen('ok', 'Du bist ausgeloggt.');
         umleiten('/deine-anmeldung');
     }
-    if ($aktion === 'link') {
+    if ($aktion === 'einloggen') {
+        // Gemeinsamer Login (E-48): Teilnehmende hier, Team weiter zum zweiten Faktor
+        $r = tk_login_pruefen(trim((string)($_POST['email'] ?? '')), (string)($_POST['passwort'] ?? ''));
+        if (isset($r['konto']) && konto_ist_team($r['konto'])) {
+            sitzung_wechseln('team');
+            anmeldung_halb_setzen($r['konto']);
+            umleiten('/einloggen');
+        }
+        if (isset($r['konto'])) {
+            tk_einloggen($r['konto']);
+            umleiten(tk_anmeldung((int)$r['konto']['id']) !== null ? '/deine-anmeldung' : '/konto');
+        }
+        $fehler['login'] = $r['fehler'];
+    } elseif ($aktion === 'link') {
         // Gleiche Antwort und Dauer für jede Adresse (R-03)
         $email = mail_adresse(is_string($_POST['email'] ?? null) ? $_POST['email'] : '');
         if ($email === null) {
@@ -112,6 +125,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $tausch = $r['tausch'];
                 $tauschPlatz = (int)($_POST['platz'] ?? 0);
                 break;
+            case 'konto_anlegen':
+                $kid = tk_anlegen_aus_anmeldung($id);
+                if ($kid === null) {
+                    flash_setzen('fehler', 'Für diese Adresse lässt sich hier kein Konto anlegen.');
+                    umleiten('/deine-anmeldung');
+                }
+                tk_einloggen(konto_laden($kid));
+                $_SESSION['tk_pw'] = true;
+                flash_setzen('ok', 'Dein Konto ist angelegt. Leg jetzt dein Passwort fest.');
+                umleiten('/konto');
             case 'ablehnen':
                 anm_angebot_ablehnen($id, (int)($_POST['platz'] ?? 0));
                 flash_setzen('ok', 'Angebot abgelehnt. Der Platz geht an die nächste Person.');
@@ -134,11 +157,11 @@ if ($a === null) {
 <div class="innen form-kopf">
     <p class="kicker">Wintersymposium · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Wie willst du rein?</h1>
-    <p class="text">Ein Konto brauchst du nicht. Deine Anmeldung öffnest du mit einem Link, den wir dir per Mail schicken.</p>
+    <p class="text">Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.</p>
 </div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
-    <div class="zg-raster">
+    <div class="zg-raster drei-spalten">
         <div class="kasten zg">
             <p class="kicker">Noch nicht angemeldet</p>
             <h2 class="zwischen">Neu anmelden</h2>
@@ -162,6 +185,18 @@ if ($a === null) {
                 <div class="feld"><label for="zg-mail">E-Mail</label><input id="zg-mail" name="email" type="email" autocomplete="email" required<?= $ungueltig('email') ?>><?= $fehlerFeld('email') ?></div>
                 <button class="knopf" type="submit">Link schicken</button>
             </form>
+        </div>
+        <div class="kasten zg">
+            <p class="kicker">Mit Konto</p>
+            <h2 class="zwischen">Einloggen</h2>
+            <form method="post" action="/deine-anmeldung" class="zg-form" novalidate>
+                <?= csrf_feld() ?><input type="hidden" name="aktion" value="einloggen">
+                <?php if (isset($fehler['login'])): ?><p class="feldfehler" role="alert"><?= e($fehler['login']) ?></p><?php endif; ?>
+                <div class="feld"><label for="zg-lmail">E-Mail</label><input id="zg-lmail" name="email" type="email" autocomplete="username" required></div>
+                <div class="feld"><label for="zg-pw">Passwort</label><input id="zg-pw" name="passwort" type="password" autocomplete="current-password" required></div>
+                <div class="aktionen"><button class="knopf" type="submit">Einloggen</button><a class="klein-link" href="/konto/passwort-vergessen">Passwort vergessen?</a></div>
+            </form>
+            <p class="meta klein">Noch kein Konto? <a href="/konto/neu">Konto anlegen</a> – oder erst anmelden und dabei ankreuzen. Team-Mitglieder loggen sich hier genauso ein; danach wird der zweite Faktor abgefragt.</p>
         </div>
     </div>
 </div>
@@ -336,11 +371,18 @@ seite_kopf('Deine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
                 <?php if ($a['berufsgruppe'] === (va_liste('berufsgruppen')[0] ?? '')): ?><div><dt>EFN</dt><dd class="mono"><?= $a['efn'] !== null ? e(efn_text($a['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
                 <div><dt>Newsletter</dt><dd><?= (int)$a['newsletter'] === 1 ? 'gewünscht (Bestätigung folgt, sobald er startet)' : 'nein' ?></dd></div>
             </dl>
-            <div class="aktionen abstand"><div class="aktion-frist"><a class="knopf zweit" href="/deine-anmeldung?aendern=daten">Daten bearbeiten</a><span class="frist">jederzeit · neue E-Mail erst nach Bestätigung</span></div></div>
+            <div class="aktionen abstand"><div class="aktion-frist"><a class="knopf zweit" href="<?= $a['konto_id'] !== null && tk_aktuell() !== null ? '/konto?aendern=profil' : '/deine-anmeldung?aendern=daten' ?>">Daten bearbeiten</a><span class="frist">jederzeit · neue E-Mail erst nach Bestätigung</span></div></div>
         </div>
     </div>
     <div class="spalte">
+        <?php $tk = tk_aktuell(); if ($tk !== null): ?>
+        <div class="kasten"><strong>Mit Konto eingeloggt</strong><p class="meta klein">Profil, Adresse und Passwort änderst du unter „Mein Konto“. Bist du 30 Minuten nicht aktiv, loggst du dich neu ein.</p><p><a class="knopf zweit" href="/konto">Mein Konto</a></p></div>
+        <?php else: ?>
         <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta klein">Du hast einen Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du 30 Minuten nicht aktiv, lass dir unter „Deine Anmeldung“ einen neuen schicken.</p></div>
+        <?php if ($a['status'] === 'bestaetigt' && $a['konto_id'] === null && (konto_per_email($a['email'])['rolle'] ?? 'teilnehmend') === 'teilnehmend'): ?>
+        <div class="kasten"><strong>Konto anlegen?</strong><p>Mit Konto brauchst du keinen Link per Mail mehr. Deine Anmeldung wird übernommen; du legst nur ein Passwort fest.</p>
+            <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="konto_anlegen"><button class="knopf zweit" type="submit">Konto anlegen</button></form></div>
+        <?php endif; endif; ?>
         <div class="kasten"><strong>Teilnahmebescheinigung</strong><p class="meta klein">Gibt es nach dem Symposium, sobald deine Anwesenheit erfasst ist.</p></div>
         <div class="kasten"><strong>Doch nicht dabei?</strong><p>Sag bitte ab – dein Platz geht an jemanden von der Warteliste.</p>
             <?php if (anm_frist_offen('stichtag_storno')): ?>

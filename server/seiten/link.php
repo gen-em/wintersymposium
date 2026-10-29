@@ -21,6 +21,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         umleiten('/deine-anmeldung');
     }
     anm_einloggen($r['anm']);
+    if (!empty($r['konto_neu'])) {
+        // Häkchen „Konto anlegen“ beim Anmelden: jetzt Passwort festlegen (E-48)
+        tk_einloggen(konto_laden((int)$r['konto_neu']));
+        $_SESSION['tk_pw'] = true;
+        flash_setzen('ok', 'Deine Anmeldung ist bestätigt und dein Konto angelegt. Leg jetzt dein Passwort fest.');
+        umleiten('/konto');
+    }
     if ($r['meldung'] !== null) {
         flash_setzen($r['zweck'] === 'email' && str_contains($r['meldung'], 'anderen') ? 'fehler' : 'ok', $r['meldung']);
     }

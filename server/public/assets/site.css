@@ -233,7 +233,8 @@ span.gl { cursor: default; }
 .pg-zeile.pg-neu-punkt .pg-link, .pg-zeile.pg-neu-punkt .griff { color: var(--nachtblau); }
 .pg-zeile.pg-neu-punkt .meta, .pg-zeile.pg-neu-punkt .st { color: #3C2768; border-color: var(--lila-600); }
 .pg-zeile.geaendert { border-color: var(--rot-300); border-style: dashed; background: rgba(255, 90, 95, .12); }
-.pg-zeile.ziel { outline: 2px solid var(--gruen); outline-offset: 1px; }
+.pg-zeile.ziel-vor { box-shadow: 0 -4px 0 var(--gruen); }
+.pg-zeile.ziel-nach { box-shadow: 0 4px 0 var(--gruen); }
 .pg-zeile.wird-gezogen { opacity: .5; }
 .st { display: inline-block; font-family: var(--f-text); font-size: .74rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
 .st.pub { border: 1.5px solid var(--gruen); background: rgba(181, 189, 0, .2); color: var(--fg); }
@@ -298,6 +299,10 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .fuss .innen { display: flex; flex-wrap: wrap; gap: 10px 22px; padding-top: 22px; padding-bottom: 22px; font-size: .88rem; color: var(--meta); align-items: center; justify-content: space-between; }
 .fuss nav ul { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
 .fuss a { color: var(--fg); }
+.fuss .version { font-size: .78rem; padding: 2px 8px; border: 1px dashed var(--meta); }
+/* Zwischentitel direkt im Inhalt (Team-Seiten): Abstand zu Kästen und Tabellen */
+.innen > .zwischen { margin: 28px 0 12px; }
+.innen > .zwischen:first-child { margin-top: 8px; }
 
 /* ---- Einstellungen (Team) ---- */
 .einstellungen { display: grid; gap: 18px; }
@@ -431,6 +436,9 @@ fieldset.feld > legend { font-weight: 700; font-size: .95rem; padding: 0; margin
 .warteliste-hinweis { margin-bottom: 16px; border-left-color: var(--rot); }
 .zg-raster { display: grid; gap: 16px; }
 @media (min-width: 760px) { .zg-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
+@media (min-width: 1000px) { .zg-raster.drei-spalten { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.klein-link { font-size: .9rem; align-self: center; color: var(--fg); }
+.schmal-kasten { max-width: 560px; }
 .zg { display: grid; gap: 10px; align-content: start; }
 .zg:first-child { border-top: 3px solid var(--gruen); }
 .zg p { margin: 0; }
@@ -474,4 +482,5 @@ form.inline { display: inline; }
 .zellen-aktionen .bestaetigen[open] { flex-basis: 100%; }
 .abstand-oben { margin-top: 28px; margin-bottom: 12px; }
 .gefahrzone-kasten { border-color: var(--rot); }
+.abstand-oben-klein { margin-top: 14px; }
 .team-raster .kasten p { margin: 0 0 12px; }

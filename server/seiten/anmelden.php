@@ -15,9 +15,13 @@ anm_sitzung();
 $beginn = microtime(true);
 $zeitraum = anm_zeitraum();
 $tn = anm_aktuell();
+$tk = tk_aktuell(); // mit Konto eingeloggt (AP-4b): Angaben vorausgefüllt, keine Bestätigungsmail
 $fehler = [];
 $wsFehler = [];
 $eingabe = [];
+if ($tk !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    $eingabe = tk_namen($tk) + ['berufsgruppe' => $tk['berufsgruppe'], 'beruf_sonstige' => $tk['beruf_sonstige'], 'institution' => $tk['institution'], 'efn' => (string)$tk['efn']];
+}
 $wahl = ['fest' => [], 'warte' => []];
 $danke = false;
 $voll = anm_frei(0) <= 0;
@@ -26,7 +30,7 @@ $gruppen = va_liste('berufsgruppen');
 if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $eingabe = $_POST;
-    $r = anm_daten_pruefen($_POST);
+    $r = anm_daten_pruefen($tk !== null ? ['email' => $tk['email']] + $_POST : $_POST);
     $fehler = $r['fehler'];
     $wahl = anm_wahl_lesen($_POST);
     if (empty($_POST['einwilligung'])) {
@@ -41,9 +45,13 @@ if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $mensch = spam_ok($_POST) && rate_erlaubt('anmelden', $ip) && !spam_wegwerf($r['werte']['email']);
         rate_misserfolg('anmelden', $ip);
         if ($mensch) {
-            $erg = anm_anlegen($r['werte'], $wahl, !empty($_POST['newsletter']));
+            $erg = anm_anlegen($r['werte'], $wahl, !empty($_POST['newsletter']), null, !empty($_POST['konto']), $tk);
             if ($erg['art'] === 'fehler') {
                 $wsFehler = $erg['fehler'];
+            } elseif ($erg['art'] === 'neu' && !empty($erg['bestaetigt'])) {
+                anm_einloggen($erg['id']);
+                flash_setzen('ok', 'Du bist angemeldet. Die Übersicht kommt auch per Mail.');
+                umleiten('/deine-anmeldung');
             } else {
                 if ($erg['art'] === 'vorhanden') {
                     // Gleiche Grenze je Adresse wie bei „Link per Mail“ (keine Mailflut an Fremde)
@@ -108,7 +116,11 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
             <div class="feld"><label for="vorname">Vorname</label><input id="vorname" name="vorname" type="text" autocomplete="given-name" maxlength="80" required value="<?= $v('vorname') ?>"<?= $ungueltig('vorname') ?>><?= $fehlerFeld('vorname') ?></div>
             <div class="feld"><label for="nachname">Nachname</label><input id="nachname" name="nachname" type="text" autocomplete="family-name" maxlength="80" required value="<?= $v('nachname') ?>"<?= $ungueltig('nachname') ?>><?= $fehlerFeld('nachname') ?></div>
         </div>
+        <?php if ($tk !== null): ?>
+        <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" value="<?= e($tk['email']) ?>" readonly><p class="hilfe">Die Adresse deines Kontos. Du bist eingeloggt, deshalb ist keine Bestätigung per Mail nötig.</p></div>
+        <?php else: ?>
         <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="email" maxlength="190" required value="<?= $v('email') ?>"<?= $ungueltig('email') ?>><p class="hilfe">An diese Adresse schicken wir die Bestätigung und deine Links zum Ändern.</p><?= $fehlerFeld('email') ?></div>
+        <?php endif; ?>
         <div class="paar">
             <div class="feld"><label for="berufsgruppe">Berufsgruppe</label>
                 <select id="berufsgruppe" name="berufsgruppe" required data-efn-gruppe="<?= e($gruppen[0] ?? '') ?>"<?= $ungueltig('berufsgruppe') ?>>
@@ -136,6 +148,7 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
         </fieldset>
 
         <div class="feld haken-liste">
+            <?php if ($tk === null): ?><label class="haken"><input type="checkbox" name="konto" value="1"<?= !empty($eingabe['konto']) ? ' checked' : '' ?>><span>Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.</span></label><?php endif; ?>
             <label class="haken"><input type="checkbox" name="newsletter" value="1"<?= !empty($eingabe['newsletter']) ? ' checked' : '' ?>><span>Newsletter „Allgäu Akut“: Termine der nächsten Fortbildungen. Freiwillig, Abmeldung jederzeit. Wir merken uns den Wunsch; bestätigen musst du ihn noch einmal per Mail, sobald der Newsletter startet.</span></label>
             <label class="haken"><input type="checkbox" name="einwilligung" value="1"<?= !empty($eingabe['einwilligung']) ? ' checked' : '' ?><?= $ungueltig('einwilligung') ?>><span>Ich habe die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen und bin einverstanden, dass meine Angaben für die Organisation des Symposiums verarbeitet werden.</span></label>
             <?= $fehlerFeld('einwilligung') ?>

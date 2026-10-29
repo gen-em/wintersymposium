@@ -1,8 +1,11 @@
 /*
  * Programm-Pflege im Team-Bereich (AP-3 Schritt 3, E-39):
- * - Ziehen am Griff ⋮⋮: Ablegen auf einer Zeile schlägt als neuen Beginn das
- *   Ende dieser Zeile vor (auf einem Workshop-Block: dessen Beginn); die Dauer
- *   bleibt. Gespeichert wird über das versteckte Formular „verschieben“.
+ * - Ziehen am Griff ⋮⋮ zwischen zwei Punkte (Admin 2026-10-29): eine grüne
+ *   Linie zeigt, ob vor oder nach der Zeile unter dem Zeiger eingefügt wird.
+ *   Neuer Beginn = Ende des Punkts darüber (direkt unter einem Workshop-Block:
+ *   dessen Beginn; ganz oben: Beginn des ersten Punkts minus Dauer). Die Dauer
+ *   bleibt; nachfolgende Punkte rücken auf dem Server nach hinten, bis eine
+ *   Lücke reicht. Gespeichert wird über das versteckte Formular „verschieben“.
  * - Felder je Typ ein- und ausblenden (data-fuer), Kürzel-Vorschlag beim Typwechsel.
  * - Termine: „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ legt den
  *   nächsten Termin im Anschluss an (gleiche Dauer und Plätze).
@@ -18,6 +21,26 @@
   var liste = document.getElementById('pg-liste');
   var form = document.getElementById('verschieben-form');
   var gezogen = null;
+  var zielZeile = null, zielVor = false;
+  function aufraeumen() { liste.querySelectorAll('.ziel-vor, .ziel-nach').forEach(function (z) { z.classList.remove('ziel-vor', 'ziel-nach'); }); }
+  function kopfVonLi(li) { return li ? li.querySelector(':scope > .pg-zeile') : null; }
+  /** Beginn für das Einfügen vor bzw. nach der Zeile. */
+  function beginnFuer(zeile, vor) {
+    if (!vor) {
+      return zeile.classList.contains('block') ? zeile.getAttribute('data-beginn') : zeile.getAttribute('data-ende');
+    }
+    var li = zeile.closest('li');
+    var davor = li ? li.previousElementSibling : null;
+    while (davor && kopfVonLi(davor) === gezogen) { davor = davor.previousElementSibling; }
+    if (davor) {
+      var k = kopfVonLi(davor);
+      if (k && k.getAttribute('data-ende')) { return k.getAttribute('data-ende'); }
+    }
+    var block = li && li.parentElement && li.parentElement.classList.contains('pg-kinder') ? kopfVonLi(li.parentElement.closest('li')) : null;
+    if (block) { return block.getAttribute('data-beginn'); }
+    var g = gezogen.getAttribute('data-beginn') && gezogen.getAttribute('data-ende') ? min(gezogen.getAttribute('data-ende')) - min(gezogen.getAttribute('data-beginn')) : 30;
+    return hm(min(zeile.getAttribute('data-beginn')) - g);
+  }
   if (liste && form) {
     liste.addEventListener('dragstart', function (ev) {
       var griff = ev.target.closest('.griff');
@@ -29,20 +52,25 @@
     });
     liste.addEventListener('dragend', function () {
       if (gezogen) { gezogen.classList.remove('wird-gezogen'); }
-      liste.querySelectorAll('.ziel').forEach(function (z) { z.classList.remove('ziel'); });
+      aufraeumen();
     });
     liste.addEventListener('dragover', function (ev) {
       var ziel = ev.target.closest('.pg-zeile');
       if (!gezogen || !ziel || ziel === gezogen || !ziel.getAttribute('data-beginn')) { return; }
       ev.preventDefault();
-      liste.querySelectorAll('.ziel').forEach(function (z) { z.classList.remove('ziel'); });
-      ziel.classList.add('ziel');
+      var r = ziel.getBoundingClientRect();
+      zielZeile = ziel;
+      zielVor = ev.clientY < r.top + r.height / 2;
+      aufraeumen();
+      ziel.classList.add(zielVor ? 'ziel-vor' : 'ziel-nach');
     });
     liste.addEventListener('drop', function (ev) {
       var ziel = ev.target.closest('.pg-zeile');
       if (!gezogen || !ziel || ziel === gezogen || !ziel.getAttribute('data-beginn')) { return; }
       ev.preventDefault();
-      var beginn = ziel.classList.contains('block') ? ziel.getAttribute('data-beginn') : ziel.getAttribute('data-ende');
+      var r = ziel.getBoundingClientRect();
+      var vor = ev.clientY ? ev.clientY < r.top + r.height / 2 : (ziel === zielZeile && zielVor);
+      var beginn = beginnFuer(ziel, vor);
       form.elements.art.value = gezogen.getAttribute('data-art');
       form.elements.id.value = gezogen.getAttribute('data-id');
       form.elements.beginn.value = beginn;

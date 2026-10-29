@@ -37,10 +37,10 @@ function konto_ist_team(?array $k): bool
 }
 
 /** Fehlertext oder null. */
-function passwort_regel_fehler(string $pw, string $pw2): ?string
+function passwort_regel_fehler(string $pw, string $pw2, int $min = PASSWORT_MIN_LAENGE): ?string
 {
-    if (mb_strlen($pw) < PASSWORT_MIN_LAENGE) {
-        return 'Das Passwort muss mindestens ' . PASSWORT_MIN_LAENGE . ' Zeichen haben.';
+    if (mb_strlen($pw) < $min) {
+        return 'Das Passwort muss mindestens ' . $min . ' Zeichen haben.';
     }
     if (mb_strlen($pw) > 200) {
         return 'Das Passwort ist zu lang (höchstens 200 Zeichen).';
@@ -76,8 +76,9 @@ function konto_anlegen(string $name, string $email, string $rolle, ?string $pass
 {
     $jetzt = db_jetzt();
     db_ausfuehren(
-        'INSERT INTO konto (email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, 1, ?, ?)',
-        [konto_email_normieren($email), trim($name), $passwort === null ? null : password_hash($passwort, PASSWORD_DEFAULT), $rolle, $jetzt, $jetzt]
+        'INSERT INTO konto (email, email_bestaetigt_am, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+        // Team-Konten legt ein Betreiber an: Adresse gilt als bestätigt; Teilnehmende bestätigen per Mail (AP-4b)
+        [konto_email_normieren($email), $rolle === 'teilnehmend' ? null : $jetzt, trim($name), $passwort === null ? null : password_hash($passwort, PASSWORD_DEFAULT), $rolle, $jetzt, $jetzt]
     );
     $id = (int)db()->lastInsertId();
     audit_schreiben('konto', 'Konto ' . $id . ' angelegt (Rolle ' . $rolle . ')', $durch);

@@ -14,7 +14,7 @@ if ($zf['codes_offen'] <= 2) {
         . 'Erzeuge unter <a href="/team/profil">Mein Konto</a> neue.</div>';
 }
 ?>
-<p>Hallo <?= e($konto['name']) ?>. Hier entsteht der Team-Bereich.</p>
+<p>Hallo <?= e($konto['name']) ?>. <span class="meta klein mono">Version <?= e(app_version()) ?> · <?= e(ucfirst(umgebung())) ?></span></p>
 <?php $z = anm_zahlen(); $ms = mail_stand(); if (!$ms['eingerichtet']): ?><div class="meldung fehler" role="alert">Der Mailversand ist nicht eingerichtet (config.php, Abschnitt mail). Bestätigungen und Links gehen erst raus, wenn er eingerichtet ist.</div><?php endif; ?>
 <div class="kacheln">
     <div class="kachel"><div class="lbl">Anmeldungen</div><div class="zahl"><?= $z['bestaetigt'] ?></div><p class="meta klein">bestätigt · <?= $z['unbestaetigt'] ?> offen · <?= $z['symposium_warte'] ?> auf der Warteliste</p><p><a href="/team/anmeldungen">Ansehen</a></p></div>
