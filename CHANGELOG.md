@@ -16,6 +16,7 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 - Startseite: Untertitel „Ein Abend für Rettungsdienst, Notaufnahme und Krankenhaus …“ statt „Ein Tag für …“; ebenfalls über Migration 3.
 - Konzept (E-10): Essenswahl „keine speziellen Wünsche / vegetarisch / kein Essen“.
 - Mockup und Konzept (E-42): Knopf „Anmelden“ in der Navigation ebenfalls grün.
+- Startseite: Beispielprogramm als Platzhalter bis AP-3 (ausgedacht, deutlich gekennzeichnet; Figuren aus der Sendung mit der Maus und die Tigerente als Dozierende), mit Programm-Darstellung nach Mockup in `site.css`.
 - Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, 18:00–22:00, CME beantragt, freie Plätze 240 / 240; Ort folgt), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
 
 ## [0.2.0] – 2026-10-29
