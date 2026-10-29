@@ -1,0 +1,1670 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wintersymposium Mockups</title>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Mockup-Rahmen (Steuerleiste) folgt dem Theme des Betrachters; die Webseite selbst
+   hat je Variante ein festes Allgäu-Akut-Aussehen. Layout reagiert per Container Query
+   auf die Breite des Geräte-Rahmens (Desktop / Handy). */
+@font-face { font-family: "Anton"; src: url("fonts/Anton-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Antonio"; src: url("fonts/Antonio-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Antonio"; src: url("fonts/Antonio-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Light.woff2") format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  --c-bg: #E5EBF1; --c-fg: #001E3A; --c-meta: #33638D; --c-knopf: #FFFFFF; --c-knopf-an: #001E3A; --c-knopf-an-text: #FFFFFF; --c-linie: #CCD8E3;
+  --f-titel: "Anton", Impact, "Arial Narrow", sans-serif;
+  --f-zwischen: "Antonio", "Arial Narrow", sans-serif;
+  --f-text: "Tajawal", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-bg: #0B1622; --c-fg: #E5EBF1; --c-meta: #99B1C6; --c-knopf: #123559; --c-knopf-an: #B48CFF; --c-knopf-an-text: #001E3A; --c-linie: #123559; color-scheme: dark; } }
+:root[data-theme="dark"] { --c-bg: #0B1622; --c-fg: #E5EBF1; --c-meta: #99B1C6; --c-knopf: #123559; --c-knopf-an: #B48CFF; --c-knopf-an-text: #001E3A; --c-linie: #123559; color-scheme: dark; }
+
+body { background: var(--c-bg); color: var(--c-fg); font-family: var(--f-text); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; }
+
+/* ---- Steuerleiste ---- */
+.steuer { display: flex; flex-direction: column; gap: 10px; max-width: 1240px; margin: 0 auto 14px; }
+.steuer h1 { font-family: var(--f-zwischen); font-weight: 700; font-size: 1.15rem; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+.reihe { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.reihe > span { font-family: var(--f-mono); font-size: .72rem; color: var(--c-meta); min-width: 64px; text-transform: uppercase; letter-spacing: .06em; }
+.steuer button { font: 600 .85rem var(--f-text); background: var(--c-knopf); color: var(--c-fg); border: 1px solid var(--c-linie); border-radius: 999px; padding: 7px 13px; cursor: pointer; min-height: 36px; }
+.steuer button[aria-pressed="true"] { background: var(--c-knopf-an); color: var(--c-knopf-an-text); border-color: var(--c-knopf-an); }
+.steuer button:focus-visible { outline: 2px solid #B48CFF; outline-offset: 2px; }
+.info { font-size: .9rem; color: var(--c-meta); margin: 0; max-width: 75ch; }
+.info strong { color: var(--c-fg); }
+
+.buehne { max-width: 1240px; margin: 0 auto; }
+.geraet { container-type: inline-size; margin: 0 auto; border: 1px solid var(--c-linie); box-shadow: 0 6px 30px rgba(0,0,0,.18); overflow: hidden; }
+.geraet[data-geraet="desktop"] { width: 100%; }
+.geraet[data-geraet="handy"] { width: min(390px, 100%); border-radius: 28px; border-width: 8px; border-color: #0A0F16; }
+
+/* ================= Webseite ================= */
+.site { --s-bg: #001E3A; --s-fg: #FFFFFF; --s-akz: #B48CFF; --s-akz-text: #B48CFF; --s-auf-akz: #001E3A; --s-flaeche: #0A2A4D; --s-flaeche2: #003C71; --s-linie: #123559; --s-meta: #99B1C6; --s-fuss: #B5BD00; --s-voll: #99B1C6;
+  background: var(--s-bg); color: var(--s-fg); font-family: var(--f-text); font-size: 16px; line-height: 1.55; }
+.site.v-b { --s-bg: #F6F8FA; --s-fg: #001E3A; --s-akz: #B48CFF; --s-akz-text: #6F52A8; --s-auf-akz: #001E3A; --s-flaeche: #FFFFFF; --s-flaeche2: #E5EBF1; --s-linie: #CCD8E3; --s-meta: #33638D; --s-fuss: #6B7000; --s-voll: #33638D; }
+.site.v-c { --s-flaeche: #0A2A4D; --s-flaeche2: #003C71; }
+.site[data-seite="workshop"] { --s-akz: #FF5A5F; --s-akz-text: #FF5A5F; }
+.site.v-b[data-seite="workshop"] { --s-akz-text: #A6363B; }
+.site * { box-sizing: border-box; }
+.site a { color: var(--s-akz-text); }
+.site :focus-visible { outline: 2px solid var(--s-akz); outline-offset: 2px; }
+.seite[hidden] { display: none !important; }
+.innen { padding-inline: 20px; max-width: 1120px; margin: 0 auto; }
+@container (min-width: 760px) { .innen { padding-inline: 40px; } }
+
+.titel { font-family: var(--f-titel); font-weight: 400; text-transform: uppercase; line-height: 1.05; letter-spacing: .005em; text-wrap: balance; margin: 0; }
+.kicker { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .82rem; color: var(--s-akz-text); margin: 0; }
+.zwischen { font-family: var(--f-zwischen); font-weight: 700; font-size: 1.45rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.meta { color: var(--s-meta); }
+.fussnote { font-family: var(--f-mono); font-size: .72rem; color: var(--s-fuss); }
+.beispiel { font-family: var(--f-mono); font-size: .7rem; color: var(--s-meta); border: 1px dashed var(--s-linie); padding: 1px 6px; white-space: nowrap; }
+
+/* Kopf */
+.kopf { border-bottom: 1px solid var(--s-linie); }
+.kopf .innen { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; }
+.kopf .logo { height: 46px; width: auto; display: block; }
+.logo-hell, .site.v-b .logo-dunkel { display: none !important; }
+.site.v-b .logo-hell { display: block !important; }
+.logo-rot { display: none !important; }
+.site[data-seite="workshop"] .logo-lila { display: none !important; }
+.site[data-seite="workshop"] .logo-rot.logo-dunkel { display: block !important; }
+.site.v-b[data-seite="workshop"] .logo-rot.logo-dunkel { display: none !important; }
+.site.v-b[data-seite="workshop"] .logo-rot.logo-hell { display: block !important; }
+.site.site:not([data-seite="workshop"]) .logo-rot { display: none !important; }
+.nav { display: none; gap: 22px; align-items: center; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; }
+.nav a { color: var(--s-fg); text-decoration: none; }
+.nav a[aria-current="page"] { color: var(--s-akz-text); }
+.menue { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: none; border: 1px solid var(--s-linie); color: var(--s-fg); padding: 8px 12px; min-height: 44px; }
+@container (min-width: 760px) { .nav { display: flex; } .menue { display: none; } }
+
+.knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 22px; border-radius: 999px; background: var(--s-akz); color: var(--s-auf-akz); font: 700 1rem var(--f-text); text-decoration: none; border: 0; cursor: pointer; }
+.knopf.zweit { background: transparent; color: var(--s-fg); border: 1px solid var(--s-linie); }
+.knopf.gefahr { background: transparent; color: var(--s-fg); border: 1px solid var(--s-linie); }
+.site a.knopf { color: var(--s-auf-akz); }
+.site .knopf.zweit, .site a.knopf.zweit { color: var(--s-akz-text); border: 1.5px solid var(--s-akz); background: transparent; }
+.site .knopf.zweit:hover { background: color-mix(in srgb, var(--s-akz) 14%, transparent); }
+.site .knopf.gruen { background: #B5BD00; color: #001E3A; box-shadow: 0 3px 10px rgba(0, 0, 0, .28); }
+.site .knopf.gruen:hover { background: #C4CC1A; }
+
+/* Sticker, Stempel, Klebeband (Erscheinungsbild Abschnitt 4) */
+.sticker { display: inline-block; font-family: var(--f-titel); text-transform: uppercase; background: var(--s-akz); color: var(--s-auf-akz); padding: 4px 12px 2px; transform: rotate(-4deg); font-size: 1.05rem; letter-spacing: .02em; line-height: 1.15; }
+.sticker.hinweis { background: #FFFFFF; color: #001E3A; box-shadow: 6px 6px 0 #B5BD00; transform: rotate(3deg); }
+.site[data-seite="workshop"] .sticker.hinweis { box-shadow: 6px 6px 0 #FF5A5F; }
+.site.v-b .sticker.hinweis { background: #001E3A; color: #FFFFFF; }
+.stempel { display: inline-grid; place-items: center; width: 116px; height: 116px; border: 3px solid var(--s-akz-text); border-radius: 50%; color: var(--s-akz-text); font-family: var(--f-mono); font-weight: 700; text-align: center; font-size: .78rem; line-height: 1.2; transform: rotate(-10deg); padding: 12px; text-transform: uppercase; }
+.stempel b { display: block; font-size: 1.5rem; font-family: var(--f-titel); font-weight: 400; }
+.band { position: absolute; width: 110px; height: 26px; background: rgba(181,189,0,.82); transform: rotate(-4deg); }
+.site[data-seite="workshop"] .band { background: rgba(255,144,148,.82); }
+
+/* Kästen */
+.kasten { background: var(--s-flaeche); border: 1px solid var(--s-linie); padding: 18px 20px; }
+.merke { background: var(--s-flaeche); border-left: 4px solid var(--s-akz); padding: 12px 16px; }
+.merke .kicker { color: var(--s-fg); }
+
+/* Fuß */
+.fuss { border-top: 1px solid var(--s-linie); margin-top: 56px; }
+.fuss .innen { display: flex; flex-wrap: wrap; gap: 10px 22px; padding-block: 22px; font-size: .88rem; color: var(--s-meta); align-items: center; justify-content: space-between; }
+.fuss nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.fuss a { color: var(--s-fg); }
+
+/* ---------- Start: Kopfbereich ---------- */
+.held { position: relative; padding-block: 40px 28px; }
+.held .titel { font-size: clamp(2.7rem, 12cqi, 7.2rem); }
+.held .titel em { font-style: normal; color: var(--s-akz-text); }
+.held .unter { font-size: 1.2rem; max-width: 40ch; margin: 14px 0 0; }
+.eckdaten { display: grid; gap: 10px; margin-top: 26px; }
+.eckdaten div { display: flex; flex-direction: column; }
+.eckdaten dt { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; color: var(--s-meta); }
+.eckdaten dd { margin: 0; font-family: var(--f-mono); font-size: 1rem; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 26px; }
+.held .sticker.frei { position: absolute; right: 20px; top: 26px; }
+@container (min-width: 760px) {
+  .eckdaten { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .held .sticker.frei { right: 40px; top: 44px; font-size: 1.5rem; }
+}
+
+/* Variante A: Plakat */
+.v-a .held { padding-block: 56px 40px; }
+.v-a .held .titel { font-size: clamp(3rem, 14cqi, 8.6rem); }
+.eckdaten { background: var(--s-flaeche); border: 1px solid var(--s-linie); border-bottom: 3px solid #B5BD00; padding: 16px 18px; }
+.eckdaten dd { font-size: 1.08rem; font-weight: 700; }
+.site.v-b .eckdaten { border-bottom-color: #6B7000; }
+.v-a .held .band { left: 14px; top: 16px; }
+@container (min-width: 760px) { .v-a .held .sticker.frei { top: 10px; } }
+
+/* Variante B: Programmheft (hell, ruhig) */
+.v-b .held { display: grid; gap: 26px; padding-block: 48px 36px; }
+.v-b .held .titel { font-size: clamp(2.5rem, 9cqi, 5.6rem); }
+.v-b .held .band { display: none; }
+.v-b .datum-gross { display: none; }
+
+@container (min-width: 760px) {
+  .v-b .held { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: end; }
+  .v-b .datum-gross { display: block; font-family: var(--f-titel); font-size: 7rem; line-height: .9; color: var(--s-akz-text); text-align: right; }
+  .v-b .datum-gross small { display: block; font-family: var(--f-mono); font-size: 1rem; color: var(--s-meta); margin-top: 10px; }
+  .v-b .eckdaten { grid-column: 1 / -1; }
+}
+.datum-gross { display: none; }
+
+/* Variante C: Dienstplan / Anzeigetafel */
+.v-c .held { padding-block: 0 28px; }
+.v-c .tafel { display: none; }
+.v-c .tafel { display: flex; flex-wrap: wrap; gap: 0; font-family: var(--f-mono); font-size: .8rem; border-bottom: 1px solid var(--s-linie); margin-bottom: 30px; }
+.v-c .tafel span { padding: 9px 14px; border-right: 1px solid var(--s-linie); }
+.v-c .tafel span:first-child { background: var(--s-akz); color: var(--s-auf-akz); font-weight: 700; }
+.v-c .held .titel { font-size: clamp(2.4rem, 9cqi, 5.4rem); }
+.v-c .held .band { display: none; }
+.v-c .held .sticker.frei { top: 70px; }
+.v-c .eckdaten { gap: 0; padding: 0; }
+.v-c .eckdaten div { padding: 12px 14px; border-bottom: 1px solid var(--s-linie); background: var(--s-flaeche); }
+@container (min-width: 760px) { .v-c .eckdaten div { border-bottom: 0; border-right: 1px solid var(--s-linie); } .v-c .eckdaten div:last-child { border-right: 0; } }
+.tafel { display: none; }
+
+/* ---------- Abschnitte ---------- */
+.abschnitt { padding-block: 36px 0; }
+.abschnitt > .innen > .zwischen { margin: 6px 0 18px; }
+.zwei { display: grid; gap: 16px; }
+@container (min-width: 760px) { .zwei { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } }
+.zwei p { margin: 6px 0 0; }
+
+/* Programm */
+.programm { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.pp { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 4px 14px; padding: 14px 0; border-top: 1px solid var(--s-linie); }
+.pp .zeit { font-family: var(--f-mono); font-size: .95rem; padding-top: 2px; }
+.pp .zeit small { display: block; color: var(--s-meta); font-size: .75rem; }
+.pp h3 { margin: 0; font-family: var(--f-zwischen); font-weight: 700; font-size: 1.2rem; line-height: 1.25; }
+.pp .titelzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.pp .titelzeile .format { line-height: 1.5; }
+.pp p { margin: 2px 0 0; }
+.pp.pause h3 { font-weight: 400; color: var(--s-meta); }
+.format { font-family: var(--f-mono); font-size: .72rem; font-weight: 700; padding: 1px 7px; background: var(--s-akz); color: var(--s-auf-akz); }
+.format.rot { background: #FF5A5F; }
+.wsliste { display: grid; gap: 8px; margin-top: 10px; }
+@container (min-width: 760px) { .wsliste { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pp.wsblock { grid-template-columns: minmax(0, 1fr); }
+.pp.wsblock .zeit { display: flex; gap: 4px; align-items: baseline; }
+.pp.wsblock .zeit small::before { content: "– "; }
+@container (min-width: 760px) { .pp.wsblock { grid-template-columns: 74px minmax(0, 1fr); } .pp.wsblock .zeit { display: block; } .pp.wsblock .zeit small::before { content: none; } }
+.ws-mobil { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.ws-mobil li > a, .ws-mobil li.offen { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; background: var(--s-flaeche); border: 1px solid var(--s-linie); border-left: 3px solid #FF5A5F; text-decoration: none; color: var(--s-fg); min-height: 44px; }
+.site .ws-mobil li > a { color: var(--s-fg); }
+.ws-mobil li.offen { grid-template-columns: 96px minmax(0, 1fr); border-left: 3px dashed var(--s-meta); background: repeating-linear-gradient(135deg, var(--s-flaeche2) 0 6px, var(--s-flaeche) 6px 12px); }
+.ws-mobil .mono { font-size: .82rem; white-space: nowrap; } .ws-mobil small { color: var(--s-meta); }
+.ws-mobil .chip { margin-top: 6px; }
+.ws-mobil .pfeil { font-size: 1.4rem; color: var(--s-meta); }
+.gantt-wrap { display: none; }
+.gantt-wrap ~ p.meta { display: none; }
+@container (min-width: 760px) { .ws-mobil { display: none; } .gantt-wrap { display: block; } .gantt-wrap ~ p.meta { display: block; } }
+.gantt-wrap { overflow-x: auto; margin-top: 10px; border: 1px solid var(--s-linie); background: var(--s-flaeche); }
+.gantt { min-width: 640px; display: grid; }
+.gz { display: grid; grid-template-columns: 210px minmax(0, 1fr); border-top: 1px solid var(--s-linie); min-height: 44px; }
+.gz.kopf { border-top: 0; min-height: 24px; }
+.gl { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-family: var(--f-zwischen); font-weight: 700; font-size: .92rem; color: var(--s-fg); text-decoration: none; border-right: 1px solid var(--s-linie); }
+.site a.gl { color: var(--s-fg); }
+.gs { position: relative; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), var(--s-linie) calc(25% - 1px) 25%); }
+.gs.skala { background: none; }
+.gs.skala span { position: absolute; top: 4px; transform: translateX(-50%); font-family: var(--f-mono); font-size: .68rem; color: var(--s-meta); white-space: nowrap; }
+.gs.skala span:first-child { transform: none; }
+.gb { position: absolute; top: 7px; bottom: 7px; display: flex; align-items: center; gap: 4px; padding: 0 6px; font-family: var(--f-mono); font-size: .7rem; overflow: hidden; white-space: nowrap; text-decoration: none; border-left: 2px solid var(--s-bg); }
+.site a.gb.frei { background: #FF5A5F; color: #001E3A; }
+.site a.gb.voll { background: transparent; color: var(--s-fg); border: 1.5px dashed #FF5A5F; }
+.gb.offen { background: repeating-linear-gradient(135deg, var(--s-flaeche2) 0 6px, transparent 6px 12px); color: var(--s-fg); border: 1px solid var(--s-meta); }
+.gl .format { white-space: nowrap; flex: none; }
+.format.offen { background: transparent; color: var(--s-fg); border: 1px solid var(--s-meta); }
+.pp-link { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--s-akz); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.pp-link:focus-visible { outline: 2px solid var(--s-akz); outline-offset: 2px; }
+.pp-mehr { font-family: var(--f-mono); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border: 1px solid var(--s-akz); color: var(--s-akz-text); vertical-align: middle; text-decoration: none; display: inline-block; }
+.popup { border: 0; padding: 0; background: transparent; max-width: min(620px, calc(100vw - 32px)); width: 100%; }
+.popup::backdrop { background: rgba(0, 10, 25, .72); }
+.popup-innen { position: relative; background: var(--s-bg); color: var(--s-fg); border: 1px solid var(--s-linie); border-top: 4px solid var(--s-akz); padding: 22px 22px 20px; display: grid; gap: 12px; max-height: 85vh; overflow-y: auto; font-family: var(--f-text); }
+.popup-innen.rot { border-top-color: #FF5A5F; --s-akz: #FF5A5F; --s-akz-text: #FF5A5F; }
+.site.v-b .popup-innen.rot { --s-akz-text: #A6363B; }
+.popup-zu { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border: 1px solid var(--s-linie); background: var(--s-flaeche); color: var(--s-fg); font-size: 1rem; cursor: pointer; }
+.popup .titel { font-size: 2.1rem; padding-right: 44px; }
+.pt-liste { display: grid; gap: 0; }
+.pt-zeile { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--s-linie); }
+.pt-zeile .knopf { margin-left: auto; min-height: 38px; padding: 6px 16px; font-size: .9rem; }
+.doz { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--s-linie); }
+.doz .foto { width: 56px; height: 56px; background: repeating-linear-gradient(135deg, var(--s-flaeche2) 0 4px, var(--s-flaeche) 4px 8px); display: grid; place-items: center; font-family: var(--f-titel); font-size: 1.2rem; color: var(--s-meta); }
+.doz p { margin: 0; }
+.wskarte { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--s-flaeche); border: 1px solid var(--s-linie); border-top: 3px solid #FF5A5F; text-decoration: none; color: inherit; }
+.wskarte strong { font-family: var(--f-zwischen); font-size: 1.02rem; }
+.status { font-family: var(--f-mono); font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.status.frei { color: var(--s-fg); }
+.status.voll { color: var(--s-voll); }
+
+.v-a .pp h3 { font-family: var(--f-titel); font-weight: 400; text-transform: uppercase; font-size: 1.45rem; letter-spacing: .01em; }
+.v-a .pp.pause h3, .v-a .pp.ablauf h3 { font-family: var(--f-zwischen); font-weight: 700; text-transform: none; font-size: 1.15rem; }
+.v-b .programm { background: var(--s-flaeche); border: 1px solid var(--s-linie); padding: 0 18px; }
+.v-b .pp:first-child { border-top: 0; }
+.v-b .pp .zeit { color: var(--s-akz-text); font-weight: 700; }
+.v-b .format { background: transparent; color: var(--s-akz-text); border: 1px solid currentColor; }
+.v-b .format.rot { color: #A6363B; background: transparent; }
+.v-c .pp { grid-template-columns: 112px minmax(0, 1fr); background: var(--s-flaeche); border: 1px solid var(--s-linie); border-top: 0; padding: 12px 14px; }
+.v-c .pp:first-child { border-top: 1px solid var(--s-linie); }
+.v-c .pp .zeit small { display: inline; }
+.v-c .pp .zeit small::before { content: "–"; }
+.v-c .pp.pause { background: transparent; }
+@container (min-width: 760px) { .v-c .pp { grid-template-columns: 150px minmax(0, 1fr); } }
+
+/* Workshops: Liste + Detail */
+.wsauswahl { display: grid; gap: 10px; }
+@container (min-width: 760px) { .wsauswahl { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.wsauswahl button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; min-height: 44px; background: var(--s-flaeche); border: 1px solid var(--s-linie); border-top: 3px solid var(--s-linie); color: var(--s-fg); }
+.wsauswahl button[aria-current="true"] { border-top-color: #FF5A5F; box-shadow: inset 0 0 0 1px #FF5A5F; }
+.wsauswahl button:focus-visible { outline: 2px solid #FF5A5F; outline-offset: 2px; }
+.wsauswahl strong { font-family: var(--f-zwischen); font-size: 1.1rem; }
+.wsauswahl .runden { font-family: var(--f-mono); font-size: .75rem; color: var(--s-meta); }
+.ws-held { display: grid; gap: 26px; padding-block: 34px 10px; }
+@container (min-width: 760px) { .ws-held { grid-template-columns: minmax(0, 1fr) 290px; align-items: start; } }
+.ws-held .titel { font-size: clamp(2.6rem, 10cqi, 6rem); }
+.ws-held .sticker.hinweis { margin-top: 22px; }
+.ws-seite { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+@container (min-width: 760px) { .ws-seite { flex-direction: column; align-items: center; } }
+.zettel { position: relative; background: #F6F8FA; color: #001E3A; padding: 26px 18px 16px; width: 250px; max-width: 100%; transform: rotate(2.5deg); box-shadow: 0 10px 18px rgba(0,0,0,.25); font-size: .95rem; line-height: 1.45; }
+.site.v-b .zettel { background: #FFFFFF; border: 1px solid #CCD8E3; }
+.zettel p { margin: 0; }
+.zettel .zettel-kopf { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; color: #A6363B; margin-bottom: 6px; }
+.zettel .band { left: 50%; top: -12px; transform: translateX(-50%) rotate(-3deg); }
+.termine { display: grid; gap: 10px; margin-top: 14px; }
+@container (min-width: 760px) { .termine { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.termine { display: grid; gap: 10px; margin-top: 14px; }
+@container (min-width: 760px) { .termine { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ws-held .stempel { right: 40px; top: 46px; width: 140px; height: 140px; } }
+.termin { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.termin .mono { font-size: 1.05rem; }
+.balken { height: 8px; background: var(--s-linie); margin-top: 8px; width: 100%; }
+.balken i { display: block; height: 100%; background: var(--s-akz); }
+
+/* Formular */
+.form { display: grid; gap: 18px; max-width: 760px; }
+.feld { display: grid; gap: 6px; }
+.feld label, .feld legend { font-weight: 700; font-size: .95rem; }
+.feld .hilfe { font-size: .85rem; color: var(--s-meta); }
+.site input[type="text"], .site input[type="email"], .site select { font: 400 1rem var(--f-text); min-height: 46px; padding: 10px 12px; border: 1px solid var(--s-meta); background: var(--s-flaeche); color: var(--s-fg); border-radius: 0; width: 100%; }
+.site input::placeholder { color: var(--s-meta); }
+.paar { display: grid; gap: 18px; }
+@container (min-width: 760px) { .paar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+fieldset.feld { border: 0; padding: 0; margin: 0; }
+.wahl { display: grid; gap: 8px; }
+.wahl label { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--s-linie); background: var(--s-flaeche); font-weight: 400; min-height: 44px; cursor: pointer; }
+.wahl label:has(input:checked) { border-color: var(--s-akz); box-shadow: inset 4px 0 0 var(--s-akz); }
+.wahl input { margin-top: 4px; accent-color: #B48CFF; width: 18px; height: 18px; flex: none; }
+.wahl .rechts { margin-left: auto; text-align: right; }
+.zeitfenster { display: grid; gap: 6px; }
+.ws-gruppe { display: grid; gap: 6px; }
+.unterkopf { margin: 6px 0 0; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .78rem; }
+.unterkopf .meta { text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 400; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wahl label.wl-zeile { border-style: dashed; border-color: #FF5A5F; }
+.wahl label.wl-zeile:has(input:checked) { box-shadow: none; border-color: #FF5A5F; }
+.wahl label.wl-zeile:has(input:focus-visible) { outline: 2px solid #FF5A5F; outline-offset: 2px; }
+.wl-toggle { font-family: var(--f-mono); font-size: .75rem; font-weight: 700; padding: 4px 10px; border: 1.5px solid #FF5A5F; border-radius: 999px; white-space: nowrap; align-self: center; }
+.wl-zeile.an .wl-toggle { background: #FF5A5F; color: #001E3A; }
+
+.ws-gruppe > .kopfzeile { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.wahl label.gesperrt { opacity: .55; cursor: not-allowed; }
+.wahl .grund { display: block; font-size: .8rem; color: var(--s-meta); }
+.wahl .zeit-chip { font-family: var(--f-mono); font-size: .9rem; }
+.zeitleiste-wrap { background: var(--s-flaeche); border: 1px solid var(--s-linie); padding: 12px 14px; }
+.site a.wskarte { color: var(--s-fg); }
+.zeitleiste { position: relative; height: 54px; background: repeating-linear-gradient(90deg, var(--s-linie) 0 1px, transparent 1px 20%); border-bottom: 1px solid var(--s-linie); }
+.zeitleiste .blk { position: absolute; top: 3px; height: 22px; background: #FF5A5F; color: #001E3A; font-family: var(--f-mono); font-size: .68rem; font-weight: 700; padding: 0 4px; overflow: hidden; white-space: nowrap; display: flex; align-items: center; }
+.zeitleiste .blk.wl { top: 29px; background: transparent; border: 2px dashed #FF5A5F; color: var(--s-fg); }
+.zeitleiste .blk.essen { background: var(--s-linie); color: var(--s-fg); }
+.zl-skala { display: flex; justify-content: space-between; font-size: .68rem; color: var(--s-meta); margin-top: 4px; }
+.zeitfenster > .mono { font-size: .82rem; color: var(--s-meta); }
+.haken { display: flex; gap: 10px; align-items: flex-start; font-size: .95rem; }
+.haken input { width: 20px; height: 20px; margin-top: 2px; accent-color: #B48CFF; flex: none; }
+.form-kopf { padding-block: 40px 10px; }
+.form-kopf .titel { font-size: clamp(2.3rem, 8cqi, 4.6rem); }
+.stichtage { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--f-mono); font-size: .8rem; color: var(--s-meta); margin-top: 10px; }
+
+/* Deine Anmeldung */
+.status-band { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 14px 18px; background: var(--s-flaeche); border: 1px solid var(--s-linie); }
+.status-band .sticker { transform: rotate(-2deg); }
+.angebot { border: 2px solid var(--s-akz); background: var(--s-flaeche); padding: 18px 20px; display: grid; gap: 10px; }
+.angebot .uhr { font-family: var(--f-mono); font-size: 1.3rem; }
+.liste-def { display: grid; gap: 0; margin: 0; }
+.liste-def div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--s-linie); }
+.liste-def dt { color: var(--s-meta); font-size: .9rem; }
+.liste-def dd { margin: 0; }
+.ersetzt { display: grid; gap: 6px; padding: 12px 14px; background: var(--s-bg); border: 1px solid var(--s-linie); border-left: 4px solid #FF5A5F; }
+.tausch-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.tausch-zeile .alt { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: #FF5A5F; color: var(--s-meta); }
+.tausch-zeile .neu { font-weight: 700; padding: 1px 8px; background: #B5BD00; color: #001E3A; }
+.bestaetigen { display: grid; gap: 10px; border-top: 1px solid var(--s-linie); padding-top: 12px; }
+.tausch { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tausch li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.chip { white-space: nowrap; display: inline-block; font-family: var(--f-mono); font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 2px 8px; margin-top: 4px; color: #001E3A; }
+.chip.ok { background: #B5BD00; }
+.chip.wl { background: #FF5A5F; }
+.aktionen { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.aktion-frist { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.frist { font-family: var(--f-mono); font-size: .74rem; color: var(--s-meta); padding-left: 14px; }
+.frist b { color: var(--s-fg); font-weight: 700; }
+.raster { display: grid; gap: 18px; }
+@container (min-width: 760px) { .raster { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
+
+/* Team */
+.team-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; padding-block: 30px 16px; }
+.team-kopf .titel { font-size: clamp(2rem, 6cqi, 3.4rem); }
+.kacheln { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@container (min-width: 760px) { .kacheln { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.kachel { background: var(--s-flaeche); border: 1px solid var(--s-linie); padding: 14px 16px; }
+.kachel .zahl { font-family: var(--f-mono); font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.kachel .zahl small { font-size: .9rem; color: var(--s-meta); font-weight: 400; }
+.kachel .lbl { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .76rem; color: var(--s-meta); }
+.tabelle-wrap { overflow-x: auto; border: 1px solid var(--s-linie); background: var(--s-flaeche); }
+table.t { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .92rem; }
+table.t th, table.t td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--s-linie); }
+table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; color: var(--s-meta); }
+table.t td.n { font-family: var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.aufgaben { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.aufgaben li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--s-flaeche); border: 1px solid var(--s-linie); }
+.marke { font-family: var(--f-mono); font-size: .7rem; font-weight: 700; padding: 2px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.team-raster { display: grid; gap: 22px; margin-top: 22px; }
+@container (min-width: 760px) { .team-raster { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+.v-c .kachel { border-left: 4px solid var(--s-akz); }
+.nur-erkannt { display: none !important; }
+.site.erkannt .nur-erkannt { display: inline-flex !important; }
+.site.erkannt .nur-gast { display: none !important; }
+.nav-person { align-items: center; gap: 0; border: 1px solid var(--s-akz); }
+.nav .nav-person a.nav-name { padding: 8px 12px; color: var(--s-akz-text); display: inline-flex; gap: 8px; align-items: center; }
+.nav-ab { font: 700 .8rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; background: var(--s-akz); color: var(--s-auf-akz); border: 0; padding: 0 12px; min-height: 40px; align-self: stretch; cursor: pointer; }
+.team-nav { display: flex; gap: 0; overflow-x: auto; background: var(--s-flaeche); border: 1px solid var(--s-linie); border-bottom: 3px solid #B5BD00; margin-bottom: 18px; scrollbar-width: thin; }
+.site.v-b .team-nav { border-bottom-color: #6B7000; }
+.team-nav a { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--s-fg); text-decoration: none; border-bottom: 3px solid transparent; }
+.team-nav a[aria-current="page"] { color: var(--s-akz-text); border-bottom-color: var(--s-akz); background: var(--s-bg); }
+.team-nav a:hover { border-bottom-color: var(--s-linie); }
+.team-nav a.betreiber { color: var(--s-meta); border-left: 1px solid var(--s-linie); margin-left: 6px; }
+.zahl-badge { font-family: var(--f-mono); font-size: .7rem; padding: 1px 6px; background: var(--s-flaeche2); color: var(--s-fg); letter-spacing: 0; }
+.stat-raster { display: grid; gap: 16px; margin-top: 16px; }
+@container (min-width: 900px) { .stat-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); } .stat.breit { grid-column: span 3; } }
+@container (min-width: 600px) and (max-width: 899px) { .stat-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat.breit { grid-column: span 2; } }
+.stat { display: grid; gap: 8px; align-content: start; min-width: 0; position: relative; }
+.stat-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.stat-kopf .zwischen { font-size: 1.15rem; }
+.stat-unter { margin: 0; font-size: .82rem; }
+.stat-aktion { display: flex; gap: 6px; }
+.export-liste { display: grid; gap: 0; }
+.export-liste div { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 9px 0; border-top: 1px solid var(--s-linie); font-size: .9rem; }
+@container (max-width: 600px) { .export-liste div { grid-template-columns: minmax(0, 1fr) auto; } .export-liste .meta { grid-column: 1 / -1; grid-row: 2; } }
+.export-liste .meta { font-size: .82rem; }
+.mini:disabled { opacity: .45; cursor: not-allowed; }
+.mini { font: 700 .72rem var(--f-mono); text-transform: uppercase; padding: 4px 8px; min-height: 30px; border: 1px solid var(--s-linie); background: transparent; color: var(--s-fg); cursor: pointer; }
+.meter { height: 6px; background: var(--s-linie); margin: 6px 0 4px; }
+.meter i { display: block; height: 100%; background: var(--s-akz); border-radius: 0 3px 3px 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .achse { stroke: var(--s-linie); stroke-width: 1; }
+.chart .raster { stroke: var(--s-linie); stroke-width: 1; opacity: .6; }
+.chart text { fill: var(--s-meta); font-family: var(--f-mono); font-size: 11px; }
+.chart .linie { fill: none; stroke: var(--s-akz); stroke-width: 2; }
+.chart .flaeche { fill: var(--s-akz); opacity: .14; }
+.chart .punkt { fill: var(--s-akz); stroke: var(--s-flaeche); stroke-width: 2; }
+.chart .ende text { fill: var(--s-fg); font-weight: 700; }
+.chart .hilfslinie { stroke: var(--s-meta); stroke-width: 1; stroke-dasharray: 3 3; }
+.tooltip { position: absolute; pointer-events: none; background: var(--s-bg); color: var(--s-fg); border: 1px solid var(--s-linie); padding: 6px 9px; font-family: var(--f-mono); font-size: .75rem; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.legende-chart { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--s-meta); }
+.lg { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; }
+.lg.belegt { background: #FF5A5F; } .lg.frei { background: var(--s-linie); } .lg.wl { border: 1.5px dashed #FF5A5F; }
+.ws-balken { display: grid; gap: 6px; }
+.wsb { cursor: default; padding: 2px 0; }
+.wsb:hover, .wsb:focus-visible { background: color-mix(in srgb, var(--s-akz) 10%, transparent); outline: none; }
+.ws-tt { white-space: normal; max-width: 300px; line-height: 1.5; z-index: 5; }
+.wsb { display: grid; grid-template-columns: 170px minmax(0, 1fr) 92px; gap: 10px; align-items: center; font-size: .85rem; }
+.wsb .bar { display: flex; height: 18px; gap: 2px; }
+.wsb .bar i { display: block; height: 100%; }
+.wsb .bar .b { background: #FF5A5F; } .wsb .bar .f { background: var(--s-linie); border-radius: 0 4px 4px 0; }
+.wsb .zahlen { font-family: var(--f-mono); font-size: .75rem; text-align: right; }
+.wsb .wlz { color: var(--s-fg); font-weight: 700; }
+.hbars { display: grid; gap: 7px; }
+.hb { display: grid; grid-template-columns: 130px minmax(0, 1fr) 34px; gap: 8px; align-items: center; font-size: .85rem; }
+.hb .bar { height: 14px; background: var(--s-akz); border-radius: 0 4px 4px 0; }
+.hb .n { font-family: var(--f-mono); font-size: .78rem; text-align: right; }
+table.t.kompakt { min-width: 0; font-size: .85rem; }
+table.t.kompakt td { padding: 7px 4px; }
+.mini-kacheln { display: flex; gap: 10px; flex-wrap: wrap; }
+.mini-kacheln div { flex: 1 1 80px; display: flex; flex-direction: column; padding: 10px; background: var(--s-bg); border: 1px solid var(--s-linie); }
+.mini-kacheln .zahl { font-family: var(--f-mono); font-size: 1.6rem; font-weight: 700; }
+.mini-kacheln .lbl { font-size: .78rem; color: var(--s-meta); }
+.entwurf-banner { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; margin: -18px 0 16px; background: #FF5A5F; color: #001E3A; }
+.entwurf-banner .eb-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.entwurf-banner .knopf.zweit { color: #001E3A; border-color: #001E3A; }
+.entwurf-banner .knopf.zweit:hover { background: rgba(0, 30, 58, .12); }
+.status-pill { font-family: var(--f-mono); font-size: .75rem; font-weight: 700; padding: 6px 10px; border: 1px dashed var(--s-meta); }
+.tw-raster, .pg-raster, .ml-raster { display: grid; gap: 16px; }
+@container (min-width: 900px) { .tw-raster { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: start; } .pg-raster { grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr); align-items: start; } .ml-raster { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; } }
+.tw-liste { display: grid; gap: 10px; }
+.tw-ws { background: var(--s-flaeche); border: 1px solid var(--s-linie); padding: 10px 12px; display: grid; gap: 6px; }
+.tw-ws > strong { font-family: var(--f-zwischen); }
+.tw-termin { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 8px; border: 1px solid transparent; font-size: .85rem; }
+.tw-termin:hover { border-color: var(--s-linie); }
+.tw-termin[aria-current="true"] { border-color: #FF5A5F; background: var(--s-bg); }
+.tw-termin:focus-visible { outline: 2px solid #FF5A5F; }
+.tw-termin .bar { position: relative; display: flex; height: 24px; gap: 2px; } .tw-termin .bar i { display: block; height: 100%; }
+.wl-badge { margin-left: auto; font-family: var(--f-mono); font-size: .62rem; font-weight: 700; line-height: 1.35; padding: 0 5px; background: #B48CFF; color: #001E3A; text-shadow: none; box-shadow: 0 0 0 2px var(--s-flaeche); }
+.tw-termin .bar-text { position: absolute; inset: 0 8px; display: flex; align-items: center; font-family: var(--f-mono); font-size: .76rem; font-weight: 700; color: #001E3A; white-space: nowrap; text-shadow: 0 0 2px rgba(255,255,255,.35); }
+.tw-termin .b { background: #FF5A5F; } .tw-termin .f { background: var(--s-linie); } .tw-termin .u { background: repeating-linear-gradient(135deg, #FF5A5F 0 3px, transparent 3px 6px); }
+.tw-detail { display: grid; gap: 10px; }
+.tw-tab { width: 100%; }
+.tw-tab td .mini { margin: 2px 2px 2px 0; }
+.pers-link { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--s-linie); text-underline-offset: 3px; }
+.pers-link:hover, .pers-link:focus-visible { text-decoration-color: var(--s-akz); color: var(--s-akz-text); outline: none; }
+.such-wrap { position: relative; flex: 1 1 240px; }
+.such-wrap input { width: 100%; }
+.vorschlag { position: absolute; z-index: 6; left: 0; right: 0; top: 100%; list-style: none; margin: 2px 0 0; padding: 0; background: var(--s-bg); border: 1px solid var(--s-akz); box-shadow: 0 8px 20px rgba(0,0,0,.35); }
+.vorschlag li { padding: 9px 12px; cursor: pointer; border-top: 1px solid var(--s-linie); font-size: .9rem; }
+.vorschlag li:first-child { border-top: 0; }
+.vorschlag li[data-p]:hover { background: color-mix(in srgb, var(--s-akz) 16%, transparent); }
+.vorschlag li.leer { cursor: default; color: var(--s-meta); }
+.ueberbuch { display: grid; gap: 8px; padding: 12px 14px; background: var(--s-bg); border: 1.5px solid #FF5A5F; }
+.pg-liste, .pg-kinder { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pg-zeile { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 8px; border: 1px solid var(--s-linie); background: var(--s-bg); font-size: .88rem; cursor: pointer; }
+.pg-zeile > .mono { white-space: nowrap; font-size: .8rem; }
+.pg-zeile .griff { color: var(--s-meta); font-family: var(--f-mono); cursor: grab; padding: 0 4px; grid-row: 1; grid-column: 3; }
+.pg-zeile:hover .griff { color: var(--s-fg); }
+.pg-zeile.pause { background: transparent; color: var(--s-meta); }
+.pg-zeile.aktiv { border-color: var(--s-akz); box-shadow: inset 4px 0 0 var(--s-akz); }
+.pg-zeile.block { border-color: #B5BD00; border-left-width: 4px; }
+.pg-zeile.pg-neu-punkt { grid-template-columns: 110px minmax(0, 1fr) auto; background: #E6D8FF; color: #001E3A; border: 1.5px dashed #6F52A8; cursor: grab; }
+.pg-zeile.pg-neu-punkt .meta { color: #553C87; }
+.pg-zeile.pg-neu-punkt .st.neu { color: #3C2768; border-color: #6F52A8; }
+.pg-zeile.pg-neu-punkt .griff { color: #553C87; font-family: var(--f-mono); }
+.pg-zeile.geaendert { border-color: #FF9094; border-style: dashed; background: rgba(255, 90, 95, .12); }
+.pg-zeile.geaendert::after { content: "✎ gespeichert · nicht veröffentlicht"; grid-column: 2; justify-self: start; font-family: var(--f-text); font-size: .72rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; border: 1.5px dashed #FF9094; background: rgba(255, 90, 95, .22); color: var(--s-fg); }
+.st { display: inline-block; font-family: var(--f-text); font-size: .74rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.st.pub { border: 1.5px solid #B5BD00; background: rgba(181, 189, 0, .2); color: var(--s-fg); }
+.st.ges { border: 1.5px dashed #FF9094; background: rgba(255, 90, 95, .22); color: var(--s-fg); }
+.st.neu { border: 1.5px dotted var(--s-meta); color: var(--s-meta); }
+.pg-kinder { margin: 4px 0 2px 14px; padding-left: 16px; border-left: 2px solid #B5BD00; }
+.pg-kinder > li { position: relative; }
+.pg-kinder > li::before { content: ""; position: absolute; left: -16px; top: 50%; width: 14px; border-top: 2px solid #B5BD00; }
+.pg-form { display: grid; gap: 12px; }
+.site textarea { font: 400 1rem var(--f-text); padding: 10px 12px; border: 1px solid var(--s-meta); background: var(--s-flaeche); color: var(--s-fg); width: 100%; border-radius: 0; resize: vertical; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border: 1px solid var(--s-akz); font-size: .88rem; }
+.tag button { all: unset; cursor: pointer; padding: 0 6px; color: var(--s-meta); }
+table.pg-termine { min-width: 0; }
+table.pg-termine input { min-height: 36px; padding: 4px 8px; width: 80px; font-family: var(--f-mono); }
+table.pg-termine tr.warnung td { background: rgba(255, 90, 95, .10); }
+.pruef { font-size: .86rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.werkzeug { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border: 1px solid var(--s-meta); border-bottom: 0; background: var(--s-bg); }
+.werkzeug button { font: 600 .82rem var(--f-text); min-width: 36px; min-height: 34px; padding: 4px 9px; border: 1px solid var(--s-linie); background: var(--s-flaeche); color: var(--s-fg); cursor: pointer; }
+.werkzeug .trenn { width: 1px; background: var(--s-linie); margin: 0 4px; }
+.schreibfeld { min-height: 260px; padding: 14px 16px; border: 1px solid var(--s-meta); background: #FFFFFF; color: #001E3A; font-family: var(--f-text); line-height: 1.55; }
+.schreibfeld:focus { outline: 2px solid var(--s-akz); outline-offset: 0; }
+.schreibfeld p { margin: 0 0 10px; }
+.ml-figur { margin: 6px 0 12px; display: grid; gap: 4px; }
+.ml-figur figcaption { font-size: .75rem; color: #33638D; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ml-figur .mini { color: #001E3A; border-color: #CCD8E3; }
+.ml-bild { height: 140px; display: grid; place-items: center; background: repeating-linear-gradient(135deg, #E5EBF1 0 10px, #F6F8FA 10px 20px); border: 2px solid #B48CFF; font-family: var(--f-mono); font-size: .8rem; color: #33638D; }
+.ml-bild.klein { height: 70px; margin: 8px 0; border-width: 1px; }
+.ml-knopf { display: inline-block; padding: 8px 16px; border-radius: 999px; background: #B48CFF; color: #001E3A; font-weight: 700; font-size: .9rem; }
+.ml-vorschau { background: #FFFFFF; color: #001E3A; padding: 14px; max-width: 320px; margin: 8px auto 0; border: 1px solid #CCD8E3; font-size: .85rem; }
+.empf { margin: 0; font-size: .9rem; }
+.ml-alt { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--s-akz); text-underline-offset: 3px; }
+.ml-alt:focus-visible { outline: 2px solid var(--s-akz); }
+.ml-gesendet { background: #FFFFFF; color: #001E3A; padding: 14px 16px; border: 1px solid #CCD8E3; font-size: .9rem; }
+.ml-gesendet p { margin: 0 0 8px; }
+.tn-raster { display: grid; gap: 16px; }
+@container (min-width: 900px) { .tn-raster { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); align-items: start; } }
+.tn-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.tn-liste li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--s-linie); min-height: 44px; }
+.pdf-opt { display: grid; gap: 8px; }
+.a4 { background: #FFFFFF; color: #001E3A; aspect-ratio: 210 / 297; max-width: 420px; width: 100%; margin: 0 auto; padding: 18px 16px; box-shadow: 0 8px 24px rgba(0,0,0,.3); display: flex; flex-direction: column; gap: 8px; font-size: 7.5px; line-height: 1.3; overflow: hidden; }
+.a4-kopf { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #001E3A; padding-bottom: 4px; font-size: 8.5px; }
+.a4-tab { border-collapse: collapse; width: 100%; }
+.a4-tab th { text-align: left; font-size: 7px; text-transform: uppercase; border-bottom: 1px solid #001E3A; padding: 2px 3px; }
+.a4-tab td { border-bottom: 1px solid #CCD8E3; padding: 3px; height: 27px; vertical-align: middle; }
+.a4-tab td.unterschrift { width: 28%; }
+.a4-tab .etikett { display: block; width: 92px; height: 20px; border: 1px dashed #99B1C6; font-size: 6px; color: #668AAA; text-align: center; line-height: 20px; }
+.a4-tab svg { display: block; height: 18px; width: 92px; }
+.a4-tab .efn-z { font-family: var(--f-mono); font-size: 5.5px; letter-spacing: .03em; }
+.a4-fuss { margin-top: auto; border-top: 1px solid #CCD8E3; padding-top: 4px; font-size: 6.5px; color: #33638D; }
+.zg-raster { display: grid; gap: 16px; }
+@container (min-width: 900px) { .zg-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; } }
+.zg { display: grid; gap: 10px; align-content: start; }
+.zg:first-child { border-top: 3px solid #B5BD00; }
+.site input.pw { font: 400 1rem var(--f-text); min-height: 46px; padding: 10px 12px; border: 1px solid var(--s-meta); background: var(--s-flaeche); color: var(--s-fg); width: 100%; border-radius: 0; }
+.klein-link { font-size: .9rem; align-self: center; }
+.legende { font-size: .82rem; margin: 0 0 10px; }
+.filterzeile { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.filterzeile input { flex: 1 1 240px; }
+.filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter button { font: 600 .82rem var(--f-text); min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--s-linie); background: var(--s-flaeche); color: var(--s-fg); cursor: pointer; }
+.filter button[aria-pressed="true"] { background: var(--s-akz); color: var(--s-auf-akz); border-color: var(--s-akz); }
+.personen-raster { display: grid; gap: 18px; }
+@container (min-width: 900px) { .personen-raster { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; } }
+table.t tr.gewaehlt td { background: color-mix(in srgb, var(--s-akz) 16%, transparent); }
+table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--s-akz); }
+.gefahrenzone { display: grid; gap: 8px; padding: 12px 14px; margin-top: 8px; border: 1.5px solid #FF5A5F; background: repeating-linear-gradient(135deg, rgba(255, 90, 95, .14) 0 8px, transparent 8px 16px); }
+.gefahrenzone .unterkopf { margin: 0; padding: 0; border: 0; color: #FF5A5F; }
+.site.v-b .gefahrenzone .unterkopf { color: #A6363B; }
+.gefahrenzone .knopf.gefahr { border-color: #FF5A5F; background: var(--s-flaeche); }
+.rolle-bestaetigen { display: grid; gap: 8px; padding: 12px 14px; background: var(--s-bg); border: 1px solid var(--s-linie); border-left: 4px solid var(--s-akz); }
+.detail { display: grid; gap: 12px; }
+.detail .unterkopf { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--s-linie); }
+.rolle-tag { font-family: var(--f-mono); font-size: .72rem; font-weight: 700; text-transform: uppercase; padding: 2px 8px; background: var(--s-akz); color: var(--s-auf-akz); }
+.chip.offen { background: transparent; color: var(--s-fg); border: 1px dashed var(--s-meta); }
+.chip.gesperrt { background: var(--s-meta); color: var(--s-bg); }
+.wer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.person { display: inline-flex; align-items: stretch; border: 1px solid var(--s-akz); }
+.person .name { padding: 4px 10px; font-weight: 700; color: var(--s-akz-text); }
+.person .rolle { padding: 4px 10px; background: var(--s-akz); color: var(--s-auf-akz); font-family: var(--f-mono); font-size: .75rem; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="steuer">
+  <h1>Wintersymposium – Mockups (Variante A · Plakat)</h1>
+  <div class="reihe" role="group" aria-label="Seite"><span>Seite</span>
+    <button type="button" data-ziel="start" aria-pressed="true">Startseite</button>
+    <button type="button" data-ziel="workshop" aria-pressed="false">Workshop (Rot)</button>
+    <button type="button" data-ziel="anmeldung" aria-pressed="false">Anmeldung</button>
+    <button type="button" data-ziel="zugang" aria-pressed="false">Einstieg / Login</button>
+    <button type="button" data-ziel="meine" aria-pressed="false">Deine Anmeldung</button>
+    <button type="button" data-ziel="team" aria-pressed="false">Team-Übersicht</button>
+    <button type="button" data-ziel="personen" aria-pressed="false">Team: Personen</button>
+    <button type="button" data-ziel="statistik" aria-pressed="false">Team: Statistik</button>
+    <button type="button" data-ziel="t-workshops" aria-pressed="false">Team: Workshops</button>
+    <button type="button" data-ziel="t-programm" aria-pressed="false">Team: Programm</button>
+    <button type="button" data-ziel="t-mailings" aria-pressed="false">Team: Mailings</button>
+    <button type="button" data-ziel="t-teilnahme" aria-pressed="false">Team: Teilnahme</button>
+  </div>
+  <div class="reihe" role="group" aria-label="Ansicht"><span>Ansicht</span>
+    <button type="button" data-geraet="desktop" aria-pressed="true">Desktop</button>
+    <button type="button" data-geraet="handy" aria-pressed="false">Handy</button>
+  </div>
+  <p class="info" id="info"></p>
+</header>
+
+<div class="buehne">
+<div class="geraet" id="geraet" data-geraet="desktop">
+<div class="site v-a" id="site" data-seite="start">
+
+  <header class="kopf"><div class="innen">
+    <a href="#a-start" data-link="start" aria-label="Zur Startseite">
+      <img class="logo logo-lila logo-dunkel" src="logo/ALLGAEU-AKUT_Logo_quer_negativ-lila.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin">
+      <img class="logo logo-lila logo-hell" src="logo/ALLGAEU-AKUT_Logo_quer_farbig-lila.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin">
+      <img class="logo logo-rot logo-dunkel" src="logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin">
+      <img class="logo logo-rot logo-hell" src="logo/ALLGAEU-AKUT_Logo_quer_farbig-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin">
+    </a>
+    <nav class="nav" aria-label="Hauptnavigation">
+      <a href="#a-start" data-link="start">Programm</a>
+      <a href="#a-workshop" data-link="workshop">Workshops</a>
+      <a href="#a-zugang" data-link="zugang">Deine Anmeldung</a>
+      <a class="knopf nur-gast" href="#a-anmeldung" data-link="anmeldung">Anmelden</a>
+      <span class="nur-erkannt nav-person"><a href="#a-meine" data-link="meine" class="nav-name" id="nav-name">Lea B.</a><button type="button" class="nav-ab">Abmelden</button></span>
+    </nav>
+    <button class="menue" type="button">Menü</button>
+  </div></header>
+
+  <!-- ===== Startseite ===== -->
+  <section class="seite" data-seite="start">
+    <div class="innen held">
+      <div class="tafel" aria-hidden="true"><span>NÄCHSTER TERMIN</span><span>MI 20.01.2027</span><span>08:30</span><span>KEMPTEN</span><span>FREI: 38/180</span></div>
+      <div>
+        <p class="kicker">Allgäu Akut · Wintersymposium 2027</p>
+        <h2 class="titel">Winter&shy;symposium <em>Notfall&shy;medizin</em></h2>
+        <p class="unter">Ein Tag für Notaufnahme und Rettungsdienst. Vorträge, Workshops, ein Fall. Keine Ausreden.</p>
+      </div>
+      <div class="datum-gross">20.01.<small>Mittwoch · 2027 · 08:30–16:30</small></div>
+      <span class="sticker hinweis frei">Kostenlos</span>
+      <dl class="eckdaten">
+        <div><dt>Datum</dt><dd>Mi 20.01.2027</dd></div>
+        <div><dt>Zeit</dt><dd>08:30–16:30</dd></div>
+        <div><dt>Ort</dt><dd>Klinikum Kempten <span class="beispiel">Beispiel</span></dd></div>
+        <div><dt>CME</dt><dd>Punkte beantragt</dd></div>
+        <div><dt>Freie Plätze</dt><dd>38 / 180</dd></div>
+      </dl>
+      <div class="cta">
+        <a class="knopf gruen" href="#a-anmeldung" data-link="anmeldung">Jetzt anmelden</a>
+        <a class="knopf zweit" href="#a-meine" data-link="meine">Anmeldung ändern</a>
+        <span class="mono meta" style="font-size:.85rem">Anmeldung ab 25.11.2026</span>
+      </div>
+    </div>
+
+    <div class="abschnitt"><div class="innen">
+      <p class="kicker">Worum es geht</p>
+      <h2 class="zwischen">Für alle, die nachts den Piepser tragen</h2>
+      <div class="zwei">
+        <div class="kasten"><strong>Für wen</strong><p>NotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.</p></div>
+        <div class="kasten"><strong>Wie</strong><p>Vormittags Vorträge im Hörsaal, nachmittags Workshops in kleinen Gruppen. Du wählst bis zu zwei Workshops; volle Termine haben eine Warteliste.</p></div>
+        <div class="kasten"><strong>Was es kostet</strong><p>Nichts. Mittagessen inklusive (Fleisch oder vegetarisch). Kaffee gibt's. Ausreden nicht.</p></div>
+      </div>
+    </div></div>
+
+    <div class="abschnitt"><div class="innen">
+      <p class="kicker">Programm · Mittwoch, 20.01.2027</p>
+      <h2 class="zwischen">Der Tag im Überblick <span class="beispiel">Beispielprogramm</span></h2>
+      <ol class="programm" id="programm"></ol>
+      <p class="fussnote" style="margin-top:14px">¹ Evans L et al. Surviving Sepsis Campaign 2021. Intensive Care Med 2021;47:1181–1247.</p>
+    </div></div>
+
+    <div class="abschnitt"><div class="innen">
+      <div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p><p style="margin:4px 0 0">Die Veranstaltung ist zur Zertifizierung eingereicht. Trag bei der Anmeldung deine EFN ein, dann melden wir deine Teilnahme. Die Teilnahmebescheinigung lädst du nach dem Symposium hier herunter.</p></div>
+    </div></div>
+  </section>
+
+  <!-- ===== Workshops: Liste + Detail (Signalrot) ===== -->
+  <section class="seite" data-seite="workshop" hidden>
+    <div class="innen" style="padding-block:30px 0">
+      <p class="kicker">Workshops · Mittwoch, 20.01.2027</p>
+      <h2 class="zwischen" style="margin:6px 0 14px">Drei Workshops, unterschiedlich lang, mehrere Termine. Such dir aus, was du üben willst.</h2>
+      <div class="wsauswahl" id="wsauswahl"></div>
+    </div>
+    <div class="innen ws-held">
+      <div class="ws-text">
+        <p class="kicker"><span class="format rot" id="wsd-nr">WS 01</span> &nbsp;Workshop · <span id="wsd-raum">Skills-Lab 1</span></p>
+        <h2 class="titel" id="wsd-titel">Atemweg.<br>Plan B.</h2>
+        <p class="unter" id="wsd-text" style="font-size:1.15rem;max-width:44ch;margin:12px 0 0"></p>
+        <div><span class="sticker hinweis" id="wsd-bring">Bring: [ Stethoskop ]</span></div>
+      </div>
+      <div class="ws-seite">
+        <span class="stempel">Max.<b id="wsd-max">12</b>Plätze</span>
+        <div class="zettel"><span class="band" aria-hidden="true"></span><p class="zettel-kopf">Notiz vom Team</p><p id="wsd-notiz"></p></div>
+      </div>
+    </div>
+    <div class="abschnitt"><div class="innen">
+      <h2 class="zwischen">Termine</h2>
+      <div class="termine" id="wsd-termine"></div>
+      <div class="merke" style="margin-top:14px"><p class="kicker">Merke · Warteliste</p><p style="margin:4px 0 0">Fest anmelden kannst du dich je Workshop für <strong>einen</strong> Termin. Auf die Warteliste darfst du dich für weitere Termine setzen. Bekommst du dort einen Platz und nimmst ihn an, ersetzt er deinen bisherigen Termin dieses Workshops.</p></div>
+    </div></div>
+    <div class="abschnitt"><div class="innen">
+      <div class="zwei">
+        <div class="kasten" id="wsd-leitung-kasten"><strong>Leitung</strong><p><span id="wsd-leitung"></span> <span class="beispiel">Beispiel</span></p></div>
+        <div class="kasten"><strong>Für wen</strong><p id="wsd-wer"></p></div>
+        <div class="kasten"><strong>Dauer</strong><p class="mono">90 min · Kleingruppen à 4</p></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ===== Anmeldung ===== -->
+  <section class="seite" data-seite="anmeldung" hidden>
+    <div class="innen form-kopf">
+      <p class="kicker">Wintersymposium · 20.01.2027</p>
+      <h2 class="titel">Anmelden</h2>
+      <p style="max-width:60ch">Dauert zwei Minuten. Danach bekommst du eine Mail mit einem Bestätigungslink – erst damit gilt deine Anmeldung.</p>
+      <div class="stichtage"><span>Anmeldeschluss 15.01.2027</span><span>Workshops ändern bis 10.01.2027</span><span>Essen ändern bis 13.01.2027</span></div>
+    </div>
+    <div class="innen">
+      <form class="form" id="formular" novalidate>
+        <div class="paar">
+          <div class="feld"><label for="vorname">Vorname</label><input id="vorname" type="text" autocomplete="given-name" value="Lea"></div>
+          <div class="feld"><label for="nachname">Nachname</label><input id="nachname" type="text" autocomplete="family-name" value="Beispiel"></div>
+        </div>
+        <div class="feld"><label for="mail">E-Mail</label><input id="mail" type="email" autocomplete="email" value="lea.beispiel@example.org"><span class="hilfe">An diese Adresse schicken wir die Bestätigung und deine Links zum Ändern.</span></div>
+        <div class="paar">
+          <div class="feld"><label for="beruf">Berufsgruppe</label>
+            <select id="beruf">
+              <option value="" selected disabled>Bitte wählen</option>
+              <option value="arzt">ÄrztIn</option>
+              <option value="notsan">NotfallsanitäterIn</option>
+              <option value="rettsan">RettungssanitäterIn</option>
+              <option value="pflege">Pflege / MFA</option>
+              <option value="student">StudentIn</option>
+              <option value="sonst">Sonstige</option>
+            </select>
+          </div>
+          <div class="feld"><label for="inst">Klinik / Institution</label><input id="inst" type="text" value="Klinikum Kempten, ZNA"></div>
+        </div>
+        <div class="feld" id="efn-feld"><label for="efn">EFN <span class="meta" style="font-weight:400">(freiwillig, für die Fortbildungspunkte)</span></label><input id="efn" type="text" inputmode="numeric" placeholder="15 Ziffern, z. B. 276…"><span class="hilfe">Die einheitliche Fortbildungsnummer steht auf deinem Fortbildungsausweis. Kannst du auch später nachtragen.</span></div>
+        <div class="feld" id="sonst-feld" hidden><label for="sonst">Sonstige – welche?</label><input id="sonst" type="text"></div>
+
+        <fieldset class="feld"><legend>Workshops <span class="meta" style="font-weight:400">(freiwillig)</span></legend>
+          <span class="hilfe">Jeder Workshop hat eigene Termine und Längen. Je Workshop ein fester Termin; Termine, die sich mit deiner Wahl überschneiden, sind gesperrt. Volle Termine kannst du zusätzlich auf die Warteliste setzen.</span>
+          <div id="ws-wahl" style="display:grid;gap:16px"></div>
+          <div class="zeitleiste-wrap"><div class="mono meta" style="font-size:.78rem;margin-bottom:6px">Dein Tag</div><div class="zeitleiste" id="zeitleiste" aria-hidden="true"></div><div class="zl-skala mono"><span>11:00</span><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span><span>16:00</span></div><p class="mono meta" id="zl-text" style="font-size:.8rem;margin:6px 0 0"></p></div>
+        </fieldset>
+
+        <fieldset class="feld"><legend>Mittagessen</legend>
+          <div class="wahl" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+            <label><input type="radio" name="essen" value="f"><span>Fleisch</span></label>
+            <label><input type="radio" name="essen" value="v" checked><span>Vegetarisch</span></label>
+            <label><input type="radio" name="essen" value="k"><span>Kein Essen</span></label>
+          </div>
+        </fieldset>
+
+        <div class="feld" style="gap:12px">
+          <label class="haken"><input type="checkbox" id="konto"><span>Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort. Geht auch später.</span></label>
+          <label class="haken"><input type="checkbox" id="nl"><span>Newsletter „Allgäu Akut“: Termine der nächsten Fortbildungen. Abmeldung jederzeit.</span></label>
+          <label class="haken"><input type="checkbox" id="ds"><span>Ich habe die <a href="#a-start">Datenschutzerklärung</a> gelesen und bin einverstanden, dass meine Angaben für die Organisation des Symposiums verarbeitet werden.</span></label>
+        </div>
+        <div><button class="knopf" type="submit">Anmelden</button> <span class="meta" id="form-hinweis" style="margin-left:10px;font-size:.9rem"></span></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== Einstieg: Login / Einmal-Link / neu ===== -->
+  <section class="seite" data-seite="zugang" hidden>
+    <div class="innen form-kopf">
+      <p class="kicker">Wintersymposium · 20.01.2027</p>
+      <h2 class="titel">Wie willst du rein?</h2>
+      <p style="max-width:60ch">Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.</p>
+    </div>
+    <div class="innen zg-raster">
+      <div class="kasten zg">
+        <p class="kicker">Noch nicht angemeldet</p>
+        <h3 class="zwischen">Neu anmelden</h3>
+        <p style="margin:0">Name, Berufsgruppe, Workshops, Essen – zwei Minuten. Am Ende kannst du ankreuzen, ob du gleich ein Konto anlegen willst.</p>
+        <a class="knopf gruen" href="#a-anmeldung" data-link="anmeldung" style="justify-self:start">Zur Anmeldung</a>
+        <p class="meta" style="margin:0;font-size:.85rem">Noch 38 von 180 Plätzen frei · Anmeldeschluss Fr 15.01.</p>
+      </div>
+      <div class="kasten zg">
+        <p class="kicker">Schon angemeldet, ohne Konto</p>
+        <h3 class="zwischen">Link per Mail</h3>
+        <p style="margin:0">Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt 30 Minuten und nur einmal.</p>
+        <div class="feld"><label for="zg-mail">E-Mail</label><input id="zg-mail" type="email" autocomplete="email" placeholder="du@example.org"></div>
+        <button class="knopf" type="button" id="zg-link" style="justify-self:start">Link schicken</button>
+        <p class="meta" id="zg-antwort" style="margin:0;font-size:.88rem" hidden>Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Schau auch im Spam-Ordner.</p>
+      </div>
+      <div class="kasten zg">
+        <p class="kicker">Mit Konto</p>
+        <h3 class="zwischen">Einloggen</h3>
+        <div class="feld"><label for="zg-lmail">E-Mail</label><input id="zg-lmail" type="email" autocomplete="username"></div>
+        <div class="feld"><label for="zg-pw">Passwort</label><input id="zg-pw" type="password" autocomplete="current-password" class="pw"></div>
+        <div class="aktionen"><button class="knopf" type="button">Einloggen</button><a href="#a-zugang" class="klein-link">Passwort vergessen?</a></div>
+        <p class="meta" style="margin:0;font-size:.85rem">Team-Mitglieder loggen sich hier genauso ein; danach wird der zweite Faktor abgefragt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Deine Anmeldung (Einmal-Link) ===== -->
+  <section class="seite" data-seite="meine" hidden>
+    <div class="innen form-kopf">
+      <p class="kicker">Deine Anmeldung</p>
+      <h2 class="titel">Hallo Lea.</h2>
+      <div class="status-band" style="margin-top:16px"><span class="sticker">Anmeldung bestätigt</span><span class="mono">Anmeldung Nr. 0142</span></div>
+    </div>
+    <div class="innen raster">
+      <div style="display:grid;gap:18px">
+        <div class="angebot">
+          <p class="kicker">Platz frei geworden</p>
+          <h3 class="zwischen" style="font-size:1.3rem">WS 01 Atemweg · 11:15–12:45</h3>
+          <p style="margin:0">Du standest auf Platz 1 der Warteliste. Der Platz ist für dich reserviert bis</p>
+          <p class="uhr" style="margin:0">Fr 08.01.2027, 14:30</p>
+          <div class="ersetzt"><p class="kicker" style="color:var(--s-fg)">Achtung · Tausch</p><p style="margin:0">Nimmst du an, <strong>ersetzt</strong> dieser Termin deinen bisherigen Platz:</p><p class="tausch-zeile"><span class="alt mono">WS 01 · 13:45–15:15</span><span aria-hidden="true">→</span><span class="neu mono">WS 01 · 11:15–12:45</span></p><p class="meta" style="margin:0;font-size:.88rem">Dein alter Platz geht sofort an die Warteliste.</p></div>
+          <p class="meta" style="margin:0;font-size:.9rem">Lässt du die Frist verstreichen, geht das Angebot an die nächste Person und du rückst ans Ende der Warteliste.</p>
+          <div class="aktionen" id="angebot-knoepfe"><button class="knopf" type="button" id="angebot-annehmen">Platz annehmen</button><button class="knopf zweit" type="button">Ablehnen</button></div>
+          <div class="bestaetigen" id="angebot-bestaetigen" hidden>
+            <p class="kicker" style="color:var(--s-fg)">Bitte bestätigen</p>
+            <ul class="tausch">
+              <li><span class="chip ok">Wird gebucht</span> WS 01 Atemweg · <span class="mono">11:15–12:45</span></li>
+              <li><span class="chip wl">Wird storniert</span> WS 01 Atemweg · <span class="mono">13:45–15:15</span> <span class="meta">– gleicher Workshop, Platz geht an die Warteliste</span></li>
+              <li><span class="chip wl">Wird storniert</span> WS 02 Kleine PatientInnen · <span class="mono">11:15–12:00</span> <span class="meta">– überschneidet sich zeitlich, Platz geht an die Warteliste</span></li>
+            </ul>
+            <p class="meta" style="margin:0;font-size:.9rem">Das lässt sich nicht rückgängig machen: Die freigegebenen Plätze werden sofort weitervergeben. Du bekommst eine Mail mit der neuen Übersicht.</p>
+            <div class="aktionen"><button class="knopf" type="button" id="tausch-ja">Ja, so tauschen</button><button class="knopf zweit" type="button" id="tausch-nein">Abbrechen</button></div>
+          </div>
+        </div>
+        <div class="kasten">
+          <h3 class="zwischen" style="font-size:1.2rem;margin-bottom:8px">Workshops und Essen</h3>
+          <dl class="liste-def">
+            <div><dt class="mono">11:15–12:00</dt><dd>WS 02 Kleine PatientInnen.<br><span class="chip ok">Platz bestätigt</span></dd></div>
+            <div><dt class="mono">13:45–15:15</dt><dd>WS 01 Atemweg. Plan B.<br><span class="chip ok">Platz bestätigt</span></dd></div>
+            <div><dt class="mono">11:15–12:45</dt><dd>WS 01 Atemweg. Plan B.<br><span class="chip wl">Warteliste · Platz 1 von 3</span> <span class="meta" style="font-size:.9rem">Angebot offen, siehe oben</span></dd></div>
+            <div><dt class="mono">12:00–12:45</dt><dd>WS 02 Kleine PatientInnen.<br><span class="chip wl">Warteliste · Platz 2 von 2</span></dd></div>
+            <div><dt>Essen</dt><dd>Vegetarisch</dd></div>
+          </dl>
+          <div class="aktionen" style="margin-top:14px">
+            <div class="aktion-frist"><button class="knopf" type="button">Workshops ändern</button><span class="frist">möglich bis <b>So 10.01.</b></span></div>
+            <div class="aktion-frist"><button class="knopf zweit" type="button">Essen ändern</button><span class="frist">möglich bis <b>Mi 13.01.</b></span></div>
+          </div>
+        </div>
+        <div class="kasten">
+          <h3 class="zwischen" style="font-size:1.2rem;margin-bottom:8px">Deine Daten</h3>
+          <dl class="liste-def">
+            <div><dt>Name</dt><dd>Lea Beispiel</dd></div>
+            <div><dt>E-Mail</dt><dd>lea.beispiel@example.org</dd></div>
+            <div><dt>Berufsgruppe</dt><dd>ÄrztIn</dd></div>
+            <div><dt>Institution</dt><dd>Klinikum Kempten, ZNA</dd></div>
+            <div><dt>EFN</dt><dd class="mono">276 xxxx xxxx xxxx 3</dd></div>
+          </dl>
+          <div class="aktionen" style="margin-top:14px"><div class="aktion-frist"><button class="knopf zweit" type="button">Daten bearbeiten</button><span class="frist">jederzeit · neue E-Mail erst nach Bestätigung</span></div></div>
+        </div>
+      </div>
+      <div style="display:grid;gap:18px">
+        <div class="kasten"><strong>Konto anlegen?</strong><p style="margin:6px 0 12px">Mit Konto brauchst du keinen Link per Mail mehr. Deine Anmeldung wird übernommen.</p><button class="knopf zweit" type="button">Konto anlegen</button></div>
+        <div class="kasten"><strong>Teilnahmebescheinigung</strong><p class="meta" style="margin:6px 0 0">Gibt es nach dem Symposium, sobald deine Anwesenheit erfasst ist.</p></div>
+        <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta" style="margin:6px 0 0;font-size:.92rem">Du hast den Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du 30 Minuten nicht aktiv, musst du dir einen neuen Link schicken lassen – ein Klick auf „Anmeldung ändern“ auf der Startseite.</p></div>
+        <div class="kasten"><strong>Doch nicht dabei?</strong><p style="margin:6px 0 12px">Sag bitte ab – dein Platz geht an jemanden von der Warteliste.</p><div class="aktion-frist"><button class="knopf gefahr" type="button">Anmeldung stornieren</button><span class="frist">möglich bis <b>So 17.01.</b></span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team-Übersicht ===== -->
+  <section class="seite" data-seite="team" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Übersicht</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="team"></nav>
+      <div class="kacheln">
+        <div class="kachel"><div class="lbl">Anmeldungen</div><div class="zahl">142 <small>/ 180</small></div><div class="meta" style="font-size:.85rem">+6 seit gestern</div></div>
+        <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl">23</div><div class="meta" style="font-size:.85rem">über 4 Termine</div></div>
+        <div class="kachel"><div class="lbl">Offene Angebote</div><div class="zahl">2</div><div class="meta" style="font-size:.85rem">Frist läuft</div></div>
+        <div class="kachel"><div class="lbl">Mails heute</div><div class="zahl">120 <small>/ 450</small></div><div class="meta" style="font-size:.85rem">System-Postfach</div></div>
+      </div>
+      <div class="team-raster">
+        <div>
+          <h3 class="zwischen" style="font-size:1.2rem;margin-bottom:10px">Workshop-Termine</h3>
+          <div class="tabelle-wrap"><table class="t">
+            <thead><tr><th>Termin</th><th>Zeit</th><th style="text-align:right">Belegt</th><th style="text-align:right">Frei</th><th style="text-align:right">Warteliste</th></tr></thead>
+            <tbody>
+              <tr><td>WS 01 Atemweg</td><td class="mono">11:15</td><td class="n">12/12</td><td class="n">0</td><td class="n">3</td></tr>
+              <tr><td>WS 01 Atemweg</td><td class="mono">13:45</td><td class="n">8/12</td><td class="n">4</td><td class="n">0</td></tr>
+              <tr><td>WS 02 Kinder</td><td class="mono">11:15</td><td class="n">10/12</td><td class="n">2</td><td class="n">0</td></tr>
+              <tr><td>WS 02 Kinder</td><td class="mono">13:45</td><td class="n">5/12</td><td class="n">7</td><td class="n">0</td></tr>
+              <tr><td>WS 03 eFAST</td><td class="mono">11:15</td><td class="n">5/10</td><td class="n">5</td><td class="n">0</td></tr>
+              <tr><td>WS 03 eFAST</td><td class="mono">13:45</td><td class="n">10/10</td><td class="n">0</td><td class="n">1</td></tr>
+            </tbody>
+          </table></div>
+          <h3 class="zwischen" style="font-size:1.2rem;margin:22px 0 10px">Essen</h3>
+          <div class="kacheln" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+            <div class="kachel"><div class="lbl">Fleisch</div><div class="zahl">61</div></div>
+            <div class="kachel"><div class="lbl">Vegetarisch</div><div class="zahl">58</div></div>
+            <div class="kachel"><div class="lbl">Kein Essen</div><div class="zahl">23</div></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="zwischen" style="font-size:1.2rem;margin-bottom:10px">Zu erledigen</h3>
+          <ul class="aufgaben">
+            <li><span class="marke">Manuell</span><span>WS 03 13:45: Platz frei nach Storno, automatische Angebote sind seit 05.01. beendet. <a href="#a-team">Vergeben</a></span></li>
+            <li><span class="marke">Mail</span><span>1 Mail nicht zustellbar (Adresse unbekannt). <a href="#a-team">Ansehen</a></span></li>
+            <li><span class="marke">Frist</span><span>Angebot an L. Beispiel läuft am 08.01. um 14:30 ab.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Personen ===== -->
+  <section class="seite" data-seite="personen" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Personen</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="personen"></nav>
+      <p class="meta legende">Angemeldet = E-Mail bestätigt, Anmeldung gilt · Mail nicht bestätigt = Bestätigungslink noch nicht geklickt, Platz nur vorgemerkt bis Ablauf der Frist · Nur Warteliste = bestätigt, aber kein fester Workshop-Platz</p>
+      <div class="filterzeile">
+        <label class="sr" for="suche">Suchen</label><input id="suche" type="text" placeholder="Name, E-Mail oder Institution suchen" value="bei">
+        <div class="filter" role="group" aria-label="Filter">
+          <button type="button" aria-pressed="true">Alle 168</button><button type="button" aria-pressed="false">Angemeldet 142</button><button type="button" aria-pressed="false">Nur Warteliste 9</button><button type="button" aria-pressed="false">Mail nicht bestätigt 4</button><button type="button" aria-pressed="false">Mit Konto 61</button><button type="button" aria-pressed="false">Team 5</button>
+        </div>
+        <button class="knopf zweit" type="button">+ Person anlegen</button>
+      </div>
+      <div class="personen-raster">
+        <div class="tabelle-wrap"><table class="t">
+          <thead><tr><th>Name</th><th>Status</th><th>Konto / Rolle</th><th>Workshops</th><th>Essen</th></tr></thead>
+          <tbody>
+            <tr class="gewaehlt"><td><strong>Lea Beispiel</strong><br><span class="meta" style="font-size:.82rem">lea.beispiel@example.org</span></td><td><span class="chip ok">Angemeldet</span></td><td>Konto</td><td class="mono">WS 01, WS 02 <span class="meta">+2 WL</span></td><td>veg.</td></tr>
+            <tr><td><strong>Tom Beispielmann</strong><br><span class="meta" style="font-size:.82rem">t.b@example.org</span></td><td><span class="chip wl">Nur Warteliste</span></td><td class="meta">ohne Konto</td><td class="mono">– <span class="meta">1 WL</span></td><td>Fleisch</td></tr>
+            <tr><td><strong>Dr. A. Beispiel</strong><br><span class="meta" style="font-size:.82rem">a.beispiel@example.org</span></td><td><span class="chip ok">Angemeldet</span></td><td><span class="rolle-tag">Admin</span></td><td class="mono">–</td><td>kein</td></tr>
+            <tr><td><strong>Kim Beispiel</strong><br><span class="meta" style="font-size:.82rem">kim@example.org</span></td><td><span class="chip offen">Mail nicht bestätigt</span></td><td class="meta">ohne Konto</td><td class="mono">WS 03</td><td>veg.</td></tr>
+            <tr><td><strong>Sam Beispiel</strong><br><span class="meta" style="font-size:.82rem">sam@example.org</span></td><td><span class="chip gesperrt">Konto gesperrt</span></td><td>Konto</td><td class="mono">WS 02</td><td>Fleisch</td></tr>
+          </tbody>
+        </table></div>
+        <aside class="kasten detail">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><p class="kicker">Ausgewählt</p><h3 class="zwischen" style="font-size:1.35rem">Lea Beispiel</h3><p class="meta" style="margin:0;font-size:.88rem">ÄrztIn · Klinikum Kempten, ZNA · EFN 276 xxxx xxxx xxxx 3</p></div><span class="chip ok">Angemeldet</span></div>
+
+          <h4 class="unterkopf">Anmeldung bearbeiten <span class="meta">– auch nach den Stichtagen</span></h4>
+          <div class="feld"><label for="p-ws1">WS 01 Atemweg</label><select id="p-ws1"><option>11:15–12:45 · voll (12/12) – überbuchen …</option><option selected>13:45–15:15 · fest</option><option>kein fester Platz</option></select></div>
+          <div class="feld"><label for="p-ws2">WS 02 Kleine PatientInnen</label><select id="p-ws2"><option selected>11:15–12:00 · fest</option><option>13:45–14:30</option><option>14:30–15:15</option><option>kein fester Platz</option></select></div>
+          <div class="feld"><label for="p-essen">Essen</label><select id="p-essen"><option>Fleisch</option><option selected>Vegetarisch</option><option>Kein Essen</option></select></div>
+          <p class="meta" style="font-size:.85rem;margin:0">Warteliste: WS 01 11:15 (Platz 1, Angebot offen) · WS 02 12:00 (Platz 2)</p>
+          <div class="aktionen"><button class="knopf" type="button">Speichern</button><button class="knopf zweit" type="button">Einmal-Link senden</button></div>
+
+          <h4 class="unterkopf">Konto</h4>
+          <div class="aktionen">
+            <button class="knopf zweit" type="button">Passwort-Link senden</button>
+            <button class="knopf zweit" type="button">Konto sperren</button>
+          </div>
+          <div class="feld"><label for="p-rolle">Rolle</label>
+            <select id="p-rolle"><option selected>Teilnehmende</option><option>Admin (Team)</option><option>Betreiber (nur durch Betreiber)</option></select>
+            <span class="hilfe">Admin und Betreiber brauchen beim nächsten Login einen zweiten Faktor (TOTP oder Passkey). Betreiber kann nur ein Betreiber vergeben.</span></div>
+          <div class="rolle-bestaetigen" id="rolle-bestaetigen" hidden>
+            <p class="kicker" style="color:var(--s-fg)">Rolle ändern – bitte bestätigen</p>
+            <p style="margin:0"><strong>Lea Beispiel</strong> wird <strong id="rolle-neu">Admin</strong>. Damit sieht sie alle Anmeldungen mit E-Mail, Institution und EFN und kann Programm, Mailings und Teilnahme bearbeiten.</p>
+            <p class="meta" style="margin:0;font-size:.88rem">Sie muss beim nächsten Login einen zweiten Faktor einrichten und bekommt eine Mail. Die Änderung steht im Audit-Protokoll.</p>
+            <div class="feld"><label for="rolle-code">Dein Code aus der Authenticator-App</label><input id="rolle-code" type="text" inputmode="numeric" placeholder="6 Ziffern" style="max-width:180px"></div>
+            <div class="aktionen"><button class="knopf" type="button" id="rolle-ja">Rolle vergeben</button><button class="knopf zweit" type="button" id="rolle-nein">Abbrechen</button></div>
+          </div>
+
+          <div class="gefahrenzone">
+            <h4 class="unterkopf">Gefahrenzone</h4>
+            <p class="meta" style="margin:0;font-size:.85rem">Lässt sich nicht rückgängig machen. Freie Plätze gehen sofort an die Warteliste.</p>
+            <div class="aktionen"><button class="knopf gefahr" type="button">Anmeldung stornieren</button><button class="knopf gefahr" type="button">Konto löschen</button></div>
+          </div>
+          <p class="mono meta" style="font-size:.74rem;margin:0">Letzte Änderung 05.01.2027, 18:20 durch Lea selbst (Workshops) · Audit ansehen</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Statistik ===== -->
+  <section class="seite" data-seite="statistik" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Statistik</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="statistik"></nav>
+      <div class="filterzeile">
+        <div class="filter" role="group" aria-label="Status"><button type="button" aria-pressed="true">Angemeldet 142</button><button type="button" aria-pressed="false">+ Mail nicht bestätigt 146</button><button type="button" aria-pressed="false">+ Nur Warteliste 155</button></div>
+        <label class="sr" for="st-beruf">Berufsgruppe</label><select id="st-beruf" style="max-width:240px"><option>Alle Berufsgruppen</option><option>ÄrztIn</option><option>NotfallsanitäterIn</option><option>RettungssanitäterIn</option><option>Pflege / MFA</option><option>StudentIn</option><option>Sonstige</option></select>
+        <a class="knopf zweit" href="#export-kachel">Zum Export</a>
+      </div>
+
+      <div class="kacheln">
+        <div class="kachel"><div class="lbl">Angemeldet</div><div class="zahl">142 <small>/ 180</small></div><div class="meter" aria-hidden="true"><i style="width:79%"></i></div><div class="meta" style="font-size:.82rem">79 % der Kapazität</div></div>
+        <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl">23</div><div class="meta" style="font-size:.82rem">Einträge · 18 Personen</div></div>
+        <div class="kachel"><div class="lbl">EFN angegeben</div><div class="zahl">71 <small>%</small></div><div class="meter" aria-hidden="true"><i style="width:71%"></i></div><div class="meta" style="font-size:.82rem">27 von 38 ÄrztInnen</div></div>
+        <div class="kachel"><div class="lbl">Konten</div><div class="zahl">61</div><div class="meta" style="font-size:.82rem">43 % der Angemeldeten</div></div>
+      </div>
+
+      <div class="stat-raster">
+        <div class="kasten stat breit">
+          <div class="stat-kopf"><h3 class="zwischen">Anmeldungen seit Start</h3><span class="stat-aktion"><button type="button" class="mini">Tabelle</button></span></div>
+          <p class="meta stat-unter">bestätigte Anmeldungen, kumuliert · 25.11.2026 bis heute</p>
+          <div class="chart" id="ch-verlauf"></div>
+          <div class="tooltip" id="tt" hidden></div>
+        </div>
+
+        <div class="kasten stat breit">
+          <div class="stat-kopf"><h3 class="zwischen">Workshop-Termine</h3></div>
+          <div class="legende-chart"><span><i class="lg belegt"></i>belegt</span><span><i class="lg frei"></i>frei</span><span><i class="lg wl"></i>Warteliste</span></div>
+          <div id="ch-ws" class="ws-balken"></div>
+          <div class="tooltip ws-tt" id="tt-ws" hidden></div>
+        </div>
+
+        <div class="kasten stat">
+          <div class="stat-kopf"><h3 class="zwischen">Berufsgruppen</h3></div>
+          <div id="ch-beruf" class="hbars"></div>
+        </div>
+
+        <div class="kasten stat">
+          <div class="stat-kopf"><h3 class="zwischen">Institutionen</h3></div>
+          <table class="t kompakt"><tbody id="tb-inst"></tbody></table>
+        </div>
+
+        <div class="kasten stat">
+          <div class="stat-kopf"><h3 class="zwischen">Essen</h3></div>
+          <div class="mini-kacheln"><div><span class="zahl">61</span><span class="lbl">Fleisch</span></div><div><span class="zahl">58</span><span class="lbl">Vegetarisch</span></div><div><span class="zahl">23</span><span class="lbl">Kein Essen</span></div></div>
+          <p class="meta" style="font-size:.82rem;margin:8px 0 0">119 Essen zu bestellen · Essens-Stichtag Mi 13.01.</p>
+        </div>
+
+        <div class="kasten stat">
+          <div class="stat-kopf"><h3 class="zwischen">Newsletter</h3></div>
+          <div class="mini-kacheln"><div><span class="zahl">88</span><span class="lbl">Wintersymposium</span></div><div><span class="zahl">54</span><span class="lbl">Allgäu Akut</span></div></div>
+          <p class="meta" style="font-size:.82rem;margin:8px 0 0">nur bestätigte Einträge (Double-Opt-In)</p>
+        </div>
+
+        <div class="kasten stat">
+          <div class="stat-kopf"><h3 class="zwischen">Anwesenheit</h3></div>
+          <p class="meta" style="margin:0">Wird am Veranstaltungstag erfasst. Danach hier: anwesend / angemeldet, je Workshop-Termin, und der CME-Export.</p>
+        </div>
+        <div class="kasten stat breit" id="export-kachel">
+          <div class="stat-kopf"><h3 class="zwischen">Export</h3><span class="meta" style="font-size:.82rem">CSV, öffnet in Excel (UTF-8 mit Umlauten) · berücksichtigt den Filter oben</span></div>
+          <div class="export-liste">
+            <div><strong>Teilnehmendenliste</strong><span class="meta">Name, Berufsgruppe, Institution, Workshops, Essen</span><button type="button" class="mini">CSV</button></div>
+            <div><strong>Listen je Workshop-Termin</strong><span class="meta">eine Datei je Termin, für die Leitung</span><button type="button" class="mini">CSV</button></div>
+            <div><strong>Wartelisten</strong><span class="meta">je Termin in Reihenfolge</span><button type="button" class="mini">CSV</button></div>
+            <div><strong>Essensliste</strong><span class="meta">Summen und Namen je Essen</span><button type="button" class="mini">CSV</button></div>
+            <div><strong>CME-Liste</strong><span class="meta">Name und EFN, nur Anwesende – ab dem Veranstaltungstag</span><button type="button" class="mini" disabled>CSV</button></div>
+            <div><strong>Newsletter-Listen</strong><span class="meta">nur bestätigte Einträge, je Liste</span><button type="button" class="mini">CSV</button></div>
+            <div><strong>Statistik</strong><span class="meta">alle Zahlen dieser Seite</span><button type="button" class="mini">CSV</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Workshops ===== -->
+  <section class="seite" data-seite="t-workshops" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Workshops</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="t-workshops"></nav>
+      <p class="meta" style="margin:0 0 10px;font-size:.88rem">Termin anklicken: Teilnehmende und Warteliste bearbeiten. Hier landet auch das Nachrücken nach der automatischen Grenze.</p>
+      <div class="tw-raster">
+        <div class="tw-liste" id="tw-liste"></div>
+        <div class="kasten tw-detail" id="tw-detail"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Programm ===== -->
+  <section class="seite" data-seite="t-programm" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Programm</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="t-programm"></nav>
+      <div class="entwurf-banner" role="status">
+        <span class="eb-text"><strong>Gespeichert, aber nicht veröffentlicht.</strong> 2 Programmpunkte sind geändert (links markiert) und noch nicht auf der Startseite sichtbar: WS 01 13:45 (Plätze), VT 02 (Dozierende).</span>
+        <span class="eb-knoepfe"><button class="knopf zweit" type="button">Vorschau</button><button class="knopf zweit" type="button">Verwerfen</button><button class="knopf gruen" type="button">Jetzt veröffentlichen</button></span>
+      </div>
+      <div class="filterzeile">
+        <button class="knopf" type="button">+ Programmpunkt</button>
+        <button class="knopf zweit" type="button">Dozierende verwalten</button>
+      </div>
+      <div class="pg-raster">
+        <div class="kasten pg-plan">
+          <p class="unterkopf" style="margin:0 0 6px">Mi 20.01.2027 · Tagesplan</p>
+          <p class="meta" style="margin:0 0 8px;font-size:.8rem">Sortiert nach Uhrzeit. Workshop-Termine und offene Stationen hängen automatisch unter dem Zeitfenster, in dessen Zeit sie liegen. Neue Punkte erscheinen oben hell-lila und werden an ihre Stelle gezogen; die Uhrzeit wird dabei vorgeschlagen.</p>
+          <p class="meta" style="margin:0 0 8px;font-size:.8rem">Markiert: <span class="st ges">✎ gespeichert · nicht veröffentlicht</span> <span class="st neu">+ neu</span> – alles ohne Markierung ist veröffentlicht.</p>
+          <ol class="pg-liste" id="pg-liste"></ol>
+        </div>
+        <div class="kasten pg-form">
+          <div class="stat-kopf"><h3 class="zwischen">WS 01 bearbeiten</h3><span class="st pub">✓ veröffentlicht</span></div>
+          <div class="paar">
+            <div class="feld"><label for="pg-typ">Typ</label><select id="pg-typ"><optgroup label="Inhalte"><option>Vortrag (VT, lila)</option><option>Fallbesprechung (FB, rot)</option><option selected>Workshop (WS, rot · mit Terminen und Plätzen)</option><option>Offene Station (ohne Anmeldung)</option></optgroup><optgroup label="Rahmen"><option>Workshop-Block (Zeitfenster)</option><option>Pause / Info</option></optgroup></select><span class="hilfe">Ein Workshop ist der Inhalt mit Kürzel WS und eigenen Terminen. Ein Workshop-Block ist nur ein Zeitfenster ohne Kürzel – er sammelt alle Termine, die in seiner Zeit liegen.</span></div>
+            <div class="feld"><label for="pg-kz">Kürzel</label><input id="pg-kz" type="text" value="WS 01"><span class="hilfe">Vorschlag automatisch, änderbar</span></div>
+          </div>
+          <div class="feld"><label for="pg-titel">Titel</label><input id="pg-titel" type="text" value="Atemweg. Plan B."></div>
+          <div class="feld"><label for="pg-unter">Untertitel</label><input id="pg-unter" type="text" value="Schwieriger Atemweg präklinisch und im Schockraum"></div>
+          <div class="feld"><label for="pg-text">Beschreibung</label><textarea id="pg-text" rows="3">Videolaryngoskop, Larynxtubus, Koniotomie am Modell. Jede und jeder macht es mindestens einmal selbst.</textarea></div>
+          <div class="paar">
+            <div class="feld"><label for="pg-ort">Ort</label><input id="pg-ort" type="text" value="Skills-Lab 1"></div>
+            <div class="feld"><label for="pg-bring">Bring (optional)</label><input id="pg-bring" type="text" value="Stethoskop"></div>
+          </div>
+          <div class="feld"><label>Leitung / Dozierende (optional)</label>
+            <div class="tags"><span class="tag">Dr. C. Beispiel <button type="button" aria-label="entfernen">✕</button></span><span class="tag">D. Muster <button type="button" aria-label="entfernen">✕</button></span><button type="button" class="mini">+ hinzufügen</button></div>
+            <span class="hilfe">Aus der Liste der Dozierenden – Name, Funktion, Kurzbio und Foto pflegst du dort einmal.</span></div>
+          <div class="feld"><label for="pg-notiz">Notiz vom Team (optional, erscheint als Zettel)</label><input id="pg-notiz" type="text" value="Handschuhe gibt's vor Ort. Brille mitbringen."></div>
+          <p class="unterkopf">Termine</p>
+          <div class="tabelle-wrap"><table class="t pg-termine">
+            <thead><tr><th>Beginn</th><th>Ende</th><th>Plätze</th><th>Belegt</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><input type="text" value="11:15" aria-label="Beginn"></td><td><input type="text" value="12:45" aria-label="Ende"></td><td><input type="text" value="12" aria-label="Plätze"></td><td class="n">12 · WL 3</td><td><button type="button" class="mini">Duplizieren</button></td></tr>
+              <tr class="warnung"><td><input type="text" value="13:45" aria-label="Beginn"></td><td><input type="text" value="15:15" aria-label="Ende"></td><td><input type="text" value="6" aria-label="Plätze"></td><td class="n">8</td><td><button type="button" class="mini">Duplizieren</button></td></tr>
+            </tbody>
+          </table></div>
+          <div class="pruef"><span class="chip wl">Prüfung</span> Termin 13:45: 6 Plätze, aber schon 8 vergeben. Plätze können nicht unter die vergebenen gesenkt werden – zuerst Personen umbuchen. <span class="meta">(AP-3)</span></div>
+          <div class="pruef leicht"><span class="chip offen">Hinweis</span> Skills-Lab 1 ist 13:45–14:30 auch für „Offene Station“ eingetragen – Raum doppelt belegt?</div>
+          <button type="button" class="mini" style="justify-self:start">+ Termin</button>
+          <div class="aktionen"><button class="knopf" type="button">Speichern</button><button class="knopf zweit" type="button">Abbrechen</button><button class="knopf gefahr" type="button" style="margin-left:auto">Programmpunkt löschen</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Mailings ===== -->
+  <section class="seite" data-seite="t-mailings" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Mailings</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Stand Mi 06.01.2027, 09:12</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="t-mailings"></nav>
+      <div class="ml-raster">
+        <div class="kasten ml-editor">
+          <div class="feld"><label>An</label>
+            <div class="filter" role="group" aria-label="Empfängerart"><button type="button" aria-pressed="true">Teilnehmende des Symposiums</button><button type="button" aria-pressed="false">Newsletter-Liste</button></div></div>
+          <div class="paar">
+            <div class="feld"><label for="ml-filter">Auswahl</label><select id="ml-filter"><option>Alle Angemeldeten</option><option selected>Workshop-Termin: WS 01 11:15–12:45</option><option>Warteliste (alle)</option><option>Berufsgruppe: NotfallsanitäterIn</option><option>Ohne Essen</option></select></div>
+            <div class="feld"><label for="ml-abs">Absender</label><select id="ml-abs"><option selected>Wintersymposium &lt;anmeldung@…&gt;</option><option>Allgäu Akut &lt;newsletter@…&gt;</option></select></div>
+          </div>
+          <p class="empf"><strong class="mono">12</strong> Empfänger · <a href="#a-t-mailings">Liste ansehen</a></p>
+          <div class="feld"><label for="ml-betreff">Betreff</label><input id="ml-betreff" type="text" value="WS 01 Atemweg: Raumänderung"></div>
+          <div class="werkzeug" role="toolbar" aria-label="Formatierung">
+            <button type="button" title="Fett"><b>B</b></button><button type="button" title="Kursiv"><i>I</i></button><button type="button" title="Überschrift">H</button><span class="trenn"></span>
+            <button type="button" title="Liste">• Liste</button><button type="button" title="Link">Link</button><button type="button" title="Bild einfügen" id="ml-bild">Bild</button><button type="button" title="Button einfügen">Button</button><span class="trenn"></span>
+            <button type="button" title="Platzhalter">{vorname}</button><button type="button" title="Platzhalter">{workshops}</button><button type="button" title="Platzhalter">{link}</button><span class="trenn"></span><button type="button" title="HTML-Quelltext bearbeiten">&lt;/&gt; HTML</button>
+          </div>
+          <div class="schreibfeld" contenteditable="true" aria-label="Text der Mail" id="ml-text">
+            <p>Hallo {vorname},</p>
+            <p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> am Mittwoch um 11:15 findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>
+            <figure class="ml-figur"><div class="ml-bild" aria-label="Bild: Lageplan">Lageplan.png · 640 × 320</div><figcaption>Bild · <button type="button" class="mini">ersetzen</button> <button type="button" class="mini">entfernen</button> Breite: <button type="button" class="mini">50 %</button><button type="button" class="mini">100 %</button></figcaption></figure>
+            <p>Alles andere bleibt. Wir freuen uns auf dich!</p>
+            <p><span class="ml-knopf">Deine Anmeldung ansehen</span></p>
+            <p>Dein Orga-Team</p>
+          </div>
+          <p class="meta" style="font-size:.8rem;margin:0">Bilder werden hochgeladen und auf dieser Webseite gespeichert (JPG/PNG, verkleinert auf max. 1200 px), dann direkt in die Mail eingebettet – keine fremden Server. HTML ist möglich, erlaubt sind nur einfache Elemente (Text, Überschrift, Liste, Link, Bild, Button). Abmeldelink und Impressum hängt die App automatisch an.</p>
+          <div class="aktionen">
+            <button class="knopf zweit" type="button">Testmail an mich</button>
+            <button class="knopf zweit" type="button">Entwurf speichern</button>
+            <button class="knopf zweit" type="button">Planen …</button>
+            <button class="knopf" type="button" style="margin-left:auto">An 12 senden</button>
+          </div>
+        </div>
+        <div style="display:grid;gap:16px;align-content:start">
+          <div class="kasten">
+            <div class="stat-kopf"><h3 class="zwischen">Vorschau</h3><div class="filter" role="group" aria-label="Vorschau"><button type="button" aria-pressed="true">Handy</button><button type="button" aria-pressed="false">Desktop</button></div></div>
+            <div class="ml-vorschau"><p class="mono meta" style="font-size:.72rem;margin:0">Von: Wintersymposium · An: Lea Beispiel</p><p style="margin:6px 0;font-weight:700">WS 01 Atemweg: Raumänderung</p><p style="margin:0">Hallo Lea,</p><p style="margin:6px 0 0">dein Workshop <b>WS 01</b> am Mittwoch um 11:15 findet im <b>Hörsaal-Nebenraum (EG)</b> statt …</p><div class="ml-bild klein">Lageplan</div><span class="ml-knopf">Deine Anmeldung ansehen</span><p class="mono meta" style="font-size:.66rem;margin:8px 0 0">Impressum · Datenschutz</p></div>
+          </div>
+          <div class="kasten">
+            <h3 class="zwischen" style="font-size:1.1rem">Versand</h3>
+            <p style="margin:6px 0 0;font-size:.9rem">Tageskontingent Newsletter-Postfach: <strong class="mono">120 / 450</strong> heute verbraucht. Diese Mail geht sofort raus. Größere Rundmails verteilt die App auf mehrere Tage; Bestätigungen und Einmal-Links haben immer Vorrang.</p>
+          </div>
+          <div class="kasten">
+            <h3 class="zwischen" style="font-size:1.1rem">Zuletzt gesendet</h3>
+            <table class="t kompakt"><tbody>
+              <tr><td><button type="button" class="ml-alt" data-ml="0">Anfahrt und Parken</button></td><td class="n">142</td><td class="n meta">04.01.</td></tr>
+              <tr><td><button type="button" class="ml-alt" data-ml="1">Erinnerung: Essen wählen</button></td><td class="n">23</td><td class="n meta">02.01.</td></tr>
+              <tr><td><button type="button" class="ml-alt" data-ml="2">Newsletter Dezember</button></td><td class="n">88</td><td class="n meta">15.12.</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Team: Teilnahme ===== -->
+  <section class="seite" data-seite="t-teilnahme" hidden>
+    <div class="innen team-kopf">
+      <div><p class="kicker">Team-Bereich</p><h2 class="titel">Teilnahme</h2></div>
+      <div class="wer"><span class="mono meta" style="font-size:.85rem">Mi 20.01.2027, 08:41 · Veranstaltungstag</span></div>
+    </div>
+    <div class="innen">
+      <nav class="team-nav" aria-label="Team-Bereich" data-aktiv="t-teilnahme"></nav>
+      <div class="kacheln" style="margin-bottom:16px">
+        <div class="kachel"><div class="lbl">Teilgenommen</div><div class="zahl">140 <small>/ 142</small></div><div class="meter" aria-hidden="true"><i style="width:98.6%"></i></div></div>
+        <div class="kachel"><div class="lbl">Nicht erschienen</div><div class="zahl">2</div></div>
+        <div class="kachel"><div class="lbl">EFN vorhanden</div><div class="zahl">27 <small>/ 38</small></div><div class="meta" style="font-size:.82rem">ÄrztInnen</div></div>
+        <div class="kachel"><div class="lbl">Zertifikate</div><div class="zahl">–</div><div class="meta" style="font-size:.82rem">nach Freischaltung</div></div>
+      </div>
+      <div class="tn-raster">
+        <div class="kasten" style="display:grid;gap:10px">
+          <div class="stat-kopf"><h3 class="zwischen">Nicht erschienen</h3><span class="chip offen">Vorschlag</span></div>
+          <p style="margin:0">Standard: <strong>Wer angemeldet ist, gilt als anwesend.</strong> Ihr tragt nur Ausnahmen ein – z. B. wer auf der Unterschriftenliste fehlt oder abgesagt hat, ohne zu stornieren. Diese Personen bekommen keine Teilnahmebescheinigung und keine CME-Meldung.</p>
+          <label class="sr" for="tn-suche">Person suchen</label><input id="tn-suche" type="text" placeholder="Name suchen und als „nicht erschienen“ markieren">
+          <ul class="tn-liste">
+            <li><span><strong>Cem Beispiel</strong> <span class="meta">Pflege · Klinikum Kempten</span></span><button type="button" class="mini">Doch anwesend</button></li>
+            <li><span><strong>Tom Beispielmann</strong> <span class="meta">NotSan · RD Lindau</span></span><button type="button" class="mini">Doch anwesend</button></li>
+          </ul>
+          <p class="meta" style="margin:0;font-size:.84rem">Nachweis für die Kammer bleibt die unterschriebene Liste (rechts drucken). Frist zum Eintragen: bis zur Freischaltung der Bescheinigungen.</p>
+        </div>
+        <div class="kasten" style="display:grid;gap:12px">
+          <h3 class="zwischen">Listen drucken (PDF)</h3>
+          <div class="pdf-opt">
+            <label class="haken"><input type="radio" name="pdfart" checked><span><strong>Unterschriftenliste</strong><br><span class="meta">Name, Berufsgruppe, Institution, Unterschrift · bei „Nur ÄrztInnen“ zusätzlich EFN · A4 hoch</span></span></label>
+            <label class="haken"><input type="radio" name="pdfart"><span><strong>Teilnehmendenliste je Workshop-Termin</strong><br><span class="meta">eine Seite je Termin, mit Feld zum Abhaken · für die Leitung</span></span></label>
+            <label class="haken"><input type="radio" name="pdfart"><span><strong>Warteliste je Termin</strong><br><span class="meta">für die Tür: wer nachrücken kann, falls jemand fehlt</span></span></label>
+          </div>
+          <div class="paar">
+            <div class="feld"><label for="pdf-wer">Personen</label><select id="pdf-wer"><option value="alle">Alle Angemeldeten (142)</option><option value="arzt" selected>Nur ÄrztInnen (38)</option><option value="offen">Ohne „nicht erschienen“ (140)</option></select></div>
+            <div class="feld"><label for="pdf-sort">Sortierung</label><select id="pdf-sort"><option value="nach" selected>Nachname A–Z</option><option value="vor">Vorname A–Z</option><option value="beruf">Berufsgruppe, dann Name</option><option value="inst">Institution, dann Name</option></select></div>
+            <div class="feld" id="pdf-efn-feld"><label for="pdf-efn">EFN-Spalte</label><select id="pdf-efn"><option selected>Barcode drucken, sonst Feld für Etikett</option><option>Nur Ziffern</option><option>Ohne EFN</option></select></div>
+          </div>
+          <div class="aktionen"><button class="knopf" type="button">PDF erzeugen</button><button class="knopf zweit" type="button">Alle Workshop-Listen als ein PDF</button></div>
+          <p class="unterkopf">Vorschau Seite 1</p>
+          <div class="a4" aria-label="Vorschau Unterschriftenliste">
+            <div class="a4-kopf"><span><b>Wintersymposium Notfallmedizin</b><br>Mi 20.01.2027 · Unterschriftenliste</span><span class="mono">Seite 1/6</span></div>
+            <table class="a4-tab"><thead id="a4-kopf"></thead>
+            <tbody id="a4-zeilen"></tbody></table>
+            <div class="a4-fuss">Mit meiner Unterschrift bestätige ich die Teilnahme. · VNR 2760…(Beispiel) · ALLGÄU AKUT</div>
+          </div>
+          <p class="meta" style="margin:0;font-size:.82rem">Ist eine EFN hinterlegt, druckt die App den Barcode direkt auf die Liste – zum Einscannen für die Meldung an die Kammer. Fehlt sie, bleibt ein Kästchen für das EFN-Etikett vom Fortbildungsausweis.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <dialog class="popup" id="popup" aria-labelledby="popup-titel">
+    <div class="popup-innen">
+      <button type="button" class="popup-zu" id="popup-zu" aria-label="Schließen">✕</button>
+      <div id="popup-inhalt"></div>
+    </div>
+  </dialog>
+
+  <footer class="fuss"><div class="innen">
+    <span>ALLGÄU AKUT – Fortbildung Notfallmedizin</span>
+    <nav aria-label="Rechtliches"><a href="#a-start">Impressum</a><a href="#a-start">Datenschutz</a><a href="#a-start">Quelltext (AGPL)</a></nav>
+  </div></footer>
+</div>
+</div>
+</div>
+
+<script>
+(function () {
+  var PROGRAMM = [
+    { z: "08:30", e: "09:00", art: "info", t: "Ankommen, Kaffee, Namensschild", o: "Foyer" },
+    { z: "09:00", e: "09:15", art: "info", t: "Begrüßung", o: "Hörsaal" },
+    { z: "09:15", e: "10:00", art: "VT", nr: "VT 01", t: "Sepsis. Uhr läuft.", u: "Die erste Stunde in der Notaufnahme¹", w: "Dr. A. Beispiel", o: "Hörsaal", txt: "Was in den ersten 60 Minuten wirklich zählt: Erkennen, Laktat, Kulturen, Antibiose, Volumen. Mit Zahlen aus der eigenen Notaufnahme und den Stolpersteinen an der Schnittstelle zum Rettungsdienst.", doz: [{ n: "Dr. A. Beispiel", f: "Oberärztin, Zentrale Notaufnahme", b: "Seit 12 Jahren in der Notaufnahme, Schwerpunkt Sepsis und Qualitätsmanagement." }] },
+    { z: "10:00", e: "10:45", art: "VT", nr: "VT 02", t: "Schockraum ohne Drama", u: "Übergabe Rettungsdienst → Notaufnahme in 60 Sekunden", w: "B. Muster, NotSan", o: "Hörsaal", txt: "Eine Übergabe, die jede und jeder versteht: Struktur, Reihenfolge, wer redet wann. Mit Videobeispielen aus dem Training.", doz: [{ n: "B. Muster", f: "Notfallsanitäter, Praxisanleiter", b: "Rettungswache Kempten, Ausbilder für Übergabetraining." }, { n: "Dr. H. Beispiel", f: "Leitender Notarzt", b: "" }] },
+    { z: "10:45", e: "11:15", art: "pause", t: "Pause" },
+    { z: "11:15", e: "12:45", art: "ws", t: "Workshop-Block vormittags" },
+    { z: "12:45", e: "13:45", art: "pause", t: "Mittagessen" },
+    { z: "13:45", e: "15:15", art: "ws", t: "Workshop-Block nachmittags" },
+    { z: "15:30", e: "16:15", art: "FB", nr: "FB 01", t: "Fall #12", u: "Was hättest du gemacht?", o: "Hörsaal", txt: "Ein echter Fall aus dem Allgäu, anonymisiert. Wir gehen ihn Schritt für Schritt durch – du entscheidest mit. Fehlerkultur statt Heldengeschichte.", doz: [] },
+    { z: "16:15", e: "16:30", art: "info", t: "Abschluss" }
+  ];
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function min(z) { var t = z.split(":"); return Number(t[0]) * 60 + Number(t[1]); }
+  function dauer(t) { return min(t.bis) - min(t.von); }
+  var WSD = [
+    { nr: "WS 01", titel: "Atemweg.<br>Plan B.", raum: "Skills-Lab 1", max: 12, bring: "Stethoskop",
+      text: "Schwieriger Atemweg präklinisch und im Schockraum: Videolaryngoskop, Larynxtubus, Koniotomie am Modell. Jede und jeder macht es mindestens einmal selbst.",
+      notiz: "Handschuhe gibt's vor Ort. Wer eine Brille braucht: mitbringen – die Koniotomie spritzt (Kunstblut).",
+      leitung: "Dr. C. Beispiel, Notärztin · D. Muster, NotSan", wer: "Alle Berufsgruppen. Keine Vorkenntnisse nötig, Routiniers lernen trotzdem was.",
+      termine: [{ id: "1a", von: "11:15", bis: "12:45", belegt: 12, wl: 3 }, { id: "1b", von: "13:45", bis: "15:15", belegt: 8, wl: 0 }] },
+    { nr: "WS 02", titel: "Kleine<br>PatientInnen.", raum: "Seminarraum 2", max: 12, bring: "Dosis-Tabelle",
+      text: "Kindernotfälle ohne Panik: Dosis nach Gewicht, intraossärer Zugang, Ruhe in den Raum bringen. Kurz und knackig in 45 Minuten, viermal am Tag.",
+      notiz: "Bring deine Dosierhilfe mit, falls du eine im Alltag nutzt – wir vergleichen.",
+      leitung: "E. Beispiel, Kinderkrankenpflege · Dr. F. Muster", wer: "Alle, die Kinder versorgen – auch wenn es selten vorkommt.",
+      termine: [{ id: "2a", von: "11:15", bis: "12:00", belegt: 10, wl: 0 }, { id: "2b", von: "12:00", bis: "12:45", belegt: 12, wl: 2 }, { id: "2c", von: "13:45", bis: "14:30", belegt: 5, wl: 0 }, { id: "2d", von: "14:30", bis: "15:15", belegt: 3, wl: 0 }] },
+    { nr: "WS 03", titel: "eFAST im<br>Schnelldurchlauf", raum: "Skills-Lab 2", max: 10, bring: "nichts",
+      text: "Ultraschall bei Trauma und Schock: Freie Flüssigkeit, Pneumothorax, Perikarderguss. Viel Schallen, wenig Folien.",
+      notiz: "Wir schallen uns gegenseitig. Zieh etwas an, bei dem du den Bauch freimachen kannst.",
+      leitung: "", wer: "ÄrztInnen und Pflege aus der Notaufnahme; NotSan willkommen.",
+      termine: [{ id: "3a", von: "11:15", bis: "12:15", belegt: 5, wl: 0 }, { id: "3b", von: "13:45", bis: "14:45", belegt: 10, wl: 1 }] }
+  ];
+  var FREI = [
+    { t: "Reanimation im Kreis", von: "11:15", bis: "12:45", o: "Foyer" },
+    { t: "Ultraschall-Phantom frei üben", von: "13:45", bis: "15:15", o: "Skills-Lab 3" }
+  ];
+  var wsAktiv = 0;
+  function wsZeigen(i) {
+    wsAktiv = i; var w = WSD[i];
+    document.getElementById("wsd-nr").textContent = w.nr;
+    document.getElementById("wsd-raum").textContent = w.raum;
+    document.getElementById("wsd-titel").innerHTML = w.titel;
+    document.getElementById("wsd-text").textContent = w.text;
+    document.getElementById("wsd-bring").textContent = "Bring: [ " + w.bring + " ]";
+    document.getElementById("wsd-max").textContent = w.max;
+    document.getElementById("wsd-notiz").textContent = w.notiz;
+    document.getElementById("wsd-leitung").textContent = w.leitung;
+    document.getElementById("wsd-leitung-kasten").hidden = !w.leitung;
+    document.getElementById("wsd-wer").textContent = w.wer;
+    document.getElementById("wsd-termine").innerHTML = w.termine.map(function (t) {
+      var frei = w.max - t.belegt, voll = frei <= 0;
+      return '<div class="kasten"><div class="termin"><span class="mono">' + esc(t.von + '–' + t.bis + ' · ' + dauer(t) + ' min') + '</span><span class="status ' + (voll ? "voll" : "frei") + '">' + (voll ? "Voll · Warteliste " + t.wl : frei + " von " + w.max + " frei") + '</span></div>'
+        + '<div class="balken" aria-hidden="true"><i style="width:' + Math.round(100 * t.belegt / w.max) + '%"></i></div>'
+        + (voll ? '<p class="meta" style="margin:10px 0 0;font-size:.9rem">Du kommst auf die Warteliste. Wird ein Platz frei, bekommst du ein Angebot per Mail und hast 48 Stunden Zeit.</p><p style="margin:12px 0 0"><a class="knopf zweit" href="#a-anmeldung" data-link="anmeldung">Auf die Warteliste</a></p>'
+                : '<p style="margin:12px 0 0"><a class="knopf" href="#a-anmeldung" data-link="anmeldung">Diesen Termin wählen</a></p>') + "</div>";
+    }).join("");
+    document.querySelectorAll("#wsauswahl button").forEach(function (b, j) { b.setAttribute("aria-current", String(j === i)); });
+    document.querySelectorAll("#wsd-termine a[data-link]").forEach(function (a) { a.setAttribute("href", "#" + zustand.v + "-anmeldung"); });
+  }
+  document.getElementById("wsauswahl").innerHTML = WSD.map(function (w, i) {
+    var r = w.termine.map(function (t) { var f = w.max - t.belegt; return t.von + " " + (f > 0 ? f + " frei" : "WL"); }).join(" · ");
+    return '<button type="button" data-wsi="' + i + '"><span class="format rot" style="align-self:flex-start">' + esc(w.nr) + "</span><strong>" + w.titel.replace("<br>", " ") + '</strong><span class="runden">' + esc(r) + "</span></button>";
+  }).join("");
+  document.getElementById("wsauswahl").addEventListener("click", function (ev) { var b = ev.target.closest("button[data-wsi]"); if (b) wsZeigen(Number(b.getAttribute("data-wsi"))); });
+
+  var ol = document.getElementById("programm");
+  ol.innerHTML = PROGRAMM.map(function (p) {
+    var cls = "pp" + (p.art === "pause" ? " pause" : "") + (p.art === "info" ? " ablauf" : "") + (p.art === "ws" ? " wsblock" : "");
+    var titel = p.txt ? '<button type="button" class="pp-link" data-pp="' + PROGRAMM.indexOf(p) + '">' + esc(p.t) + ' <span class="pp-mehr">Infos</span></button>' : esc(p.t);
+    var kopf = '<div class="titelzeile">' + (p.nr ? '<span class="format' + (p.art === "FB" ? " rot" : "") + '">' + esc(p.nr) + "</span>" : "") + "<h3>" + titel + "</h3></div>";
+    var rest = "";
+    if (p.u) rest += "<p>" + esc(p.u) + "</p>";
+    if (p.w || p.o) rest += '<p class="meta" style="font-size:.9rem">' + esc([p.w, p.o].filter(Boolean).join(" · ")) + "</p>";
+    if (p.art === "ws") {
+      var v0 = min(p.z), v1 = min(p.e), sp = v1 - v0;
+      function pos(t) { return "left:" + ((min(t.von) - v0) / sp * 100) + "%;width:" + ((min(t.bis) - min(t.von)) / sp * 100) + "%"; }
+      var skala = ""; for (var m = v0; m <= v1; m += 15) { var hh = Math.floor(m / 60), mm = m % 60; skala += '<span style="left:' + ((m - v0) / sp * 100) + '%">' + (mm === 0 || mm === 30 ? hh + ":" + (mm < 10 ? "0" : "") + mm : "") + "</span>"; }
+      var zeilen = WSD.map(function (w, i) {
+        var balken = w.termine.filter(function (t) { return min(t.von) >= v0 && min(t.bis) <= v1; }).map(function (t) {
+          var f = w.max - t.belegt;
+          return '<a class="gb ' + (f > 0 ? "frei" : "voll") + '" style="' + pos(t) + '" href="#a-workshop" data-popup-ws="' + i + ':' + t.id + '" title="' + w.nr + " " + t.von + "–" + t.bis + '"><b>' + t.von + "</b> " + (f > 0 ? f + " frei" : "WL") + "</a>";
+        }).join("");
+        return '<div class="gz"><a class="gl" href="#a-workshop" data-popup-ws="' + i + ':"><span class="format rot">' + w.nr + "</span> " + w.titel.replace("<br>", " ") + '</a><div class="gs">' + balken + "</div></div>";
+      }).join("");
+      var offen = FREI.filter(function (f) { return min(f.von) >= v0 && min(f.bis) <= v1; });
+      zeilen += offen.map(function (f) {
+        return '<div class="gz"><span class="gl"><span class="format offen">OFFEN</span> ' + esc(f.t) + '</span><div class="gs"><span class="gb offen" style="' + pos(f) + '"><b>' + f.von + "–" + f.bis + "</b> ohne Anmeldung · " + esc(f.o) + "</span></div></div>";
+      }).join("");
+      var mobil = [];
+      WSD.forEach(function (w, i) { w.termine.forEach(function (t) { if (min(t.von) >= v0 && min(t.bis) <= v1) mobil.push({ w: w, i: i, t: t }); }); });
+      offen.forEach(function (f) { mobil.push({ f: f, t: f }); });
+      mobil.sort(function (a, b) { return min(a.t.von) - min(b.t.von) || (a.f ? 1 : 0) - (b.f ? 1 : 0); });
+      rest += '<ul class="ws-mobil">' + mobil.map(function (m) {
+        if (m.f) return '<li class="offen"><span class="mono">' + m.f.von + "–" + m.f.bis + '</span><span><span class="format offen">OFFEN</span> ' + esc(m.f.t) + '<br><span class="meta" style="font-size:.8rem">ohne Anmeldung · ' + esc(m.f.o) + "</span></span></li>";
+        var fr = m.w.max - m.t.belegt;
+        return '<li><a href="#a-workshop" data-popup-ws="' + m.i + ":" + m.t.id + '"><span class="mono">' + m.t.von + "–" + m.t.bis + '<br><small>' + dauer(m.t) + ' min</small></span><span><span class="format rot">' + m.w.nr + "</span> " + m.w.titel.replace("<br>", " ") + '<br><span class="chip ' + (fr > 0 ? "ok" : "wl") + '">' + (fr > 0 ? fr + " frei" : "voll · WL " + m.t.wl) + '</span></span><span class="pfeil" aria-hidden="true">›</span></a></li>';
+      }).join("") + "</ul>";
+      rest += '<div class="gantt-wrap"><div class="gantt"><div class="gz kopf"><span class="gl"></span><div class="gs skala">' + skala + "</div></div>" + zeilen + '</div></div><p class="meta" style="font-size:.85rem;margin:8px 0 0">Balken antippen für Infos und Anmeldung. Offene Stationen laufen parallel – einfach vorbeikommen, keine Anmeldung.</p>';
+    }
+    return '<li class="' + cls + '"><div class="zeit">' + esc(p.z) + "<small>" + esc(p.e) + "</small></div><div>" + kopf + rest + "</div></li>";
+  }).join("");
+
+  var INFO = {
+    a: "<strong>A · Plakat:</strong> laut und frech im dunklen Modus. Riesige Anton-Titel, Sticker und Klebeband, Lila als Hauptakzent. Am nächsten an Social Media und Flyern.",
+    b: "<strong>B · Programmheft:</strong> heller Modus, ruhig und gut lesbar. Großes Datum, Programm als sauberes Heft, Akzente nur in Linien und Schrift. Wirkt seriöser, weniger Reihen-Charakter.",
+    c: "<strong>C · Dienstplan:</strong> dunkel und strukturiert wie eine Anzeigetafel. Viel Mono-Schrift, Raster mit Linien, Status-Zeile oben. Betont Zeiten und freie Plätze."
+  };
+  var site = document.getElementById("site"), geraet = document.getElementById("geraet");
+  var zustand = { v: "a", s: "start" };
+  var SEITEN = ["start", "workshop", "anmeldung", "zugang", "meine", "team", "personen", "statistik", "t-workshops", "t-programm", "t-mailings", "t-teilnahme"];
+
+  function zeigen() {
+    site.className = "site v-" + zustand.v;
+    site.setAttribute("data-seite", zustand.s);
+    var teamSeite = ["team", "personen", "statistik", "t-workshops", "t-programm", "t-mailings", "t-teilnahme"].indexOf(zustand.s) >= 0;
+    site.classList.toggle("erkannt", zustand.s === "meine" || teamSeite);
+    var nn = document.getElementById("nav-name");
+    nn.innerHTML = teamSeite ? 'P. Beispiel <span class="rolle-tag">' + (zustand.s === "personen" ? "Betreiber" : "Admin") + "</span>" : "Lea B.";
+    nn.setAttribute("href", "#" + zustand.v + "-" + (teamSeite ? "team" : "meine")); nn.setAttribute("data-link", teamSeite ? "team" : "meine");
+    document.querySelectorAll(".seite").forEach(function (el) { el.hidden = el.getAttribute("data-seite") !== zustand.s; });
+    document.querySelectorAll("[data-variante]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-variante") === zustand.v)); });
+    document.querySelectorAll("button[data-ziel]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-ziel") === zustand.s)); });
+    document.querySelectorAll(".nav a[data-link]").forEach(function (a) { if (a.getAttribute("data-link") === zustand.s && !a.classList.contains("knopf")) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    document.querySelectorAll("a[data-link]").forEach(function (a) { a.setAttribute("href", "#" + zustand.v + "-" + a.getAttribute("data-link")); });
+    document.getElementById("info").innerHTML = "Gewählte Richtung: <strong>A · Plakat</strong> – dunkel, Lila als Hauptakzent, Workshop-Seiten in Signalrot. Alle Inhalte sind Beispiele.";
+  }
+  function ausHash() {
+    var m = /^#([abc])-([a-z-]+)$/.exec(location.hash || "");
+    if (m && SEITEN.indexOf(m[2]) >= 0) { zustand.v = "a"; zustand.s = m[2]; }
+    zeigen();
+  }
+  function setzen(v, s) { zustand.v = v; zustand.s = s; var h = "#" + v + "-" + s; if (location.hash !== h) location.hash = h; else zeigen(); }
+
+  document.querySelectorAll("[data-variante]").forEach(function (b) { b.addEventListener("click", function () { setzen(b.getAttribute("data-variante"), zustand.s); }); });
+  document.querySelectorAll("button[data-ziel]").forEach(function (b) { b.addEventListener("click", function () { setzen(zustand.v, b.getAttribute("data-ziel")); }); });
+  document.querySelectorAll("button[data-geraet]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      geraet.setAttribute("data-geraet", b.getAttribute("data-geraet"));
+      document.querySelectorAll("button[data-geraet]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    });
+  });
+  site.addEventListener("click", function (ev) {
+    var a = ev.target.closest("a[data-link]");
+    if (a) { ev.preventDefault(); if (a.hasAttribute("data-wsi")) wsZeigen(Number(a.getAttribute("data-wsi"))); setzen(zustand.v, a.getAttribute("data-link")); geraet.scrollIntoView({ block: "start" }); }
+  });
+  window.addEventListener("hashchange", ausHash);
+
+  var wahl = { fest: { 0: "1b", 1: "2a" }, wl: { "1a": true } };
+  function terminVon(id) { for (var i = 0; i < WSD.length; i++) for (var j = 0; j < WSD[i].termine.length; j++) if (WSD[i].termine[j].id === id) return { w: WSD[i], wi: i, t: WSD[i].termine[j] }; }
+  function ueberlappt(a, b) { return min(a.von) < min(b.bis) && min(b.von) < min(a.bis); }
+  function wahlZeichnen() {
+    var festeListe = Object.keys(wahl.fest).map(function (k) { return wahl.fest[k] && terminVon(wahl.fest[k]); }).filter(Boolean);
+    document.getElementById("ws-wahl").innerHTML = WSD.map(function (w, wi) {
+      var fest = "", warte = "";
+      w.termine.forEach(function (t) {
+        var frei = w.max - t.belegt, voll = frei <= 0, eigen = wahl.fest[wi] === t.id;
+        var konflikt = festeListe.filter(function (f) { return f.wi !== wi && ueberlappt(f.t, t); })[0];
+        var zeit = '<span class="zeit-chip">' + t.von + "–" + t.bis + '</span> <span class="meta">· ' + dauer(t) + " min</span>";
+        if (voll) {
+          var an = !!wahl.wl[t.id];
+          warte += '<label class="wl-zeile' + (an ? " an" : "") + '"><input class="sr" type="checkbox" data-wl="' + t.id + '"' + (an ? " checked" : "") + "><span>" + zeit + '<span class="grund">Voll · ' + t.wl + (t.wl === 1 ? ' Person wartet' : ' Personen warten') + '</span></span><span class="rechts wl-toggle">' + (an ? "✓ Auf der Warteliste" : "+ Warteliste") + "</span></label>";
+          return;
+        }
+        var gesperrt = konflikt && !eigen;
+        fest += '<label' + (gesperrt ? ' class="gesperrt"' : "") + '><input type="radio" name="ws' + wi + '" data-fest="' + wi + ":" + t.id + '"' + (eigen ? " checked" : "") + (gesperrt ? " disabled" : "") + "><span>" + zeit + (gesperrt ? '<span class="grund">Überschneidet sich mit ' + konflikt.w.nr + " " + konflikt.t.von + "–" + konflikt.t.bis + "</span>" : "") + '</span><span class="rechts status frei">' + frei + " frei</span></label>";
+      });
+      fest += '<label><input type="radio" name="ws' + wi + '" data-fest="' + wi + ':"' + (!wahl.fest[wi] ? " checked" : "") + "><span>Keinen festen Platz</span></label>";
+      var opts = '<p class="unterkopf">Fester Platz <span class="meta">– wähle einen</span></p><div class="wahl">' + fest + "</div>"
+        + (warte ? '<p class="unterkopf">Warteliste für volle Termine <span class="meta">– du kannst auch mehrere markieren</span></p><div class="wahl">' + warte + "</div>" : "");
+      return '<div class="ws-gruppe"><div class="kopfzeile"><span class="format rot">' + w.nr + "</span><strong>" + w.titel.replace("<br>", " ") + '</strong><span class="meta" style="font-size:.85rem">' + w.raum + "</span></div>" + opts + "</div>";
+    }).join("");
+    var start = min("11:00"), spanne = min("16:00") - start, bl = [];
+    function blk(v, b, cls, txt) { bl.push('<span class="blk ' + cls + '" style="left:' + ((min(v) - start) / spanne * 100) + "%;width:" + ((min(b) - min(v)) / spanne * 100) + '%">' + txt + "</span>"); }
+    blk("12:45", "13:45", "essen", "Essen");
+    festeListe.forEach(function (f) { blk(f.t.von, f.t.bis, "", f.w.nr); });
+    Object.keys(wahl.wl).forEach(function (id) { if (wahl.wl[id]) { var f = terminVon(id); blk(f.t.von, f.t.bis, "wl", f.w.nr + " WL"); } });
+    document.getElementById("zeitleiste").innerHTML = bl.join("");
+    document.getElementById("zl-text").textContent = festeListe.map(function (f) { return f.w.nr + " " + f.t.von + "–" + f.t.bis; }).join(" · ") + (Object.keys(wahl.wl).some(function (k) { return wahl.wl[k]; }) ? " · gestrichelt = Warteliste" : "");
+  }
+  document.getElementById("ws-wahl").addEventListener("change", function (ev) {
+    var el = ev.target;
+    if (el.hasAttribute("data-fest")) { var t = el.getAttribute("data-fest").split(":"); wahl.fest[t[0]] = t[1] || null; }
+    if (el.hasAttribute("data-wl")) { wahl.wl[el.getAttribute("data-wl")] = el.checked; }
+    wahlZeichnen();
+  });
+  wahlZeichnen();
+
+  document.getElementById("angebot-annehmen").addEventListener("click", function () { document.getElementById("angebot-knoepfe").hidden = true; document.getElementById("angebot-bestaetigen").hidden = false; });
+  document.getElementById("tausch-nein").addEventListener("click", function () { document.getElementById("angebot-knoepfe").hidden = false; document.getElementById("angebot-bestaetigen").hidden = true; });
+  document.getElementById("tausch-ja").addEventListener("click", function () { document.getElementById("angebot-bestaetigen").innerHTML = '<p style="margin:0"><span class="chip ok">Erledigt</span> Mockup: Platz getauscht, Mail ist unterwegs.</p>'; });
+  var popup = document.getElementById("popup"), popupInhalt = document.getElementById("popup-inhalt");
+  function popupAuf(html, rot) { popupInhalt.innerHTML = html; popupInhalt.parentNode.classList.toggle("rot", !!rot); if (popup.showModal) popup.showModal(); else popup.setAttribute("open", ""); }
+  document.getElementById("popup-zu").addEventListener("click", function () { popup.close(); });
+  popup.addEventListener("click", function (ev) { if (ev.target === popup) popup.close(); });
+  function popupVortrag(p) {
+    var doz = (p.doz || []).map(function (d) { var ini = d.n.replace(/^Dr\. /, "").split(" ").map(function (x) { return x[0]; }).join(""); return '<div class="doz"><span class="foto" aria-hidden="true">' + esc(ini) + '</span><div><p><strong>' + esc(d.n) + '</strong></p><p class="meta" style="font-size:.9rem">' + esc(d.f) + "</p>" + (d.b ? '<p style="font-size:.92rem;margin-top:4px">' + esc(d.b) + "</p>" : "") + "</div></div>"; }).join("");
+    popupAuf('<p class="kicker"><span class="format' + (p.art === "FB" ? " rot" : "") + '">' + esc(p.nr) + '</span> &nbsp;' + (p.art === "FB" ? "Fallbesprechung" : "Vortrag") + '</p><h2 class="titel" id="popup-titel">' + esc(p.t) + '</h2><p class="mono" style="margin:0">' + p.z + "–" + p.e + " · " + esc(p.o || "") + "</p>" + (p.u ? '<p style="margin:0;font-weight:700">' + esc(p.u) + "</p>" : "") + "<p style=\"margin:0\">" + esc(p.txt) + "</p>" + (doz ? '<div><p class="unterkopf">' + (p.doz.length > 1 ? "Dozierende" : "Dozierende·r") + "</p>" + doz + "</div>" : "") + '<p class="meta" style="font-size:.88rem;margin:0">Vorträge brauchen keine eigene Anmeldung – sie gehören zur Symposium-Anmeldung.</p>', p.art === "FB");
+  }
+  function popupWorkshop(wi, tid) {
+    if (!tid) { return popupWorkshopAlle(wi); }
+    var w = WSD[wi], t = w.termine.filter(function (x) { return x.id === tid; })[0], f = w.max - t.belegt;
+    var andere = w.termine.filter(function (x) { return x.id !== tid; }).map(function (x) { var ff = w.max - x.belegt; return x.von + "–" + x.bis + " (" + (ff > 0 ? ff + " frei" : "Warteliste") + ")"; }).join(" · ");
+    popupAuf('<p class="kicker" style="color:#FF5A5F"><span class="format rot">' + w.nr + '</span> &nbsp;Workshop · ' + esc(w.raum) + '</p><h2 class="titel" id="popup-titel">' + w.titel.replace("<br>", " ") + '</h2><p class="mono" style="margin:0;font-size:1.05rem">' + t.von + "–" + t.bis + " · " + dauer(t) + ' min · <span class="chip ' + (f > 0 ? "ok" : "wl") + '">' + (f > 0 ? f + " von " + w.max + " frei" : "voll · " + t.wl + " warten") + "</span></p><p style=\"margin:0\">" + esc(w.text) + "</p>" + (w.leitung ? '<p style="margin:0"><strong>Leitung:</strong> ' + esc(w.leitung) + "</p>" : "") + '<p style="margin:0"><strong>Bring:</strong> ' + esc(w.bring) + '</p><p class="meta" style="margin:0;font-size:.88rem">Weitere Termine: ' + esc(andere) + '</p><div class="aktionen"><a class="knopf' + (f > 0 ? "" : " zweit") + '" href="#' + zustand.v + '-anmeldung" data-link="anmeldung" style="' + (f > 0 ? "background:#FF5A5F" : "") + '">' + (f > 0 ? "Diesen Termin wählen" : "Auf die Warteliste") + '</a><a class="knopf zweit" href="#' + zustand.v + '-workshop" data-link="workshop" data-wsi="' + wi + '">Alle Infos zum Workshop</a></div>', true);
+  }
+  function popupWorkshopAlle(wi) {
+    var w = WSD[wi];
+    var zeilen = w.termine.map(function (t) {
+      var f = w.max - t.belegt;
+      return '<div class="pt-zeile"><span class="mono">' + t.von + "–" + t.bis + '</span><span class="chip ' + (f > 0 ? "ok" : "wl") + '">' + (f > 0 ? f + " frei" : "voll · " + t.wl + " warten") + '</span><a class="knopf' + (f > 0 ? "" : " zweit") + ' klein" href="#' + zustand.v + '-anmeldung" data-link="anmeldung"' + (f > 0 ? ' style="background:#FF5A5F"' : "") + ">" + (f > 0 ? "Wählen" : "Warteliste") + "</a></div>";
+    }).join("");
+    popupAuf('<p class="kicker" style="color:#FF5A5F"><span class="format rot">' + w.nr + '</span> &nbsp;Workshop · ' + esc(w.raum) + '</p><h2 class="titel" id="popup-titel">' + w.titel.replace("<br>", " ") + "</h2><p style=\"margin:0\">" + esc(w.text) + "</p>" + (w.leitung ? '<p style="margin:0"><strong>Leitung:</strong> ' + esc(w.leitung) + "</p>" : "") + '<p style="margin:0"><strong>Bring:</strong> ' + esc(w.bring) + " · " + w.max + ' Plätze je Termin</p><p class="unterkopf">Termine</p><div class="pt-liste">' + zeilen + '</div><div class="aktionen"><a class="knopf zweit" href="#' + zustand.v + '-workshop" data-link="workshop" data-wsi="' + wi + '">Ganze Workshop-Seite</a></div>', true);
+  }
+  site.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-pp]"); if (b) { popupVortrag(PROGRAMM[Number(b.getAttribute("data-pp"))]); return; }
+    var g = ev.target.closest("[data-popup-ws]"); if (g) { ev.preventDefault(); ev.stopPropagation(); var x = g.getAttribute("data-popup-ws").split(":"); popupWorkshop(Number(x[0]), x[1]); }
+  }, true);
+  popupInhalt.addEventListener("click", function (ev) { if (ev.target.closest("a[data-link]")) popup.close(); });
+  // ---- Statistik ----
+  (function statistik() {
+    var tage = 43, werte = [], summe = 0;
+    for (var d = 0; d < tage; d++) { var zu = d === 0 ? 31 : d < 4 ? 9 - d * 1.5 : d > 38 ? 4 : 2 + ((d * 7) % 5) * 0.5; summe += zu; werte.push(summe); }
+    var faktor = 142 / summe; werte = werte.map(function (v) { return Math.round(v * faktor); }); werte[tage - 1] = 142;
+    var W = 900, H = 220, L = 34, R = 40, T = 12, B = 26, maxY = 180;
+    function x(i) { return L + i / (tage - 1) * (W - L - R); } function y(v) { return T + (1 - v / maxY) * (H - T - B); }
+    var g = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Anmeldungen kumuliert, von 31 am 25.11. auf 142 am 06.01.">';
+    [0, 60, 120, 180].forEach(function (v) { g += '<line class="raster" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + "</text>"; });
+    g += '<line class="hilfslinie" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(180) + '" y2="' + y(180) + '"/><text x="' + (W - R) + '" y="' + (y(180) - 4) + '" text-anchor="end">Kapazität 180</text>';
+    var start = new Date(Date.UTC(2026, 10, 25));
+    function datum(i) { var t = new Date(start.getTime() + i * 864e5); return ("0" + t.getUTCDate()).slice(-2) + "." + ("0" + (t.getUTCMonth() + 1)).slice(-2) + "."; }
+    [0, 7, 14, 21, 28, 35, 42].forEach(function (i) { g += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + datum(i) + "</text>"; });
+    var pfad = werte.map(function (v, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); }).join(" ");
+    g += '<path class="flaeche" d="' + pfad + " L" + x(tage - 1) + " " + y(0) + " L" + x(0) + " " + y(0) + ' Z"/><path class="linie" d="' + pfad + '"/>';
+    g += '<line class="achse" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '"/>';
+    g += '<line id="kreuz" class="hilfslinie" y1="' + T + '" y2="' + y(0) + '" x1="-10" x2="-10"/><circle id="kpunkt" class="punkt" r="5" cx="-10" cy="-10"/>';
+    g += '<g class="ende"><circle class="punkt" r="5" cx="' + x(tage - 1) + '" cy="' + y(142) + '"/><text x="' + (x(tage - 1) + 8) + '" y="' + (y(142) + 4) + '">142</text></g>';
+    g += '<rect id="treffer" x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '" fill="transparent"/></svg>';
+    var box = document.getElementById("ch-verlauf"); box.innerHTML = g;
+    var svg = box.querySelector("svg"), tt = document.getElementById("tt");
+    svg.querySelector("#treffer").addEventListener("mousemove", function (ev) {
+      var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W;
+      var i = Math.max(0, Math.min(tage - 1, Math.round((px - L) / (W - L - R) * (tage - 1))));
+      svg.querySelector("#kreuz").setAttribute("x1", x(i)); svg.querySelector("#kreuz").setAttribute("x2", x(i));
+      svg.querySelector("#kpunkt").setAttribute("cx", x(i)); svg.querySelector("#kpunkt").setAttribute("cy", y(werte[i]));
+      var zu = i ? werte[i] - werte[i - 1] : werte[0];
+      tt.hidden = false; tt.textContent = datum(i) + " · " + werte[i] + " gesamt · +" + zu;
+      var pr = box.parentNode.getBoundingClientRect(); tt.style.left = Math.min(ev.clientX - pr.left + 12, pr.width - 190) + "px"; tt.style.top = (ev.clientY - pr.top - 34) + "px";
+    });
+    svg.querySelector("#treffer").addEventListener("mouseleave", function () { tt.hidden = true; svg.querySelector("#kreuz").setAttribute("x1", -10); svg.querySelector("#kreuz").setAttribute("x2", -10); svg.querySelector("#kpunkt").setAttribute("cx", -10); });
+
+    document.getElementById("ch-ws").innerHTML = WSD.map(function (w) {
+      return w.termine.map(function (t) {
+        var frei = Math.max(0, w.max - t.belegt);
+        return '<div class="wsb" tabindex="0" data-tt="' + WSD.indexOf(w) + ":" + t.id + '"><span><span class="format rot">' + w.nr + '</span> <span class="mono">' + t.von + "–" + t.bis + '</span></span><span class="bar"><i class="b" style="width:' + (t.belegt / w.max * 100) + '%"></i>' + (frei ? '<i class="f" style="width:' + (frei / w.max * 100) + '%"></i>' : "") + '</span><span class="zahlen">' + t.belegt + "/" + w.max + (t.wl ? ' · <span class="wlz">WL ' + t.wl + "</span>" : "") + "</span></div>";
+      }).join("");
+    }).join("");
+
+    var ttWs = document.getElementById("tt-ws"), wsBox = document.getElementById("ch-ws");
+    function ttZeigen(zeile, ev) {
+      var x = zeile.getAttribute("data-tt").split(":"), w = WSD[Number(x[0])], t = w.termine.filter(function (k) { return k.id === x[1]; })[0];
+      var frei = Math.max(0, w.max - t.belegt);
+      ttWs.innerHTML = '<strong style="font-family:var(--f-zwischen);font-size:.95rem">' + w.nr + " · " + w.titel.replace("<br>", " ") + "</strong><br>" + (w.leitung ? "Leitung: " + esc(w.leitung) + "<br>" : "") + "Ort: " + esc(w.raum) + "<br>" + t.von + "–" + t.bis + " · " + t.belegt + "/" + w.max + " belegt · " + frei + " frei" + (t.wl ? " · WL " + t.wl : "");
+      ttWs.hidden = false;
+      var box = wsBox.parentNode.getBoundingClientRect(), zr = zeile.getBoundingClientRect();
+      var links = ev && ev.clientX ? ev.clientX - box.left + 14 : 24;
+      ttWs.style.left = Math.min(links, box.width - 320) + "px"; ttWs.style.top = (zr.bottom - box.top + 6) + "px";
+    }
+    wsBox.addEventListener("mousemove", function (ev) { var z = ev.target.closest(".wsb"); if (z) ttZeigen(z, ev); else ttWs.hidden = true; });
+    wsBox.addEventListener("mouseleave", function () { ttWs.hidden = true; });
+    wsBox.addEventListener("focusin", function (ev) { var z = ev.target.closest(".wsb"); if (z) ttZeigen(z); });
+    wsBox.addEventListener("focusout", function () { ttWs.hidden = true; });
+    var BG = [["NotfallsanitäterIn", 46], ["ÄrztIn", 38], ["Pflege / MFA", 31], ["RettungssanitäterIn", 14], ["StudentIn", 9], ["Sonstige", 4]];
+    document.getElementById("ch-beruf").innerHTML = BG.map(function (b) { return '<div class="hb" title="' + b[0] + ": " + b[1] + " (" + Math.round(b[1] / 142 * 100) + ' %)"><span>' + b[0] + '</span><span class="bar" style="width:' + (b[1] / 46 * 100) + '%"></span><span class="n">' + b[1] + "</span></div>"; }).join("");
+    var IN = [["Klinikum Kempten", 34], ["BRK Rettungsdienst Oberallgäu", 22], ["Klinik Immenstadt", 15], ["Rettungsdienst Lindau", 11], ["Klinikum Memmingen", 9], ["31 weitere", 51]];
+    document.getElementById("tb-inst").innerHTML = IN.map(function (b) { return "<tr><td>" + b[0] + '</td><td class="n">' + b[1] + '</td><td class="n meta">' + Math.round(b[1] / 142 * 100) + " %</td></tr>"; }).join("");
+  })();
+  (function () {
+    var sel = document.getElementById("p-rolle"), box = document.getElementById("rolle-bestaetigen"), alt = sel.selectedIndex;
+    sel.addEventListener("change", function () {
+      if (sel.selectedIndex === alt) { box.hidden = true; return; }
+      document.getElementById("rolle-neu").textContent = sel.selectedIndex === 0 ? "wieder Teilnehmende (Team-Zugang entfällt)" : sel.selectedIndex === 1 ? "Admin" : "Betreiber";
+      box.hidden = false;
+    });
+    document.getElementById("rolle-nein").addEventListener("click", function () { sel.selectedIndex = alt; box.hidden = true; });
+    document.getElementById("rolle-ja").addEventListener("click", function () { alt = sel.selectedIndex; box.innerHTML = '<p style="margin:0"><span class="chip ok">Gespeichert</span> Mockup: Rolle geändert, Mail an Lea verschickt.</p>'; });
+  })();
+  // ---- Team-Navigation (eine Quelle für alle Team-Seiten) ----
+  var TEAMNAV = [["team", "Übersicht"], ["statistik", "Statistik"], ["personen", "Personen", 168], ["t-workshops", "Workshops", 23], ["t-programm", "Programm"], ["t-mailings", "Mailings"], ["", "Newsletter"], ["t-teilnahme", "Teilnahme"], ["", "Einstellungen"]];
+  document.querySelectorAll("nav.team-nav[data-aktiv]").forEach(function (nav) {
+    var aktiv = nav.getAttribute("data-aktiv");
+    nav.innerHTML = TEAMNAV.map(function (t) {
+      var ziel = t[0] || "team";
+      return '<a href="#a-' + ziel + '"' + (t[0] ? ' data-link="' + t[0] + '"' : "") + (t[0] === aktiv ? ' aria-current="page"' : "") + ">" + t[1] + (t[2] ? ' <span class="zahl-badge">' + t[2] + "</span>" : "") + "</a>";
+    }).join("") + '<a href="#a-team" class="betreiber" title="nur für Betreiber sichtbar">Betrieb</a>';
+  });
+
+  // ---- Team: Workshops ----
+  var TN = { "1a": ["Anna Beispiel|NotSan", "Ben Muster|ÄrztIn", "Cem Beispiel|Pflege", "Dana Muster|NotSan", "Eva Beispiel|ÄrztIn", "Finn Muster|RettSan", "Gül Beispiel|NotSan", "Hanna Muster|Pflege", "Ida Beispiel|StudentIn", "Jonas Muster|NotSan", "Kai Beispiel|ÄrztIn", "Lina Muster|NotSan"], wl: ["Lea Beispiel|ÄrztIn|hat 13:45 fest · Angebot offen bis 08.01. 14:30", "Tom Beispielmann|NotSan|", "Mia Muster|Pflege|"] };
+  var twAktiv = "1a";
+  function twListe() {
+    document.getElementById("tw-liste").innerHTML = WSD.map(function (w, wi) {
+      return '<div class="tw-ws"><strong><span class="format rot">' + w.nr + "</span> " + w.titel.replace("<br>", " ") + ' <span class="meta" style="font-family:var(--f-text);font-weight:400;font-size:.82rem">· ' + w.raum + "</span></strong>" + w.termine.map(function (t) {
+        var frei = Math.max(0, w.max - t.belegt), ueber = Math.max(0, t.belegt - w.max), basis = Math.max(w.max, t.belegt);
+        return '<button type="button" class="tw-termin" data-tw="' + t.id + '"' + (t.id === twAktiv ? ' aria-current="true"' : "") + '><span class="mono">' + t.von + "–" + t.bis + '</span><span class="bar"><i class="b" style="width:' + (Math.min(t.belegt, w.max) / basis * 100) + '%"></i>' + (ueber ? '<i class="u" style="width:' + (ueber / basis * 100) + '%"></i>' : "") + (frei ? '<i class="f" style="width:' + (frei / basis * 100) + '%"></i>' : "") + '<span class="bar-text">' + t.belegt + "/" + w.max + (t.wl ? ' <span class="wl-badge">WL ' + t.wl + "</span>" : "") + "</span></span></button>";
+      }).join("") + "</div>";
+    }).join("");
+  }
+  function twDetail() {
+    var f = terminVon(twAktiv), w = f.w, t = f.t, frei = w.max - t.belegt;
+    var VOR = ["Alex", "Bea", "Chris", "Deniz", "Elif", "Felix", "Greta", "Henrik", "Inga", "Jan", "Kira", "Luca"], NACH = ["Beispiel", "Muster", "Probe", "Exempel"], BG = ["NotSan", "ÄrztIn", "Pflege", "RettSan", "NotSan", "StudentIn"];
+    var namen = TN[twAktiv] || Array.from({ length: t.belegt }, function (_, i) { return VOR[i % 12] + " " + NACH[(i + twAktiv.charCodeAt(1)) % 4] + "|" + BG[(i + twAktiv.charCodeAt(0)) % 6]; });
+    var zeilen = namen.map(function (n) { var p = n.split("|"); return '<tr><td><button type="button" class="pers-link" data-person="' + esc(n) + '">' + esc(p[0]) + '</button></td><td class="meta">' + esc(p[1]) + '</td><td><button type="button" class="mini">Auf Warteliste</button><button type="button" class="mini">Verschieben</button><button type="button" class="mini">Entfernen</button></td></tr>'; }).join("");
+    var wl = (twAktiv === "1a" ? TN.wl : []).map(function (n, i) { var p = n.split("|"); return '<tr><td class="mono">' + (i + 1) + '.</td><td><button type="button" class="pers-link" data-person="' + esc(p[0] + "|" + p[1]) + '">' + esc(p[0]) + '</button><br><span class="meta" style="font-size:.8rem">' + esc(p[1]) + (p[2] ? " · " + esc(p[2]) : "") + '</span></td><td><button type="button" class="mini">Platz vergeben</button><button type="button" class="mini">↑</button><button type="button" class="mini">↓</button><button type="button" class="mini">Entfernen</button></td></tr>'; }).join("");
+    document.getElementById("tw-detail").innerHTML = '<div class="stat-kopf"><h3 class="zwischen"><span class="format rot">' + w.nr + "</span> " + t.von + "–" + t.bis + '</h3><span class="chip ' + (frei > 0 ? "ok" : "wl") + '">' + t.belegt + "/" + w.max + (frei > 0 ? " · " + frei + " frei" : frei < 0 ? " · überbucht" : " · voll") + "</span></div>"
+      + '<div class="filterzeile" style="margin:0"><div class="such-wrap"><label class="sr" for="tw-neu">Person hinzufügen</label><input id="tw-neu" type="text" role="combobox" aria-expanded="false" aria-controls="tw-vorschlag" autocomplete="off" placeholder="Person hinzufügen – Name tippen"><ul class="vorschlag" id="tw-vorschlag" role="listbox" hidden></ul></div><button class="knopf zweit" type="button" id="tw-add" disabled>Hinzufügen</button><button type="button" class="mini">Liste als CSV</button><button type="button" class="mini">Mail an diese Gruppe</button></div>'
+      + '<div id="tw-ueber" hidden></div>'
+      + '<p class="unterkopf">Teilnehmende (' + namen.length + ')</p><div class="tabelle-wrap"><table class="t tw-tab"><tbody>' + zeilen + "</tbody></table></div>"
+      + (wl ? '<p class="unterkopf">Warteliste (' + TN.wl.length + ') <span class="meta">– automatische Angebote bis 06.01., danach nur manuell</span></p><div class="tabelle-wrap"><table class="t tw-tab"><tbody>' + wl + "</tbody></table></div>" : '<p class="meta" style="margin:0">Keine Warteliste.</p>');
+    var PERS = ["Sam Beispiel|NotSan · sam@example.org", "Sara Muster|Pflege · s.muster@example.org", "Samuel Beispielmann|ÄrztIn · samuel@example.org", "Tom Beispielmann|NotSan · t.b@example.org", "Kim Beispiel|StudentIn · kim@example.org"];
+    var ein = document.getElementById("tw-neu"), vor = document.getElementById("tw-vorschlag"), add = document.getElementById("tw-add"), gewaehlt = null;
+    ein.addEventListener("input", function () {
+      gewaehlt = null; add.disabled = true;
+      var q = ein.value.trim().toLowerCase();
+      var treffer = q.length < 2 ? [] : PERS.filter(function (x) { return x.toLowerCase().indexOf(q) >= 0; });
+      vor.hidden = q.length < 2; ein.setAttribute("aria-expanded", String(!vor.hidden));
+      vor.innerHTML = treffer.length ? treffer.map(function (x) { var t = x.split("|"); return '<li role="option" tabindex="-1" data-p="' + esc(t[0]) + '"><strong>' + esc(t[0]) + '</strong> <span class="meta">' + esc(t[1]) + "</span></li>"; }).join("") : '<li class="leer">Keine angemeldete Person gefunden. Neue Personen legst du unter <a href="#a-personen" data-link="personen">Personen</a> an.</li>';
+    });
+    vor.addEventListener("click", function (ev) { var li = ev.target.closest("li[data-p]"); if (!li) return; gewaehlt = li.getAttribute("data-p"); ein.value = gewaehlt; vor.hidden = true; ein.setAttribute("aria-expanded", "false"); add.disabled = false; });
+    document.getElementById("tw-add").addEventListener("click", function () {
+      var box = document.getElementById("tw-ueber");
+      if (t.belegt < w.max) { box.hidden = false; box.innerHTML = '<p style="margin:0"><span class="chip ok">Hinzugefügt</span> ' + esc(gewaehlt) + ' ist jetzt eingetragen.</p>'; return; }
+      box.hidden = false; box.className = "ueberbuch";
+      box.innerHTML = '<p class="kicker" style="color:#FF5A5F;margin:0">Termin ist voll – überbuchen?</p><p style="margin:0"><strong>' + esc(gewaehlt) + '</strong> wird als <strong>' + (t.belegt + 1) + ". Person</strong> eingetragen (" + (t.belegt + 1) + "/" + w.max + "). Die Warteliste (" + t.wl + ') bleibt unverändert und rückt nicht vor.</p><p class="meta" style="margin:0;font-size:.86rem">Bitte nur, wenn Raum und Material reichen. Wird im Audit protokolliert.</p><label class="haken"><input type="checkbox" id="tw-ok"><span>Ja, ich überbuche diesen Termin bewusst.</span></label><div class="aktionen"><button class="knopf" type="button" id="tw-ja" disabled>Überbuchen</button><button class="knopf zweit" type="button" id="tw-nein">Abbrechen</button></div>';
+      document.getElementById("tw-ok").addEventListener("change", function (e) { document.getElementById("tw-ja").disabled = !e.target.checked; });
+      document.getElementById("tw-nein").addEventListener("click", function () { box.hidden = true; });
+      document.getElementById("tw-ja").addEventListener("click", function () { box.innerHTML = '<p style="margin:0"><span class="chip ok">Gespeichert</span> Mockup: Termin überbucht (13/12).</p>'; });
+    });
+  }
+  document.getElementById("tw-detail").addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-person]"); if (!b) return;
+    var x = b.getAttribute("data-person").split("|"), name = x[0], bg = x[1] || "–", lea = name === "Lea Beispiel";
+    var mail = name.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(" ", ".") + "@example.org";
+    popupAuf('<p class="kicker">Person</p><h2 class="titel" id="popup-titel" style="font-size:1.9rem">' + esc(name) + '</h2><p style="margin:0"><span class="chip ok">Angemeldet</span> ' + (lea ? '<span class="rolle-tag">Konto</span>' : '<span class="meta">ohne Konto</span>') + '</p><dl class="liste-def"><div><dt>Berufsgruppe</dt><dd>' + esc(bg) + "</dd></div><div><dt>Institution</dt><dd>" + (lea ? "Klinikum Kempten, ZNA" : "BRK Oberallgäu") + '</dd></div><div><dt>E-Mail</dt><dd>' + esc(mail) + "</dd></div>" + (bg === "ÄrztIn" ? '<div><dt>EFN</dt><dd class="mono">' + (lea ? "276 xxxx xxxx xxxx 3" : "– nicht angegeben") + "</dd></div>" : "") + '<div><dt>Workshops</dt><dd class="mono">' + (lea ? "WS 01 13:45 · WS 02 11:15<br>WL: WS 01 11:15 (Platz 1)" : "WS 01 11:15") + "</dd></div><div><dt>Essen</dt><dd>" + (lea ? "Vegetarisch" : "Fleisch") + "</dd></div><div><dt>Angemeldet am</dt><dd class=\"mono\">27.11.2026, 21:14</dd></div></dl>" + '<div class="aktionen"><a class="knopf zweit" href="#a-personen" data-link="personen">In „Personen“ bearbeiten</a><button class="knopf zweit" type="button">Einmal-Link senden</button></div>', false);
+  });
+  document.getElementById("tw-liste").addEventListener("click", function (ev) { var b = ev.target.closest("[data-tw]"); if (b) { twAktiv = b.getAttribute("data-tw"); twListe(); twDetail(); } });
+  twListe(); twDetail();
+
+  // ---- Team: Programm (Tagesplan) ----
+  document.getElementById("pg-liste").innerHTML = '<li><div class="pg-zeile pg-neu-punkt" draggable="true"><span class="mono">--:--</span><span><span class="st neu">+ neu</span> Neuer Programmpunkt <span class="meta" style="font-size:.78rem">– an die richtige Stelle ziehen</span></span><span class="griff" aria-hidden="true">⋮⋮</span></div></li>' + PROGRAMM.map(function (p) {
+    var kopf = '<div class="pg-zeile' + (p.art === "pause" ? " pause" : "") + (p.nr === "VT 02" ? " geaendert" : "") + '"><span class="mono">' + p.z + "–" + p.e + "</span><span>" + (p.nr ? '<span class="format' + (p.art === "FB" ? " rot" : "") + '">' + p.nr + "</span> " : "") + esc(p.t) + '</span><span class="griff" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span></div>';
+    if (p.art !== "ws") return "<li>" + kopf + "</li>";
+    var kinder = [];
+    WSD.forEach(function (w) { w.termine.forEach(function (t) { if (min(t.von) >= min(p.z) && min(t.bis) <= min(p.e)) kinder.push({ w: w, t: t }); }); });
+    FREI.forEach(function (f) { if (min(f.von) >= min(p.z) && min(f.bis) <= min(p.e)) kinder.push({ offen: f, t: f }); });
+    kinder.sort(function (a, b) { return min(a.t.von) - min(b.t.von); });
+    return '<li class="pg-block"><div class="pg-zeile block"><span class="mono">' + p.z + "–" + p.e + '</span><span><strong>' + esc(p.t) + '</strong> <span class="meta" style="font-size:.78rem">Zeitfenster · ' + kinder.length + ' Termine</span></span><span class="griff" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span></div><ol class="pg-kinder">' + kinder.map(function (k) {
+      var aktiv = k.w && k.w.nr === "WS 01" && k.t.von === "11:15";
+      var geaendert = k.w && k.w.nr === "WS 01" && k.t.von === "13:45";
+      return '<li><div class="pg-zeile' + (aktiv ? " aktiv" : "") + (geaendert ? " geaendert" : "") + '"><span class="mono">' + k.t.von + "–" + k.t.bis + "</span><span>" + (k.w ? '<span class="format rot">' + k.w.nr + "</span> " + k.w.titel.replace("<br>", " ") : '<span class="format offen">OFFEN</span> ' + esc(k.offen.t)) + '</span><span class="griff" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span></div></li>';
+    }).join("") + "</ol></li>";
+  }).join("");
+
+  // ---- Personen: Überbuchen über die Auswahl ----
+  (function () {
+    var sel = document.getElementById("p-ws1"), alt = sel.selectedIndex;
+    var box = document.createElement("div"); box.className = "ueberbuch"; box.hidden = true; sel.parentNode.appendChild(box);
+    sel.addEventListener("change", function () {
+      if (sel.selectedIndex !== 0) { box.hidden = true; alt = sel.selectedIndex; return; }
+      box.hidden = false;
+      box.innerHTML = '<p class="kicker" style="color:#FF5A5F;margin:0">Termin ist voll (12/12)</p><p style="margin:0">Lea wird als 13. Person eingetragen – der Termin ist dann überbucht. Ihr bisheriger Termin 13:45 wird frei und geht an die Warteliste.</p><label class="haken"><input type="checkbox" class="ub-ok"><span>Ja, ich überbuche bewusst.</span></label><div class="aktionen"><button class="knopf ub-ja" type="button" disabled>Überbuchen</button><button class="knopf zweit ub-nein" type="button">Abbrechen</button></div>';
+      box.querySelector(".ub-ok").addEventListener("change", function (e) { box.querySelector(".ub-ja").disabled = !e.target.checked; });
+      box.querySelector(".ub-nein").addEventListener("click", function () { sel.selectedIndex = alt; box.hidden = true; });
+      box.querySelector(".ub-ja").addEventListener("click", function () { alt = 0; box.innerHTML = '<p style="margin:0"><span class="chip ok">Gespeichert</span> Mockup: überbucht, Audit-Eintrag angelegt.</p>'; });
+    });
+  })();
+  // ---- Teilnahme: A4-Vorschau mit Barcodes ----
+  (function () {
+    function balken(ziffern) {
+      var x = 0, out = "", seed = 0; for (var i = 0; i < ziffern.length; i++) seed = (seed * 31 + ziffern.charCodeAt(i)) % 9973;
+      while (x < 90) { seed = (seed * 73 + 41) % 9973; var bw = 1 + seed % 3, gap = 1 + (seed >> 3) % 2; out += '<rect x="' + x + '" y="0" width="' + bw + '" height="18" fill="#001E3A"/>'; x += bw + gap; }
+      return '<svg viewBox="0 0 92 18" aria-label="Barcode EFN">' + out + "</svg>";
+    }
+    var P = [["Beispiel, Anna", "NotSan · BRK Oberallgäu", ""], ["Beispiel, Eva", "ÄrztIn · Klinikum Kempten", "276080123456789"], ["Beispiel, Ida", "StudentIn · Uni Ulm", ""], ["Beispiel, Kai", "ÄrztIn · Klinik Immenstadt", ""], ["Beispiel, Lea", "ÄrztIn · Klinikum Kempten, ZNA", "276080111222333"], ["Beispielmann, Tom", "NotSan · RD Lindau", ""], ["Muster, Ben", "ÄrztIn · Klinikum Memmingen", "276080444555666"], ["Muster, Dana", "NotSan · BRK Oberallgäu", ""], ["Muster, Finn", "RettSan · BRK Oberallgäu", ""], ["Muster, Hanna", "Pflege · Klinikum Kempten", ""]];
+    function a4() {
+      var wer = document.getElementById("pdf-wer").value, nurArzt = wer === "arzt";
+      document.getElementById("pdf-efn-feld").hidden = !nurArzt;
+      var liste = (nurArzt ? P.filter(function (p) { return p[1].indexOf("ÄrztIn") === 0; }) : P).slice();
+      var sort = document.getElementById("pdf-sort").value;
+      function vn(p) { return (p[0].split(", ")[1] || "") + " " + p[0]; }
+      function teil(p, i) { return p[1].split(" · ")[i] || ""; }
+      liste.sort(function (a, b) {
+        var ka = sort === "vor" ? vn(a) : sort === "beruf" ? teil(a, 0) + a[0] : sort === "inst" ? teil(a, 1) + a[0] : a[0];
+        var kb = sort === "vor" ? vn(b) : sort === "beruf" ? teil(b, 0) + b[0] : sort === "inst" ? teil(b, 1) + b[0] : b[0];
+        return ka.localeCompare(kb, "de");
+      });
+      document.getElementById("a4-kopf").innerHTML = "<tr><th>Name</th><th>Berufsgruppe / Institution</th>" + (nurArzt ? "<th>EFN</th>" : "") + "<th>Unterschrift</th></tr>";
+      document.getElementById("a4-zeilen").innerHTML = liste.map(function (p) {
+        var efn = p[2] ? balken(p[2]) + '<span class="efn-z">' + p[2] + "</span>" : '<span class="etikett">EFN-Etikett</span>';
+        return "<tr><td><b>" + esc(p[0]) + "</b></td><td>" + esc(p[1]) + "</td>" + (nurArzt ? "<td>" + efn + "</td>" : "") + '<td class="unterschrift"></td></tr>';
+      }).join("");
+    }
+    document.getElementById("pdf-wer").addEventListener("change", a4);
+    document.getElementById("pdf-sort").addEventListener("change", a4);
+    a4();
+  })();
+  document.getElementById("zg-link").addEventListener("click", function () { document.getElementById("zg-antwort").hidden = false; });
+  var GESENDET = [
+    { b: "Anfahrt und Parken", von: "Wintersymposium <anmeldung@…>", an: "Alle Angemeldeten", n: 142, am: "Mo 04.01.2027, 10:15", wer: "P. Beispiel", txt: "<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Hier alles zur Anfahrt: Parken im Parkhaus P2 (kostenlos mit Einfahrtsticket, Ausfahrt mit Code am Empfang), mit dem Zug ab Kempten Hbf Bus 1 bis Klinikum.</p><div class=\"ml-bild klein\">Lageplan.png</div><p>Wir freuen uns auf dich!</p>" },
+    { b: "Erinnerung: Essen wählen", von: "Wintersymposium <anmeldung@…>", an: "Angemeldete ohne Essenswahl", n: 23, am: "Sa 02.01.2027, 09:00", wer: "P. Beispiel", txt: "<p>Hallo {vorname},</p><p>du hast noch kein Mittagessen gewählt. Bis Mi 13.01. kannst du das hier nachholen: {link}</p>" },
+    { b: "Newsletter Dezember", von: "Allgäu Akut <newsletter@…>", an: "Newsletter-Liste „Wintersymposium“", n: 88, am: "Di 15.12.2026, 18:00", wer: "D. Muster", txt: "<p>Hallo,</p><p>das Programm steht! Drei Workshops, zwei Vorträge, ein Fall. Anmeldung läuft, noch 60 Plätze frei.</p><p class=\"meta\">Abmelden · Impressum</p>" }
+  ];
+  document.querySelectorAll(".ml-alt").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var m = GESENDET[Number(b.getAttribute("data-ml"))];
+      popupAuf('<p class="kicker">Gesendet · ' + esc(m.am) + '</p><h2 class="titel" id="popup-titel" style="font-size:1.7rem">' + esc(m.b) + '</h2><p class="mono meta" style="margin:0;font-size:.8rem">Von: ' + esc(m.von) + "<br>An: " + esc(m.an) + " · " + m.n + " Empfänger<br>Gesendet von: " + esc(m.wer) + '</p><div class="ml-gesendet">' + m.txt + '</div><p class="meta" style="margin:0;font-size:.82rem">Gespeichert sind Betreff, Text, Auswahl und Anzahl – nicht, wer die Mail im Einzelnen bekommen hat (Datensparsamkeit, R-02).</p><div class="aktionen"><button class="knopf zweit" type="button" onclick="document.getElementById(\'popup\').close()">Als neue Mail kopieren</button></div>', false);
+    });
+  });
+  var beruf = document.getElementById("beruf");
+  function berufGeaendert() {
+    document.getElementById("efn-feld").hidden = beruf.value !== "arzt";
+    document.getElementById("sonst-feld").hidden = beruf.value !== "sonst";
+  }
+  beruf.addEventListener("change", berufGeaendert);
+  berufGeaendert();
+  document.getElementById("formular").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    document.getElementById("form-hinweis").textContent = "Mockup: hier käme „Fast geschafft – schau in dein Postfach“.";
+  });
+  wsZeigen(0);
+  ausHash();
+})();
+</script>
+
+</body>
+</html>

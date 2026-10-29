@@ -76,6 +76,28 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        2 => [
+            'beschreibung' => 'Pflegbare Texte der öffentlichen Seiten (Startseite, Impressum, Datenschutz)',
+            'sql' => [
+                "CREATE TABLE inhalt (
+                    schluessel    VARCHAR(64)  NOT NULL PRIMARY KEY,
+                    text          MEDIUMTEXT   NOT NULL,
+                    geaendert_am  DATETIME     NOT NULL,
+                    geaendert_von INT UNSIGNED NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Startwerte aus den freigegebenen Mockups; im Betreiber-Bereich änderbar (AP-5).
+                "INSERT INTO inhalt (schluessel, text, geaendert_am) VALUES
+                    ('start_kicker', 'Allgäu Akut · Wintersymposium', UTC_TIMESTAMP()),
+                    ('start_titel', 'Wintersymposium *Notfallmedizin*', UTC_TIMESTAMP()),
+                    ('start_unter', 'Ein Tag für Notaufnahme und Rettungsdienst. Vorträge, Workshops, ein Fall. Keine Ausreden.', UTC_TIMESTAMP()),
+                    ('start_sticker', 'Kostenlos', UTC_TIMESTAMP()),
+                    ('start_infos_titel', 'Für alle, die nachts den Piepser tragen', UTC_TIMESTAMP()),
+                    ('start_infos', '## Für wen\nNotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.\n## Wie\nVormittags Vorträge, dazwischen und nachmittags Workshops in kleinen Gruppen und offene Stationen ohne Anmeldung.\n## Was es kostet\nNichts. Mittagessen inklusive (Fleisch oder vegetarisch). Kaffee gibt''s. Ausreden nicht.', UTC_TIMESTAMP()),
+                    ('start_cme', 'Die Veranstaltung ist zur Zertifizierung eingereicht. Trag bei der Anmeldung deine EFN ein, dann melden wir deine Teilnahme. Die Teilnahmebescheinigung lädst du nach dem Symposium hier herunter.', UTC_TIMESTAMP()),
+                    ('impressum', '', UTC_TIMESTAMP()),
+                    ('datenschutz', '', UTC_TIMESTAMP())",
+            ],
+        ],
     ];
 }
 

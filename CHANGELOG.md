@@ -2,6 +2,34 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.2.0] – 2026-10-29
+
+AP-2 Design-Mockups und öffentliche Seiten.
+
+### Neu
+
+- Freigegebene Mockups (Variante A „Plakat“) in `docs/mockups/` – Vorlage für alle Seiten.
+- Erscheinungsbild Allgäu Akut im Code: `assets/site.css` mit Design-Tokens, Schriften Anton, Antonio, Tajawal und IBM Plex Mono als WOFF2 (selbst ausgeliefert, Lizenzen beigelegt), Logo als SVG, Favicon und App-Symbol.
+- Seitenrahmen mit Logo, Navigation (Handy: aufklappbares Menü ohne JavaScript), Sprunglink und Fußzeile mit Impressum, Datenschutz und Quelltext-Link.
+- Pflegbare Texte (Tabelle `inhalt`, Migration 2) mit einfacher Auszeichnung; Startwerte aus den Mockups. Bearbeitung folgt im Betreiber-Bereich (AP-5).
+- Startseite mit Titel, Sticker, Eckdaten (sobald die Veranstaltungs-Einstellungen aus AP-3 gesetzt sind), Infokästen, Programmabschnitt und CME-Hinweis.
+- Seiten `/impressum` und `/datenschutz`.
+
+### Geändert
+
+- Installer und Meldungsseiten im neuen Rahmen.
+
+### Entfernt
+
+- `assets/basis.css` (Übergangs-Stylesheet aus AP-1).
+
+## [0.1.2] – 2026-10-29
+
+### Doku
+
+- Prüfprotokoll: Ergebnisse der Abnahme von AP-1 auf Staging (T-100, T-101, T-105 bis T-110) und verbleibende Prüfungen.
+- Konzept: AP-1 auf Staging abgenommen; Hinweis auf das Hoster-Cookie für die Datenschutzerklärung (AP-2).
+
 ## [0.1.1] – 2026-10-29
 
 ### Behoben

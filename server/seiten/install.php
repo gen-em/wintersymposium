@@ -13,12 +13,12 @@ $host = (string)$GLOBALS['ws_host'];
 $maengel = konfig_maengel();
 if ($maengel !== []) {
     http_response_code(503);
-    seite_kopf('Installation');
-    echo '<h1>Installation</h1><p>Die Konfiguration ist noch nicht vollständig:</p><ul>';
+    seite_kopf('Installation', ['nav' => false]);
+    echo '<div class="innen seitenkopf"><h1 class="titel">Installation</h1></div><div class="innen text"><p>Die Konfiguration ist noch nicht vollständig:</p><ul>';
     foreach ($maengel as $m) {
         echo '<li>' . e($m) . '</li>';
     }
-    echo '</ul>';
+    echo '</ul></div>';
     seite_fuss();
     exit;
 }
@@ -63,20 +63,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             install_ausfuehren($host, $eingabe);
             rate_erfolg('installation', $merkmal);
             sitzung_erneuern();
-            seite_kopf('Installation abgeschlossen');
-            echo '<h1>Installation abgeschlossen</h1>'
+            seite_kopf('Installation abgeschlossen', ['nav' => false]);
+            echo '<div class="innen seitenkopf"><h1 class="titel">Installation abgeschlossen</h1></div><div class="innen text">'
                 . '<p>Datenbank angelegt, Haupt-Host <strong>' . e($host) . '</strong> eingetragen, '
                 . 'erster Betreiber angelegt. Der Installer ist jetzt gesperrt.</p>'
-                . '<p>Die Anmeldung für das Team folgt mit dem Team-Bereich.</p>';
+                . '<p>Die Anmeldung für das Team folgt mit dem Team-Bereich.</p></div>';
             seite_fuss();
             exit;
         }
     }
 }
 
-seite_kopf('Installation');
-echo '<h1>Installation</h1>';
-echo '<p>Legt die Datenbank und den ersten Betreiber an. Haupt-Host wird <strong>' . e($host) . '</strong>.</p>';
+seite_kopf('Installation', ['nav' => false]);
+echo '<div class="innen seitenkopf"><h1 class="titel">Installation</h1></div><div class="innen">';
+echo '<p class="text">Legt die Datenbank und den ersten Betreiber an. Haupt-Host wird <strong>' . e($host) . '</strong>.</p>';
 if ($fehler !== []) {
     echo '<div class="meldung fehler" role="alert"><ul>';
     foreach ($fehler as $f) {
@@ -107,5 +107,6 @@ if ($fehler !== []) {
 
     <button type="submit">Installieren</button>
 </form>
+</div>
 <?php
 seite_fuss();

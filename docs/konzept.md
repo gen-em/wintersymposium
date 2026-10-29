@@ -3,8 +3,8 @@ dokument: konzept
 projekt: wintersymposium
 repo: gen-em/wintersymposium
 stand: 2026-10-29
-phase: umsetzung   # AP-1 umgesetzt (Abnahme auf Staging offen)
-status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-35 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
+phase: umsetzung   # AP-1 auf Staging abgenommen, AP-2 umgesetzt (Mockups freigegeben), als Nächstes AP-3
+status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-41 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
 version: null   # Konzept ohne Version; die Repo-Version legt die Umsetzung fest (Datei VERSION)
 verantwortlich: Philipp Chadid
 termine:
@@ -131,7 +131,7 @@ mail:
 | E-18 | Übernahme aus NAdoku | siehe Tabelle unten | Analyse 2026-10-29 |
 | E-19 | Nachrücken | Freier Platz wird der ersten Person der Warteliste **angeboten**, Annahme über Einmal-Link innerhalb einer **Annahmefrist von 48 h**; bei Ablauf oder Ablehnung geht das Angebot an die nächste Person. Automatische Angebote **bis 14 Tage vor dem Symposium** (letztes Angebot spätestens 16 Tage vorher, damit die Frist vor der Grenze endet); danach nur noch manuell durch das Team. Frist und Grenze in den Veranstaltungs-Einstellungen einstellbar. Wer die Frist verstreichen lässt, kommt **ans Ende der Warteliste** dieses Termins und wird per Mail informiert | Admin 2026-10-29 (O-17 entschieden) |
 | E-20 | Workshop-Regeln | **Überschneidende Termine gesperrt**; **kein Limit** an Workshops je Person als Standard, Limit in den Veranstaltungs-Einstellungen einstellbar; Workshop-Wahl freiwillig (einstellbar); Gesamtkapazität optional (0 = unbegrenzt) | Admin 2026-10-29 |
-| E-21 | Anmeldefelder | Vorname, Nachname, E-Mail, **Berufsgruppe** (Auswahl, Pflicht: Ärztin/Arzt, Notfallsanitäter/in, Rettungssanitäter/in, Pflege/MFA, Student/in, Sonstige mit optionalem Freitext), **Klinik/Institution** (Pflicht), EFN nur bei Ärztin/Arzt (E-22). Bei Konto (E-30) werden Berufsgruppe und Institution ins Profil übernommen und sind dort änderbar | Admin 2026-10-29 (O-15 entschieden) |
+| E-21 | Anmeldefelder | Vorname, Nachname, E-Mail, **Berufsgruppe** (Auswahl, Pflicht: ÄrztIn, NotfallsanitäterIn, RettungssanitäterIn, Pflege/MFA, StudentIn, Sonstige mit optionalem Freitext; Schreibweise nach E-37), **Klinik/Institution** (Pflicht), EFN nur bei Ärztin/Arzt (E-22). Bei Konto (E-30) werden Berufsgruppe und Institution ins Profil übernommen und sind dort änderbar | Admin 2026-10-29 (O-15 entschieden) |
 | E-22 | Fortbildungspunkte (CME) | Symposium wird zertifiziert; **EFN-Feld freiwillig**, nur bei Berufsgruppe Ärztin/Arzt abgefragt und angezeigt (15-stellig, Prüfziffer geprüft); Punkte, Kammer, Veranstaltungsnummer werden in den **Veranstaltungsinfos** (Einstellungen) gepflegt; das Team **erfasst die Teilnahme** (Anwesenheit); danach ist ein **Teilnahmezertifikat als PDF** mit eigenem Namen über Einmal-Link oder Konto herunterladbar. **Den Zertifikat-Entwurf liefert der Admin** (fertiges Layout); die App bringt nur Name, Datum und ggf. EFN darauf (O-19) | Admin 2026-10-29. Meldeweg an die Kammer: O-16 |
 | E-23 | Seitendesign | **Mockups vor der Umsetzung**, Freigabe durch den Admin (AP-2); **Lila als Hauptakzent**, bewusst frech; einzelne Seiten in **Signalrot** (nach der Markenregel passend für Workshop-Inhalte); Logo vorhanden | Admin 2026-10-29 |
 | E-24 | Löschfristen | **Konten bleiben bestehen** (keine automatische Löschung; Löschung durch die Person selbst oder das Team). CME-Nachweise (Name, EFN, Anwesenheit): solange das Konto besteht, sonst **10 Jahre**, getrennt aufbewahrt. Anmeldungen **ohne Konto**: **14 Monate nach dem Symposium anonymisieren** (Name, E-Mail, Institution, EFN entfernen; Zahlen für die Statistik bleiben) – so können Wiederkehrende beim nächsten Symposium ihre Daten per Einmal-Link an die bekannte Adresse übernehmen, wer nicht wiederkommt, ist danach weg | Admin 2026-10-29 (O-18, O-21 entschieden) |
@@ -146,6 +146,12 @@ mail:
 | E-31 | Stichtage für Teilnehmende | In den Veranstaltungs-Einstellungen getrennte Stichtage, ab denen Teilnehmende (mit Konto und per Einmal-Link) nichts mehr ändern können: **Anmeldeschluss**, **Workshop-Änderungen**, **Essens-Änderungen**, **Storno**. Das Team kann danach weiterhin alles ändern; die Oberfläche zeigt den Stichtag an | Admin 2026-10-29 |
 | E-34 | Webroot | Die Domains zeigen auf den Unterordner **`public/`** des jeweiligen Zielordners (`/wintersymposium/staging/public`, `/wintersymposium/produktiv/public`). Bibliotheken, `config.php` und der Laufzeitordner `var/` liegen außerhalb des Webroots; zusätzlich sperrt eine `.htaccess` den Zielordner, falls die Zuordnung doch auf ihn zeigt | Admin 2026-10-29 |
 | E-35 | Freigabe Produktion | Produktion wird über ein **Tag `vX.Y.Z`** ausgeliefert (Admin ist Tags gewohnt). Der Lauf bricht ab, wenn das Tag nicht zur Datei `VERSION` passt oder nicht auf `main` liegt. Environment „produktiv“ in GitHub; ein Pflicht-Prüfer dort ist optional | Admin 2026-10-29 (ersetzt den Vorschlag „manueller Lauf“ aus E-32) |
+| E-36 | Gestaltung | **Variante A „Plakat“** aus den Mockups: dunkler Modus, Lila als Hauptakzent, Workshop-Inhalte in Signalrot, Sticker/Zettel/Klebeband nach Erscheinungsbild; Varianten B und C verworfen. Mockups liegen in `docs/mockups/` und sind Vorlage für alle Seiten (öffentlich, Teilnehmende, Team) | Admin 2026-10-29 (Mockups freigegeben) |
+| E-37 | Sprache | **Du-Ansprache überall** (Seiten, Formulare, Mails); Rechtstexte neutral. Gendern mit **Binnen-I** („ÄrztInnen“, „NotfallsanitäterIn“) nach Erscheinungsbild | Admin 2026-10-29 |
+| E-38 | Workshop-Termine und Warteliste | Workshops haben **eigene Termine mit freier Dauer** (keine festen Runden; z. B. 90, 45, 60 min). Je Workshop **ein fester Termin**; für **weitere Termine desselben Workshops** darf man auf die Warteliste. Feste Termine dürfen sich nicht überschneiden (E-20). Nimmt jemand ein Nachrück-Angebot an und hat schon einen anderen Termin desselben Workshops, zeigt die App den **Tausch** (alter Termin wird storniert, neuer gebucht) und führt ihn erst nach **aktiver Bestätigung** aus; der frei gewordene Platz geht sofort ans Nachrücken. Ohne anderen Termin entfällt der Tausch-Hinweis. Anzeige für Teilnehmende: Status je Termin (Platz bestätigt / Warteliste mit „Platz X von Y“). Überschneidung des Angebots mit einem anderen festen Workshop: O-23 | Admin 2026-10-29 (Mockup-Kommentare) |
+| E-39 | Programm-Modell und Pflege | Typen: **Vortrag (VT)**, **Fallbesprechung (FB)**, **Workshop (WS**, mit Terminen, Plätzen je Termin, Leitung optional, Notiz vom Team optional, „Bring“ optional), **Offene Station** (parallel, ohne Anmeldung), **Workshop-Block** (nur Zeitfenster; sammelt automatisch alle Termine und offenen Stationen, die in seiner Zeit liegen), **Pause/Info**. **Dozierende** als eigene Liste (Name, Funktion, Kurzbio, Foto optional), mehreren Punkten zuordenbar. Pflege im Team-Reiter „Programm“: Tagesplan nach Uhrzeit mit Zieh-Griffen; neue Punkte erscheinen oben hell-lila und werden an ihre Stelle gezogen (Uhrzeit wird vorgeschlagen). **Speichern ≠ Veröffentlichen**: Status je Punkt „veröffentlicht“, „gespeichert, nicht veröffentlicht“ (im Plan markiert), „neu“; roter Banner, solange Unveröffentlichtes besteht; Prüfungen beim Speichern (Plätze nicht unter vergebene, Raum doppelt belegt) | Admin 2026-10-29 (Mockup-Kommentare) |
+| E-40 | Öffentliche Seiten und Einstieg | Eckdaten-Band mit Datum, Zeit, Ort, CME und **freien Plätzen „X / Y“** (Gesamtkapazität aus den Einstellungen). Programm mit **Popups** für Workshops (Termin, Plätze, Beschreibung, Anmelden) und Vorträge (Dozierende); Workshop-Blöcke als Zeitraster auf dem Desktop, als Liste auf dem Handy. **Einstiegsseite** „Deine Anmeldung“: neu anmelden / Einmal-Link per Mail / Login mit Konto (Team nutzt denselben Login + zweiten Faktor). Nach dem Erkennen zeigt die Navigation Name (und Rolle) und „Abmelden“ statt „Anmelden“. Auf „Deine Anmeldung“: Fristen direkt an den jeweiligen Knöpfen, eigener Kasten „Deine Daten“ zum Bearbeiten | Admin 2026-10-29 (Mockup-Kommentare) |
+| E-41 | Team-Bereich | Reiter: Übersicht, Statistik, Personen, Workshops, Programm, Mailings, Newsletter, Teilnahme, Einstellungen, Betrieb (nur Betreiber). **Personen**: Suche/Filter, Anmeldung bearbeiten (auch nach Stichtagen), Einmal-Link/Passwort-Link senden, sperren, **Rollenwechsel nur nach Bestätigung mit dem eigenen zweiten Faktor**, Gefahrenzone (Storno, Konto löschen). **Workshops**: je Termin Teilnehmende und Warteliste bearbeiten (entfernen, auf Warteliste, verschieben, Platz vergeben); Personen nur aus vorhandenen Anmeldungen wählbar; **Überbuchen nur mit aktiver Bestätigung** (auch über „Personen“). **Statistik**: Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen, Newsletter; Exporte zentral in einer Export-Kachel. **Mailings**: Editor mit Bildern (**selbst gehostet, in die Mail eingebettet**), eingeschränktes HTML (Liste erlaubter Elemente), Vorschau, Testmail, Planen; Archiv gesendeter Mails (Text und Auswahl, ohne Empfängerliste, R-02). **Teilnahme**: PDF-Listen – Unterschriftenliste (EFN-Spalte mit Barcode bzw. Feld für Etikett nur bei der Liste „Nur ÄrztInnen“), Teilnehmenden- und Wartelisten je Termin, Sortierung wählbar | Admin 2026-10-29 (Mockup-Kommentare) |
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
@@ -218,7 +224,7 @@ nicht_uebernehmen:
     - HTTPS mit gültigem Zertifikat; Sicherheits-Header gesetzt (CSP, HSTS, nosniff, Referrer-Policy)
     - Cron-Job läuft nachweislich
     - Auslieferung aus GitHub überschreibt config.php nicht; Staging und Produktion getrennt
-  status: umgesetzt   # Code im PR; Abnahme auf Staging (T-100 bis T-110) nach Einrichtung durch den Admin offen
+  status: abgenommen_staging   # 2026-10-29: Staging eingerichtet und geprüft; offen: Produktion per Tag einrichten, Restprüfungen mit AP-4/AP-5 (Prüfprotokoll)
   ergebnis:
     - "Struktur: server/ (Webroot server/public/ mit einzigem Einstieg index.php, lib/, seiten/, cli/), tools/tests/, docs/betrieb.md (Einrichtung, Auslieferung, Wartung, Tests)"
     - "config.php (Vorlage config.example.php): DB-Zugang, geheimnis, installations_schluessel, jobs_token, health_token – alle geheimen Werte nur dort (R-01); WS_CONFIG nur für Tests auf der Kommandozeile"
@@ -234,6 +240,7 @@ nicht_uebernehmen:
     - "Jobs: Katalog mit Mindestabstand je Job, MySQL-Sperre gegen parallele Läufe, Zeitstempel jobs_letzter_lauf bei jedem Aufruf; Auslöser cli/jobs.php oder /jobs?token=…; erster Job aufraeumen (Sitzungsdateien, Ratenschutz)"
     - "Auslieferung (E-32, E-35): Workflow Auslieferung – Prüfung, dann FTPS-Abgleich von server/; main → staging, Tag vX.Y.Z → produktiv (Tag = VERSION und auf main, sonst Abbruch vor jeder Übertragung); Ausnahmeliste config.php und var/; Zustandsdatei wird vorab angelegt, falls sie fehlt"
     - "Workflow Prüfung (bei jedem PR und vor jeder Auslieferung): php -l aller Dateien und tools/tests/lauf.php gegen MySQL 8.4"
+    - "Staging (2026-10-29): ausgeliefert, installiert, Cron per URL alle 5 min läuft, Health ok, Kopfzeilen, gesperrter Installer, Wartungsmodus und Schutz interner Dateien geprüft (Prüfprotokoll T-100 bis T-110)"
   probleme:
     - {problem: "Bei NAdoku brach die FTP-Deploy-Action gegen diesen Hoster mit ECONNRESET ab, solange die Zustandsdatei auf dem Server fehlte (die Action deutet den Abbruch als Erstauslieferung und arbeitet mit toter Verbindung weiter)", loesung: "Vor dem Abgleich prüft ein curl-Schritt per SIZE auf dem Steuerkanal, ob die Datei da ist, und legt nur dann eine leere an; eine vorhandene wird nie überschrieben"}
     - {problem: "Ein Team-Login gibt es erst mit AP-5; T-108 verlangt „Team-Login weiter möglich“", loesung: "Der Wartungsmodus nimmt /team bereits aus (getestet); der Login-Teil von T-108 wird nach AP-5 geprüft"}
@@ -251,16 +258,27 @@ nicht_uebernehmen:
     - "Schritt 2 – Design-Tokens (Farben, Schriften, Abstände) aus zina-branding/9 Technik; Schriften selbst ausgeliefert; Logo eingebunden"
     - Seitenrahmen mit Logo, Navigation, Fußzeile mit Impressum, Datenschutz und Quelltext-Link (E-25)
     - Startseite mit frei pflegbaren Infotexten (Ort, Anfahrt, Ablauf, CME-Hinweis) und Programm aus der Programm-Konfiguration (AP-3)
-    - Rechtstexte Impressum und Datenschutz (pflegbar durch Betreiber)
+    - Rechtstexte Impressum und Datenschutz (pflegbar durch Betreiber); der Hoster setzt ein eigenes Cookie `_lcp` (gesehen auf Staging) – in der Datenschutzerklärung berücksichtigen
     - "Suchmaschinen: bis zum Anmeldestart tragen alle Seiten noindex (seit AP-1); für Produktion zum Start aufheben, Staging behält noindex"
   nadoku_bausteine: [rechtstexte_lib, rechtstext_seite]
   abnahmekriterien:
     - Mockups vom Admin freigegeben
     - Darstellung auf Handy und Desktop geprüft; Kontraste WCAG AA
     - keine externen Ressourcen zur Laufzeit
-  status: offen
-  ergebnis: null
-  probleme: []
+  status: umgesetzt   # Schritt 1 freigegeben 2026-10-29 (Variante A, E-36); Schritt 2 im Code; Pflege der Texte im Betreiber-Bereich folgt mit AP-5, Programmteil mit AP-3
+  ergebnis:
+    - "Mockups: drei Varianten erstellt, nach rund 60 Kommentaren des Admins zu Variante A ausgearbeitet und freigegeben; Seiten: Start, Workshop, Anmeldung, Einstieg/Login, Deine Anmeldung, Team (Übersicht, Personen, Statistik, Workshops, Programm, Mailings, Teilnahme); abgelegt in docs/mockups/ (mit Schriften und Logos)"
+    - "Design im Code: server/public/assets/site.css mit Tokens aus zina-branding (Nachtblau, Lila, Signalrot, Grün, Blau-Stufen), Schriften Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 selbst ausgeliefert (OFL-Lizenzen beigelegt), Logo quer negativ lila/rot als SVG, Favicon und App-Symbol"
+    - "Seitenrahmen (html_lib): Logo, Navigation (Desktop als Liste, Handy als aufklappbares Menü ohne JavaScript), Sprunglink zum Inhalt, Fußzeile mit Impressum, Datenschutz und Quelltext-Link; body.akzent-rot für Workshop-Seiten"
+    - "Pflegbare Texte (Tabelle inhalt, Migration 2, inhalt_lib): kleine Auszeichnung (Absätze, ##-Überschriften, Listen, **fett**, *Akzent*, Links nur https/mailto), HTML wird immer maskiert; Startwerte aus den Mockups; Bearbeitung im Betreiber-Bereich mit AP-5"
+    - "Startseite: Kicker, Titel, Untertitel, Sticker, Eckdaten-Band (erscheint, sobald die Veranstaltungs-Einstellungen aus AP-3 gesetzt sind), Infokästen, Programmabschnitt mit Hinweis bis AP-3, CME-Hinweis"
+    - "Impressum und Datenschutz unter /impressum und /datenschutz; solange leer, Hinweis „wird gerade erstellt“; die Texte liefert der Admin (vor dem Anmeldestart, Checkliste Abschnitt 9)"
+    - "Installer und Meldungsseiten im neuen Rahmen; noindex bleibt bis zum Anmeldestart"
+  probleme:
+    - {problem: "Desktop-Navigation unsichtbar: Inhalt eines geschlossenen <details> wird vom Browser nicht gerendert, auch nicht per CSS", loesung: "Liste zweimal ausgeben – als Liste daneben (Desktop) und im aufklappbaren Menü (Handy)"}
+    - {problem: "Lila und rotes Logo erschienen gleichzeitig (Spezifität der CSS-Regeln)", loesung: "Logo-Regeln an .kopf gebunden; Screenshot-Prüfung Desktop und Handy"}
+    - {problem: "Überschrift direkt über einer Textzeile (ohne Leerzeile) wurde im Textparser nicht erkannt", loesung: "Überschriften am Blockanfang werden abgetrennt; Test ergänzt"}
+    - {problem: "Mehrere Mockup-Wünsche berühren spätere Arbeitspakete und Regeln (Ampelfarben, Grün als Fläche, Anwesenheit, Empfängerlisten)", loesung: "Als offene Punkte O-23 bis O-32 festgehalten; Klärung vor dem jeweiligen AP"}
 
 - id: AP-3
   titel: Programm und Veranstaltungs-Einstellungen
@@ -270,6 +288,7 @@ nicht_uebernehmen:
     - Datenmodell Veranstaltung, Zeitfenster (Beginn/Ende frei, auch überlappend), Workshop, Workshop-Termin (Zeitfenster, Raum, Plätze), Programmpunkte ohne Anmeldung (Vorträge, Pausen)
     - "Veranstaltungs-Einstellungen (R-11): Anmeldezeitraum (Start 2026-11-25, Ende einstellbar), Gesamtkapazität (0 = unbegrenzt), Workshop-Limit je Person (0 = keins), Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist (48 h), Grenze für automatisches Nachrücken (14 Tage vor dem Symposium), Stichtage für Workshop-Änderung, Essens-Änderung und Storno (E-31), Berufsgruppen-Liste (E-21), Veranstaltungsinfos mit CME-Angaben (E-22)"
     - Regel: überschneidende Termine gesperrt (E-20)
+    - "Ergänzt durch die Mockups: Programm-Modell, Typen, Dozierende, Workshop-Blöcke, Entwurf/Veröffentlichen, Team-Reiter „Programm“ (E-39); freie Plätze X/Y auf der Startseite (E-40)"
   abnahmekriterien:
     - Änderungen erscheinen sofort auf der Startseite
     - Plätze können nicht unter die Zahl bereits vergebener Plätze gesenkt werden (Warnung; Überhang bleibt bestehen)
@@ -288,6 +307,7 @@ nicht_uebernehmen:
     - Bestätigung per Mail (Double-Opt-In), danach gilt die Anmeldung; unbestätigte Anmeldungen verfallen nach einstellbarer Frist
     - Einmal-Link-Anforderung über Mailadresse (gleiche Antwort für alle Fälle); Link öffnet die eigene Anmeldung: Workshops und Essen ändern, stornieren, EFN nachtragen
     - "Stichtage (E-31): nach dem jeweiligen Stichtag sind Workshop-Änderung, Essens-Änderung bzw. Storno für Teilnehmende gesperrt, mit Hinweis auf den Stichtag; Nachrück-Angebote enden mit der Grenze aus E-19"
+    - "Ergänzt durch die Mockups: Termine mit freier Dauer, ein fester Termin je Workshop, Warteliste für weitere Termine, Tausch mit Bestätigung (E-38); Einstiegsseite und Popups (E-40)"
     - "Warteliste je Workshop-Termin und für die Gesamtkapazität; Nachrück-Angebot nach E-19 (Angebot per Mail mit Einmal-Link, Annahmefrist, bei Ablauf Weitergabe und Person ans Ende der Liste mit Mail, Grenze für automatische Angebote, danach manuelle Vergabe durch das Team); alles in Transaktionen (R-04)"
   nadoku_bausteine: [registrieren.php (Bremsen), pow.js, email_lib, wegwerfdomains.txt, Token-Muster, einwilligung_lib]
   abnahmekriterien:
@@ -334,6 +354,7 @@ nicht_uebernehmen:
     - Export (CSV): Teilnehmerliste, Listen je Workshop-Termin, Essensliste, CME-Liste (Name, EFN)
     - Betreiber-Einstellungen: Team-Konten, Hostnamen und Absenderadressen (E-27), SMTP-Postfächer, Rechtstexte
     - Audit-Protokoll aller Änderungen durch das Team
+    - "Ergänzt durch die Mockups: Reiter-Gliederung, Personen, Workshops (Überbuchen mit Bestätigung), Statistik mit Export-Kachel, Rollenwechsel mit zweitem Faktor (E-41); Bearbeitung der pflegbaren Texte und Rechtstexte (Tabelle inhalt, AP-2)"
   nadoku_bausteine: [totp_lib (Kern), passkey_lib (O-14), serverkrypto_lib (sk_versiegeln), Rollen- und Listenmuster aus admin_users.php]
   abnahmekriterien:
     - ohne zweiten Faktor kein Zugriff auf den Team-Bereich
@@ -354,6 +375,7 @@ nicht_uebernehmen:
     - Mail-Vorlagen: Bestätigung, Einmal-Link, Änderung, Storno, Nachrück-Angebot, Angebot abgelaufen, Platz erhalten, Wartelistenplatz, Zertifikat verfügbar
     - Rundmail an Teilnehmende mit Filter (alle, je Workshop-Termin, Warteliste, Berufsgruppe); Vorschau und Testversand an sich selbst
     - Anzeige im Team-Bereich: Warteschlange, Tageskontingent, Fehler
+    - "Ergänzt durch die Mockups: Mail-Editor mit selbst gehosteten, eingebetteten Bildern, eingeschränktes HTML, Archiv gesendeter Mails (E-41); Abgrenzung Mailings/Newsletter O-29"
   nadoku_bausteine: [smtp.php, mail_lib (Muster), jobs_lib]
   abnahmekriterien:
     - Rundmail über dem Tageslimit wird auf Folgetage verteilt, Bestätigungsmails gehen trotzdem sofort raus
@@ -392,6 +414,7 @@ nicht_uebernehmen:
     - "Zertifikat: Entwurf vom Admin (E-22); die App setzt Name, Datum, ggf. EFN darauf; Erzeugung in PHP ohne Composer (O-19)"
     - Freischaltung durch das Team (einzeln oder alle); Mail „Zertifikat verfügbar“ mit Einmal-Link; Download über die Einmal-Link-Seite
     - CME-Export für die Meldung an die Ärztekammer (Name, EFN, Anwesenheit)
+    - "Ergänzt durch die Mockups: PDF-Listen (Unterschriftenliste mit EFN-Barcode, Workshop- und Wartelisten, Sortierung) (E-41); Art der Anwesenheitserfassung O-31, Barcode-Format O-30"
   abnahmekriterien:
     - ohne erfasste Anwesenheit kein Zertifikat
     - PDF öffnet in gängigen Viewern, Name und Umlaute korrekt
@@ -437,6 +460,16 @@ nicht_uebernehmen:
 - {id: O-20, thema: Logo-Dateien, status: "erledigt (Admin 2026-10-29): Logo liegt auf main des Branding-Repos unter 1 Logo/"}
 - {id: O-21, thema: Löschfrist ohne Konto, status: "entschieden → E-24 (14 Monate, Anonymisierung)"}
 - {id: O-22, thema: Lima-City-Einrichtung, frage: "Subdomain test.winter-notfallsymposium.de → Ordner staging/public, Hauptdomain → Ordner produktiv/public (Zuordnung im Lima-City-Konto, E-34); je eine MySQL-Datenbank mit eigenem Benutzer für Staging und Produktion; Cron-Aufruf des Job-Endpunkts; Datenbank-Zugangsdaten kommen nur in die config.php auf dem Webspace", zustaendig: Admin, benoetigt_fuer: AP-1, status: in Arbeit (Admin 2026-10-29)}
+- {id: O-23, thema: "Nachrück-Angebot überschneidet sich mit anderem festen Workshop", frage: "(a) Beim Annehmen den überschneidenden Termin mit Bestätigung automatisch stornieren (so im Mockup) oder (b) das Angebot gar nicht an diese Person geben, sondern direkt an die nächste? Dazu: Darf man auf die Warteliste eines Termins, der sich mit einem eigenen festen Termin überschneidet?", zustaendig: Admin, benoetigt_fuer: AP-4, status: offen}
+- {id: O-24, thema: "Statusfarben Grün/Rot", frage: "Grün für „Platz bestätigt“, Rot für „Warteliste“ widerspricht der Markenregel „keine Ampelfarben“. Beibehalten oder markentreu (bestätigt grün, Warteliste gestrichelt ohne Rot)?", zustaendig: Admin, benoetigt_fuer: AP-4, status: offen}
+- {id: O-25, thema: "Grüner Haupt-Button", frage: "„Jetzt anmelden“ als grüne Fläche (Marke: Grün nur Erkennungszeichen) beibehalten oder lila Button?", zustaendig: Admin, benoetigt_fuer: AP-4, status: offen}
+- {id: O-26, thema: "Button-Beschriftung", frage: "„Anmelden“ ist doppeldeutig (Symposium vs. Login). Umbenennen in „Teilnehmen“ oder „Platz sichern“?", zustaendig: Admin, benoetigt_fuer: AP-4, status: offen}
+- {id: O-27, thema: "Daten nach dem Symposium", frage: "Sollen Name und EFN nach dem Symposium noch änderbar sein (Teilnahmebescheinigung) oder ab einem Stichtag gesperrt?", zustaendig: Admin, benoetigt_fuer: AP-4b/AP-10, status: offen}
+- {id: O-28, thema: "Eine Konten-Tabelle mit Rollen", frage: "Mit „zum Admin machen“ (E-41) wird ein Teilnehmenden-Konto zum Team-Konto. Künftig eine gemeinsame Konten-Tabelle mit Rollen (Teilnehmende, Admin, Betreiber) statt getrennter Team-Konten (AP-1: team_konto)?", zustaendig: Admin, benoetigt_fuer: AP-4b/AP-5, status: offen}
+- {id: O-29, thema: "Mailings und Newsletter", frage: "Mailings = organisatorische Rundmails an Angemeldete; Newsletter = Listen mit Double-Opt-In. Ein gemeinsamer Editor unter „Mailings“ mit Wahl der Empfängerart, Reiter „Newsletter“ nur für Listen und Abonnierende?", zustaendig: Admin, benoetigt_fuer: AP-6/AP-7, status: offen}
+- {id: O-30, thema: "EFN-Barcode", frage: "Welches Barcode-Format nutzen die EFN-Etiketten bzw. der Scanner der Kammer? (Foto eines Etiketts genügt)", zustaendig: Admin, benoetigt_fuer: AP-10, status: offen}
+- {id: O-31, thema: "Anwesenheit", frage: "Admin: Anwesenheit eigentlich nicht erfassen („wer angemeldet ist, war da“). Vorschlag: Standard anwesend, das Team trägt nur Ausnahmen „nicht erschienen“ ein, Nachweis bleibt die Unterschriftenliste. Annehmen (E-22 anpassen) oder ganz ohne Ausnahmen?", zustaendig: Admin, benoetigt_fuer: AP-10, status: offen}
+- {id: O-32, thema: "Empfängerliste von Rundmails", frage: "Gesendete Mails werden ohne Empfängerliste archiviert (R-02). Wird die Liste für Rückfragen gebraucht? Dann R-02 anpassen und Löschfrist festlegen", zustaendig: Admin, benoetigt_fuer: AP-6, status: offen}
 ```
 
 ## 8. Bekannte Risiken und Einschränkungen
@@ -475,6 +508,8 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | Datum | Änderung |
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
+| 2026-10-29 | AP-2 umgesetzt: Mockups (Variante A) freigegeben und in docs/mockups/ abgelegt; E-36 bis E-41 (Gestaltung, Sprache, Workshop-Termine und Warteliste, Programm-Modell, öffentliche Seiten und Einstieg, Team-Bereich) aus den Mockup-Kommentaren; E-21 auf Binnen-I; Hinweise in AP-3 bis AP-10; offene Punkte O-23 bis O-32. |
+| 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |
 | 2026-10-29 | E-32 (Auslieferung: Secrets, Zielordner staging/produktiv, Zuordnung der Domains), E-33 (Plan B Konten bestätigt), O-22 (Lima-City-Einrichtung) neu; O-10 Repo wird öffentlich. |

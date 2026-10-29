@@ -11,6 +11,7 @@ require __DIR__ . '/lib/db_lib.php';
 require __DIR__ . '/lib/transaktion_lib.php';
 require __DIR__ . '/lib/format_lib.php';
 require __DIR__ . '/lib/html_lib.php';
+require __DIR__ . '/lib/inhalt_lib.php';
 require __DIR__ . '/lib/kopfzeilen_lib.php';
 require __DIR__ . '/lib/sitzung_lib.php';
 require __DIR__ . '/lib/host_lib.php';

@@ -26,6 +26,8 @@ const ROUTEN = [
     '/install' => 'install',
     '/jobs' => 'jobs',
     '/health' => 'health',
+    '/impressum' => 'impressum',
+    '/datenschutz' => 'datenschutz',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

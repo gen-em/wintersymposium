@@ -12,6 +12,7 @@ Verbindliche Quelle ist [`docs/konzept.md`](docs/konzept.md) (Entscheidungen E-x
 ## Technik
 
 - Aufbau, Einrichtung, Auslieferung und Tests: [`docs/betrieb.md`](docs/betrieb.md). Webroot ist `server/public/`.
+- Gestaltung: freigegebene Mockups in [`docs/mockups/`](docs/mockups/index.html) (Variante A, E-36) sind Vorlage für jede neue Seite; CSS in `server/public/assets/site.css`.
 - Vor jedem PR: `php tools/tests/lauf.php` mit Testdatenbank (Umgebungsvariablen `WS_TEST_DB_*`); neue Funktionen bekommen Tests dort.
 
 ## Regeln

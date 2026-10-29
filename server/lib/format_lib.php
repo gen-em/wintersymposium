@@ -24,6 +24,17 @@ function datum_text(?string $utc): string
     return zeit_lokal($utc, 'd.m.Y');
 }
 
+/** Kalendertag (JJJJ-MM-TT, ohne Uhrzeit) als „Mi 20.01.2027". */
+function tag_text(string $tag): string
+{
+    $dt = DateTimeImmutable::createFromFormat('!Y-m-d', $tag, new DateTimeZone(ANZEIGE_ZEITZONE));
+    if ($dt === false) {
+        return $tag;
+    }
+    $wt = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][(int)$dt->format('w')];
+    return $wt . ' ' . $dt->format('d.m.Y');
+}
+
 /** „20.01.2027, 14:30" */
 function datum_zeit_text(?string $utc): string
 {
