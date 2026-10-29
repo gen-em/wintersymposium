@@ -31,6 +31,7 @@ const ROUTEN = [
     '/einloggen' => 'einloggen',
     '/ausloggen' => 'ausloggen',
     '/einrichten' => 'einrichten',
+    '/notzugang' => 'notzugang',
     '/team' => 'team',
     '/team/profil' => 'team_profil',
     '/team/konten' => 'team_konten',

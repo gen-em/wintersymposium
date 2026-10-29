@@ -15,7 +15,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 |---|---|---|---|---|
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
-| AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 umgesetzt, Staging offen | lokal T-127 bis T-133, T-150, T-151, T-153, T-154 | Staging: Schritt 1 (siehe unten); T-120 bis T-126 mit Schritt 2 und 3 |
+| AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 umgesetzt, Staging offen | lokal T-127 bis T-134, T-150, T-151, T-153, T-154 | Staging: Schritt 1 (siehe unten); T-120 bis T-126 mit Schritt 2 und 3 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
@@ -62,7 +62,8 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-129, ap: AP-3, was: "Rollenwechsel nur mit eigenem Code (E-41)", wie: "falscher Code → abgelehnt; richtiger → Rolle geändert, Sitzung des Kontos beendet", status: "lokal bestanden"}
 - {id: T-130, ap: AP-3, was: "Sperren und Sitzungen", wie: "gesperrtes Konto kommt nicht rein; eigenes Konto nicht sperrbar; letzter Betreiber bleibt", status: "lokal bestanden"}
 - {id: T-131, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
-- {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden; auf Lima-City offen (O-34)"}
+- {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden (nur wo eine Kommandozeile verfügbar ist)"}
+- {id: T-134, ap: AP-3, was: "Notzugang im Browser (O-34)", wie: "falscher Schlüssel oder unbekannte Adresse → gleiche Meldung, nichts geändert; richtiger Schlüssel → zweiter Faktor zurückgesetzt, Link angezeigt, alte Sitzung beendet, Audit-Eintrag; nach 3 Fehlversuchen gesperrt", status: "lokal bestanden"}
 - {id: T-133, ap: AP-3, was: "Team-Seiten im Browser", wie: "Login, Einrichtung mit QR, Codes, Übersicht, Team-Konten, Mein Konto bei 390 und 1280 px; kein seitliches Scrollen, keine Konsolenfehler", status: "lokal bestanden"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
@@ -167,7 +168,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-115 | 2026-10-29 | claude-dev | teilweise | /impressum und /datenschutz 200, in der Fußzeile verlinkt; leer → Hinweis; gepflegter Text (Überschrift, mailto-Link) wird angezeigt | Bearbeiten durch Betreiber erst mit AP-5 |
 | T-116 | 2026-10-29 | claude-dev | lokal bestanden | Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 von /assets/fonts (200), Logo als SVG (scharf in jeder Auflösung) | – |
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
-| T-127 bis T-133 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 188 ok, 0 Fehler; Login-Ablauf im Browser (Playwright) mit echter TOTP-Berechnung, QR-Code sichtbar, 390/1280 px ohne seitliches Scrollen, keine Konsolenfehler | Staging-Prüfung nach dem Merge |
+| T-127 bis T-134 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Login-Ablauf im Browser (Playwright) mit echter TOTP-Berechnung, QR-Code sichtbar, 390/1280 px ohne seitliches Scrollen, keine Konsolenfehler | Staging-Prüfung nach dem Merge |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
 
 ### Noch zu prüfen für AP-1
@@ -191,4 +192,5 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 5. „Team-Konten“ → zweites Konto (z. B. zweiter Betreiber) anlegen → Link kopieren, in einem privaten Fenster öffnen, Passwort setzen, zweiten Faktor einrichten.
 6. Mit dem zweiten Konto „Team-Konten“ öffnen: als Admin → „Kein Zugriff“; als Betreiber → sichtbar.
 7. Einmal mit einem Wiederherstellungscode einloggen → Hinweis „Übrig: 9“.
+8. Notzugang (nur zum Ausprobieren, setzt den eigenen zweiten Faktor zurück): `https://test.winter-notfallsymposium.de/notzugang` → Installationsschlüssel aus der config.php und eigene Adresse → Link erscheint → Passwort neu setzen, zweiten Faktor neu einrichten. Danach den Installationsschlüssel in der config.php tauschen.
 

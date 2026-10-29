@@ -27,6 +27,7 @@ const RATE_TOEPFE = [
     'login'        => [5, 900, 900],
     'zweitfaktor'  => [5, 900, 900],
     'einrichten'   => [10, 900, 900],
+    'notzugang'    => [3, 3600, 3600],
 ];
 
 function rate_grenze(string $topf): array

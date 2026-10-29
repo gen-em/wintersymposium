@@ -12,6 +12,7 @@ AP-3 Schritt 1: Konten und Team-Login.
 - Team-Bereich `/team` mit den Reitern Übersicht, Mein Konto (Passwort ändern, neue Wiederherstellungscodes) und Team-Konten (nur Betreiber). Name, Rolle und „Ausloggen“ in der Navigation.
 - Team-Konten: Konto anlegen mit Einrichtungslink (72 h, einmal benutzbar, wird dem Betreiber angezeigt, solange es keinen Mailversand gibt), Passwort-Link, zweiten Faktor zurücksetzen, sperren, Rolle ändern nur mit eigenem Code. Das eigene Konto ist dort gesperrt, und es bleibt immer ein aktiver Betreiber.
 - Ratenschutz für Login, Codes und Einrichtungslinks; gleiche Meldung und Laufzeit für bekannte und unbekannte Adressen.
+- Notzugang für Betreiber unter `/notzugang` (O-34): mit dem Installationsschlüssel aus der config.php wird der zweite Faktor eines Betreiber-Kontos zurückgesetzt und ein Passwort-Link angezeigt; 3 Versuche je Stunde, Audit-Eintrag, nicht verlinkt.
 - Notweg auf der Kommandozeile: `cli/konto.php` (Liste, Link erzeugen, zweiten Faktor zurücksetzen).
 - QR-Code lokal erzeugt: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, MIT) und `assets/qr.js`, übernommen aus NAdoku.
 

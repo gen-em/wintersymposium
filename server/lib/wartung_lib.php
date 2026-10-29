@@ -8,7 +8,7 @@ declare(strict_types=1);
  * der Health-Endpunkt und der Installer bleiben erreichbar. Jobs pausieren.
  */
 
-const WARTUNG_AUSNAHMEN = ['/team', '/einloggen', '/ausloggen', '/einrichten', '/health', '/install', '/assets'];
+const WARTUNG_AUSNAHMEN = ['/team', '/einloggen', '/ausloggen', '/einrichten', '/notzugang', '/health', '/install', '/assets'];
 
 function wartung_datei(): string
 {

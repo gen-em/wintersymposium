@@ -104,7 +104,6 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     pruefe(db_wert("SELECT COUNT(*) FROM konto_code WHERE hash LIKE '$%'") == 10 && !str_contains((string)db_wert('SELECT totp_geheimnis FROM konto'), totp_base32((string)$roh)), 'Codes nur als Hash, Geheimnis versiegelt');
     $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Erste Betreiberin') && str_contains($r['text'], 'Ausloggen'), 'Team-Bereich mit Name und Ausloggen (E-40)');
-    pruefe(str_contains($r['text'], 'nur einen aktiven Betreiber'), 'Hinweis auf zweiten Betreiber');
     $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Neues Team-Konto'), 'Team-Konten für Betreiber');
 
@@ -185,6 +184,27 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     }
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'passwort', 'email' => 'ziel@example.org', 'passwort' => 'x'], $x);
     pruefe(str_contains($r['text'], 'Zu viele Versuche'), 'nach ' . RATE_TOEPFE['login'][0] . ' Fehlversuchen für eine Adresse gesperrt');
+
+    abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
+    $n = "$tmp/kekse-not.txt";
+    $r = http_anfrage($basis, 'GET', '/notzugang', $h, [], null, $n);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Installationsschlüssel'), 'Notzugang erreichbar');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => 'falsch', 'email' => 'betrieb@example.org'], $n);
+    pruefe(str_contains($r['text'], 'stimmt nicht') && db_wert("SELECT totp_seit FROM konto WHERE email = 'betrieb@example.org'") !== null, 'falscher Schlüssel: nichts zurückgesetzt');
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'niemand@example.org'], $n);
+    pruefe(str_contains($r['text'], 'stimmt nicht'), 'unbekannte Adresse: gleiche Meldung');
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'betrieb@example.org'], $n);
+    $notlink = preg_match('#/einrichten\?t=([A-Za-z0-9_-]+)#', $r['text'], $m) === 1 ? $m[1] : '';
+    pruefe($notlink !== '' && db_wert("SELECT totp_seit FROM konto WHERE email = 'betrieb@example.org'") === null, 'richtiger Schlüssel: zweiter Faktor zurückgesetzt, Link angezeigt');
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'notzugang'") == 1, 'Notzugang im Audit-Protokoll');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    pruefe($r['status'] === 303, 'alte Sitzung des Kontos beendet');
+    for ($i = 0; $i < RATE_TOEPFE['notzugang'][0]; $i++) {
+        http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => 'falsch', 'email' => 'x@example.org'], $n);
+    }
+    $r = http_anfrage($basis, 'POST', '/notzugang', $h, [], ['csrf' => $csrf, 'schluessel' => str_repeat('i', 40), 'email' => 'betrieb@example.org'], $n);
+    pruefe(str_contains($r['text'], 'Zu viele Versuche') && !str_contains($r['text'], '/einrichten?t='), 'nach drei Fehlversuchen gesperrt, auch mit richtigem Schlüssel');
 
     abschnitt('Notweg auf der Kommandozeile');
     $aus = [];

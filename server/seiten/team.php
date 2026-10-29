@@ -14,10 +14,6 @@ if ($zf['codes_offen'] <= 2) {
     echo '<div class="meldung fehler" role="alert">Du hast nur noch ' . $zf['codes_offen'] . ' Wiederherstellungscodes. '
         . 'Erzeuge unter <a href="/team/profil">Mein Konto</a> neue.</div>';
 }
-if ($konto['rolle'] === 'betreiber' && konto_aktive_betreiber() < 2) {
-    echo '<div class="meldung hinweis">Es gibt nur einen aktiven Betreiber. Lege unter <a href="/team/konten">Team-Konten</a> '
-        . 'einen zweiten an. Sonst kann niemand helfen, wenn du dein Handy und deine Wiederherstellungscodes verlierst.</div>';
-}
 ?>
 <p>Hallo <?= e($konto['name']) ?>. Hier entsteht der Team-Bereich.</p>
 <div class="kacheln">
