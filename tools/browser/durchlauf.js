@@ -147,9 +147,15 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   // Elemente, die rechts aus dem Fenster ragen (außer in scrollbaren Tabellen)
   const raus = await p.evaluate(ueberstand);
   notiere(engine, breite, name, 'alles innerhalb der Fensterbreite', raus.length === 0, raus.join(', '));
-  // Abgeschnittenes in scrollbaren Rahmen (overflow): Inhalt breiter als der Rahmen
-  const abgeschnitten = await p.evaluate(() => [...document.querySelectorAll('.tabelle-wrap')].filter(w => !w.closest('.scroll-erlaubt') && w.scrollWidth > w.clientWidth + 1).length);
-  notiere(engine, breite, name, 'Tabellen ohne verdecktes Seitwärts-Scrollen', abgeschnitten === 0, `${abgeschnitten} Tabelle(n)`);
+  // Abgeschnittenes oder verdecktes Seitwärts-Scrollen in jedem Rahmen mit overflow (Tabellen, Kästen, Popups):
+  // Inhalt breiter als der Rahmen. Ausnahmen: .scroll-erlaubt und bewusst gekürzter Text (text-overflow: ellipsis).
+  const abgeschnitten = await p.evaluate(() => [...document.body.querySelectorAll('*')].filter(w => {
+    if (!w.checkVisibility || !w.checkVisibility() || w.closest('.scroll-erlaubt')) return false;
+    const st = getComputedStyle(w);
+    if (st.overflowX === 'visible' || st.textOverflow === 'ellipsis') return false;
+    return w.scrollWidth > w.clientWidth + 1;
+  }).map(w => w.tagName.toLowerCase() + (w.className && typeof w.className === 'string' ? '.' + w.className.trim().split(/\s+/)[0] : '')));
+  notiere(engine, breite, name, 'nichts abgeschnitten oder verdeckt seitwärts scrollbar', abgeschnitten.length === 0, [...new Set(abgeschnitten)].join(', '));
   // Code-Felder für Passwortmanager (Bitwarden in Firefox erkennt sie nur über Stichwörter,
   // siehe chodid/server-family docs/erkenntnis-bitwarden-einmalcode.md)
   const otp = await p.evaluate(() => [...document.querySelectorAll('input[autocomplete="one-time-code"]')].map(i => {
@@ -180,8 +186,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Jede Engine richtet den zweiten Faktor frisch ein.
       php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
       // Deutsche Oberfläche wie bei den Nutzenden: Datums- und Zeitfelder zeigen dann TT.MM.JJJJ und 24 h.
-      const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'] }
-        : engine === 'firefox' ? { firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': false } } : {});
+      // Die Sprache allein reicht nicht: Chromium und Firefox formatieren die Felder nach der Umgebung
+      // des Browserprozesses (LANG), Firefox nur, wenn er die Systemeinstellung übernehmen darf.
+      const deUmgebung = { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de_DE:de', LC_ALL: 'de_DE.UTF-8' };
+      const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'], env: deUmgebung }
+        : engine === 'firefox' ? { env: deUmgebung, firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': true } }
+        : { env: deUmgebung });
       const version = browser.version();
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
       const p = await ctx.newPage();
@@ -195,6 +205,23 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'start', basis + '/');
         notiere(engine, breite, 'start', w < 760 ? 'Menü-Knopf sichtbar, Liste versteckt' : 'Navigation sichtbar',
           w < 760 ? (await p.isVisible('.menue summary') && !await p.isVisible('.nav-gross a')) : await p.isVisible('.nav-gross a'));
+        // Programm: Raster ab 760 px, Liste darunter
+        const raster = await p.isVisible('.gantt-wrap');
+        const liste = await p.isVisible('.ws-mobil');
+        notiere(engine, breite, 'start', w >= 760 ? 'Workshop-Block als Zeitraster' : 'Workshop-Block als Liste', w >= 760 ? (raster && !liste) : (liste && !raster));
+        if (w >= 760) {
+          const balken = await p.evaluate(() => [...document.querySelectorAll('.gb')].every(b => b.getBoundingClientRect().width > 8));
+          notiere(engine, breite, 'start', 'Balken im Zeitraster gesetzt', balken);
+        }
+        // Geöffnete Popups als Bildschirmfoto (zum Ansehen: Vortrag mit Dozierenden, Workshop mit Terminen und Zettel)
+        for (const [titel, name] of [['Sepsis', 'popup-vortrag'], ['Atemweg', 'popup-workshop']]) {
+          const ausloeser = p.locator('[data-dialog]:visible', { hasText: titel }).first();
+          await ausloeser.click();
+          await p.waitForSelector('dialog[open]');
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-${name}.png`) });
+          await p.click('dialog[open] [data-schliessen]');
+          notiere(engine, breite, 'start', `${name}: ✕ schließt`, await p.locator('dialog[open]').count() === 0);
+        }
         for (const s of ['impressum', 'datenschutz', 'einloggen', 'notzugang']) {
           await pruefeSeite(p, fehler, engine, breite, s, basis + '/' + s);
         }
@@ -224,13 +251,63 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
+        for (const [text, ziel, name] of [['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
       }
+
+      // Programm: Punkt bearbeiten (Formular, Termine), Dozierende, Vorschau in allen Breiten
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await p.goto(basis + '/team/programm');
+        await p.click('.pg-link:has-text("Atemweg")');
+        await p.waitForLoadState('load');
+        await pruefeSeite(p, fehler, engine, breite, 'team-programm-workshop', null);
+        const vorher = await p.locator('#pg-termine tr').count();
+        await p.click('#pg-termin-neu');
+        await p.locator('#pg-termine tr').first().locator('[data-duplizieren]').click();
+        const nachher = await p.locator('#pg-termine tr').count();
+        const dup = await p.locator('#pg-termine tr').last().locator('[name="t_beginn[]"]').inputValue();
+        notiere(engine, breite, 'team-programm-workshop', '+ Termin und Duplizieren (Anschluss 20:15)', nachher === vorher + 2 && dup === '20:15', `${vorher}→${nachher}, ${dup}`);
+        await pruefeSeite(p, fehler, engine, breite, 'team-dozierende', basis + '/team/dozierende?id=1');
+        await pruefeSeite(p, fehler, engine, breite, 'team-programm-vorschau', basis + '/team/programm/vorschau');
+      }
+      // Neuer Punkt ohne Uhrzeit, dann an seine Stelle ziehen (Desktop)
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/programm?neu=vortrag');
+      await p.selectOption('#pg-typ', 'pause');
+      notiere(engine, 'desktop-breit', 'team-programm', 'Typwechsel blendet Felder aus', !await p.isVisible('#pg-kuerzel') && !await p.isVisible('#pg-bring'));
+      await p.fill('#pg-titel', 'Pause ' + engine);
+      await p.click('#pg-formular button[type=submit]');
+      await p.waitForLoadState('load');
+      const neuZeile = p.locator('.pg-zeile.pg-neu-punkt', { hasText: 'Pause ' + engine });
+      notiere(engine, 'desktop-breit', 'team-programm', 'neuer Punkt oben hell-lila', await neuZeile.count() === 1);
+      const zielZeile = p.locator('.pg-zeile', { hasText: 'Fall #1' }).first();
+      if (engine === 'webkit') {
+        // Playwright kann in WebKit unter Linux kein natives Ziehen (HTML5 Drag and Drop) auslösen;
+        // dieselben Ereignisse werden deshalb im Browser selbst ausgelöst – die Logik in programm-team.js läuft gleich.
+        await Promise.all([p.waitForNavigation(), p.evaluate(([titel]) => {
+          const quelle = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes(titel)).querySelector('.griff');
+          const ziel = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes('Fall #1'));
+          const dt = new DataTransfer();
+          quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
+          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        }, ['Pause ' + engine])]);
+      } else {
+        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile)]);
+      }
+      await p.waitForLoadState('load');
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-programm-gezogen.png`), fullPage: true });
+      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45'),
+        (await p.locator('.meldung').allTextContents()).join(' | ') + ' ' + p.url());
+      await p.click('.entwurf-banner summary:has-text("Verwerfen")');
+      await p.click('.entwurf-banner button:has-text("Ja, verwerfen")');
+      await p.waitForLoadState('load');
+      notiere(engine, 'desktop-breit', 'team-programm', 'Verwerfen über den Banner', (await p.textContent('body')).includes('Verworfen'));
 
       // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
       await p.setViewportSize({ width: 390, height: 844 });

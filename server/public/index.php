@@ -36,11 +36,14 @@ const ROUTEN = [
     '/team/profil' => 'team_profil',
     '/team/konten' => 'team_konten',
     '/team/einstellungen' => 'team_einstellungen',
+    '/team/programm' => 'team_programm',
+    '/team/programm/vorschau' => 'team_programm_vorschau',
+    '/team/dozierende' => 'team_dozierende',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
 $pfad = $pfad === '/' ? '/' : rtrim($pfad, '/');
-$seite = ROUTEN[$pfad] ?? null;
+$seite = ROUTEN[$pfad] ?? (str_starts_with($pfad, '/bild/') ? 'bild' : null);
 
 // 1. Noch nicht eingerichtet: nur der Installer antwortet.
 if (konfig_maengel() !== [] || !installiert()) {

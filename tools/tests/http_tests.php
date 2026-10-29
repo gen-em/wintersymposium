@@ -68,6 +68,108 @@ function http_totp_geheimnis(string $html): ?string
     return preg_match('/secret=([A-Z2-7]+)/', $html, $m) === 1 ? base32_dekodieren($m[1]) : null;
 }
 
+/** Programm pflegen, veröffentlichen, anzeigen (AP-3 Schritt 3); $b = Kekse einer eingeloggten Betreiberin. */
+function programm_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Programm pflegen und veröffentlichen (AP-3 Schritt 3)');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Noch keine Programmpunkte'), 'Programm-Reiter, noch leer');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'GET', '/team/programm?neu=vortrag', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'value="VT 01"'), 'Kürzel-Vorschlag VT 01');
+    // Dozentin anlegen
+    $r = http_anfrage($basis, 'POST', '/team/dozierende', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'name' => 'Dr. Erika Test', 'funktion' => 'Oberärztin', 'kurzbio' => 'Kurz.'], $b);
+    $dozId = (int)db_wert("SELECT id FROM dozent WHERE name = 'Dr. Erika Test'");
+    pruefe($r['status'] === 303 && $dozId > 0, 'Dozentin angelegt');
+    // Fehlerfall: Ende vor Beginn
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Sepsis', 'beginn' => '18:30', 'ende' => '18:00'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Das Ende muss nach dem Beginn liegen') && str_contains($r['text'], 'value="Sepsis"'), 'Fehler am Feld, Eingabe bleibt');
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Sepsis <b>jetzt</b>', 'beginn' => '18:15', 'ende' => '18:45', 'ort' => 'Hörsaal', 'dozenten' => [$dozId]], $b);
+    pruefe($r['status'] === 303, 'Vortrag gespeichert');
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'block', 'titel' => 'Workshops', 'beginn' => '19:00', 'ende' => '21:00'], $b);
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Atemweg', 'ort' => 'Lab 1', 'bring' => 'Stethoskop', 'notiz' => 'Brille mit',
+        't_id' => [0, 0], 't_beginn' => ['19:00', '20:00'], 't_ende' => ['19:45', '20:45'], 't_plaetze' => ['12', '10']], $b);
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'station', 'titel' => 'Reanimation', 'ort' => 'Lab 1', 'beginn' => '19:00', 'ende' => '21:00'], $b);
+    pruefe(db_wert('SELECT COUNT(*) FROM programmpunkt') == 4 && db_wert('SELECT COUNT(*) FROM workshop_termin') == 2, 'Block, Workshop mit zwei Terminen, Station gespeichert');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht') && substr_count($r['text'], '+ neu') >= 4, 'Banner und Markierung „neu“');
+    pruefe(str_contains($r['text'], 'Lab 1 ist 19:00–19:45 doppelt belegt'), 'Hinweis: Raum doppelt belegt');
+    pruefe(preg_match('#<ol class="pg-kinder">.*WS 01.*Reanimation#s', $r['text']) === 1, 'Termine und Station hängen unter dem Block');
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(!str_contains($r['text'], 'Sepsis') && str_contains($r['text'], 'sobald es veröffentlicht ist'), 'Startseite noch ohne Programm (nur gespeichert)');
+    $r = http_anfrage($basis, 'GET', '/team/programm/vorschau', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Vorschau') && str_contains($r['text'], 'Atemweg'), 'Vorschau zeigt Arbeitsstand');
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'veroeffentlichen'], $b);
+    pruefe($r['status'] === 303, 'veröffentlicht');
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    $html = $r['text'];
+    pruefe(str_contains($html, 'Sepsis &lt;b&gt;jetzt&lt;/b&gt;') && !str_contains($html, '<b>jetzt</b>'), 'Startseite zeigt Programm, Titel maskiert');
+    pruefe(str_contains($html, 'data-dialog="pp-') && str_contains($html, '<dialog class="popup"') && str_contains($html, 'Dr. Erika Test'), 'Popups mit Dozentin');
+    pruefe(str_contains($html, 'class="gantt-wrap"') && str_contains($html, 'class="ws-mobil"') && str_contains($html, '12 frei'), 'Workshop-Block: Raster und Liste, freie Plätze');
+    pruefe(str_contains($html, 'Brille mit') && str_contains($html, 'Stethoskop'), 'Workshop-Popup mit Bring und Notiz');
+    pruefe(str_contains($html, '/assets/programm.js'), 'Skript für Popups eingebunden');
+    preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
+    pruefe(array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/')) === [], 'Programm ohne externe Ressourcen');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(!str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht') && str_contains($r['text'], 'Alles veröffentlicht'), 'nach dem Veröffentlichen kein Banner');
+    // Ändern, verschieben, verwerfen
+    $vtId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'vortrag'");
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'verschieben', 'art' => 'punkt', 'id' => $vtId, 'beginn' => '18:30'], $b);
+    pruefe($r['status'] === 303 && db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$vtId]) === '18:30:00' && db_wert('SELECT ende FROM programmpunkt WHERE id = ?', [$vtId]) === '19:00:00', 'Verschieben: neuer Beginn, Dauer bleibt');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Neue Uhrzeit vorgeschlagen: 18:30–19:00'), 'Meldung nennt neue Uhrzeit von–bis');
+    pruefe(str_contains($r['text'], '✎ nicht veröffentlicht') && str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht'), 'geändert markiert');
+    $blockId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'block'");
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'verschieben', 'art' => 'punkt', 'id' => $blockId, 'beginn' => '19:30'], $b);
+    pruefe(db_wert("SELECT MIN(beginn) FROM workshop_termin") === '19:30:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station'") === '19:30:00', 'Block verschieben nimmt Termine und Station mit');
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'verwerfen'], $b);
+    pruefe(db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$vtId]) === '18:15:00' && db_wert("SELECT MIN(beginn) FROM workshop_termin") === '19:00:00', 'Verwerfen stellt den veröffentlichten Stand her');
+    pruefe(programm_status()['offen'] === false, 'danach nichts offen');
+    // Löschen ist erst nach dem Veröffentlichen weg
+    $stId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'station'");
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'loeschen', 'id' => $stId], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Reanimation'), 'gelöscht, aber bis zum Veröffentlichen noch auf der Startseite');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Reanimation (gelöscht)'), 'Banner nennt gelöschten Punkt');
+    // Veröffentlichen verlangt Uhrzeiten
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'pause', 'titel' => 'Pause ohne Zeit'], $b);
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'veroeffentlichen'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Nicht veröffentlicht') && str_contains($r['text'], 'Pause ohne Zeit'), 'Punkt ohne Uhrzeit verhindert das Veröffentlichen');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'pg-neu-punkt'), 'Punkt ohne Uhrzeit steht oben als neu');
+    $pauseId = (int)db_wert("SELECT id FROM programmpunkt WHERE titel = 'Pause ohne Zeit'");
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'verschieben', 'art' => 'punkt', 'id' => $pauseId, 'beginn' => '18:45'], $b);
+    pruefe(db_wert('SELECT ende FROM programmpunkt WHERE id = ?', [$pauseId]) === '19:15:00', 'Ziehen gibt einem neuen Punkt 30 Minuten');
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'veroeffentlichen'], $b);
+    pruefe($r['status'] === 303 && !str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Reanimation'), 'nach dem Veröffentlichen ist der gelöschte Punkt weg');
+    // Foto (braucht die PHP-Erweiterung GD; ohne sie ist der Upload ausgeblendet)
+    if (!foto_moeglich()) {
+        echo "  --    Foto-Prüfungen übersprungen: GD fehlt\n";
+    } else {
+    $png = "$tmp/foto.png";
+    $bild = imagecreatetruecolor(800, 600);
+    imagefill($bild, 0, 0, imagecolorallocate($bild, 180, 140, 255));
+    imagepng($bild, $png);
+    $ch = curl_init("$basis/team/dozierende");
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Host: ' . $h], CURLOPT_COOKIEFILE => $b, CURLOPT_COOKIEJAR => $b,
+        CURLOPT_POSTFIELDS => ['csrf' => $csrf, 'aktion' => 'speichern', 'id' => $dozId, 'name' => 'Dr. Erika Test', 'funktion' => 'Oberärztin', 'kurzbio' => 'Kurz.', 'foto' => new CURLFile($png, 'image/png', 'foto.png')]]);
+    curl_exec($ch);
+    $foto = (string)db_wert('SELECT foto FROM dozent WHERE id = ?', [$dozId]);
+    pruefe(preg_match('/^dozent-\d+-[0-9a-f]{12}\.jpg$/', $foto) === 1, 'Foto hochgeladen und als JPEG gespeichert');
+    $r = http_anfrage($basis, 'GET', '/bild/' . $foto, $h);
+    $info = @getimagesizefromstring($r['text']);
+    pruefe($r['status'] === 200 && $info !== false && $info[0] === FOTO_KANTE && $info[1] === FOTO_KANTE, 'Foto quadratisch verkleinert ausgeliefert');
+    pruefe(http_anfrage($basis, 'GET', '/bild/../config.php', $h)['status'] === 404 && http_anfrage($basis, 'GET', '/bild/dozent-1-zzz.jpg', $h)['status'] === 404, 'Bild-Adresse nimmt nur echte Fotonamen');
+    $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht'), 'Foto-Änderung zählt als unveröffentlicht');
+    http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'veroeffentlichen'], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], '/bild/' . $foto), 'Foto im Popup nach dem Veröffentlichen');
+    }
+    // Ohne Login
+    $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'veroeffentlichen'], "$tmp/kekse-niemand.txt");
+    pruefe($r['status'] === 303 || $r['status'] === 403, 'ohne Login nichts änderbar');
+}
+
 function team_login_tests(string $basis, string $h, string $tmp, string $wurzel): void
 {
     $b = "$tmp/kekse-betreiber.txt";
@@ -144,7 +246,9 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $csrf = http_csrf($r['text']);
     $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'rolle', 'id' => $annaId, 'rolle' => 'betreiber', 'totp' => '000000'], $b);
     pruefe(str_contains($r['text'], 'Die Rolle wurde nicht geändert') && db_wert('SELECT rolle FROM konto WHERE id = ?', [$annaId]) === 'admin', 'Rollenwechsel ohne gültigen eigenen Code abgelehnt');
-    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'rolle', 'id' => $annaId, 'rolle' => 'betreiber', 'totp' => totp_code((string)$roh, time() + 30)], $b);
+    // Code einmal erzeugen und unten wiederverwenden (sonst kann eine 30-s-Grenze dazwischen liegen)
+    $benutzt = totp_code((string)$roh, time() + 30);
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'rolle', 'id' => $annaId, 'rolle' => 'betreiber', 'totp' => $benutzt], $b);
     pruefe($r['status'] === 303 && db_wert('SELECT rolle FROM konto WHERE id = ?', [$annaId]) === 'betreiber', 'Rollenwechsel mit eigenem Code (E-41)');
     $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $a);
     pruefe($r['status'] === 303, 'Rollenwechsel beendet die Sitzung des Kontos');
@@ -169,7 +273,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'Authenticator-App ein') && !str_contains($r['text'], 'data-qr'), 'zweites Login fragt nur den Code');
     $csrf = http_csrf($r['text']);
-    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'code', 'totp' => totp_code((string)$roh, time() + 30)], $b);
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'code', 'totp' => $benutzt], $b);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code stimmt nicht'), 'schon benutzter Code gilt nicht noch einmal');
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => $csrf, 'aktion' => 'code', 'totp' => strtolower($codes[0])], $b);
     pruefe($r['status'] === 303, 'Wiederherstellungscode öffnet');
@@ -204,6 +308,8 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['veranstaltung_ort' => 'Klinikum Test', 'veranstaltung_kapazitaet' => '120'] + $form, "$tmp/kekse-leer.txt");
     pruefe($r['status'] === 403 || $r['status'] === 303, 'ohne Login nicht speicherbar');
     db_ausfuehren("DELETE FROM einstellung WHERE schluessel IN ('veranstaltung_ort', 'veranstaltung_kapazitaet')");
+
+    programm_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -370,7 +476,7 @@ function http_tests(string $wurzel, string $tmp): void
         pruefe(str_contains($html, '<em>Notfallmedizin</em>'), 'Titel aus pflegbarem Text (mit Akzent)');
         pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
         pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten aus den Einstellungen (Startwerte)');
-        pruefe(str_contains($html, 'Beispielprogramm') && str_contains($html, 'class="programm"') && str_contains($html, 'Tigerente'), 'Beispielprogramm als Platzhalter sichtbar und gekennzeichnet');
+        pruefe(str_contains($html, 'Das Programm erscheint hier, sobald es veröffentlicht ist') && !str_contains($html, 'Tigerente'), 'ohne veröffentlichtes Programm: Hinweis, kein Beispielprogramm');
         pruefe(str_contains($html, 'href="/impressum"') && str_contains($html, 'href="/datenschutz"') && str_contains($html, 'Quelltext (AGPL)'), 'Fußzeile mit Impressum, Datenschutz, Quelltext');
         preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
         $fremd = array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/'));

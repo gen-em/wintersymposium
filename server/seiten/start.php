@@ -5,14 +5,14 @@ declare(strict_types=1);
  * Startseite (AP-2). Texte aus der Tabelle inhalt (pflegbar, AP-5).
  * Eckdaten (Datum, Zeit, Ort, CME, freie Plätze) kommen aus den
  * Veranstaltungs-Einstellungen (AP-3 Schritt 2, lib/veranstaltung_lib.php).
- * Das Programm ist bis AP-3 Schritt 3 ein Beispiel (teil_beispielprogramm.php).
+ * Das Programm zeigt den veröffentlichten Stand (AP-3 Schritt 3, teil_programm.php).
  */
 
 $eck = va_eckdaten();
 $anmeldungAb = va('anmeldung_start');
 $anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
 
-seite_kopf('Start', ['aktiv' => '/']);
+seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
 ?>
 <div class="innen held">
     <div>
@@ -47,7 +47,7 @@ seite_kopf('Start', ['aktiv' => '/']);
 <section class="abschnitt" id="programm" aria-labelledby="programm-titel"><div class="innen">
     <p class="kicker">Programm</p>
     <h2 class="zwischen" id="programm-titel">Der Abend im Überblick</h2>
-    <?php require __DIR__ . '/teil_beispielprogramm.php'; // Platzhalter bis AP-3 ?>
+    <?php $programm_punkte = programm_veroeffentlicht()['punkte'] ?? []; require __DIR__ . '/teil_programm.php'; ?>
 </div></section>
 
 <?php if (inhalt('start_cme') !== ''): ?>

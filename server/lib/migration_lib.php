@@ -163,6 +163,61 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        5 => [
+            'beschreibung' => 'Programm: Programmpunkte, Workshop-Termine, Dozierende, veröffentlichter Stand (E-39)',
+            'sql' => [
+                // Arbeitsstand des Programms. Die Startseite zeigt nur den veröffentlichten Stand (programm_stand).
+                "CREATE TABLE programmpunkt (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    typ          ENUM('vortrag','fall','workshop','station','block','pause') NOT NULL,
+                    kuerzel      VARCHAR(12)  NOT NULL DEFAULT '',
+                    titel        VARCHAR(160) NOT NULL,
+                    untertitel   VARCHAR(200) NOT NULL DEFAULT '',
+                    beschreibung TEXT         NOT NULL,
+                    ort          VARCHAR(120) NOT NULL DEFAULT '',
+                    beginn       TIME         NULL,
+                    ende         TIME         NULL,
+                    bring        VARCHAR(160) NOT NULL DEFAULT '',
+                    notiz        VARCHAR(300) NOT NULL DEFAULT '',
+                    erstellt_am  DATETIME     NOT NULL,
+                    geaendert_am DATETIME     NOT NULL,
+                    KEY ix_programmpunkt_beginn (beginn)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "CREATE TABLE workshop_termin (
+                    id       INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    punkt_id INT UNSIGNED NOT NULL,
+                    beginn   TIME         NOT NULL,
+                    ende     TIME         NOT NULL,
+                    plaetze  INT UNSIGNED NOT NULL,
+                    KEY ix_workshop_termin_punkt (punkt_id),
+                    CONSTRAINT fk_workshop_termin_punkt FOREIGN KEY (punkt_id) REFERENCES programmpunkt (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "CREATE TABLE dozent (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    name         VARCHAR(120) NOT NULL,
+                    funktion     VARCHAR(160) NOT NULL DEFAULT '',
+                    kurzbio      TEXT         NOT NULL,
+                    foto         VARCHAR(64)  NULL,
+                    erstellt_am  DATETIME     NOT NULL,
+                    geaendert_am DATETIME     NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "CREATE TABLE punkt_dozent (
+                    punkt_id  INT UNSIGNED NOT NULL,
+                    dozent_id INT UNSIGNED NOT NULL,
+                    pos       SMALLINT     NOT NULL DEFAULT 0,
+                    PRIMARY KEY (punkt_id, dozent_id),
+                    CONSTRAINT fk_punkt_dozent_punkt FOREIGN KEY (punkt_id) REFERENCES programmpunkt (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_punkt_dozent_dozent FOREIGN KEY (dozent_id) REFERENCES dozent (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Veröffentlichter Stand als JSON (eine Zeile); die Startseite liest nur hier.
+                "CREATE TABLE programm_stand (
+                    id                INT UNSIGNED NOT NULL PRIMARY KEY,
+                    daten             MEDIUMTEXT   NOT NULL,
+                    veroeffentlicht_am DATETIME    NOT NULL,
+                    veroeffentlicht_von INT UNSIGNED NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

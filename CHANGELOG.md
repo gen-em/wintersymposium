@@ -2,6 +2,31 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.5.0] – 2026-10-29
+
+AP-3 Schritt 3: Programm.
+
+### Neu
+
+- Reiter „Programm“ im Team-Bereich: Tagesplan nach Uhrzeit mit Programmpunkten der Typen Vortrag, Fallbesprechung, Workshop (mit Terminen und Plätzen je Termin, „Bring“, Notiz vom Team), offene Station, Workshop-Block und Pause/Info. Ein Workshop-Block sammelt automatisch alle Workshop-Termine und Stationen in seiner Zeit.
+- Speichern ist nicht Veröffentlichen: Änderungen sind im Plan markiert („neu“, „gespeichert · nicht veröffentlicht“), ein roter Banner zeigt den offenen Stand mit Vorschau, Verwerfen und „Jetzt veröffentlichen“. Die Startseite zeigt nur den veröffentlichten Stand. Ohne Uhrzeit lässt sich nicht veröffentlichen.
+- Ziehen am Griff ⋮⋮: Ablegen auf einer Zeile schlägt deren Ende als neuen Beginn vor (auf einem Block dessen Beginn); die Dauer bleibt, ein Block nimmt seine Inhalte mit. Neue Punkte ohne Uhrzeit stehen oben hell-lila.
+- Termine: „+ Termin“ und „Duplizieren“ (nächster Termin im Anschluss, gleiche Dauer und Plätze); Hinweis, wenn ein Raum doppelt belegt ist.
+- Dozierende als eigene Liste (Name, Funktion, Kurzbio, Foto optional), mehreren Punkten zuordenbar. Fotos werden quadratisch auf 480 px verkleinert, ohne Metadaten gespeichert und unter `/bild/` ausgeliefert; verwaiste Fotos räumt der Job „aufraeumen“ weg.
+- Startseite: Programm mit Popups für Vorträge, Fallbesprechungen, Workshops und Stationen (Dozierende, Termine mit freien Plätzen, Notiz-Zettel); Workshop-Block auf dem Desktop als Zeitraster, auf dem Handy als Liste.
+- Test-Beispieldatensatz `tools/testdaten/beispieldaten.php`: erfundenes Programm für den Browser-Durchlauf; wächst mit jedem Arbeitspaket.
+- Browser-Durchlauf: Programm-Pflege (Formular, Typwechsel, Termine, Ziehen, Verwerfen), Dozierende, Vorschau, Zeitraster und Liste, Bildschirmfotos geöffneter Popups. Die Prüfung auf Abgeschnittenes gilt jetzt für jeden Rahmen mit overflow, nicht nur für Tabellen.
+
+### Behoben
+
+- Test zum Wiederholungsschutz der Einmalcodes schlug zufällig fehl, wenn zwischen zwei Aufrufen eine 30-Sekunden-Grenze lag (Fehler im Test, nicht in der Anwendung).
+- Kästchen in Formularfeldern bekamen die Maße der Textfelder.
+- Browser-Durchlauf: Chromium und Firefox zeigten Datums- und Zeitfelder im US-Format (AM/PM), weil nur die Sprache, nicht die Umgebung des Browserprozesses deutsch war. Jetzt mit `LANG=de_DE.UTF-8`; die Bildschirmfotos zeigen 24 h und TT.MM.JJJJ.
+
+### Entfernt
+
+- Beispielprogramm auf der Startseite (`server/seiten/teil_beispielprogramm.php`, aus 0.2.2); ohne veröffentlichtes Programm steht dort ein Hinweis.
+
 ## [0.4.0] – 2026-10-29
 
 AP-3 Schritt 2: Veranstaltungs-Einstellungen.
