@@ -1,6 +1,6 @@
 # Wintersymposium – Allgäu Akut
 
-Webseite für das Wintersymposium der Fortbildungsreihe **ALLGÄU AKUT – Fortbildung Notfallmedizin**: Infos und Programm, Anmeldung mit Warteliste (ohne Konto, Verwaltung über Einmal-Links), Team-Bereich mit Statistik und Verwaltung, Rundmails, Newsletter, Teilnahmezertifikate. Teamkommunikation läuft über das bestehende Kaneo von Gen-EM.
+Webseite für das Wintersymposium der Fortbildungsreihe **ALLGÄU AKUT – Fortbildung Notfallmedizin**: Infos und Programm, Anmeldung mit Warteliste (Verwaltung über Einmal-Links oder ein optionales Konto), Team-Bereich mit Statistik und Verwaltung, Rundmails, Newsletter, Teilnahmezertifikate. Teamkommunikation läuft über das bestehende Kaneo von Gen-EM.
 
 **Stand: Konzeptphase.** Noch kein Code.
 

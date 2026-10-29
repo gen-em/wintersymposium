@@ -16,8 +16,9 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-1 | Grundgerüst und Auslieferung | offen | – | T-100 bis T-110 |
 | AP-2 | Design-Mockups und öffentliche Seiten | offen | – | T-111 bis T-116 |
 | AP-3 | Programm und Veranstaltungs-Einstellungen | offen | – | T-120 bis T-125 |
-| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-142 |
-| AP-5 | Team-Bereich | offen | – | T-150 bis T-158 |
+| AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
+| AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
+| AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
 | AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
@@ -55,21 +56,31 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-123, ap: AP-3, was: "Anmeldezeitraum", wie: "Vor Start und nach Ende: Formular geschlossen mit Hinweis", status: offen}
 - {id: T-124, ap: AP-3, was: "Workshop-Limit und Pflicht einstellbar", wie: "Limit 1 setzen → zweiter Workshop abgelehnt; Pflicht an → Anmeldung ohne Workshop abgelehnt; beides aus → frei", status: offen}
 - {id: T-125, ap: AP-3, was: "Nachrück-Einstellungen wirken", wie: "Annahmefrist auf 1 h setzen → Angebot läuft nach 1 h ab; Grenze auf heute setzen → keine automatischen Angebote", status: offen}
+- {id: T-126, ap: AP-3, was: "Stichtage einstellbar (E-31)", wie: "Stichtage für Workshop, Essen, Storno getrennt setzen; Anzeige auf Startseite und in der Anmeldung stimmt", status: offen}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
 - {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: offen}
 - {id: T-131, ap: AP-4, was: "Spamschutz", wie: "Honeypot gefüllt, Formular unter 4 s, ohne Proof-of-Work → stille Ablehnung mit gleicher Antwort", status: offen}
 - {id: T-132, ap: AP-4, was: "Wegwerfadresse abgelehnt", wie: "Anmeldung mit Domain aus wegwerfdomains.txt", status: offen}
-- {id: T-133, ap: AP-4, was: "Pflichtfelder und EFN-Prüfziffer", wie: "Ohne Berufsgruppe/Institution → Fehler; EFN mit falscher Prüfziffer → Fehler; gültige EFN → angenommen", status: offen}
+- {id: T-133, ap: AP-4, was: "Pflichtfelder, Berufsgruppen und EFN", wie: "Ohne Berufsgruppe/Institution → Fehler; Sonstige zeigt Freitext; EFN-Feld nur bei Ärztin/Arzt sichtbar; leer erlaubt; falsche Prüfziffer → Fehler; gültige EFN → angenommen", status: offen}
 - {id: T-134, ap: AP-4, was: "Einmal-Link anfordern", wie: "Bekannte und unbekannte Adresse → gleiche Antwort, gleiche Dauer (±); Mail nur bei bekannter", status: offen}
 - {id: T-135, ap: AP-4, was: "Einmal-Link: Ablauf und Einmalverwendung", wie: "Link zweimal öffnen; Link nach Ablauf öffnen", status: offen}
 - {id: T-136, ap: AP-4, was: "Eigene Anmeldung ändern und stornieren", wie: "Workshop und Essen ändern, EFN nachtragen, dann stornieren; Mails kommen an", status: offen}
 - {id: T-137, ap: AP-4, was: "Letzter Platz bei gleichzeitigen Anmeldungen", wie: "Skript mit 20 parallelen Anmeldungen auf 1 freien Platz → genau 1 Platz, 19 Warteliste", status: offen}
 - {id: T-138, ap: AP-4, was: "Nachrück-Angebot nach Storno", wie: "Storno eines Platzes → erste Person der Warteliste erhält Angebot per Mail; Annahme über Link → Platz; Platz ist währenddessen für andere gesperrt", status: offen}
-- {id: T-139, ap: AP-4, was: "Angebot läuft ab oder wird abgelehnt", wie: "Frist verstreichen lassen bzw. ablehnen → Angebot geht an die nächste Person; abgelaufene Person nach O-17 behandelt; Mails kommen an", status: offen}
+- {id: T-139, ap: AP-4, was: "Angebot läuft ab oder wird abgelehnt", wie: "Frist verstreichen lassen bzw. ablehnen → Angebot geht an die nächste Person; abgelaufene Person steht am Ende der Warteliste und hat eine Mail; Mails kommen an", status: offen}
 - {id: T-140, ap: AP-4, was: "Grenze für automatisches Nachrücken", wie: "Symposium-Datum testweise auf in 10 Tagen setzen → Storno erzeugt kein Angebot, Team sieht offenen Platz zur manuellen Vergabe", status: offen}
 - {id: T-141, ap: AP-4, was: "Überschneidende Termine gesperrt", wie: "Zwei Termine im selben Zeitfenster wählen → Ablehnung mit Hinweis", status: offen}
 - {id: T-142, ap: AP-4, was: "Token nur als Hash in der DB", wie: "Datenbank: Spalte enthält sha256, nicht den Link-Wert", status: offen}
+- {id: T-143, ap: AP-4, was: "Stichtage sperren Teilnehmende", wie: "Stichtag Workshop auf gestern setzen → Workshop-Änderung per Einmal-Link gesperrt mit Hinweis, Essen noch änderbar; Storno-Stichtag → Storno gesperrt", status: offen}
+- {id: T-144, ap: AP-4, was: "Stichtage sperren das Team nicht", wie: "Nach Stichtag ändert das Team Workshop und Essen einer Anmeldung; Audit-Eintrag", status: offen}
+
+# AP-4b Konten für Teilnehmende
+- {id: T-145, ap: AP-4b, was: "Konto beim Anmelden und nachträglich", wie: "Anmeldung mit „Konto anlegen“ → Bestätigung → Login zeigt Anmeldung; Anmeldung ohne Konto → Einmal-Link → Konto anlegen → Anmeldung im Profil", status: offen}
+- {id: T-146, ap: AP-4b, was: "Konto ohne Symposium-Anmeldung", wie: "Konto nur mit Newsletter anlegen; später Anmeldung aus dem Profil heraus", status: offen}
+- {id: T-147, ap: AP-4b, was: "E-Mail-Änderung mit Bestätigung", wie: "Neue Adresse eintragen → alte bleibt gültig bis Bestätigung; nach Bestätigung gehen Mails an die neue; Newsletter zieht mit", status: offen}
+- {id: T-148, ap: AP-4b, was: "Login, Passwort vergessen, Ratenschutz, kein 2FA-Zwang", wie: "Falsches Passwort n-mal → Sperre; Reset-Link einmalig; Login ohne zweiten Faktor möglich", status: offen}
+- {id: T-149, ap: AP-4b, was: "Profil übernimmt Berufsgruppe/Institution, Konto löschen", wie: "Werte aus der Anmeldung im Profil, Änderung wirkt auf die Anmeldung; Konto löschen → Login weg, Anmeldung nach Regel E-24/O-21", status: offen}
 
 # AP-5 Team-Bereich
 - {id: T-150, ap: AP-5, was: "Login ohne zweiten Faktor verweigert", wie: "Konto ohne TOTP/Passkey → nach Passwort Zwang zur Einrichtung, kein Zugriff", status: offen}
@@ -77,10 +88,11 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-152, ap: AP-5, was: "Passkey", wie: "Registrieren und anmelden auf Handy und Desktop", status: offen}
 - {id: T-153, ap: AP-5, was: "Wiederherstellungscodes", wie: "Login mit Code; Code danach ungültig", status: offen}
 - {id: T-154, ap: AP-5, was: "Rollen", wie: "Admin ruft Konten-, Betreiber-Einstellungs- und Rechtstext-Seiten auf → verweigert", status: offen}
-- {id: T-155, ap: AP-5, was: "Statistik stimmt", wie: "Zahlen der Übersicht (inkl. offener Angebote) gegen SQL-Abfragen prüfen", status: offen}
+- {id: T-155, ap: AP-5, was: "Statistik-Seite stimmt", wie: "Alle Kennzahlen (Workshops, Warteliste, offene Angebote, Essen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter, Konten) gegen SQL-Abfragen prüfen; Diagramme und Export je Ansicht", status: offen}
 - {id: T-156, ap: AP-5, was: "Export", wie: "CSV öffnet in Excel korrekt (UTF-8 mit BOM, Umlaute); CME-Liste enthält nur Name und EFN", status: offen}
 - {id: T-157, ap: AP-5, was: "Audit-Protokoll", wie: "Änderung durch Team erzeugt Eintrag mit Zeit, Konto, Art", status: offen}
 - {id: T-158, ap: AP-5, was: "Betreiber-Einstellungen: Hostnamen und Absender", wie: "Zweiten Hostnamen und Absender anlegen → Mails tragen den gewählten Absender; Host wird akzeptiert (T-110)", status: offen}
+- {id: T-159, ap: AP-5, was: "Konten der Teilnehmenden im Team-Bereich", wie: "Konto suchen, mit Anmeldung verknüpfen, Reset auslösen, sperren → Login verweigert", status: offen}
 
 # AP-6 Mailversand und Rundmails
 - {id: T-160, ap: AP-6, was: "SMTP-Versand über Lima-City", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: offen}
@@ -109,9 +121,9 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-195, ap: AP-10, was: "Zertifikat nicht fälschbar über fremden Link", wie: "Einmal-Link einer anderen Person liefert nur deren Zertifikat; manipulierte IDs → 404", status: offen}
 
 # AP-9 Abschluss und Datenschutz
-- {id: T-200, ap: AP-9, was: "Automatische Löschung", wie: "Testdatensatz mit altem Datum → vom Job gelöscht/anonymisiert nach E-24; CME-Daten bleiben bis O-18-Frist", status: offen}
+- {id: T-200, ap: AP-9, was: "Automatische Löschung", wie: "Anmeldung ohne Konto mit altem Datum → vom Job anonymisiert nach O-21; Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre (E-24)", status: offen}
 - {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "DB-Dump auf Staging einspielen, Anmeldung aufrufbar", status: offen}
-- {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Änderung → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen", status: offen}
+- {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Konto anlegen → Änderung → Stichtag → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen (eine mit, eine ohne Konto)", status: offen}
 - {id: T-203, ap: AP-9, was: "Checkliste Anmeldestart", wie: "Konzept Abschnitt 9 vollständig abgehakt", status: offen}
 - {id: T-204, ap: AP-9, was: "Repo frei von Interna (R-10)", wie: "Suche im Repo nach Kontonamen, IPs, Pfaden, Postfachnamen vor dem Umschalten auf öffentlich", status: offen}
 ```

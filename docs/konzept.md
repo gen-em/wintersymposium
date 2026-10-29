@@ -4,7 +4,7 @@ projekt: wintersymposium
 repo: gen-em/wintersymposium
 stand: 2026-10-29
 phase: konzept
-status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-29 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
+status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-31 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
 version: null   # Konzept ohne Version; die Repo-Version legt die Umsetzung fest (Datei VERSION)
 verantwortlich: Philipp Chadid
 termine:
@@ -33,8 +33,8 @@ termine:
 - Teilnahme **kostenlos**, keine Bezahlfunktion.
 - Bestandteile:
   1. **Startseite** mit Infos und Programm (aus der Programm-Konfiguration erzeugt)
-  2. **Anmeldung** ohne Konto, mit Workshop-Wahl, Essenswahl und Warteliste; Verwaltung der eigenen Anmeldung über Einmal-Links per Mail
-  3. **Team-Bereich**: Überblick, Statistik, Verwaltung der Anmeldungen und des Programms, Export
+  2. **Anmeldung** mit Workshop-Wahl, Essenswahl und Warteliste; Verwaltung der eigenen Anmeldung über Einmal-Links per Mail oder über ein **optionales Konto** (E-30); Änderungen bis zu einstellbaren Stichtagen (E-31)
+  3. **Team-Bereich**: Überblick, **Statistik-Seite** mit allen Auswertungen, Verwaltung der Anmeldungen und des Programms, Export
   4. **Mailings**: Rundmails an Teilnehmende
   5. **Newsletter** mit mehreren Listen, auch unabhängig von einer Symposium-Anmeldung
   6. **Teilnahme und Zertifikate**: Anwesenheit erfassen, CME-Teilnahmebescheinigung als PDF zum Herunterladen (E-22)
@@ -70,7 +70,7 @@ branding:
   quelle: chodid/zina-branding (4 Regeln/Erscheinungsbild.md, 9 Technik/Gestaltungswerte, 9 Technik/farben-und-schriften.json)
   farben: {nachtblau: "#001E3A", markenblau: "#003C71", lila: "#B48CFF", signalrot: "#FF5A5F", kva_gruen: "#B5BD00"}
   schriften: {titel: Anton, zwischenueberschrift: Antonio, text: Tajawal, zahlen: IBM Plex Mono}
-  logo: "vorhanden (Admin 2026-10-29); Dateien noch nicht im Branding-Repo (O-20)"
+  logo: "vorhanden: Bildzeichen und Logo (gestapelt, Lila/Rot/Nachtblau/Weiß, SVG und PNG) unter `1 Logo/` im Branch `claude/zina-off-label-designsystem` des Branding-Repos; noch nicht auf main (O-20)"
   regel: "ein Akzent je Medium: Lila für Vortrag/Journal Club, Signalrot für Workshop/Fallbesprechung"
 vorlage_code:
   repo: gen-em/einsatzdoku-luftrettung (NAdoku, PHP/MySQL, AGPL-3.0)
@@ -87,11 +87,11 @@ app:
   mandanten: "eine Installation, mehrere Hostnamen und Absenderadressen konfigurierbar (E-27); vorerst eine Domain"
   bereiche:
     oeffentlich: [Startseite/Programm, Anmeldung, Newsletter-Anmeldung, Impressum, Datenschutz]
-    teilnehmende: "Einmal-Link → eigene Anmeldung ansehen, ändern, stornieren; Nachrück-Angebot annehmen; Zertifikat herunterladen; Newsletter verwalten"
-    team: "Login (Passwort + TOTP oder Passkey) → Übersicht, Statistik, Anmeldungen, Programm, Veranstaltungs-Einstellungen, Mailings, Newsletter, Teilnahme"
+    teilnehmende: "Einmal-Link oder Konto-Login (E-30) → eigene Anmeldung ansehen, ändern, stornieren; Nachrück-Angebot annehmen; Zertifikat herunterladen; Newsletter verwalten; mit Konto zusätzlich Profil (E-Mail, Passwort, Berufsgruppe, Institution, EFN); Änderungen nur bis zu den Stichtagen (E-31)"
+    team: "Login (Passwort + TOTP oder Passkey) → Übersicht, Statistik-Seite, Anmeldungen, Konten der Teilnehmenden, Programm, Veranstaltungs-Einstellungen, Mailings, Newsletter, Teilnahme"
     betreiber: "zusätzlich Team-Konten, Domains/Absender, SMTP, Rechtstexte, Backups"
   einstellungen:
-    veranstaltung: "Anmeldezeitraum, Gesamtkapazität, Workshop-Limit je Person, Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist, Grenze für automatisches Nachrücken (E-19, E-20)"
+    veranstaltung: "Anmeldezeitraum, Gesamtkapazität, Workshop-Limit je Person, Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist, Grenze für automatisches Nachrücken (E-19, E-20); Stichtage für Workshop-Änderung, Essens-Änderung und Storno (E-31); Veranstaltungsinfos inkl. CME-Angaben (E-22)"
     betreiber: "Hostnamen, Absenderadressen je Zweck/Liste, SMTP-Postfächer, Tageslimit je Postfach (E-13, E-27)"
   hintergrund: "Cron ruft einen Job-Endpunkt (CLI oder Token-URL) auf; Mail-Warteschlange, Nachrück-Angebote und -Fristen, Aufräumen, Ablauf von Links, Löschfristen"
   auslieferung: "GitHub Actions → FTPS auf den Lima-City-Webspace (Staging und Produktion, E-28); config.php und Laufzeitordner bleiben unangetastet"
@@ -125,17 +125,19 @@ mail:
 | E-16 | Verantwortlicher | Philipp Chadid (Impressum, Datenschutzerklärung) | Admin 2026-10-29 |
 | E-17 | Zeitplan | AP-1 bis AP-6 bis **2026-11-25** (Anmeldestart); AP-7 (Newsletter) danach; AP-10 (Teilnahme, Zertifikate) bis zum **20.01.2027**; AP-9 zuletzt | Admin 2026-10-29 |
 | E-18 | Übernahme aus NAdoku | siehe Tabelle unten | Analyse 2026-10-29 |
-| E-19 | Nachrücken | Freier Platz wird der ersten Person der Warteliste **angeboten**, Annahme über Einmal-Link innerhalb einer **Annahmefrist von 48 h**; bei Ablauf oder Ablehnung geht das Angebot an die nächste Person. Automatische Angebote **bis 14 Tage vor dem Symposium** (letztes Angebot spätestens 16 Tage vorher, damit die Frist vor der Grenze endet); danach nur noch manuell durch das Team. Frist und Grenze in den Veranstaltungs-Einstellungen einstellbar | Admin 2026-10-29. Umgang mit der abgelaufenen Person: O-17 |
+| E-19 | Nachrücken | Freier Platz wird der ersten Person der Warteliste **angeboten**, Annahme über Einmal-Link innerhalb einer **Annahmefrist von 48 h**; bei Ablauf oder Ablehnung geht das Angebot an die nächste Person. Automatische Angebote **bis 14 Tage vor dem Symposium** (letztes Angebot spätestens 16 Tage vorher, damit die Frist vor der Grenze endet); danach nur noch manuell durch das Team. Frist und Grenze in den Veranstaltungs-Einstellungen einstellbar. Wer die Frist verstreichen lässt, kommt **ans Ende der Warteliste** dieses Termins und wird per Mail informiert | Admin 2026-10-29 (O-17 entschieden) |
 | E-20 | Workshop-Regeln | **Überschneidende Termine gesperrt**; **kein Limit** an Workshops je Person als Standard, Limit in den Veranstaltungs-Einstellungen einstellbar; Workshop-Wahl freiwillig (einstellbar); Gesamtkapazität optional (0 = unbegrenzt) | Admin 2026-10-29 |
-| E-21 | Anmeldefelder | Vorname, Nachname, E-Mail, **Berufsgruppe** (Auswahl, Pflicht), **Klinik/Institution** (Pflicht), EFN (E-22); Vorbelegungen der Berufsgruppen liefert der Admin (O-15) | Admin 2026-10-29 |
-| E-22 | Fortbildungspunkte (CME) | Symposium wird zertifiziert; **EFN-Feld** (15-stellig, Prüfziffer geprüft); das Team **erfasst die Teilnahme** (Anwesenheit); danach ist für Teilnehmende ein **Teilnahmezertifikat als PDF** mit eigenem Namen automatisch über den Einmal-Link herunterladbar | Admin 2026-10-29. Pflicht/freiwillig des EFN-Felds, Zertifikatsinhalt und Nummer der Ärztekammer: O-16 |
+| E-21 | Anmeldefelder | Vorname, Nachname, E-Mail, **Berufsgruppe** (Auswahl, Pflicht: Ärztin/Arzt, Notfallsanitäter/in, Rettungssanitäter/in, Pflege/MFA, Student/in, Sonstige mit optionalem Freitext), **Klinik/Institution** (Pflicht), EFN nur bei Ärztin/Arzt (E-22). Bei Konto (E-30) werden Berufsgruppe und Institution ins Profil übernommen und sind dort änderbar | Admin 2026-10-29 (O-15 entschieden) |
+| E-22 | Fortbildungspunkte (CME) | Symposium wird zertifiziert; **EFN-Feld freiwillig**, nur bei Berufsgruppe Ärztin/Arzt abgefragt und angezeigt (15-stellig, Prüfziffer geprüft); Punkte, Kammer, Veranstaltungsnummer werden in den **Veranstaltungsinfos** (Einstellungen) gepflegt; das Team **erfasst die Teilnahme** (Anwesenheit); danach ist ein **Teilnahmezertifikat als PDF** mit eigenem Namen über Einmal-Link oder Konto herunterladbar | Admin 2026-10-29. Zertifikatsinhalt/Unterschrift und Meldeweg an die Kammer: O-16 |
 | E-23 | Seitendesign | **Mockups vor der Umsetzung**, Freigabe durch den Admin (AP-2); **Lila als Hauptakzent**, bewusst frech; einzelne Seiten in **Signalrot** (nach der Markenregel passend für Workshop-Inhalte); Logo vorhanden | Admin 2026-10-29 |
-| E-24 | Löschfristen | Anmeldedaten **3 Monate nach dem Symposium** löschen bzw. anonymisieren; Daten, die für den CME-Nachweis nötig sind (Name, EFN, Teilnahme), länger nach O-18 | Admin 2026-10-29 |
+| E-24 | Löschfristen | **Konten bleiben bestehen** (keine automatische Löschung; Löschung durch die Person selbst oder das Team). CME-Nachweise (Name, EFN, Anwesenheit): solange das Konto besteht, sonst **10 Jahre**. Die Frist für Anmeldungen **ohne Konto** (bisher 3 Monate) wird neu festgelegt (O-21) | Admin 2026-10-29 (O-18 entschieden, O-08 teilweise wieder offen) |
 | E-25 | Repo-Sichtbarkeit | **öffentlich**, mit Trennung: keine Zugangsdaten, Kontonamen, IP-Adressen, Serverpfade oder Hosting-Interna im Repo (R-10); Betriebsangaben bleiben in `gen-em/server-infrastruktur` (privat) bzw. beim Admin; Quelltext-Link in der Fußzeile der Webseite | Admin 2026-10-29 („wenn trennbar, gerne public“). Konzept entsprechend bereinigt |
 | E-26 | Ausgabe der Arbeit | Commit auf Arbeits-Branch und **PR**, der Admin mergt; keine ZIP-Dateien | Admin 2026-10-29 |
 | E-27 | Domains und Absender | **vorerst eine Domain**; in der Betreiberoberfläche **mehrere Hostnamen und Absenderadressen** konfigurierbar, Absender je Zweck (System, Newsletter) und je Newsletter-Liste wählbar | Admin 2026-10-29 |
 | E-28 | Staging | Testumgebung unter `test.<domain>` mit eigener Datenbank und eigenem Webspace-Ordner | Admin 2026-10-29 |
 | E-29 | Kaneo-Subdomain | entfallen (E-15: bestehendes Kaneo, keine eigene Subdomain) | Admin 2026-10-29 |
+| E-30 | Optionales Konto für Teilnehmende | Registrierung **möglich, nicht nötig**: Konto mit E-Mail und Passwort (kein zweiter Faktor, der bleibt Admin/Betreiber), Passwort-Zurücksetzen per Mail. Profil: E-Mail (neue Adresse erst nach Bestätigung gültig), Passwort, Berufsgruppe, Institution, EFN, Anmeldung, Workshops, Essen, Newsletter. Konto kann **beim Anmelden, nachträglich über den Einmal-Link oder ohne Symposium-Anmeldung** (z. B. nur Newsletter) angelegt werden. Ohne Konto bleibt alles über Einmal-Links erreichbar | Admin 2026-10-29 |
+| E-31 | Stichtage für Teilnehmende | In den Veranstaltungs-Einstellungen getrennte Stichtage, ab denen Teilnehmende (mit Konto und per Einmal-Link) nichts mehr ändern können: **Anmeldeschluss**, **Workshop-Änderungen**, **Essens-Änderungen**, **Storno**. Das Team kann danach weiterhin alles ändern; die Oberfläche zeigt den Stichtag an | Admin 2026-10-29 |
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
@@ -237,7 +239,7 @@ nicht_uebernehmen:
   abhaengig_von: [AP-1]
   umfang:
     - Datenmodell Veranstaltung, Zeitfenster (Beginn/Ende frei, auch überlappend), Workshop, Workshop-Termin (Zeitfenster, Raum, Plätze), Programmpunkte ohne Anmeldung (Vorträge, Pausen)
-    - "Veranstaltungs-Einstellungen (R-11): Anmeldezeitraum (Start 2026-11-25, Ende einstellbar), Gesamtkapazität (0 = unbegrenzt), Workshop-Limit je Person (0 = keins), Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist (48 h), Grenze für automatisches Nachrücken (14 Tage vor dem Symposium), Berufsgruppen-Liste (O-15)"
+    - "Veranstaltungs-Einstellungen (R-11): Anmeldezeitraum (Start 2026-11-25, Ende einstellbar), Gesamtkapazität (0 = unbegrenzt), Workshop-Limit je Person (0 = keins), Workshop-Wahl Pflicht/freiwillig, Nachrück-Annahmefrist (48 h), Grenze für automatisches Nachrücken (14 Tage vor dem Symposium), Stichtage für Workshop-Änderung, Essens-Änderung und Storno (E-31), Berufsgruppen-Liste (E-21), Veranstaltungsinfos mit CME-Angaben (E-22)"
     - Regel: überschneidende Termine gesperrt (E-20)
   abnahmekriterien:
     - Änderungen erscheinen sofort auf der Startseite
@@ -249,20 +251,43 @@ nicht_uebernehmen:
 
 - id: AP-4
   titel: Anmeldung, Einmal-Links, Warteliste und Nachrücken
-  ziel: "Anmeldung ohne Konto, Verwaltung per Einmal-Link, Warteliste je Workshop-Termin mit Nachrück-Angeboten"
-  abhaengig_von: [AP-3, O-15, O-16, O-17]
+  ziel: "Anmeldung ohne Konto, Verwaltung per Einmal-Link, Warteliste je Workshop-Termin mit Nachrück-Angeboten, Stichtage"
+  abhaengig_von: [AP-3]
   umfang:
-    - "Anmeldeformular: Felder nach E-21 (inkl. EFN mit Prüfziffer, E-22), Essenswahl (E-10), Workshop-Wahl mit Regeln aus den Einstellungen, freiwilliges Newsletter-Häkchen (E-14), Einwilligung Datenschutz"
+    - "Anmeldeformular: Felder nach E-21 (EFN nur bei Ärztin/Arzt, freiwillig, mit Prüfziffer, E-22), Essenswahl (E-10), Workshop-Wahl mit Regeln aus den Einstellungen, freiwilliges Newsletter-Häkchen (E-14), Einwilligung Datenschutz; Option „Konto anlegen“ (AP-4b)"
     - Spamschutz (Honeypot, Zeitstempel, Proof-of-Work, Ratenschutz, Wegwerfadressen)
     - Bestätigung per Mail (Double-Opt-In), danach gilt die Anmeldung; unbestätigte Anmeldungen verfallen nach einstellbarer Frist
     - Einmal-Link-Anforderung über Mailadresse (gleiche Antwort für alle Fälle); Link öffnet die eigene Anmeldung: Workshops und Essen ändern, stornieren, EFN nachtragen
-    - "Warteliste je Workshop-Termin und für die Gesamtkapazität; Nachrück-Angebot nach E-19 (Angebot per Mail mit Einmal-Link, Annahmefrist, Weitergabe bei Ablauf, Grenze für automatische Angebote, danach manuelle Vergabe durch das Team); alles in Transaktionen (R-04)"
+    - "Stichtage (E-31): nach dem jeweiligen Stichtag sind Workshop-Änderung, Essens-Änderung bzw. Storno für Teilnehmende gesperrt, mit Hinweis auf den Stichtag; Nachrück-Angebote enden mit der Grenze aus E-19"
+    - "Warteliste je Workshop-Termin und für die Gesamtkapazität; Nachrück-Angebot nach E-19 (Angebot per Mail mit Einmal-Link, Annahmefrist, bei Ablauf Weitergabe und Person ans Ende der Liste mit Mail, Grenze für automatische Angebote, danach manuelle Vergabe durch das Team); alles in Transaktionen (R-04)"
   nadoku_bausteine: [registrieren.php (Bremsen), pow.js, email_lib, wegwerfdomains.txt, Token-Muster, einwilligung_lib]
   abnahmekriterien:
     - Paralleltest: gleichzeitige Anmeldungen auf den letzten Platz vergeben ihn genau einmal
-    - Storno löst Angebot an die nächste Person aus; Ablauf der Frist gibt das Angebot weiter; nach der Grenze keine automatischen Angebote mehr
+    - Storno löst Angebot an die nächste Person aus; Ablauf der Frist gibt das Angebot weiter und setzt die Person ans Ende; nach der Grenze keine automatischen Angebote mehr
     - abgelaufene oder benutzte Links funktionieren nicht mehr
-    - EFN mit falscher Prüfziffer wird abgelehnt
+    - EFN mit falscher Prüfziffer wird abgelehnt; EFN-Feld erscheint nur bei Ärztin/Arzt
+    - nach einem Stichtag ist die jeweilige Änderung für Teilnehmende gesperrt, für das Team nicht
+  status: offen
+  ergebnis: null
+  probleme: []
+
+- id: AP-4b
+  titel: Konten für Teilnehmende
+  ziel: "Optionales Konto mit Profil (E-30); Einmal-Links bleiben der Weg ohne Konto"
+  abhaengig_von: [AP-4]
+  termin: "Ziel 2026-11-25; falls die Zeit nicht reicht, unmittelbar nach dem Anmeldestart (dann melden sich alle zunächst ohne Konto an und legen es später über den Einmal-Link an)"
+  umfang:
+    - Registrierung mit E-Mail und Passwort (password_hash), Bestätigung per Mail; Spamschutz wie beim Anmeldeformular
+    - Konto anlegen beim Anmelden, nachträglich über den Einmal-Link oder ohne Symposium-Anmeldung
+    - Login, Passwort vergessen (Token-Muster), Logout; Ratenschutz; kein zweiter Faktor
+    - "Profil: E-Mail ändern (neue Adresse erst nach Bestätigung gültig, Anmeldung und Newsletter ziehen mit), Passwort ändern, Berufsgruppe, Institution, EFN; Anmeldung, Workshops, Essen und Newsletter-Listen verwalten (gleiche Regeln und Stichtage wie per Einmal-Link); Konto löschen"
+    - Team-Bereich: Konten sehen, mit Anmeldung verknüpfen, Passwort-Reset auslösen, sperren, löschen
+  nadoku_bausteine: [Token-Muster, ratelimit_lib, Login-Muster (klassisch, ohne E2E)]
+  abnahmekriterien:
+    - Anmeldung ohne Konto funktioniert unverändert
+    - Konto nachträglich über Einmal-Link angelegt → Anmeldung ist im Profil sichtbar
+    - E-Mail-Änderung ohne Bestätigung bleibt wirkungslos
+    - Stichtage gelten im Profil genauso wie per Einmal-Link
   status: offen
   ergebnis: null
   probleme: []
@@ -274,8 +299,9 @@ nicht_uebernehmen:
   umfang:
     - Team-Login mit Passwort (password_hash) und Pflicht-Zweitfaktor TOTP oder Passkey (E-11); Wiederherstellungscodes; Einladung neuer Team-Mitglieder durch Betreiber
     - Rollen Admin/Betreiber nach E-11
-    - Übersicht: Anmeldungen gesamt, je Workshop-Termin (belegt/frei/Warteliste/offene Angebote), Essenszahlen, Berufsgruppen, Verlauf der Anmeldungen
-    - Anmeldungen suchen, ansehen, ändern, stornieren, manuell anlegen, Plätze von der Warteliste manuell vergeben
+    - Übersicht (Startseite des Team-Bereichs): Kennzahlen, offene Aufgaben (manuelle Vergabe nach der Nachrück-Grenze, Mail-Fehler)
+    - "Statistik-Seite (Admin 2026-10-29): alles einsehbar – Anmeldungen gesamt und Verlauf, je Workshop-Termin (belegt/frei/Warteliste/offene Angebote), Essenszahlen, Berufsgruppen, Institutionen, EFN-Quote, Newsletter-Listen, Konten, Anwesenheit (nach AP-10); Diagramme, Filter nach Status, Export jeder Ansicht"
+    - Anmeldungen suchen, ansehen, ändern, stornieren, manuell anlegen, Plätze von der Warteliste manuell vergeben – auch nach den Stichtagen (E-31)
     - Export (CSV): Teilnehmerliste, Listen je Workshop-Termin, Essensliste, CME-Liste (Name, EFN)
     - Betreiber-Einstellungen: Team-Konten, Hostnamen und Absenderadressen (E-27), SMTP-Postfächer, Rechtstexte
     - Audit-Protokoll aller Änderungen durch das Team
@@ -283,7 +309,8 @@ nicht_uebernehmen:
   abnahmekriterien:
     - ohne zweiten Faktor kein Zugriff auf den Team-Bereich
     - Admin kann keine Team-Konten, Betreiber-Einstellungen oder Rechtstexte ändern
-    - Zahlen in der Übersicht stimmen mit der Datenbank überein
+    - Zahlen auf der Statistik-Seite stimmen mit der Datenbank überein
+    - Team kann nach einem Stichtag ändern, Teilnehmende nicht
   status: offen
   ergebnis: null
   probleme: []
@@ -346,9 +373,9 @@ nicht_uebernehmen:
 - id: AP-9
   titel: Abschluss und Datenschutz
   ziel: "Löschkonzept umgesetzt, Gesamtprüfung bestanden"
-  abhaengig_von: [AP-1, AP-2, AP-3, AP-4, AP-5, AP-6, AP-7, AP-10, O-18]
+  abhaengig_von: [AP-1, AP-2, AP-3, AP-4, AP-4b, AP-5, AP-6, AP-7, AP-10, O-21]
   umfang:
-    - automatische Löschung bzw. Anonymisierung nach E-24 und O-18 (Anmeldungen, Mail-Warteschlange, Protokolle, Zertifikate)
+    - automatische Löschung bzw. Anonymisierung nach E-24 und O-21 (Anmeldungen ohne Konto, Mail-Warteschlange, Protokolle); Konten und CME-Nachweise nach E-24
     - Gesamttest aller Abläufe; Prüfprotokoll vollständig
     - Betriebsdoku (Backup, Wiederherstellung, Wartungsmodus) ohne Hosting-Interna (R-10)
   status: offen
@@ -359,33 +386,34 @@ nicht_uebernehmen:
 ## 7. Offene Punkte
 
 ```yaml
-- {id: O-01, thema: Domain, frage: "Ist wintersymposium.de frei? Bestellung im Gen-EM-Konto bei Lima-City", zustaendig: Admin, benoetigt_fuer: AP-1, status: in Arbeit (Admin 2026-10-29)}
+- {id: O-01, thema: Domain, frage: "Ist wintersymposium.de frei? Bestellung im Gen-EM-Konto bei Lima-City", zustaendig: Admin, benoetigt_fuer: AP-1, status: in Arbeit (Admin 2026-10-29, bestätigt)}
 - {id: O-02, thema: Postfächer, frage: "System- und Newsletter-Postfach anlegen (Adressen nennt der Admin, nicht ins Repo – R-10)", zustaendig: Admin, benoetigt_fuer: AP-6, status: in Arbeit (Admin 2026-10-29)}
 - {id: O-03, thema: Nachrücken, status: "entschieden → E-19"}
 - {id: O-04, thema: Workshop-Regeln, status: "entschieden → E-20"}
 - {id: O-05, thema: Anmeldefelder, status: "entschieden → E-21"}
 - {id: O-06, thema: Fortbildungspunkte, status: "entschieden → E-22; Details O-16"}
 - {id: O-07, thema: Akzentfarbe und Logo, status: "entschieden → E-23; Logo-Dateien O-20"}
-- {id: O-08, thema: Löschfristen, status: "entschieden → E-24; CME-Frist O-18"}
+- {id: O-08, thema: Löschfristen, status: "teilweise entschieden → E-24; Frist ohne Konto wieder offen → O-21"}
 - {id: O-09, thema: Kaneo, status: "entfallen → E-15 (bestehendes Kaneo)"}
 - {id: O-10, thema: Repo-Sichtbarkeit, status: "entschieden → E-25; Umschalten auf öffentlich macht der Admin, sobald dieses Konzept gemergt ist"}
 - {id: O-11, thema: Ausgabe der Arbeit, status: "entschieden → E-26"}
 - {id: O-12, thema: Newsletter-Absender, status: "entschieden → E-27"}
 - {id: O-13, thema: Staging, status: "entschieden → E-28"}
 - {id: O-14, thema: Passkey, frage: "passkey_lib aus NAdoku anpassen oder kleine WebAuthn-Bibliothek (AGPL-kompatibel) nutzen?", zustaendig: Umsetzung, benoetigt_fuer: AP-5, status: offen}
-- {id: O-15, thema: Berufsgruppen, frage: "Vorbelegung der Auswahlliste (z. B. Ärztin/Arzt, Notfallsanitäter/in, Rettungssanitäter/in, Pflege, Student/in, Sonstige)", zustaendig: Admin, benoetigt_fuer: AP-4, status: offen (Admin liefert)}
-- {id: O-16, thema: CME-Details, frage: "EFN Pflicht oder freiwillig (nur wer Punkte will)? Zahl der Fortbildungspunkte, Veranstaltungsnummer/Kategorie der Ärztekammer, Pflichtangaben und Unterschrift auf dem Zertifikat; Meldung an die Kammer elektronisch (EIV) oder per Liste?", zustaendig: Admin, benoetigt_fuer: AP-4/AP-10, status: offen}
-- {id: O-17, thema: Abgelaufenes Nachrück-Angebot, frage: "Person nach Ablauf der 48 h von der Warteliste dieses Termins streichen (Vorschlag, mit Mail) oder ans Ende der Warteliste setzen?", vorschlag: streichen, zustaendig: Admin, benoetigt_fuer: AP-4, status: offen}
-- {id: O-18, thema: Aufbewahrung CME-Nachweise, frage: "Wie lange müssen Name, EFN und Anwesenheit für die Ärztekammer aufbewahrt werden (Vorgabe der BLÄK prüfen)?", zustaendig: Admin, benoetigt_fuer: AP-9, status: offen}
+- {id: O-15, thema: Berufsgruppen, status: "entschieden → E-21"}
+- {id: O-16, thema: CME-Details, frage: "Pflichtangaben und Unterschrift auf dem Zertifikat; Meldung an die Kammer elektronisch (EIV) oder per Liste?", hinweis: "EFN freiwillig und nur für Ärztin/Arzt, Punkte/Kammer in den Veranstaltungsinfos – entschieden (E-22)", zustaendig: Admin, benoetigt_fuer: AP-10, status: offen}
+- {id: O-17, thema: Abgelaufenes Nachrück-Angebot, status: "entschieden → E-19 (ans Ende der Liste, mit Mail)"}
+- {id: O-18, thema: Aufbewahrung CME-Nachweise, status: "entschieden → E-24 (solange das Konto besteht, sonst 10 Jahre)"}
 - {id: O-19, thema: PDF-Erzeugung, frage: "Eigener minimaler PDF-Writer oder kleine Bibliothek (z. B. FPDF/TCPDF, LGPL – AGPL-kompatibel) im vendor/-Ordner?", zustaendig: Umsetzung, benoetigt_fuer: AP-10, status: offen}
-- {id: O-20, thema: Logo-Dateien, frage: "Logo (SVG, PNG, Favicon-Varianten) in chodid/zina-branding/1 Logo ablegen", zustaendig: Admin, benoetigt_fuer: AP-2, status: offen}
+- {id: O-20, thema: Logo-Dateien, frage: "Branch claude/zina-off-label-designsystem des Branding-Repos (enthält 1 Logo/ mit Bildzeichen und Logo in allen Farben) nach main mergen, damit die Umsetzung von main lesen kann", zustaendig: Admin, benoetigt_fuer: AP-2, status: offen}
+- {id: O-21, thema: Löschfrist ohne Konto, frage: "Wann werden Anmeldungen ohne Konto nach dem Symposium gelöscht bzw. anonymisiert? Die bisherigen 3 Monate sollen überdacht werden (Admin 2026-10-29)", vorschlag: "6 Monate nach dem Symposium anonymisieren (Name, E-Mail, Institution entfernen; Zahlen für die Statistik bleiben); CME-Daten ohne Konto nach E-24 10 Jahre getrennt aufbewahren", zustaendig: Admin, benoetigt_fuer: AP-9, status: offen}
 ```
 
 ## 8. Bekannte Risiken und Einschränkungen
 
 | ID | Risiko | Umgang |
 |---|---|---|
-| K-01 | Zeitplan: knapp 4 Wochen bis zum Anmeldestart | Newsletter und Zertifikate nach dem Start; Umfang von AP-1 bis AP-6 nicht ausweiten; Mockup-Freigabe (AP-2) zügig |
+| K-01 | Zeitplan: knapp 4 Wochen bis zum Anmeldestart | Newsletter und Zertifikate nach dem Start; Konten (AP-4b) mit Rückfall nach dem Start; Umfang von AP-1 bis AP-6 nicht ausweiten; Mockup-Freigabe (AP-2) zügig |
 | K-02 | Mail-Limit 500 Empfänger/24 h je Postfach | Tageslimit, Prioritäten, zwei Postfächer; Wechsel zu EU-Versanddienst vorbereitet |
 | K-03 | Lima-City-Botschutz kann automatisierte Tests und ggf. Formular-POSTs blockieren | beim Hoster für die Domain klären; echte Anmeldungen vor dem Start mit verschiedenen Browsern testen |
 | K-04 | Zustellbarkeit (SPF/DKIM/DMARC der neuen Domain) | DNS-Einträge mit der Domain einrichten und prüfen (AP-6) |
@@ -398,7 +426,7 @@ nicht_uebernehmen:
 - [ ] Domain mit HTTPS, Mail-DNS (SPF, DKIM, DMARC) geprüft
 - [ ] Impressum und Datenschutz online
 - [ ] Programm vollständig eingetragen, Veranstaltungs-Einstellungen gesetzt
-- [ ] Testanmeldungen inkl. Warteliste, Nachrück-Angebot, Storno und Einmal-Links bestanden
+- [ ] Testanmeldungen inkl. Warteliste, Nachrück-Angebot, Storno, Einmal-Links und Stichtagen bestanden (Konten, falls AP-4b fertig)
 - [ ] Team-Konten mit zweitem Faktor eingerichtet
 - [ ] Backup der Datenbank eingerichtet und Wiederherstellung einmal geprüft
 - [ ] Testdaten gelöscht
@@ -414,5 +442,6 @@ nicht_uebernehmen:
 | Datum | Änderung |
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
+| 2026-10-29 | Konzeptanpassung Admin: E-30 (optionales Konto mit Profil), E-31 (Stichtage für Teilnehmende), AP-4b (Konten) neu, AP-5 um Statistik-Seite erweitert; Antworten eingearbeitet: E-21 Berufsgruppen (O-15), E-22 EFN freiwillig und nur Ärztin/Arzt (O-16 verengt), E-19 abgelaufenes Angebot ans Listenende (O-17), E-24 Konten bleiben, CME 10 Jahre (O-18), O-21 Löschfrist ohne Konto neu; O-20 Logo-Branch benannt. |
 | 2026-10-29 | Kaneo: E-15 geändert auf Mitnutzung des bestehenden Gen-EM-Kaneo; AP-8 entfallen, E-29 und O-09 entfallen, K-05 gestrichen. |
 | 2026-10-29 | Antworten des Admins eingearbeitet: E-19 bis E-29 (Nachrücken mit Annahmefrist, Workshop-Regeln, Anmeldefelder, CME mit Zertifikat, Mockups und Lila/Rot, Löschfristen, Repo öffentlich, PR, mehrere Domains/Absender, Staging, Kaneo-Subdomain); R-10 und R-11 neu; AP-2 mit Mockup-Halt, AP-3 um Veranstaltungs-Einstellungen, AP-4 um Nachrück-Angebote und EFN, AP-5 um Betreiber-Einstellungen erweitert; AP-10 (Teilnahme und Zertifikate) neu; O-03 bis O-08 und O-10 bis O-13 entschieden, O-15 bis O-20 neu; K-07, K-08 neu; Hosting-Interna nach R-10 entfernt. |
