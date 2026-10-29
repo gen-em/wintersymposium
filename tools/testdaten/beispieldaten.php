@@ -14,7 +14,29 @@ declare(strict_types=1);
 /** Lädt den ganzen Datensatz. Gibt die angelegten IDs je Bereich zurück. */
 function beispieldaten_laden(): array
 {
-    return ['programm' => beispieldaten_programm()];
+    beispieldaten_einstellungen();
+    return ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
+}
+
+/**
+ * Einstellungen relativ zu heute, damit Anmeldung und Nachrücken in jedem
+ * Testlauf offen sind: Veranstaltung in 60 Tagen, Anmeldung seit gestern.
+ */
+function beispieldaten_einstellungen(): void
+{
+    $w = va_pruefen([
+        'veranstaltung_datum' => gmdate('Y-m-d', time() + 60 * 86400),
+        'veranstaltung_beginn' => '18:00', 'veranstaltung_ende' => '22:00', 'veranstaltung_ort' => 'Hörsaal Testklinik',
+        'veranstaltung_kapazitaet' => '240', 'cme_anzeige' => 'Punkte beantragt',
+        'anmeldung_start' => zeit_lokal(gmdate('Y-m-d H:i:s', time() - 86400), 'Y-m-d H:i'),
+        'anmeldung_bestaetigung_h' => '24', 'workshop_limit' => '0', 'workshop_pflicht' => 'freiwillig',
+        'nachrueck_frist_h' => '48', 'nachrueck_grenze_tage' => '14',
+        'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
+    ]);
+    if ($w['fehler'] !== []) {
+        throw new RuntimeException('Beispieldaten Einstellungen: ' . json_encode($w['fehler'], JSON_UNESCAPED_UNICODE));
+    }
+    va_speichern($w['werte'], null);
 }
 
 /**
@@ -41,7 +63,7 @@ function beispieldaten_programm(): array
     $ids[] = $punkt(['typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Atemweg. Plan B.', 'beschreibung' => 'Videolaryngoskop, Larynxtubus, Koniotomie.', 'ort' => 'Skills-Lab 1', 'bring' => 'Stethoskop', 'notiz' => 'Brille mitbringen.', 'dozenten' => [$d2],
         't_beginn' => ['19:30', '20:30'], 't_ende' => ['20:15', '21:15'], 't_plaetze' => ['12', '12']]);
     $ids[] = $punkt(['typ' => 'workshop', 'kuerzel' => 'WS 02', 'titel' => 'Kleine PatientInnen', 'beschreibung' => 'Kindernotfälle ohne Panik.', 'ort' => 'Seminarraum 2',
-        't_beginn' => ['19:30', '20:00', '20:30'], 't_ende' => ['20:00', '20:30', '21:00'], 't_plaetze' => ['10', '10', '10']]);
+        't_beginn' => ['19:30', '20:00', '20:30'], 't_ende' => ['20:00', '20:30', '21:00'], 't_plaetze' => ['10', '10', '2']]);
     $ids[] = $punkt(['typ' => 'station', 'titel' => 'Reanimation im Kreis', 'beschreibung' => 'Komm vorbei und drück mit.', 'ort' => 'Foyer', 'beginn' => '19:30', 'ende' => '21:30']);
     $ids[] = $punkt(['typ' => 'pause', 'titel' => 'Abschluss', 'ort' => 'Foyer', 'beginn' => '21:30', 'ende' => '22:00']);
     $fehler = programm_veroeffentlichen(null);
@@ -49,4 +71,52 @@ function beispieldaten_programm(): array
         throw new RuntimeException('Beispieldaten Programm nicht veröffentlicht: ' . implode('; ', $fehler));
     }
     return ['dozenten' => [$d1, $d2], 'punkte' => $ids];
+}
+
+/**
+ * Anmeldungen (AP-4): drei bestätigte mit Workshops, eine unbestätigte. Der
+ * Termin WS 02 20:30 (2 Plätze) wird voll, Paula steht auf seiner Warteliste;
+ * nach Max' Storno hat sie ein offenes Angebot, das sich mit ihrem festen
+ * Termin WS 01 20:30 überschneidet (Tausch, E-42).
+ * Gibt die IDs zurück: ['lea' => …, 'paula' => …, 'tom' => …].
+ */
+function beispieldaten_anmeldungen(): array
+{
+    $termin = function (string $kuerzel, string $beginn): int {
+        foreach (anm_workshops(true) as $w) {
+            foreach ($w['termine'] as $t) {
+                if ($w['kuerzel'] === $kuerzel && $t['beginn'] === $beginn) {
+                    return (int)$t['id'];
+                }
+            }
+        }
+        throw new RuntimeException("Beispieldaten: Termin $kuerzel $beginn fehlt");
+    };
+    $ws = fn(string $k) => (int)array_values(array_filter(anm_workshops(), fn($w) => $w['kuerzel'] === $k))[0]['id'];
+    $person = function (array $daten, array $fest, array $warte, bool $bestaetigen) {
+        $r = anm_daten_pruefen($daten + ['beruf_sonstige' => '', 'efn' => '']);
+        if ($r['fehler'] !== []) {
+            throw new RuntimeException('Beispieldaten Anmeldung: ' . json_encode($r['fehler'], JSON_UNESCAPED_UNICODE));
+        }
+        $e = anm_anlegen($r['werte'], ['fest' => $fest, 'warte' => $warte], false);
+        if ($e['art'] !== 'neu') {
+            throw new RuntimeException('Beispieldaten Anmeldung: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+        }
+        if ($bestaetigen) {
+            $token = anm_link_erzeugen($e['id'], 'bestaetigen', time() + 3600);
+            anm_link_einloesen($token);
+        }
+        return $e['id'];
+    };
+    $lea = $person(['vorname' => 'Lea', 'nachname' => 'Beispiel', 'email' => 'lea@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinikum Beispielstadt, ZNA', 'efn' => '802760012345673', 'essen' => 'vegetarisch'],
+        [$ws('WS 01') => $termin('WS 01', '19:30'), $ws('WS 02') => $termin('WS 02', '20:30')], [], true);
+    $max = $person(['vorname' => 'Max', 'nachname' => 'Muster', 'email' => 'max@example.org', 'berufsgruppe' => 'NotfallsanitäterIn', 'institution' => 'Rettungswache Musterdorf', 'essen' => 'egal'],
+        [$ws('WS 02') => $termin('WS 02', '20:30')], [], true);
+    $paula = $person(['vorname' => 'Paula', 'nachname' => 'Probe', 'email' => 'paula@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Klinik am Probeberg', 'essen' => 'kein'],
+        [$ws('WS 01') => $termin('WS 01', '20:30')], [$termin('WS 02', '20:30')], true);
+    $tom = $person(['vorname' => 'Tom', 'nachname' => 'Test', 'email' => 'tom@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Universität Teststadt', 'essen' => 'egal'], [], [], false);
+    anm_stornieren($max);
+    // Mails des Datensatzes nicht versenden (Warteschlange leeren)
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['lea' => $lea, 'paula' => $paula, 'tom' => $tom];
 }

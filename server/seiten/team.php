@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Team-Bereich, Übersicht (AP-3 Schritt 1). Reiter für Programm und
- * Einstellungen kommen mit Schritt 2 und 3, die übrigen mit AP-5 (E-41).
+ * Team-Bereich, Übersicht (AP-3 Schritt 1). Weitere Reiter kommen mit AP-5 (E-41).
  */
 
 $konto = team_tor();
@@ -16,7 +15,9 @@ if ($zf['codes_offen'] <= 2) {
 }
 ?>
 <p>Hallo <?= e($konto['name']) ?>. Hier entsteht der Team-Bereich.</p>
+<?php $z = anm_zahlen(); $ms = mail_stand(); if (!$ms['eingerichtet']): ?><div class="meldung fehler" role="alert">Der Mailversand ist nicht eingerichtet (config.php, Abschnitt mail). Bestätigungen und Links gehen erst raus, wenn er eingerichtet ist.</div><?php endif; ?>
 <div class="kacheln">
+    <div class="kachel"><div class="lbl">Anmeldungen</div><div class="zahl"><?= $z['bestaetigt'] ?></div><p class="meta klein">bestätigt · <?= $z['unbestaetigt'] ?> offen · <?= $z['symposium_warte'] ?> auf der Warteliste</p><p><a href="/team/anmeldungen">Ansehen</a></p></div>
     <div class="kachel"><div class="lbl">Programm</div><p>Programm, Workshops und Dozierende pflegen.</p><p><a href="/team/programm">Öffnen</a></p></div>
     <div class="kachel"><div class="lbl">Einstellungen</div><p>Datum, Ort, Kapazität, Anmeldezeitraum, Fristen.</p><p><a href="/team/einstellungen">Öffnen</a></p></div>
     <div class="kachel"><div class="lbl">Mein Konto</div><p>Passwort und Wiederherstellungscodes.</p><p><a href="/team/profil">Öffnen</a></p></div>

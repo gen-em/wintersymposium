@@ -1,0 +1,428 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Mailversand (AP-4, Grundlage aus AP-6 vorgezogen; E-13, R-02, R-08).
+ *
+ * Jede Mail geht zuerst in die Warteschlange (Tabelle mail_ausgang) und wird
+ * dann versendet: direkt nach der Antwort an den Browser (mail_nach_antwort)
+ * und spätestens beim nächsten Job-Lauf. So bleibt die Antwortzeit gleich,
+ * egal ob eine Mail entsteht (R-03), und ein langsamer Mailserver hält keine
+ * Seite auf. Nach dem Versand werden Empfänger, Betreff und Text geleert
+ * (R-02); stehen bleibt nur, dass und wann versendet wurde (Tageszähler).
+ *
+ * Konfiguration in config.php unter 'mail' (siehe config.example.php):
+ *   modus 'smtp'  – Versand über SMTP (implizites TLS oder STARTTLS)
+ *   modus 'datei' – nur für Tests: jede Mail als Datei in var/mails/
+ * Ohne Eintrag gilt in der Entwicklung 'datei', sonst 'smtp'; fehlt dann der
+ * Host, bleiben Mails in der Warteschlange und der Team-Bereich warnt.
+ *
+ * SMTP-Client nach NAdoku smtp.php: ein Zeitbudget für den ganzen Versand
+ * (nicht je Zeile), Empfänger ohne Zeilenumbrüche, keine Adressen im Protokoll.
+ */
+
+/** Priorität: System-Mails (Bestätigung, Links, Angebote) vor Rundmails (AP-6). */
+const MAIL_PRIO_SYSTEM = 1;
+const MAIL_PRIO_RUNDMAIL = 5;
+/** Zeitbudget je SMTP-Versand in Sekunden (Lima-City: 5 s, R-08). */
+const MAIL_SMTP_FRIST_S = 5;
+/** Wiederholungen nach einem Fehlschlag (Minuten bis zum nächsten Versuch). */
+const MAIL_WIEDERHOLUNG_MIN = [5, 30, 120, 360];
+/** Versendete und fehlgeschlagene Einträge werden nach so vielen Tagen gelöscht. */
+const MAIL_AUFBEWAHREN_TAGE = 30;
+
+function mail_konfig(): array
+{
+    $c = konfig('mail', []);
+    $c = is_array($c) ? $c : [];
+    return $c + [
+        'modus' => entwicklung() ? 'datei' : 'smtp',
+        'host' => '',
+        'port' => 465,
+        'verschluesselung' => 'ssl',
+        'benutzer' => '',
+        'passwort' => '',
+        'absender' => '',
+        'absender_name' => 'Wintersymposium Notfallmedizin',
+        'antwort_an' => '',
+        'tageslimit' => 450,
+    ];
+}
+
+/** Absender: aus der Konfiguration, sonst anmeldung@ der Haupt-Domain (E-13). */
+function mail_absender(array $c): string
+{
+    $a = trim((string)$c['absender']);
+    return $a !== '' ? $a : 'anmeldung@' . (host_haupt() ?? 'localhost');
+}
+
+/** Ist der Versand eingerichtet? (Datei-Modus zählt als eingerichtet.) */
+function mail_eingerichtet(): bool
+{
+    $c = mail_konfig();
+    if ($c['modus'] === 'datei') {
+        return true;
+    }
+    return trim((string)$c['host']) !== '';
+}
+
+/** Adresse für den Versand prüfen und normieren (klein, ohne Leerraum) oder null. */
+function mail_adresse(string $roh): ?string
+{
+    $e = mb_strtolower(trim($roh));
+    if ($e === '' || strlen($e) > 190 || strcspn($e, "\r\n") !== strlen($e) || filter_var($e, FILTER_VALIDATE_EMAIL) === false) {
+        return null;
+    }
+    return $e;
+}
+
+/** Mail in die Warteschlange stellen. Gibt die ID zurück. */
+function mail_einreihen(string $an, string $betreff, string $text, int $prio = MAIL_PRIO_SYSTEM): int
+{
+    $adresse = mail_adresse($an);
+    if ($adresse === null) {
+        throw new InvalidArgumentException('Unbrauchbare Empfängeradresse.');
+    }
+    $jetzt = db_jetzt();
+    db_ausfuehren(
+        "INSERT INTO mail_ausgang (an, betreff, text, prio, status, versuche, naechster_versuch, erstellt_am) VALUES (?, ?, ?, ?, 'offen', 0, ?, ?)",
+        [$adresse, $betreff, $text, $prio, $jetzt, $jetzt]
+    );
+    $id = (int)db()->lastInsertId();
+    $GLOBALS['ws_mail_neu'] = true;
+    // Im Web nach der Antwort senden (auch nach einer Umleitung mit exit); Jobs und Tests senden selbst.
+    if (PHP_SAPI !== 'cli' && empty($GLOBALS['ws_mail_shutdown'])) {
+        $GLOBALS['ws_mail_shutdown'] = true;
+        register_shutdown_function('mail_nach_antwort');
+    }
+    return $id;
+}
+
+/** Mail aus einer Vorlage einreihen. */
+function mail_vorlage_einreihen(string $an, string $vorlage, array $daten, int $prio = MAIL_PRIO_SYSTEM): int
+{
+    [$betreff, $text] = mail_vorlage($vorlage, $daten);
+    return mail_einreihen($an, $betreff, $text, $prio);
+}
+
+/** Heute (Ortszeit) versendete Mails – für das Tageslimit. */
+function mail_heute_gesendet(?int $jetzt = null): int
+{
+    $jetzt ??= time();
+    $tag = (new DateTimeImmutable('@' . $jetzt))->setTimezone(new DateTimeZone(ANZEIGE_ZEITZONE))->format('Y-m-d');
+    $ab = lokal_nach_utc($tag . ' 00:00:00');
+    return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ?", [$ab]);
+}
+
+/**
+ * Fällige Mails senden: System-Mails immer, Rundmails nur bis zum Tageslimit
+ * (der Rest wartet auf den nächsten Tag, AP-6). Höchstens $max Mails und
+ * etwa $budget Sekunden. Gibt Zahlen zurück: gesendet, fehler, wartet.
+ */
+function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt = null): array
+{
+    $jetzt ??= time();
+    $ende = microtime(true) + $budget;
+    $erg = ['gesendet' => 0, 'fehler' => 0, 'wartet' => 0];
+    if (!mail_eingerichtet()) {
+        $erg['wartet'] = (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
+        return $erg;
+    }
+    $limit = max(0, (int)mail_konfig()['tageslimit']);
+    $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+    // Hängengebliebene Versuche (Abbruch mitten im Versand) nach 10 min freigeben
+    db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
+    for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
+        $heute = mail_heute_gesendet($jetzt);
+        $z = db_zeile(
+            "SELECT id, an, betreff, text, prio, versuche FROM mail_ausgang
+             WHERE status = 'offen' AND naechster_versuch <= ? AND (prio = ? OR ? < ?)
+             ORDER BY prio, id LIMIT 1",
+            [$jetztDb, MAIL_PRIO_SYSTEM, $heute, $limit]
+        );
+        if ($z === null) {
+            break;
+        }
+        // Eintrag für diesen Lauf beanspruchen (zwei gleichzeitige Läufe senden nicht doppelt)
+        $n = db_ausfuehren("UPDATE mail_ausgang SET status = 'sendet', naechster_versuch = ? WHERE id = ? AND status = 'offen'", [$jetztDb, $z['id']])->rowCount();
+        if ($n !== 1) {
+            continue;
+        }
+        $fehler = mail_zustellen($z['an'], $z['betreff'], $z['text']);
+        if ($fehler === null) {
+            // R-02: Inhalt und Empfänger nach dem Versand leeren
+            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', time()), $z['id']]);
+            $erg['gesendet']++;
+        } else {
+            $versuche = (int)$z['versuche'] + 1;
+            if ($versuche > count(MAIL_WIEDERHOLUNG_MIN)) {
+                db_ausfuehren("UPDATE mail_ausgang SET status = 'fehler', versuche = ?, fehler = ? WHERE id = ?", [$versuche, $fehler, $z['id']]);
+            } else {
+                $naechster = gmdate('Y-m-d H:i:s', $jetzt + 60 * MAIL_WIEDERHOLUNG_MIN[$versuche - 1]);
+                db_ausfuehren("UPDATE mail_ausgang SET status = 'offen', versuche = ?, naechster_versuch = ?, fehler = ? WHERE id = ?", [$versuche, $naechster, $fehler, $z['id']]);
+            }
+            error_log('Mail ' . $z['id'] . ': ' . $fehler);
+            $erg['fehler']++;
+        }
+    }
+    $erg['wartet'] = (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
+    return $erg;
+}
+
+/**
+ * Nach der Antwort an den Browser senden, was diese Anfrage eingereiht hat.
+ * Der Browser wartet nicht darauf (gleiche Antwortzeit, R-03).
+ */
+function mail_nach_antwort(): void
+{
+    if (empty($GLOBALS['ws_mail_neu'])) {
+        return;
+    }
+    $GLOBALS['ws_mail_neu'] = false;
+    antwort_abschliessen();
+    try {
+        mail_senden_faellige(5, 12.0);
+    } catch (Throwable $ex) {
+        error_log('Mailversand nach der Antwort: ' . $ex->getMessage());
+    }
+}
+
+/** Antwort an den Browser abschließen, das Skript läuft weiter (Muster NAdoku smtp.php). */
+function antwort_abschliessen(): void
+{
+    ignore_user_abort(true);
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    foreach (['fastcgi_finish_request', 'litespeed_finish_request'] as $fn) {
+        if (function_exists($fn)) {
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+            @flush();
+            $fn();
+            return;
+        }
+    }
+    if (headers_sent()) {
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+        @flush();
+        return;
+    }
+    $inhalt = '';
+    while (ob_get_level() > 0) {
+        $stueck = ob_get_clean();
+        if ($stueck !== false) {
+            $inhalt = $stueck . $inhalt;
+        }
+    }
+    header('Connection: close');
+    header('Content-Length: ' . strlen($inhalt));
+    echo $inhalt;
+    @flush();
+}
+
+/** Eine Mail zustellen. Gibt null bei Erfolg zurück, sonst einen Grund (ohne Empfänger). */
+function mail_zustellen(string $an, string $betreff, string $text): ?string
+{
+    $c = mail_konfig();
+    $nachricht = mail_nachricht($c, $an, $betreff, $text);
+    if ($c['modus'] === 'datei') {
+        // Name sortierbar nach Zeit (Mikrosekunden), damit Tests die neueste Mail finden
+        $datei = laufzeit_pfad('mails') . '/' . sprintf('%.6f', microtime(true)) . '-' . bin2hex(random_bytes(3)) . '.eml';
+        return @file_put_contents($datei, $nachricht) === false ? 'Datei nicht schreibbar' : null;
+    }
+    return smtp_senden($c, $an, $nachricht);
+}
+
+/** Vollständige Nachricht (Kopf und Text, quoted-printable). */
+function mail_nachricht(array $c, string $an, string $betreff, string $text): string
+{
+    $absender = mail_absender($c);
+    $domain = substr(strrchr($absender, '@') ?: '@localhost', 1);
+    $kopf = [
+        'From: ' . mb_encode_mimeheader((string)$c['absender_name'], 'UTF-8', 'Q') . ' <' . $absender . '>',
+        'To: <' . $an . '>',
+        'Subject: ' . mb_encode_mimeheader(trim(preg_replace('/[\r\n]+/', ' ', $betreff) ?? ''), 'UTF-8', 'Q'),
+        'Date: ' . date(DATE_RFC2822),
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $domain . '>',
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: quoted-printable',
+        'Auto-Submitted: auto-generated',
+    ];
+    if (trim((string)$c['antwort_an']) !== '') {
+        $kopf[] = 'Reply-To: <' . trim((string)$c['antwort_an']) . '>';
+    }
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    return implode("\r\n", $kopf) . "\r\n\r\n" . quoted_printable_encode(str_replace("\n", "\r\n", $text)) . "\r\n";
+}
+
+/** SMTP-Gespräch. Gibt null bei Erfolg zurück, sonst den Grund. */
+function smtp_senden(array $c, string $an, string $nachricht): ?string
+{
+    if (strcspn($an, "\r\n") !== strlen($an) || filter_var($an, FILTER_VALIDATE_EMAIL) === false) {
+        return 'Empfängeradresse unbrauchbar';
+    }
+    $host = trim((string)$c['host']);
+    $port = (int)$c['port'];
+    $starttls = ($c['verschluesselung'] ?? 'ssl') === 'starttls';
+    $frist = microtime(true) + MAIL_SMTP_FRIST_S;
+    $rest = fn(): float => $frist - microtime(true);
+    $ziel = ($starttls ? 'tcp://' : 'ssl://') . $host . ':' . $port;
+    $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $host]]);
+    $fp = @stream_socket_client($ziel, $errno, $errstr, max(0.5, $rest()), STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) {
+        return 'Verbindung nicht möglich: ' . $errstr;
+    }
+    $grund = null;
+    $erwarte = function (string $code) use ($fp, $rest, &$grund): bool {
+        do {
+            $r = $rest();
+            if ($r <= 0) {
+                $grund = 'Zeitbudget erschöpft (erwartet ' . $code . ')';
+                return false;
+            }
+            stream_set_timeout($fp, (int)$r, (int)(fmod($r, 1.0) * 1_000_000));
+            $zeile = fgets($fp, 1024);
+            if ($zeile === false) {
+                $grund = 'Verbindung abgebrochen (erwartet ' . $code . ')';
+                return false;
+            }
+        } while (isset($zeile[3]) && $zeile[3] === '-');
+        if (strncmp($zeile, $code, 3) === 0) {
+            return true;
+        }
+        $grund = 'Server antwortete ' . substr(trim($zeile), 0, 3) . ', erwartet ' . $code;
+        return false;
+    };
+    $sende = fn(string $befehl) => fwrite($fp, $befehl . "\r\n");
+    $ehlo = host_haupt() ?? 'localhost';
+    $ok = $erwarte('220');
+    if ($ok) {
+        $sende('EHLO ' . $ehlo);
+        $ok = $erwarte('250');
+    }
+    if ($ok && $starttls) {
+        $sende('STARTTLS');
+        $ok = $erwarte('220') && @stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT) === true;
+        if ($ok) {
+            $sende('EHLO ' . $ehlo);
+            $ok = $erwarte('250');
+        } elseif ($grund === null) {
+            $grund = 'STARTTLS fehlgeschlagen';
+        }
+    }
+    if ($ok && (string)$c['benutzer'] !== '') {
+        $sende('AUTH LOGIN');
+        $ok = $erwarte('334');
+        if ($ok) {
+            $sende(base64_encode((string)$c['benutzer']));
+            $ok = $erwarte('334');
+        }
+        if ($ok) {
+            $sende(base64_encode((string)$c['passwort']));
+            $ok = $erwarte('235');
+        }
+    }
+    foreach (['MAIL FROM:<' . mail_absender($c) . '>' => '250', 'RCPT TO:<' . $an . '>' => '250', 'DATA' => '354'] as $befehl => $code) {
+        if ($ok) {
+            $sende($befehl);
+            $ok = $erwarte($code);
+        }
+    }
+    if ($ok) {
+        // Punkt am Zeilenanfang verdoppeln (Dot-Stuffing)
+        fwrite($fp, preg_replace('/^\./m', '..', $nachricht) . "\r\n.\r\n");
+        $ok = $erwarte('250');
+    }
+    @fwrite($fp, "QUIT\r\n");
+    fclose($fp);
+    return $ok ? null : ($grund ?? 'unbekannter Fehler');
+}
+
+/** Alte Einträge entfernen (Job 'aufraeumen'). */
+function mail_aufraeumen(?int $jetzt = null): int
+{
+    $jetzt ??= time();
+    $grenze = gmdate('Y-m-d H:i:s', $jetzt - MAIL_AUFBEWAHREN_TAGE * 86400);
+    return db_ausfuehren("DELETE FROM mail_ausgang WHERE status IN ('gesendet','fehler') AND erstellt_am < ?", [$grenze])->rowCount();
+}
+
+/** Stand für den Team-Bereich. */
+function mail_stand(): array
+{
+    return [
+        'eingerichtet' => mail_eingerichtet(),
+        'modus' => mail_konfig()['modus'],
+        'offen' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
+        'fehler' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'fehler'"),
+        'heute' => mail_heute_gesendet(),
+        'limit' => (int)mail_konfig()['tageslimit'],
+    ];
+}
+
+/* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */
+
+function mail_gruss(): string
+{
+    return "\n\nBis bald\nDein Team vom Wintersymposium\nALLGÄU AKUT – Fortbildung Notfallmedizin\n" . url('/');
+}
+
+/**
+ * Betreff und Text einer Vorlage. $d enthält je Vorlage: vorname, link,
+ * gueltig (Text), uebersicht (Text), frist (Text), was (Text) …
+ */
+function mail_vorlage(string $name, array $d): array
+{
+    $hallo = 'Hallo ' . ($d['vorname'] ?? '') . ",\n\n";
+    $u = isset($d['uebersicht']) ? "\n\n" . $d['uebersicht'] : '';
+    switch ($name) {
+        case 'bestaetigen':
+            return ['Bitte bestätige deine Anmeldung zum Wintersymposium',
+                $hallo . "danke für deine Anmeldung. Sie gilt erst, wenn du sie über diesen Link bestätigst:\n\n"
+                . $d['link'] . "\n\nDer Link gilt bis " . $d['gueltig'] . '. Bis dahin halten wir deine Plätze frei; danach verfällt die Anmeldung und die Plätze gehen an andere.'
+                . $u . "\n\nDu hast dich nicht angemeldet? Dann ignoriere diese Mail einfach." . mail_gruss()];
+        case 'bestaetigt':
+            return ['Deine Anmeldung zum Wintersymposium ist bestätigt',
+                $hallo . 'deine Anmeldung ist bestätigt.' . $u
+                . "\n\nÄndern oder absagen kannst du unter " . url('/deine-anmeldung') . ' – dort schicken wir dir einen Link an diese Adresse.' . mail_gruss()];
+        case 'zugang':
+            return ['Dein Link zur Anmeldung beim Wintersymposium',
+                $hallo . "mit diesem Link siehst und änderst du deine Anmeldung:\n\n" . $d['link']
+                . "\n\nEr gilt bis " . $d['gueltig'] . ' und nur einmal. Danach kannst du dir jederzeit einen neuen schicken lassen.'
+                . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'schon_angemeldet':
+            return ['Du bist schon beim Wintersymposium angemeldet',
+                $hallo . "mit dieser Adresse gibt es schon eine Anmeldung. Eine zweite legen wir nicht an. Mit diesem Link siehst und änderst du die bestehende:\n\n"
+                . $d['link'] . "\n\nEr gilt bis " . $d['gueltig'] . ' und nur einmal.'
+                . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'geaendert':
+            return ['Deine Anmeldung zum Wintersymposium wurde geändert',
+                $hallo . ($d['was'] ?? 'deine Anmeldung wurde geändert.') . $u . mail_gruss()];
+        case 'storniert':
+            return ['Deine Anmeldung zum Wintersymposium ist storniert',
+                $hallo . "deine Anmeldung ist storniert. Deine Plätze gehen an die Warteliste. Danke, dass du abgesagt hast.\n\nWenn du doch kommen willst, melde dich einfach neu an: " . url('/anmelden') . mail_gruss()];
+        case 'angebot':
+            return ['Platz frei: ' . $d['was'],
+                $hallo . 'auf der Warteliste ist ein Platz für dich frei geworden: ' . $d['was'] . ".\n\nDer Platz ist für dich reserviert bis " . $d['frist']
+                . ". Annehmen oder ablehnen kannst du hier:\n\n" . $d['link']
+                . "\n\nLässt du die Frist verstreichen, geht der Platz an die nächste Person und du rückst ans Ende der Warteliste."
+                . (($d['tausch'] ?? '') !== '' ? "\n\nAchtung: " . $d['tausch'] : '') . mail_gruss()];
+        case 'angebot_abgelaufen':
+            return ['Angebot abgelaufen: ' . $d['was'],
+                $hallo . 'das Angebot für ' . $d['was'] . ' ist abgelaufen. Der Platz geht an die nächste Person; du stehst jetzt am Ende der Warteliste.' . $u . mail_gruss()];
+        case 'platz_erhalten':
+            return ['Du hast den Platz: ' . $d['was'],
+                $hallo . 'du hast den Platz angenommen: ' . $d['was'] . '.' . $u . mail_gruss()];
+        case 'email_bestaetigen':
+            return ['Bitte bestätige deine neue Adresse',
+                $hallo . "du willst deine Anmeldung zum Wintersymposium auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
+                . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'test':
+            return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
+    }
+    throw new InvalidArgumentException('Unbekannte Mail-Vorlage: ' . $name);
+}

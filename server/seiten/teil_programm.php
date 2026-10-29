@@ -20,7 +20,11 @@ $dauer = fn(string $von, string $bis) => minuten($bis) - minuten($von);
 $frei = fn(array $t) => max(0, $t['plaetze'] - termin_belegt((int)$t['id']));
 $chipFrei = function (array $t) use ($frei): string {
     $f = $frei($t);
-    return $f > 0 ? '<span class="chip ok">' . $f . ' frei</span>' : '<span class="chip wl">voll · Warteliste</span>';
+    if ($f > 0) {
+        return '<span class="chip ok">' . $f . ' frei</span>';
+    }
+    $w = anm_wartend((int)$t['id']);
+    return '<span class="chip wl">voll · ' . ($w > 0 ? $w . ' warten' : 'Warteliste') . '</span>';
 };
 $format = function (array $p): string {
     $typ = PROGRAMM_TYPEN[$p['typ']];
@@ -147,6 +151,7 @@ endforeach; ?>
         <?php if (in_array($p['typ'], ['vortrag', 'fall'], true)): ?><p class="meta klein">Vorträge und Fallbesprechungen brauchen keine eigene Anmeldung – sie gehören zur Anmeldung zum Symposium.</p><?php endif; ?>
         <?php if ($p['typ'] === 'station'): ?><p class="meta klein">Offene Station: ohne Anmeldung, komm einfach vorbei.</p><?php endif; ?>
         <?php if ($p['typ'] === 'workshop' && $anmeldungHinweis !== ''): ?><p class="meta klein"><?= e($anmeldungHinweis) ?></p><?php endif; ?>
+        <?php if ($p['typ'] === 'workshop' && anm_zeitraum() === 'offen'): ?><div class="aktionen"><a class="knopf gruen" href="/anmelden#workshops">Zur Anmeldung</a><a class="knopf zweit" href="/deine-anmeldung">Schon angemeldet?</a></div><?php endif; ?>
     </div>
 </dialog>
 <?php endforeach;

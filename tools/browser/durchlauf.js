@@ -227,6 +227,81 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         }
       }
 
+      // ---- Anmeldung (AP-4) ----
+      // Formular und Einstieg in allen Breiten: EFN-/Sonstige-Feld je Berufsgruppe, Sperre bei Überschneidung
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'anmelden', basis + '/anmelden');
+        await p.selectOption('#berufsgruppe', 'ÄrztIn');
+        const efnAn = await p.isVisible('#efn');
+        await p.selectOption('#berufsgruppe', 'StudentIn');
+        const efnAus = !await p.isVisible('#efn') && !await p.isVisible('#beruf_sonstige');
+        await p.selectOption('#berufsgruppe', 'Sonstige');
+        notiere(engine, breite, 'anmelden', 'EFN nur bei ÄrztIn, Freitext nur bei Sonstige', efnAn && efnAus && await p.isVisible('#beruf_sonstige'));
+        await p.locator('.ws-gruppe', { hasText: 'Atemweg' }).locator('label', { hasText: '19:30–20:15' }).click();
+        const gesperrt = await p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label', { hasText: '19:30–20:00' }).locator('input').isDisabled();
+        const grund = await p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label', { hasText: '19:30–20:00' }).textContent();
+        notiere(engine, breite, 'anmelden', 'Überschneidender Termin gesperrt, mit Grund', gesperrt && grund.includes('Überschneidet sich mit WS 01'));
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-einstieg', basis + '/deine-anmeldung');
+      }
+      // Anmelden wie eine Person (Handy), Mail lesen, bestätigen
+      await p.setViewportSize({ width: 390, height: 844 });
+      const mailAdresse = `browser-${engine}@example.org`;
+      await p.goto(basis + '/anmelden');
+      const geladen = Date.now();
+      await p.fill('#vorname', 'Bruno'); await p.fill('#nachname', 'Browser ' + engine); await p.fill('#email', mailAdresse);
+      await p.selectOption('#berufsgruppe', 'ÄrztIn'); await p.fill('#institution', 'Klinikum Teststadt'); await p.fill('#efn', '802760012345673');
+      await p.locator('.ws-gruppe', { hasText: 'Atemweg' }).locator('label', { hasText: '19:30–20:15' }).click();
+      const wl = p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label.wl-zeile', { hasText: '20:30–21:00' });
+      await wl.click();
+      notiere(engine, 'handy', 'anmelden', 'Warteliste umschalten', (await wl.textContent()).includes('✓ Auf der Warteliste'));
+      await p.locator('label', { hasText: 'Vegetarisch' }).click();
+      await p.locator('label.haken', { hasText: 'Datenschutzerklärung' }).locator('input').check();
+      await p.waitForTimeout(Math.max(0, 4500 - (Date.now() - geladen)));
+      await Promise.all([p.waitForNavigation({ timeout: 20000 }), p.click('button[data-pow-knopf]')]);
+      notiere(engine, 'handy', 'anmelden', 'Absenden mit Sicherheitsprüfung → „Schau in dein Postfach“', (await p.textContent('body')).includes('Schau in dein Postfach'));
+      await pruefeSeite(p, fehler, engine, 'handy', 'anmelden-danke', null);
+      let mailText = '';
+      for (let i = 0; i < 40 && !mailText; i++) {
+        for (const f of (fs.existsSync(vor.mails) ? fs.readdirSync(vor.mails) : []).sort().reverse()) {
+          const t = fs.readFileSync(path.join(vor.mails, f), 'utf8').replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/g, (_, x) => String.fromCharCode(parseInt(x, 16)));
+          if (t.includes(`To: <${mailAdresse}>`)) { mailText = t; break; }
+        }
+        if (!mailText) await p.waitForTimeout(150);
+      }
+      const linkPfad = (mailText.match(/\/link\?t=[0-9a-f]{48}/) || [''])[0];
+      notiere(engine, 'handy', 'anmelden', 'Bestätigungsmail mit Link', linkPfad !== '');
+      await pruefeSeite(p, fehler, engine, 'handy', 'link', basis + linkPfad);
+      await Promise.all([p.waitForNavigation(), p.click('button:has-text("Anmeldung bestätigen")')]);
+      notiere(engine, 'handy', 'deine-anmeldung', 'Bestätigt, Name in der Navigation', (await p.textContent('body')).includes('Anmeldung bestätigt') && (await p.textContent('.nav-gross, .menue')).includes('Bruno'));
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung', basis + '/deine-anmeldung');
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-workshops', basis + '/deine-anmeldung?aendern=workshops');
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-daten', basis + '/deine-anmeldung?aendern=daten');
+      }
+      // Workshops ändern: Termin wechseln
+      await p.goto(basis + '/deine-anmeldung?aendern=workshops');
+      await p.locator('.ws-gruppe', { hasText: 'Atemweg' }).locator('label', { hasText: '20:30–21:15' }).click();
+      await Promise.all([p.waitForNavigation(), p.click('button:has-text("Speichern")')]);
+      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Workshop-Termin gewechselt', (await p.textContent('.liste-def')).includes('20:30–21:15'));
+      // Paula: offenes Angebot mit Tausch (nur ansehen und abbrechen, damit es für die nächste Engine bleibt)
+      await p.goto(basis + vor.paula_links[ENGINES.indexOf(engine)]);
+      await Promise.all([p.waitForNavigation(), p.click('button:has-text("Weiter")')]);
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-angebot', basis + '/deine-anmeldung');
+        notiere(engine, breite, 'deine-anmeldung-angebot', 'Angebot mit Tausch-Hinweis', await p.isVisible('.angebot .ersetzt'));
+        await Promise.all([p.waitForNavigation(), p.click('.angebot button:has-text("Platz annehmen")')]);
+        notiere(engine, breite, 'deine-anmeldung-angebot', 'Annehmen fragt nach (Tausch bestätigen)', await p.isVisible('.tausch-bestaetigen') && (await p.textContent('.tausch-bestaetigen')).includes('Wird storniert'));
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-tausch', null);
+        await p.click('.tausch-bestaetigen a:has-text("Abbrechen")');
+        await p.waitForLoadState('load');
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
+      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
+
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/einloggen');
@@ -251,7 +326,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
+        for (const [text, ziel, name] of [['Anmeldungen', '/team/anmeldungen', 'team-anmeldungen'], ['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());

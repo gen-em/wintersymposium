@@ -170,6 +170,147 @@ function programm_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe($r['status'] === 303 || $r['status'] === 403, 'ohne Login nichts änderbar');
 }
 
+/**
+ * Neueste Mail im Datei-Modus an eine Adresse (Text dekodiert) oder ''. Mit
+ * $enthaelt: wartet auf eine Mail mit diesem Text (Versand läuft nach der Antwort).
+ */
+function http_mail_an(string $tmp, string $an, int $warten = 20, string $enthaelt = ''): string
+{
+    for ($i = 0; $i < $warten; $i++) {
+        $dateien = glob("$tmp/var/mails/*.eml") ?: [];
+        rsort($dateien);
+        foreach ($dateien as $d) {
+            $text = quoted_printable_decode((string)file_get_contents($d));
+            if (str_contains($text, "To: <$an>") && ($enthaelt === '' || str_contains($text, $enthaelt))) {
+                return $text;
+            }
+        }
+        usleep(150_000);
+    }
+    return '';
+}
+
+function http_mail_anzahl(string $tmp, string $an): int
+{
+    return count(array_filter(glob("$tmp/var/mails/*.eml") ?: [], fn($d) => str_contains((string)file_get_contents($d), "To: <$an>")));
+}
+
+/** Rechenaufgabe des Spamschutzes lösen (wie assets/pow-worker.js). */
+function http_pow(string $aufgabe): string
+{
+    for ($n = 0; ; $n++) {
+        if (spam_nullbits(hash('sha256', $aufgabe . $n, true), SPAM_POW_BITS)) {
+            return (string)$n;
+        }
+    }
+}
+
+/** Anmeldeformular absenden wie ein Browser (Aufgabe gelöst, Formular 10 s alt). */
+function http_anmelden(string $basis, string $h, string $keks, array $felder): array
+{
+    $r = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $keks);
+    preg_match('/name="pow_aufgabe" value="([0-9a-f]{64})"/', $r['text'], $m);
+    $form = $felder + ['csrf' => http_csrf($r['text']), 'zeit' => spam_stempel(time() - 10), 'pow_aufgabe' => $m[1] ?? '', 'pow_loesung' => http_pow($m[1] ?? ''), 'website' => '', 'einwilligung' => '1'];
+    return http_anfrage($basis, 'POST', '/anmelden', $h, [], $form, $keks);
+}
+
+/** Anmeldung, Einmal-Links, Deine Anmeldung, Team-Liste (AP-4). */
+function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Anmeldung (AP-4)');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() + 86400));
+    $r = http_anfrage($basis, 'GET', '/anmelden', $h);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Die Anmeldung öffnet am') && !str_contains($r['text'], 'name="vorname"'), 'vor dem Start: Hinweis statt Formular');
+    pruefe(!str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Jetzt anmelden'), 'Startseite ohne Anmeldeknopf vor dem Start');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 60));
+    $k1 = "$tmp/kekse-tn1.txt";
+    $r = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k1);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'name="pow_aufgabe"') && str_contains($r['text'], 'name="website"') && str_contains($r['text'], 'name="ws['), 'Formular mit Spamschutz und Workshop-Wahl');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Jetzt anmelden'), 'Startseite: „Jetzt anmelden“ (E-42)');
+    $r = http_anfrage($basis, 'POST', '/anmelden', $h, [], ['vorname' => 'X'], $k1);
+    pruefe($r['status'] === 403, 'ohne CSRF-Token abgelehnt');
+    $wid = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'workshop'");
+    $t1 = (int)db_wert("SELECT id FROM workshop_termin WHERE beginn = '19:00:00'");
+    $t2 = (int)db_wert("SELECT id FROM workshop_termin WHERE beginn = '20:00:00'");
+    $person = ['vorname' => 'Lena', 'nachname' => 'Test', 'email' => 'Lena.Test@Example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA Test', 'efn' => '80276 00123 45673', 'essen' => 'vegetarisch', 'ws' => [$wid => $t1]];
+    $r = http_anmelden($basis, $h, $k1, ['email' => 'kaputt', 'einwilligung' => ''] + $person);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Noch nicht angemeldet') && str_contains($r['text'], 'aria-invalid="true"') && str_contains($r['text'], 'value="Lena"') && db_wert('SELECT COUNT(*) FROM anmeldung') == 0, 'Eingabefehler sichtbar, Eingabe bleibt, nichts angelegt');
+    $r = http_anmelden($basis, $h, $k1, ['website' => 'http://spam.example'] + $person);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Schau in dein Postfach') && db_wert('SELECT COUNT(*) FROM anmeldung') == 0, 'Honigtopf: gleiche Antwort, nichts angelegt (T-131)');
+    $r = http_anmelden($basis, $h, $k1, ['pow_loesung' => '1'] + $person);
+    pruefe(str_contains($r['text'], 'Schau in dein Postfach') && db_wert('SELECT COUNT(*) FROM anmeldung') == 0, 'ohne gelöste Rechenaufgabe: gleiche Antwort, nichts angelegt');
+    $r = http_anmelden($basis, $h, $k1, ['zeit' => spam_stempel(time() - 1)] + $person);
+    pruefe(str_contains($r['text'], 'Schau in dein Postfach') && db_wert('SELECT COUNT(*) FROM anmeldung') == 0, 'Formular unter 4 s: gleiche Antwort, nichts angelegt');
+    $r = http_anmelden($basis, $h, $k1, ['email' => 'wer@mailinator.com'] + $person);
+    pruefe(str_contains($r['text'], 'Schau in dein Postfach') && db_wert('SELECT COUNT(*) FROM anmeldung') == 0, 'Wegwerfadresse: gleiche Antwort, nichts angelegt (T-132)');
+    $r = http_anmelden($basis, $h, $k1, $person);
+    $a = db_zeile("SELECT * FROM anmeldung WHERE email = 'lena.test@example.org'");
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Schau in dein Postfach') && $a !== null && $a['status'] === 'unbestaetigt' && $a['efn'] === '802760012345673', 'Anmeldung angelegt (unbestätigt, EFN ohne Leerzeichen)');
+    pruefe(db_wert('SELECT COUNT(*) FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$a['id'] ?? 0, $t1]) == 1, 'Workshop-Platz reserviert');
+    $mail = http_mail_an($tmp, 'lena.test@example.org');
+    preg_match('~(/link\?t=[0-9a-f]{48})~', $mail, $m);
+    pruefe(str_contains($mail, 'Subject: ') && str_contains($mail, 'From: Wintersymposium Notfallmedizin <anmeldung@ws.test>') && str_contains($mail, 'Sie gilt erst, wenn du sie') && isset($m[1]), 'Bestätigungsmail mit Link (nach der Antwort versendet)');
+    pruefe((int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") >= 1, 'Warteschlange: Empfänger nach dem Versand geleert');
+    $link = $m[1] ?? '/link?t=x';
+    $r = http_anfrage($basis, 'GET', $link, $h, [], null, $k1);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Anmeldung bestätigen') && db_wert('SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ?', [$a['id'] ?? 0]) == 1, 'Link öffnen verbraucht ihn nicht (Mail-Scanner)');
+    $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($link, 8)], $k1);
+    pruefe($r['status'] === 303 && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'bestaetigt', 'Klick bestätigt die Anmeldung (T-130)');
+    $r = http_anfrage($basis, 'GET', $link, $h, [], null, $k1);
+    pruefe(str_contains($r['text'], 'Link abgelaufen'), 'Link danach ungültig (T-135)');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k1);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Hallo Lena.') && str_contains($r['text'], 'Anmeldung bestätigt') && str_contains($r['text'], 'Platz bestätigt') && str_contains($r['text'], '80276 00123 45673'), 'Deine Anmeldung: Status, Workshop, EFN');
+    pruefe(str_contains($r['text'], 'Lena Test</span>') && str_contains($r['text'], 'value="ausloggen"'), 'Navigation zeigt Name und „Ausloggen“ (E-40)');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'essen', 'essen' => 'kein'], $k1);
+    pruefe($r['status'] === 303 && db_wert('SELECT essen FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'kein', 'Essen ändern');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'workshops', 'ws' => [$wid => $t2]], $k1);
+    pruefe($r['status'] === 303 && db_wert('SELECT termin_id FROM platz WHERE anmeldung_id = ? AND termin_id <> 0', [$a['id'] ?? 0]) == $t2, 'Workshop-Termin wechseln');
+    pruefe(http_mail_an($tmp, 'lena.test@example.org', 20, 'deine Workshops sind ge') !== '', 'Mail nach der Änderung');
+    einstellung_setzen('stichtag_workshop', gmdate('Y-m-d', time() - 86400));
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k1);
+    pruefe(str_contains($r['text'], 'nur noch über das Team') && !str_contains($r['text'], 'href="/deine-anmeldung?aendern=workshops"'), 'Nach dem Stichtag: Knopf gesperrt mit Hinweis (E-31)');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'workshops', 'ws' => [$wid => $t1]], $k1);
+    pruefe(db_wert('SELECT termin_id FROM platz WHERE anmeldung_id = ? AND termin_id <> 0', [$a['id'] ?? 0]) == $t2, 'Nach dem Stichtag: Änderung abgelehnt (T-143)');
+    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'stichtag_workshop'");
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'daten', 'vorname' => 'Lena', 'nachname' => 'Test', 'email' => 'neu@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA Test', 'efn' => ''], $k1);
+    pruefe($r['status'] === 303 && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'lena.test@example.org', 'Neue Adresse gilt erst nach Bestätigung');
+    preg_match('~/link\?t=([0-9a-f]{48})~', http_mail_an($tmp, 'neu@example.org'), $m2);
+    anm_link_einloesen($m2[1] ?? '');
+    pruefe(db_wert('SELECT email FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'neu@example.org', 'nach dem Link gilt die neue Adresse');
+
+    abschnitt('HTTP: Gleiche Adresse, Link per Mail, Storno, Team (AP-4)');
+    $k2 = "$tmp/kekse-tn2.txt";
+    $vorher = http_mail_anzahl($tmp, 'neu@example.org');
+    $r = http_anmelden($basis, $h, $k2, ['email' => 'neu@example.org'] + $person);
+    pruefe(str_contains($r['text'], 'Schau in dein Postfach') && db_wert('SELECT COUNT(*) FROM anmeldung') == 1, 'gleiche Adresse: gleiche Antwort, keine zweite Anmeldung (E-46)');
+    pruefe(http_mail_an($tmp, 'neu@example.org', 20, 'gibt es schon eine Anmeldung') !== '' && http_mail_anzahl($tmp, 'neu@example.org') === $vorher + 1, 'stattdessen Link zur bestehenden Anmeldung');
+    $k3 = "$tmp/kekse-tn3.txt";
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    pruefe(str_contains($r['text'], 'Wie willst du rein?') && str_contains($r['text'], 'Link schicken'), 'Einstieg ohne Sitzung');
+    $c3 = http_csrf($r['text']);
+    $t0 = microtime(true);
+    $r1 = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $c3, 'aktion' => 'link', 'email' => 'unbekannt@example.org', 'website' => ''], $k3);
+    $d1 = microtime(true) - $t0;
+    $t0 = microtime(true);
+    $r2 = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $c3, 'aktion' => 'link', 'email' => 'neu@example.org', 'website' => ''], $k3);
+    $d2 = microtime(true) - $t0;
+    $f1 = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    pruefe($r1['status'] === 303 && $r2['status'] === 303 && abs($d1 - $d2) < 0.3 && str_contains($f1['text'], 'Wenn die Adresse bei uns angemeldet ist'), 'Link anfordern: gleiche Antwort und Dauer (T-134)');
+    pruefe(http_mail_an($tmp, 'unbekannt@example.org', 3) === '' && http_mail_an($tmp, 'neu@example.org', 20, 'siehst und änderst du deine Anmeldung') !== '', 'Mail nur an bekannte Adresse');
+    $r = http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Lena Test') && str_contains($r['text'], 'neu@example.org') && str_contains($r['text'], 'href="/team/anmeldungen" aria-current'), 'Team: Liste der Anmeldungen');
+    pruefe(http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'Team-Liste nur mit Login');
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(preg_match('~Freie Plätze</dt><dd>239 / 240~u', $r['text']) === 1, 'Startseite: freie Plätze X / Y (E-40)');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'storno'], $k1);
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM anmeldung') == 0 && db_wert('SELECT COUNT(*) FROM platz') == 0, 'Storno löscht Anmeldung und Plätze');
+    pruefe(http_mail_an($tmp, 'neu@example.org', 20, 'ist storniert') !== '', 'Storno-Mail');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k1);
+    pruefe(str_contains($r['text'], 'Wie willst du rein?'), 'danach keine Sitzung mehr');
+    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+}
+
 function team_login_tests(string $basis, string $h, string $tmp, string $wurzel): void
 {
     $b = "$tmp/kekse-betreiber.txt";
@@ -310,6 +451,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     db_ausfuehren("DELETE FROM einstellung WHERE schluessel IN ('veranstaltung_ort', 'veranstaltung_kapazitaet')");
 
     programm_http_tests($basis, $h, $tmp, $b);
+    anmeldung_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";

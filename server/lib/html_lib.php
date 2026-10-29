@@ -49,19 +49,27 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
         . '</a>';
     if ($nav) {
-        // Weitere Menüpunkte (Workshops, Anmeldung, Deine Anmeldung) kommen mit AP-3/AP-4.
-        $punkte = [['/#programm', 'Programm', '/']];
+        $punkte = [['/#programm', 'Programm', '/'], ['/deine-anmeldung', 'Deine Anmeldung', '/deine-anmeldung']];
         $konto = $opt['konto'] ?? null;
         if (is_array($konto)) {
             $punkte[] = ['/team', 'Team-Bereich', '/team'];
         }
+        // Teilnehmende nach dem Einmal-Link (E-40); nur wenn schon eine Sitzung besteht
+        $tn = !is_array($konto) ? ($opt['teilnehmer'] ?? anm_aus_keks()) : null;
         $liste = '';
         foreach ($punkte as [$href, $text, $pfad]) {
             $liste .= '<li><a href="' . e($href) . '"' . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
         }
+        // Grüner Knopf „Anmelden“, solange die Anmeldung offen ist (E-42); nicht für Angemeldete
+        if (!is_array($tn) && !is_array($konto) && anm_zeitraum() === 'offen') {
+            $liste .= '<li><a class="nav-anmelden" href="/anmelden"' . ($aktiv === '/anmelden' ? ' aria-current="page"' : '') . '>Anmelden</a></li>';
+        }
         if (is_array($konto)) {
             $liste .= '<li class="nav-person"><span class="nav-name">' . e($konto['name']) . ' <small>' . e(ROLLEN[$konto['rolle']] ?? '') . '</small></span>'
                 . '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="nav-ab">Ausloggen</button></form></li>';
+        } elseif (is_array($tn)) {
+            $liste .= '<li class="nav-person"><span class="nav-name">' . e($tn['vorname'] . ' ' . $tn['nachname']) . '</span>'
+                . '<form method="post" action="/deine-anmeldung">' . csrf_feld() . '<input type="hidden" name="aktion" value="ausloggen"><button type="submit" class="nav-ab">Ausloggen</button></form></li>';
         }
         // Zwei Darstellungen derselben Liste: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.
         echo '<nav aria-label="Hauptnavigation"><ul class="nav-liste nav-gross">' . $liste . '</ul>'
@@ -87,6 +95,7 @@ function team_reiter(array $konto, string $aktiv): string
 {
     $reiter = [
         ['/team', 'Übersicht'],
+        ['/team/anmeldungen', 'Anmeldungen'],
         ['/team/programm', 'Programm'],
         ['/team/einstellungen', 'Einstellungen'],
         ['/team/profil', 'Mein Konto'],

@@ -39,6 +39,10 @@ const ROUTEN = [
     '/team/programm' => 'team_programm',
     '/team/programm/vorschau' => 'team_programm_vorschau',
     '/team/dozierende' => 'team_dozierende',
+    '/team/anmeldungen' => 'team_anmeldungen',
+    '/anmelden' => 'anmelden',
+    '/link' => 'link',
+    '/deine-anmeldung' => 'deine_anmeldung',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

@@ -27,6 +27,9 @@ require __DIR__ . '/lib/konto_lib.php';
 require __DIR__ . '/lib/anmeldung_lib.php';
 require __DIR__ . '/lib/veranstaltung_lib.php';
 require __DIR__ . '/lib/programm_lib.php';
+require __DIR__ . '/lib/mail_lib.php';
+require __DIR__ . '/lib/spamschutz_lib.php';
+require __DIR__ . '/lib/buchung_lib.php';
 
 date_default_timezone_set('UTC');
 mb_internal_encoding('UTF-8');

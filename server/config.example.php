@@ -39,4 +39,18 @@ return [
     // Nur setzen, wenn der Webspace HTTPS hinter einem Proxy abschließt und
     // $_SERVER['HTTPS'] deshalb leer ist; dann zählt X-Forwarded-Proto.
     'https_ueber_proxy' => false,
+
+    // Mailversand (AP-4). Postfach anmeldung@ beim Hoster; Passwort nur hier.
+    'mail' => [
+        'modus' => 'smtp',              // 'smtp'; 'datei' nur für Tests (Mails in var/mails/)
+        'host' => '',                   // SMTP-Server des Hosters
+        'port' => 465,
+        'verschluesselung' => 'ssl',    // 'ssl' (Port 465) oder 'starttls' (Port 587)
+        'benutzer' => '',               // meist die volle Adresse des Postfachs
+        'passwort' => '',
+        'absender' => 'anmeldung@winter-notfallsymposium.de',
+        'absender_name' => 'Wintersymposium Notfallmedizin',
+        'antwort_an' => '',             // optional, z. B. admin@…
+        'tageslimit' => 450,            // Mails je Tag; System-Mails gehen immer raus
+    ],
 ];
