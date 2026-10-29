@@ -64,6 +64,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-131, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
 - {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden (nur wo eine Kommandozeile verfügbar ist)"}
 - {id: T-134, ap: AP-3, was: "Notzugang im Browser (O-34)", wie: "falscher Schlüssel oder unbekannte Adresse → gleiche Meldung, nichts geändert; richtiger Schlüssel → zweiter Faktor zurückgesetzt, Link angezeigt, alte Sitzung beendet, Audit-Eintrag; nach 3 Fehlversuchen gesperrt", status: "lokal bestanden"}
+- {id: T-135, ap: AP-3, was: "Bitwarden füllt den Code ein (auch in Firefox)", wie: "Code-Felder heißen totp; Browser-Durchlauf prüft Stichwort in id/Name auf jeder Seite; beim Admin: Firefox mit Bitwarden → Menü „Fill verification code“ am Code-Feld", status: "lokal bestanden (Durchlauf 855 ok; Gegenprobe mit altem Namen → 12 Fehler); beim Admin offen"}
 - {id: T-133, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
@@ -194,3 +195,6 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 7. Einmal mit einem Wiederherstellungscode einloggen → Hinweis „Übrig: 9“.
 8. Notzugang (nur zum Ausprobieren, setzt den eigenen zweiten Faktor zurück): `https://test.winter-notfallsymposium.de/notzugang` → Installationsschlüssel aus der config.php und eigene Adresse → Link erscheint → Passwort neu setzen, zweiten Faktor neu einrichten. Danach den Installationsschlüssel in der config.php tauschen.
 
+### Noch zu prüfen für 0.3.1
+
+1. T-135: In Firefox mit Bitwarden einloggen: Nach dem Passwort erscheint am Feld „Code“ das Bitwarden-Menü, und der Code lässt sich einfügen (Eintrag mit TOTP-Schlüssel in Bitwarden vorausgesetzt).

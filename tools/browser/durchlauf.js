@@ -6,6 +6,8 @@
  *   - kein seitliches Scrollen (scrollWidth ≤ Fensterbreite)
  *   - keine Konsolen- und Skriptfehler
  *   - jedes Element liegt innerhalb der Fensterbreite
+ *   - Code-Felder (autocomplete=one-time-code) tragen ein Stichwort wie
+ *     totp in id oder Name, damit Bitwarden sie auch in Firefox erkennt
  *   - Bedienelemente auf jeder Seite: jedes Auswahlfeld mit jeder Option,
  *     jedes Aufklapp-Element (details) auf und zu, jedes Popup (dialog)
  *     über seinen Auslöser auf und mit Escape wieder zu
@@ -148,6 +150,15 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   // Abgeschnittenes in scrollbaren Rahmen (overflow): Inhalt breiter als der Rahmen
   const abgeschnitten = await p.evaluate(() => [...document.querySelectorAll('.tabelle-wrap')].filter(w => !w.closest('.scroll-erlaubt') && w.scrollWidth > w.clientWidth + 1).length);
   notiere(engine, breite, name, 'Tabellen ohne verdecktes Seitwärts-Scrollen', abgeschnitten === 0, `${abgeschnitten} Tabelle(n)`);
+  // Code-Felder für Passwortmanager (Bitwarden in Firefox erkennt sie nur über Stichwörter,
+  // siehe chodid/server-family docs/erkenntnis-bitwarden-einmalcode.md)
+  const otp = await p.evaluate(() => [...document.querySelectorAll('input[autocomplete="one-time-code"]')].map(i => {
+    const kennung = (i.id + ' ' + i.name + ' ' + (i.getAttribute('aria-label') || '')).toLowerCase().replace(/-/g, '');
+    const stark = /totp|onetimecode|onetimepassword|twofactor|verificationcode|securitycode|mfacode|2facode/.test(kennung);
+    const schlecht = i.type === 'password' || /backup|recovery/.test(kennung);
+    return stark && !schlecht ? '' : (i.id || i.name || '?');
+  }).filter(Boolean));
+  notiere(engine, breite, name, 'Code-Felder für Passwortmanager erkennbar', otp.length === 0, otp.join(', '));
   await pruefeBedienung(p, engine, breite, name);
   notiere(engine, breite, name, 'keine Konsolenfehler', fehler.length === 0, fehler.join(' | '));
   await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-${name}.png`), fullPage: true });
@@ -197,7 +208,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await pruefeSeite(p, fehler, engine, 'handy', 'einrichtung', null);
       const uri = await p.getAttribute('svg.qr', 'data-qr');
       const key = b32(new URL(uri.replace('otpauth://', 'http://')).searchParams.get('secret'));
-      await p.fill('#code', totp(key, Date.now() / 1000));
+      await p.fill('#totp', totp(key, Date.now() / 1000));
       await p.click('form:has(input[value=einrichten]) button');
       await p.waitForLoadState('load');
       const codes = await p.locator('ul.codes li').allTextContents();
@@ -253,7 +264,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
       await p.click('form:has(input[value=passwort]) button');
       await p.waitForLoadState('load');
-      await p.fill('#code', codes[0]);
+      await p.fill('#totp', codes[0]);
       await p.click('form:has(input[value=code]) button');
       await p.waitForLoadState('load');
       notiere(engine, 'desktop-breit', 'code-login', 'Login mit Wiederherstellungscode', new URL(p.url()).pathname === '/team');

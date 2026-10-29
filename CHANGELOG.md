@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.3.1] – 2026-10-29
+
+### Behoben
+
+- Bitwarden füllte den Code aus der Authenticator-App in Firefox nicht ein: Die Code-Felder heißen jetzt `totp` statt `code`. Firefox gibt `autocomplete="one-time-code"` nicht an Erweiterungen weiter, Bitwarden sucht dann nach Stichwörtern wie `totp` (Lösung aus dem Familien-Server, dort `docs/erkenntnis-bitwarden-einmalcode.md`).
+
+### Neu
+
+- Browser-Durchlauf prüft auf jeder Seite, dass Code-Felder ein solches Stichwort tragen und kein Passwortfeld sind.
+
 ## [0.3.0] – 2026-10-29
 
 AP-3 Schritt 1: Konten und Team-Login.

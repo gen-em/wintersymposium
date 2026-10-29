@@ -58,7 +58,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $fehler[] = 'Es muss mindestens ein aktiver Betreiber bleiben.';
                 } elseif (!rate_erlaubt('zweitfaktor', $kennung)) {
                     $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-                } elseif (!totp_anmeldung_pruefen($ich, (string)($_POST['code'] ?? ''))['ok']) {
+                } elseif (!totp_anmeldung_pruefen($ich, (string)($_POST['totp'] ?? ''))['ok']) {
                     rate_misserfolg('zweitfaktor', $kennung);
                     $fehler[] = 'Der Code aus deiner App stimmt nicht. Die Rolle wurde nicht geändert.';
                 } else {
@@ -108,8 +108,8 @@ if (is_array($link)): ?>
                         <?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="rolle">
                         <label for="rolle-<?= (int)$k['id'] ?>">Neue Rolle</label>
                         <select id="rolle-<?= (int)$k['id'] ?>" name="rolle"><?php foreach (TEAM_ROLLEN as $r): if ($r !== $k['rolle']): ?><option value="<?= e($r) ?>"><?= e(ROLLEN[$r]) ?></option><?php endif; endforeach; ?></select>
-                        <label for="code-<?= (int)$k['id'] ?>">Bestätigen mit dem Code aus deiner App</label>
-                        <input id="code-<?= (int)$k['id'] ?>" name="code" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+                        <label for="totp-<?= (int)$k['id'] ?>">Bestätigen mit dem Code aus deiner App</label>
+                        <input id="totp-<?= (int)$k['id'] ?>" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
                         <button class="knopf klein" type="submit">Rolle ändern</button>
                     </form>
                 </details>
