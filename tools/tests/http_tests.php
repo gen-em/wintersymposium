@@ -192,7 +192,7 @@ function http_tests(string $wurzel, string $tmp): void
             pruefe($r['status'] === 200 && strlen($r['text']) > 10000, "Schrift $font ausgeliefert");
         }
         $r = http_anfrage($basis, 'GET', '/favicon.svg', $h);
-        pruefe($r['status'] === 200, 'Favicon ausgeliefert');
+        pruefe($r['status'] === 200 && str_contains($r['text'], 'prefers-color-scheme: dark'), 'Favicon ausgeliefert, passt sich hell/dunkel an');
         foreach (['/impressum' => 'Impressum', '/datenschutz' => 'Datenschutz'] as $pf => $titel) {
             $r = http_anfrage($basis, 'GET', $pf, $h);
             pruefe($r['status'] === 200 && str_contains($r['text'], $titel) && str_contains($r['text'], 'wird gerade erstellt'), "$titel erreichbar (noch leer)");

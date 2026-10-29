@@ -32,8 +32,10 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<meta name="robots" content="noindex">'
         . '<title>' . e($titel) . ' – Wintersymposium</title>'
         . '<link rel="stylesheet" href="/assets/site.css">'
+        // .ico zuerst mit fester Größe, SVG danach: so nehmen Chrome, Edge und Firefox die SVG,
+        // die sich hellen und dunklen Oberflächen anpasst; Safari bleibt bei der .ico (Kachel).
+        . '<link rel="icon" href="/favicon.ico" sizes="32x32">'
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
-        . '<link rel="icon" href="/favicon.ico" sizes="any">'
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         . '<meta name="theme-color" content="#001E3A">'
         . '</head><body class="akzent-' . $akzent . '">'
