@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.3.0] – 2026-10-29
+
+AP-3 Schritt 1: Konten und Team-Login (in Arbeit).
+
+### Geändert
+
+- Favicon besser erkennbar (Variante B): Auf hellen Oberflächen füllt das lila Bildzeichen die nachtblaue Kachel fast ganz aus statt nur zu drei Vierteln; bei 16 px war es vorher kaum zu erkennen. Auf dunklen Oberflächen unverändert. `favicon.ico` neu erzeugt.
+
 ## [0.2.1] – 2026-10-29
 
 ### Geändert
