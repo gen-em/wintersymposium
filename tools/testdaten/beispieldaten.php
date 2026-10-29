@@ -29,7 +29,7 @@ function beispieldaten_einstellungen(): void
         'veranstaltung_beginn' => '18:00', 'veranstaltung_ende' => '22:00', 'veranstaltung_ort' => 'Hörsaal Testklinik',
         'veranstaltung_kapazitaet' => '240', 'cme_anzeige' => 'Punkte beantragt',
         'anmeldung_start' => zeit_lokal(gmdate('Y-m-d H:i:s', time() - 86400), 'Y-m-d H:i'),
-        'anmeldung_bestaetigung_h' => '24', 'workshop_limit' => '0', 'workshop_pflicht' => 'freiwillig',
+        'anmeldung_bestaetigung_h' => '48', 'workshop_limit' => '0', 'workshop_pflicht' => 'freiwillig',
         'nachrueck_frist_h' => '48', 'nachrueck_grenze_tage' => '14',
         'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
     ]);

@@ -40,7 +40,7 @@ const VA_KATALOG = [
     'cme_veranstaltungsnummer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Veranstaltungsnummer (VNR)', 'start' => '', 'max' => 40],
     'anmeldung_start' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldung ab', 'start' => '2026-11-24 23:00:00', 'pflicht' => true],
     'anmeldung_ende' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldeschluss', 'start' => '', 'hilfe' => 'Leer: bis zum Beginn der Veranstaltung.'],
-    'anmeldung_bestaetigung_h' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Bestätigungsfrist (Stunden)', 'start' => '24', 'min' => 1, 'max' => 168, 'hilfe' => 'So lange hält eine neue Anmeldung ihre Plätze, bis die Person den Link in der Mail anklickt. Danach verfällt sie und die Plätze gehen an die Warteliste.'],
+    'anmeldung_bestaetigung_h' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Bestätigungsfrist (Stunden)', 'start' => '48', 'min' => 1, 'max' => 168, 'hilfe' => 'So lange hält eine neue Anmeldung ihre Plätze, bis die Person den Link in der Mail anklickt. Danach verfällt sie und die Plätze gehen an die Warteliste.'],
     'workshop_limit' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Workshops je Person (höchstens)', 'start' => '0', 'min' => 0, 'max' => 20, 'hilfe' => '0 = kein Limit (E-20).'],
     'workshop_pflicht' => ['gruppe' => 'anmeldung', 'typ' => 'auswahl', 'titel' => 'Workshop-Wahl', 'start' => 'freiwillig', 'optionen' => ['freiwillig' => 'freiwillig', 'pflicht' => 'Pflicht (mindestens ein Workshop)']],
     'nachrueck_frist_h' => ['gruppe' => 'nachruecken', 'typ' => 'zahl', 'titel' => 'Annahmefrist für ein Angebot (Stunden)', 'start' => '48', 'min' => 1, 'max' => 336],

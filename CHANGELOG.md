@@ -9,7 +9,7 @@ AP-4: Anmeldung, Einmal-Links, Warteliste und Nachrücken.
 ### Neu
 
 - Anmeldung unter `/anmelden`: Vorname, Nachname, E-Mail, Berufsgruppe, Klinik/Institution, EFN (nur bei ÄrztInnen, freiwillig, mit Prüfziffer), Essen, Workshop-Wahl, Newsletter-Wunsch, Einwilligung. Workshop-Wahl wie im Mockup: je Workshop ein fester Termin, überschneidende Termine sofort gesperrt (mit Grund), volle Termine auf die Warteliste, Limit und Pflicht aus den Einstellungen. Ist das Symposium voll, geht die Anmeldung auf dessen Warteliste.
-- Bestätigung per Mail: Erst der Klick auf den Link macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze; neue Einstellung „Bestätigungsfrist“ (Start 24 h), danach verfällt sie.
+- Bestätigung per Mail: Erst der Klick auf den Link macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze; neue Einstellung „Bestätigungsfrist“ (Start 48 h, Admin), danach verfällt sie.
 - „Deine Anmeldung“ (`/deine-anmeldung`): Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse), Übersicht mit Status und Wartelisten-Platz, Workshops, Essen und Daten ändern (neue Adresse erst nach Bestätigung), stornieren. Stichtage stehen am jeweiligen Knopf und sperren nach Ablauf.
 - Einmal-Links: 48 Stunden gültig, einmal benutzbar, nur als Hash gespeichert; erst der Klick auf „Weiter“ verbraucht sie (Mail-Scanner entwerten sie nicht).
 - Wartelisten je Workshop-Termin und für das Symposium; Nachrücken mit Angebot per Mail, Annahmefrist, Weitergabe ans Listenende bei Ablauf und Grenze vor der Veranstaltung. Überschneidet sich ein Angebot mit einem festen Termin oder betrifft es denselben Workshop, zeigt die Seite den Tausch und führt ihn erst nach Bestätigung aus.
