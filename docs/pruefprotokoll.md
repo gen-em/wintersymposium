@@ -7,7 +7,7 @@ stand: 2026-10-29
 
 # Prüfprotokoll: Webseite Wintersymposium
 
-Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft wurde und was noch wie zu prüfen ist. Prüfungen tragen eine T-Nummer (T-100 ff.), Ergebnisse werden mit Datum, Prüfer (`admin`, `claude-dev`) und entscheidender Ausgabe (ohne Secrets, ohne Hosting-Interna – R-10) eingetragen.
+Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft wurde und was noch wie zu prüfen ist. Prüfungen tragen eine T-Nummer (T-100 ff.; jede Nummer nur einmal – AP-3 hat T-120 bis T-129 und T-210 bis T-222, weil T-130 bis T-144 für AP-4 vergeben sind), Ergebnisse werden mit Datum, Prüfer (`admin`, `claude-dev`) und entscheidender Ausgabe (ohne Secrets, ohne Hosting-Interna – R-10) eingetragen.
 
 ## 1. Stand
 
@@ -15,7 +15,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 |---|---|---|---|---|
 | AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
-| AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-134, T-136, T-150, T-151, T-153, T-154, T-210 bis T-215 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
+| AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-129, T-150, T-151, T-153, T-154, T-210 bis T-222 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | offen | – | T-130 bis T-144 |
 | AP-4b | Konten für Teilnehmende | offen | – | T-145 bis T-149 |
 | AP-5 | Team-Bereich | offen | – | T-150 bis T-159 |
@@ -60,19 +60,19 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-127, ap: AP-3, was: "Alte Team-Konten übernommen", wie: "Migration 4 auf einem Stand mit team_konto: gleiche id, Rolle, ohne zweiten Faktor; team_konto entfernt", status: "lokal bestanden"}
 - {id: T-128, ap: AP-3, was: "Einrichtungslink", wie: "Betreiber legt Konto an → Link einmal angezeigt; Passwort setzen; Link danach ungültig; nach 72 h abgelaufen; nur Hash gespeichert", status: "lokal bestanden"}
 - {id: T-129, ap: AP-3, was: "Rollenwechsel nur mit eigenem Code (E-41)", wie: "falscher Code → abgelehnt; richtiger → Rolle geändert, Sitzung des Kontos beendet", status: "lokal bestanden"}
-- {id: T-130, ap: AP-3, was: "Sperren und Sitzungen", wie: "gesperrtes Konto kommt nicht rein; eigenes Konto nicht sperrbar; letzter Betreiber bleibt", status: "lokal bestanden"}
-- {id: T-131, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
-- {id: T-132, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden (nur wo eine Kommandozeile verfügbar ist)"}
-- {id: T-134, ap: AP-3, was: "Notzugang im Browser (O-34)", wie: "falscher Schlüssel oder unbekannte Adresse → gleiche Meldung, nichts geändert; richtiger Schlüssel → zweiter Faktor zurückgesetzt, Link angezeigt, alte Sitzung beendet, Audit-Eintrag; nach 3 Fehlversuchen gesperrt", status: "lokal bestanden"}
-- {id: T-135, ap: AP-3, was: "Bitwarden füllt den Code ein (auch in Firefox)", wie: "Code-Felder heißen totp; Browser-Durchlauf prüft Stichwort in id/Name auf jeder Seite; beim Admin: Firefox mit Bitwarden → Menü „Fill verification code“ am Code-Feld", status: "lokal bestanden (Durchlauf 855 ok; Gegenprobe mit altem Namen → 12 Fehler); beim Admin offen"}
-- {id: T-136, ap: AP-3, was: "Veranstaltungs-Einstellungen speichern und prüfen", wie: "Startwerte gültig; ungültige Eingaben (Datum, Uhrzeit, Zahlenbereich, Auswahl, doppelte Liste, Ende vor Beginn, Stichtag oder Anmeldestart nach der Veranstaltung, Anmeldeschluss vor Start) abgelehnt und am Feld markiert, Eingabe bleibt stehen; Ortszeit ↔ UTC; Speichern ändert die Startseite sofort, Audit-Eintrag; ohne Login nicht speicherbar; im Browser alle drei Engines × 4 Breiten", status: "lokal bestanden"}
+- {id: T-216, ap: AP-3, was: "Sperren und Sitzungen", wie: "gesperrtes Konto kommt nicht rein; eigenes Konto nicht sperrbar; letzter Betreiber bleibt", status: "lokal bestanden"}
+- {id: T-217, ap: AP-3, was: "Ratenschutz Login", wie: "5 Fehlversuche für eine Adresse → gesperrt; unbekannte Adresse gleiche Meldung", status: "lokal bestanden"}
+- {id: T-218, ap: AP-3, was: "Notweg Kommandozeile", wie: "cli/konto.php zweitfaktor/link", status: "lokal bestanden (nur wo eine Kommandozeile verfügbar ist)"}
+- {id: T-220, ap: AP-3, was: "Notzugang im Browser (O-34)", wie: "falscher Schlüssel oder unbekannte Adresse → gleiche Meldung, nichts geändert; richtiger Schlüssel → zweiter Faktor zurückgesetzt, Link angezeigt, alte Sitzung beendet, Audit-Eintrag; nach 3 Fehlversuchen gesperrt", status: "lokal bestanden"}
+- {id: T-221, ap: AP-3, was: "Bitwarden füllt den Code ein (auch in Firefox)", wie: "Code-Felder heißen totp; Browser-Durchlauf prüft Stichwort in id/Name auf jeder Seite; beim Admin: Firefox mit Bitwarden → Menü „Fill verification code“ am Code-Feld", status: "lokal bestanden (Durchlauf 855 ok; Gegenprobe mit altem Namen → 12 Fehler); beim Admin offen"}
+- {id: T-222, ap: AP-3, was: "Veranstaltungs-Einstellungen speichern und prüfen", wie: "Startwerte gültig; ungültige Eingaben (Datum, Uhrzeit, Zahlenbereich, Auswahl, doppelte Liste, Ende vor Beginn, Stichtag oder Anmeldestart nach der Veranstaltung, Anmeldeschluss vor Start) abgelehnt und am Feld markiert, Eingabe bleibt stehen; Ortszeit ↔ UTC; Speichern ändert die Startseite sofort, Audit-Eintrag; ohne Login nicht speicherbar; im Browser alle drei Engines × 4 Breiten", status: "lokal bestanden"}
 - {id: T-210, ap: AP-3, was: "Programmpunkt anlegen und prüfen", wie: "je Typ speichern; Pflichtfelder, Beginn ohne Ende, Ende vor Beginn, Termin mit 0 Plätzen abgelehnt und markiert; Felder, die der Typ nicht hat, geleert; Typwechsel blendet Felder aus; Kürzel-Vorschlag", status: "lokal bestanden"}
 - {id: T-211, ap: AP-3, was: "Speichern ≠ Veröffentlichen", wie: "Speichern → Banner und Markierung, Startseite unverändert; Vorschau zeigt Arbeitsstand; Veröffentlichen → Startseite; Verwerfen stellt den Stand wieder her (auch Gelöschtes); Punkt ohne Uhrzeit blockiert Veröffentlichen", status: "lokal bestanden"}
 - {id: T-212, ap: AP-3, was: "Ziehen und Termine", wie: "neuer Punkt ohne Uhrzeit oben hell-lila, auf „Fall #1“ ziehen → 19:15–19:45; Block verschieben nimmt Termine und Station mit; + Termin und Duplizieren (Anschluss, gleiche Dauer)", status: "lokal bestanden (Chromium und Firefox echtes Ziehen, WebKit mit ausgelösten Ereignissen)"}
 - {id: T-213, ap: AP-3, was: "Dozierende und Fotos", wie: "anlegen, Punkten zuordnen, Foto hochladen → quadratisch 480 px, ohne Metadaten, unter /bild/ mit Cache; falscher Name → 404; Foto entfernen; verwaiste Fotos im Job aufraeumen", status: "lokal bestanden"}
 - {id: T-214, ap: AP-3, was: "Programm auf der Startseite", wie: "Popups (Vortrag mit Dozierenden, Workshop mit Terminen, Bring, Zettel) öffnen, ✕ und Escape schließen; Zeitraster ab 760 px, Liste darunter; Inhalte escaped; keine fremden Adressen", status: "lokal bestanden (Bildschirmfotos der Popups angesehen)"}
 - {id: T-215, ap: AP-3, was: "Test-Beispieldatensatz", wie: "tools/testdaten/beispieldaten.php lädt fehlerfrei und veröffentlicht vollständig (lauf.php); Browser-Durchlauf nutzt ihn", status: "lokal bestanden"}
-- {id: T-133, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
+- {id: T-219, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
 - {id: T-130, ap: AP-4, was: "Anmeldung mit Double-Opt-In", wie: "Anmelden, Bestätigungsmail, Link klicken → Status bestätigt; unbestätigte Anmeldung verfällt nach Frist und gibt den Platz frei", status: offen}
@@ -176,10 +176,10 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-115 | 2026-10-29 | claude-dev | teilweise | /impressum und /datenschutz 200, in der Fußzeile verlinkt; leer → Hinweis; gepflegter Text (Überschrift, mailto-Link) wird angezeigt | Bearbeiten durch Betreiber erst mit AP-5 |
 | T-116 | 2026-10-29 | claude-dev | lokal bestanden | Anton, Antonio, Tajawal, IBM Plex Mono als WOFF2 von /assets/fonts (200), Logo als SVG (scharf in jeder Auflösung) | – |
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
-| T-127 bis T-134 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
+| T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
 | T-120, T-121, T-210 bis T-215 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 271 ok, 0 Fehler; Browser-Durchlauf 1563 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Programm-Pflege, Dozierende, Vorschau, Startseite mit Popups, Zeitraster und Liste); Bildschirmfotos angesehen, dabei Termintabelle, Kästchen und Skala korrigiert; Datums- und Zeitfelder in Chromium und Firefox nach Korrektur der Browser-Umgebung im deutschen Format (19:30, 20.01.2027) | Staging nach dem Merge |
-| T-121, T-136 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 221 ok, 0 Fehler; Browser-Durchlauf 978 ok, 0 Fehler (Einstellungen: Fehler markiert, Speichern, Auswahl, neuer Ort auf der Startseite, in Chromium, Firefox, WebKit) | Staging nach dem Merge |
+| T-121, T-222 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 221 ok, 0 Fehler; Browser-Durchlauf 978 ok, 0 Fehler (Einstellungen: Fehler markiert, Speichern, Auswahl, neuer Ort auf der Startseite, in Chromium, Firefox, WebKit) | Staging nach dem Merge |
 
 ### Noch zu prüfen für AP-1
 
@@ -206,7 +206,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 
 ### Noch zu prüfen für 0.3.1
 
-1. T-135: In Firefox mit Bitwarden einloggen: Nach dem Passwort erscheint am Feld „Code“ das Bitwarden-Menü, und der Code lässt sich einfügen (Eintrag mit TOTP-Schlüssel in Bitwarden vorausgesetzt).
+1. T-221: In Firefox mit Bitwarden einloggen: Nach dem Passwort erscheint am Feld „Code“ das Bitwarden-Menü, und der Code lässt sich einfügen (Eintrag mit TOTP-Schlüssel in Bitwarden vorausgesetzt).
 
 ### Noch zu prüfen für AP-3 Schritt 2 (nach Merge auf Staging)
 
