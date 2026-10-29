@@ -3,7 +3,7 @@ dokument: konzept
 projekt: wintersymposium
 repo: gen-em/wintersymposium
 stand: 2026-10-29
-phase: umsetzung   # AP-1 umgesetzt (Abnahme auf Staging offen)
+phase: umsetzung   # AP-1 auf Staging abgenommen, als Nächstes AP-2
 status: bestaetigt   # Zusammenfassung, Reihenfolge und Entscheidungen E-01 bis E-35 vom Admin bestätigt (2026-10-29); offene Punkte in Abschnitt 7
 version: null   # Konzept ohne Version; die Repo-Version legt die Umsetzung fest (Datei VERSION)
 verantwortlich: Philipp Chadid
@@ -218,7 +218,7 @@ nicht_uebernehmen:
     - HTTPS mit gültigem Zertifikat; Sicherheits-Header gesetzt (CSP, HSTS, nosniff, Referrer-Policy)
     - Cron-Job läuft nachweislich
     - Auslieferung aus GitHub überschreibt config.php nicht; Staging und Produktion getrennt
-  status: umgesetzt   # Code im PR; Abnahme auf Staging (T-100 bis T-110) nach Einrichtung durch den Admin offen
+  status: abgenommen_staging   # 2026-10-29: Staging eingerichtet und geprüft; offen: Produktion per Tag einrichten, Restprüfungen mit AP-4/AP-5 (Prüfprotokoll)
   ergebnis:
     - "Struktur: server/ (Webroot server/public/ mit einzigem Einstieg index.php, lib/, seiten/, cli/), tools/tests/, docs/betrieb.md (Einrichtung, Auslieferung, Wartung, Tests)"
     - "config.php (Vorlage config.example.php): DB-Zugang, geheimnis, installations_schluessel, jobs_token, health_token – alle geheimen Werte nur dort (R-01); WS_CONFIG nur für Tests auf der Kommandozeile"
@@ -234,6 +234,7 @@ nicht_uebernehmen:
     - "Jobs: Katalog mit Mindestabstand je Job, MySQL-Sperre gegen parallele Läufe, Zeitstempel jobs_letzter_lauf bei jedem Aufruf; Auslöser cli/jobs.php oder /jobs?token=…; erster Job aufraeumen (Sitzungsdateien, Ratenschutz)"
     - "Auslieferung (E-32, E-35): Workflow Auslieferung – Prüfung, dann FTPS-Abgleich von server/; main → staging, Tag vX.Y.Z → produktiv (Tag = VERSION und auf main, sonst Abbruch vor jeder Übertragung); Ausnahmeliste config.php und var/; Zustandsdatei wird vorab angelegt, falls sie fehlt"
     - "Workflow Prüfung (bei jedem PR und vor jeder Auslieferung): php -l aller Dateien und tools/tests/lauf.php gegen MySQL 8.4"
+    - "Staging (2026-10-29): ausgeliefert, installiert, Cron per URL alle 5 min läuft, Health ok, Kopfzeilen, gesperrter Installer, Wartungsmodus und Schutz interner Dateien geprüft (Prüfprotokoll T-100 bis T-110)"
   probleme:
     - {problem: "Bei NAdoku brach die FTP-Deploy-Action gegen diesen Hoster mit ECONNRESET ab, solange die Zustandsdatei auf dem Server fehlte (die Action deutet den Abbruch als Erstauslieferung und arbeitet mit toter Verbindung weiter)", loesung: "Vor dem Abgleich prüft ein curl-Schritt per SIZE auf dem Steuerkanal, ob die Datei da ist, und legt nur dann eine leere an; eine vorhandene wird nie überschrieben"}
     - {problem: "Ein Team-Login gibt es erst mit AP-5; T-108 verlangt „Team-Login weiter möglich“", loesung: "Der Wartungsmodus nimmt /team bereits aus (getestet); der Login-Teil von T-108 wird nach AP-5 geprüft"}
@@ -251,7 +252,7 @@ nicht_uebernehmen:
     - "Schritt 2 – Design-Tokens (Farben, Schriften, Abstände) aus zina-branding/9 Technik; Schriften selbst ausgeliefert; Logo eingebunden"
     - Seitenrahmen mit Logo, Navigation, Fußzeile mit Impressum, Datenschutz und Quelltext-Link (E-25)
     - Startseite mit frei pflegbaren Infotexten (Ort, Anfahrt, Ablauf, CME-Hinweis) und Programm aus der Programm-Konfiguration (AP-3)
-    - Rechtstexte Impressum und Datenschutz (pflegbar durch Betreiber)
+    - Rechtstexte Impressum und Datenschutz (pflegbar durch Betreiber); der Hoster setzt ein eigenes Cookie `_lcp` (gesehen auf Staging) – in der Datenschutzerklärung berücksichtigen
     - "Suchmaschinen: bis zum Anmeldestart tragen alle Seiten noindex (seit AP-1); für Produktion zum Start aufheben, Staging behält noindex"
   nadoku_bausteine: [rechtstexte_lib, rechtstext_seite]
   abnahmekriterien:
@@ -475,6 +476,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | Datum | Änderung |
 |---|---|
 | 2026-10-29 | Erstfassung nach Abstimmung mit dem Admin: E-01 bis E-18, R-01 bis R-09, AP-1 bis AP-9, O-01 bis O-14. Grundlagen: Analyse NAdoku (Login, Registrierung, Spamschutz, Rollen, Mail, Verschlüsselung, Betrieb), Kaneo-Doku (OIDC vorhanden, kein Theme), zina-branding, Gen-EM-Konzept (Server-Ressourcen, Kaneo-Stack). |
+| 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
 | 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |
 | 2026-10-29 | E-32 (Auslieferung: Secrets, Zielordner staging/produktiv, Zuordnung der Domains), E-33 (Plan B Konten bestätigt), O-22 (Lima-City-Einrichtung) neu; O-10 Repo wird öffentlich. |
