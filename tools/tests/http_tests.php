@@ -250,6 +250,9 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     $mail = http_mail_an($tmp, 'lena.test@example.org');
     preg_match('~(/link\?t=[0-9a-f]{48})~', $mail, $m);
     pruefe(str_contains($mail, 'Subject: ') && str_contains($mail, 'From: Wintersymposium Notfallmedizin <anmeldung@ws.test>') && str_contains($mail, 'Sie gilt erst, wenn du sie') && isset($m[1]), 'Bestätigungsmail mit Link (nach der Antwort versendet)');
+    for ($i = 0; $i < 20 && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") === 0; $i++) {
+        usleep(100_000); // Datei ist geschrieben, der Vermerk in der Datenbank folgt gleich
+    }
     pruefe((int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") >= 1, 'Warteschlange: Empfänger nach dem Versand geleert');
     $link = $m[1] ?? '/link?t=x';
     $r = http_anfrage($basis, 'GET', $link, $h, [], null, $k1);
@@ -309,6 +312,40 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k1);
     pruefe(str_contains($r['text'], 'Wie willst du rein?'), 'danach keine Sitzung mehr');
     db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+}
+
+/** Sicherung, Wiederherstellung, Testdaten (E-47); $codes: zwei unbenutzte Wiederherstellungscodes. */
+function daten_http_tests(string $basis, string $h, string $tmp, string $b, array $codes): void
+{
+    abschnitt('HTTP: Daten – Sicherung und Testdaten (E-47)');
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Sicherung anlegen') && str_contains($r['text'], 'Testdaten laden') && str_contains($r['text'], 'href="/team/daten" aria-current'), 'Seite „Daten“ für Betreiber, Testdaten außerhalb der Produktion');
+    pruefe(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'ohne Login kein Zugriff');
+    $csrf = http_csrf($r['text']);
+    $alt = glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [];
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'anlegen'], $b);
+    $dateien = array_values(array_diff(glob("$tmp/var/sicherungen/sicherung-*.jsonl.gz") ?: [], $alt));
+    pruefe($r['status'] === 303 && count($dateien) === 1, 'Sicherung angelegt (gzip im Laufzeitordner)');
+    $name = basename($dateien[0] ?? 'x');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => $name, 'totp' => '000000'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code aus deiner App stimmt nicht'), 'Herunterladen ohne gültigen Code abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => $name, 'totp' => strtolower($codes[0])], $b);
+    $erste = strtok((string)@gzdecode($r['text']), "\n");
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/gzip' && str_contains((string)$erste, '"art":"kopf"'), 'Herunterladen mit Code: gzip mit Kopfzeile');
+    pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
+    $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert('SELECT COUNT(*) FROM konto')];
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 8 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert('SELECT COUNT(*) FROM konto') === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
+    $vorTest = '';
+    foreach (sicherung_liste() as $s) {
+        if (($s['kopf']['anlass'] ?? '') === 'vor dem Laden der Testdaten') {
+            $vorTest = $s['name'];
+        }
+    }
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'wiederherstellen', 'name' => $vorTest, 'totp' => strtolower($codes[1])], $b);
+    pruefe($r['status'] === 303 && (int)db_wert('SELECT COUNT(*) FROM programmpunkt') === $vorher['punkte'] && (int)db_wert('SELECT COUNT(*) FROM anmeldung') === $vorher['anm'], 'Wiederherstellen: Stand vor den Testdaten zurück');
+    pruefe(count(sicherung_liste()) === count($alt) + 3 && http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 200, 'davor automatisch gesichert, Team bleibt eingeloggt');
 }
 
 function team_login_tests(string $basis, string $h, string $tmp, string $wurzel): void
@@ -452,6 +489,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
 
     programm_http_tests($basis, $h, $tmp, $b);
     anmeldung_http_tests($basis, $h, $tmp, $b);
+    daten_http_tests($basis, $h, $tmp, $b, [$codes[5], $codes[6]]);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";

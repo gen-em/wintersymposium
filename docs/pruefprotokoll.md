@@ -23,7 +23,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
-| AP-9 | Abschluss und Datenschutz | offen | – | T-200 bis T-204 |
+| AP-9 | Abschluss und Datenschutz | offen; Sicherung vorgezogen (E-47) | lokal T-201, T-223, T-224 | T-200 bis T-204 |
 
 ## 2. Geplante Prüfungen
 
@@ -71,7 +71,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-212, ap: AP-3, was: "Ziehen und Termine", wie: "neuer Punkt ohne Uhrzeit oben hell-lila, auf „Fall #1“ ziehen → 19:15–19:45; Block verschieben nimmt Termine und Station mit; + Termin und Duplizieren (Anschluss, gleiche Dauer)", status: "lokal bestanden (Chromium und Firefox echtes Ziehen, WebKit mit ausgelösten Ereignissen)"}
 - {id: T-213, ap: AP-3, was: "Dozierende und Fotos", wie: "anlegen, Punkten zuordnen, Foto hochladen → quadratisch 480 px, ohne Metadaten, unter /bild/ mit Cache; falscher Name → 404; Foto entfernen; verwaiste Fotos im Job aufraeumen", status: "lokal bestanden"}
 - {id: T-214, ap: AP-3, was: "Programm auf der Startseite", wie: "Popups (Vortrag mit Dozierenden, Workshop mit Terminen, Bring, Zettel) öffnen, ✕ und Escape schließen; Zeitraster ab 760 px, Liste darunter; Inhalte escaped; keine fremden Adressen", status: "lokal bestanden (Bildschirmfotos der Popups angesehen)"}
-- {id: T-215, ap: AP-3, was: "Test-Beispieldatensatz", wie: "tools/testdaten/beispieldaten.php lädt fehlerfrei und veröffentlicht vollständig (lauf.php); Browser-Durchlauf nutzt ihn", status: "lokal bestanden"}
+- {id: T-215, ap: AP-3, was: "Test-Beispieldatensatz", wie: "server/testdaten/beispieldaten.php lädt fehlerfrei und veröffentlicht vollständig (lauf.php); Browser-Durchlauf nutzt ihn", status: "lokal bestanden"}
 - {id: T-219, ap: AP-3, was: "Alle Seiten im Browser-Durchlauf (R-12)", wie: "tools/browser/durchlauf.js: Chromium, Firefox, WebKit × 390/768/1024/1440 px; öffentliche Seiten, Login mit Einrichtung, Codes, Team-Reiter, Konto anlegen mit Auswahlfeld, Einrichtungslink, Ausloggen, Login mit Wiederherstellungscode; Auswahlfelder, Aufklapp-Elemente, Popups; kein Überstand, keine Konsolenfehler", status: "lokal bestanden (750 ok, 0 Fehler)"}
 
 # AP-4 Anmeldung, Einmal-Links, Warteliste und Nachrücken
@@ -138,7 +138,9 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 
 # AP-9 Abschluss und Datenschutz
 - {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Symposium länger als 14 Monate her → vom Job anonymisiert (E-24); Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre", status: offen}
-- {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "DB-Dump auf Staging einspielen, Anmeldung aufrufbar", status: offen}
+- {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "Team-Bereich → Daten: Sicherung anlegen, Daten ändern, wiederherstellen → alter Stand zurück, Stand davor gesichert; unvollständige oder neuere Sicherung abgelehnt; Herunterladen nur mit Code (E-47)", status: "lokal bestanden; auf Staging offen"}
+- {id: T-223, ap: AP-9, was: "Testdaten laden (E-47)", wie: "nur Staging/Entwicklung; ersetzt Programm, Anmeldungen, Einstellungen durch den Beispieldatensatz, Team-Konten bleiben, vorher Sicherung", status: "lokal bestanden; auf Staging offen"}
+- {id: T-224, ap: AP-9, was: "Mail-Umleitung auf Staging (E-47)", wie: "mail.umleiten_an gesetzt → Mail an diese Adresse, Empfänger im Betreff", status: "lokal bestanden; auf Staging offen"}
 - {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Konto anlegen → Änderung → Stichtag → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen (eine mit, eine ohne Konto)", status: offen}
 - {id: T-203, ap: AP-9, was: "Checkliste Anmeldestart", wie: "Konzept Abschnitt 9 vollständig abgehakt", status: offen}
 - {id: T-204, ap: AP-9, was: "Repo frei von Interna (R-10)", wie: "Suche im Repo nach Kontonamen, IPs, Pfaden, Postfachnamen vor dem Umschalten auf öffentlich", status: offen}
@@ -178,6 +180,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-201, T-223, T-224 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 362 ok, 0 Fehler (Sicherung und Wiederherstellung, kaputte und neuere Sicherung, Mail-Umleitung, HTTP: Herunterladen mit Code, Testdaten laden und zurück); Browser-Durchlauf 2550 ok, 0 Fehler mit Seite „Daten“ in 3 Engines × 4 Breiten | Staging |
 | T-130 bis T-143 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 342 ok, 0 Fehler (Regeln, Bestätigung, Links, Tausch, Nachrücken, Fristen, Paralleltest, HTTP-Ablauf); Browser-Durchlauf 2376 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Formular mit Sicherheitsprüfung, Mail, Bestätigen, Deine Anmeldung, Workshops und Daten ändern, Angebot mit Tausch-Bestätigung, Ausloggen, Team-Liste); Bildschirmfotos angesehen | Staging mit echtem Mailversand |
 | T-120, T-121, T-210 bis T-215 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 271 ok, 0 Fehler; Browser-Durchlauf 1563 ok, 0 Fehler in Chromium, Firefox, WebKit × 4 Breiten (Programm-Pflege, Dozierende, Vorschau, Startseite mit Popups, Zeitraster und Liste); Bildschirmfotos angesehen, dabei Termintabelle, Kästchen und Skala korrigiert; Datums- und Zeitfelder in Chromium und Firefox nach Korrektur der Browser-Umgebung im deutschen Format (19:30, 20.01.2027) | Staging nach dem Merge |
 | T-121, T-222 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 221 ok, 0 Fehler; Browser-Durchlauf 978 ok, 0 Fehler (Einstellungen: Fehler markiert, Speichern, Auswahl, neuer Ort auf der Startseite, in Chromium, Firefox, WebKit) | Staging nach dem Merge |
@@ -214,6 +217,14 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für Sicherung und Testdaten (nach Merge auf Staging)
+
+1. In der `config.php` auf Staging unter `mail` den Eintrag `'umleiten_an' => '<deine Adresse>'` ergänzen (nur Staging).
+2. Team-Bereich → „Daten“ → „Sicherung anlegen“: Die Sicherung erscheint in der Liste.
+3. „Testdaten laden“ → Startseite zeigt das Beispielprogramm, „Anmeldungen“ zeigt Lea, Paula und Tom. Eine Test-Anmeldung über `/anmelden` schicken: Die Mail kommt an deine Adresse, im Betreff steht der eigentliche Empfänger.
+4. Die Sicherung „vor dem Laden der Testdaten“ mit deinem Code wiederherstellen → alter Stand ist zurück.
+5. Eine Sicherung mit Code herunterladen; die Datei verschlüsselt ablegen oder löschen (personenbezogene Daten).
 
 ### Noch zu prüfen für AP-4 (nach Merge auf Staging)
 

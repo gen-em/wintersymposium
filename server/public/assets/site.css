@@ -468,3 +468,10 @@ form.inline { display: inline; }
 .link-knopf { all: unset; cursor: pointer; text-decoration: underline; font-weight: 700; color: var(--fg); }
 .link-knopf:focus-visible { outline: 2px solid var(--akz); outline-offset: 2px; }
 .klein-knopf { min-height: 36px; padding: 6px 14px; font-size: .88rem; }
+
+/* ---- Daten: Sicherungen und Testdaten (E-47) ---- */
+.zellen-aktionen { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.zellen-aktionen .bestaetigen[open] { flex-basis: 100%; }
+.abstand-oben { margin-top: 28px; margin-bottom: 12px; }
+.gefahrzone-kasten { border-color: var(--rot); }
+.team-raster .kasten p { margin: 0 0 12px; }

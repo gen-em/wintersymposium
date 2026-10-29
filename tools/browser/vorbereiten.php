@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Vorbereitung für den Browser-Durchlauf (tools/browser/durchlauf.js):
  * leere Testdatenbank, Installation mit festen Testkonten, Konfiguration in
  * einem eigenen Ordner, dazu der Test-Beispieldatensatz
- * (tools/testdaten/beispieldaten.php). Gibt JSON aus. Nur für die Testdatenbank – sie wird
+ * (server/testdaten/beispieldaten.php). Gibt JSON aus. Nur für die Testdatenbank – sie wird
  * geleert! (Umgebungsvariablen WS_TEST_DB_* wie bei lauf.php.)
  *
  *   php tools/browser/vorbereiten.php <ordner>
@@ -53,13 +53,16 @@ install_ausfuehren('127.0.0.1', ['name' => 'Bea Betreiberin', 'email' => 'betrie
 $admin = konto_anlegen('Anna Admin', 'anna@example.org', 'admin');
 
 // Test-Beispieldatensatz (wächst mit jedem Arbeitspaket)
-require dirname(__DIR__) . '/testdaten/beispieldaten.php';
+require dirname(__DIR__, 2) . '/server/testdaten/beispieldaten.php';
 $bd = beispieldaten_laden();
 // Je Engine ein Zugangslink für Paula (offenes Nachrück-Angebot mit Tausch)
 $paula = [];
 for ($i = 0; $i < 3; $i++) {
     $paula[] = '/link?t=' . anm_link_erzeugen($bd['anmeldungen']['paula'], 'zugang', time() + 86400);
 }
+
+// Eine Sicherung, damit die Seite „Daten“ eine Tabelle mit Aktionen zeigt
+sicherung_anlegen('Browser-Durchlauf');
 
 echo json_encode([
     'config' => $ordner . '/config.php',

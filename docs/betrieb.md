@@ -20,16 +20,18 @@ server/                 → wird in den Zielordner der Umgebung übertragen
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
   daten/                → wegwerfdomains.txt (Spamschutz, Quelle: disposable-email-domains)
+  testdaten/            → Test-Beispieldatensatz (erfundene Daten, wächst je AP; auf Staging
+                          über Team-Bereich → Daten ladbar)
   cli/jobs.php          → Job-Einstieg für den Cron auf der Kommandozeile
   cli/konto.php         → Notweg für Team-Konten (Link erzeugen, zweiten Faktor zurücksetzen)
   config.example.php    → Vorlage; die echte config.php liegt nur auf dem Webspace
   var/                  → Laufzeitordner, legt die App selbst an (Sitzungen,
                           install.lock, wartung.lock, Logs, bilder/ mit den
-                          Fotos der Dozierenden, mails/ nur im Test-Modus 'datei');
+                          Fotos der Dozierenden, sicherungen/ mit den Sicherungen,
+                          mails/ nur im Test-Modus 'datei');
                           wird nie ausgeliefert
 tools/tests/            → Testlauf (lokal und im Prüf-Workflow)
 tools/browser/          → Browser-Durchlauf (R-12)
-tools/testdaten/        → Test-Beispieldatensatz (erfundene Daten, wächst je AP)
 ```
 
 Zielordner auf dem Webspace (E-32):
@@ -109,7 +111,7 @@ node tools/browser/durchlauf.js <Ausgabeordner>
 
 (mit denselben `WS_TEST_DB_*`-Variablen; die Testdatenbank wird geleert. Im Ausgabeordner liegen `bericht.txt` und je Engine, Breite und Seite ein Bildschirmfoto.) Popups erkennt der Durchlauf an Auslösern mit `aria-haspopup="dialog"` oder `data-dialog` und einem `<dialog>`; neue Popups so auszeichnen. Die Browser laufen mit deutscher Sprache, deutscher Umgebung (`LANG=de_DE.UTF-8` für den Browserprozess, bei Firefox mit Übernahme der Systemeinstellung) und Zeitzone Europe/Berlin; nur so zeigen Datums- und Zeitfelder TT.MM.JJJJ und 24 h – die Spracheinstellung allein ergibt in Chromium und Firefox das US-Format mit AM/PM. Auf den Bildschirmfotos das Format mit ansehen. **Grenzen:** WebKit unter Linux zeigt bei Uhrzeiten Sekunden (19:30:00), auch mit `step="60"`; Safari auf iPhone und Mac hat eigene Zeitfelder. Das betrifft nur die Darstellung im Testbrowser, nicht die gespeicherten Werte. Natives Ziehen (Drag and Drop) kann Playwright in WebKit unter Linux nicht auslösen; dort löst der Durchlauf dieselben Ereignisse im Browser aus.
 
-**Test-Beispieldatensatz:** `tools/testdaten/beispieldaten.php` legt erfundene Daten an: Einstellungen relativ zu heute (Veranstaltung in 60 Tagen, Anmeldung offen), zwei Dozierende, ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops (ein Termin mit nur 2 Plätzen) und einer Station, Pausen, dazu Anmeldungen: drei bestätigte mit Workshops, eine unbestätigte, ein voller Termin mit Warteliste und ein offenes Nachrück-Angebot mit Tausch. Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
+**Test-Beispieldatensatz:** `server/testdaten/beispieldaten.php` legt erfundene Daten an: Einstellungen relativ zu heute (Veranstaltung in 60 Tagen, Anmeldung offen), zwei Dozierende, ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops (ein Termin mit nur 2 Plätzen) und einer Station, Pausen, dazu Anmeldungen: drei bestätigte mit Workshops, eine unbestätigte, ein voller Termin mit Warteliste und ein offenes Nachrück-Angebot mit Tausch. Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
 
 ## 7. Pflegbare Texte
 
@@ -181,9 +183,21 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `absender`, `absender_name` | Absender; leer: `anmeldung@<Haupt-Domain>` |
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Rundmails (AP-6) warten auf den nächsten Tag |
+| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 13) |
 
 Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an den Browser versendet, spätestens beim nächsten Cron-Lauf. Fehlschläge werden nach 5, 30, 120 und 360 Minuten wiederholt, danach als Fehler gezählt (Team-Bereich, Fehlerprotokoll ohne Empfängeradresse). Nach dem Versand werden Empfänger, Betreff und Text gelöscht (R-02); Einträge verschwinden nach 30 Tagen. Zeitbudget je Versand 5 s.
 
-## 13. Fehlerprotokoll
+## 13. Daten: Sicherung, Wiederherstellung, Testdaten
+
+Team-Bereich → „Daten“ (nur Betreiber, E-47).
+
+- **Sicherung anlegen:** alle Tabellen und die Fotos der Dozierenden als gzip-Datei in `var/sicherungen/` (nie über das Web erreichbar). Ohne Inhalt bleiben Ratenschutz und Mail-Warteschlange.
+- **Herunterladen** und **Wiederherstellen** verlangen den eigenen Code aus der App. Heruntergeladene Sicherungen enthalten personenbezogene Daten und Passwort-Hashes: verschlüsselt aufbewahren.
+- **Wiederherstellen** ersetzt alles, auch die Team-Konten. Vorher wird der jetzige Stand gesichert. Unvollständige Dateien und Sicherungen aus einem neueren Stand der Anwendung werden abgelehnt; ältere werden nach dem Einspielen per Migration nachgezogen.
+- **Testdaten laden** gibt es nur, wenn `umgebung` `staging` oder `entwicklung` ist: ersetzt Programm, Dozierende, Anmeldungen und Veranstaltungs-Einstellungen durch den Beispieldatensatz (`server/testdaten/beispieldaten.php`), Team-Konten bleiben, vorher automatische Sicherung. Danach ist die Anmeldung offen (Veranstaltung in 60 Tagen).
+- **Mail-Umleitung (Staging):** `mail.umleiten_an` in der `config.php` schickt jede Mail an diese Adresse; der eigentliche Empfänger steht im Betreff. Auf Produktion leer lassen.
+- Sicherungen werden nicht automatisch gelöscht; alte über „Löschen“ entfernen.
+
+## 14. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).

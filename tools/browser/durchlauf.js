@@ -326,7 +326,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Anmeldungen', '/team/anmeldungen', 'team-anmeldungen'], ['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten']]) {
+        for (const [text, ziel, name] of [['Anmeldungen', '/team/anmeldungen', 'team-anmeldungen'], ['Programm', '/team/programm', 'team-programm'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Daten', '/team/daten', 'team-daten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());

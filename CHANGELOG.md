@@ -2,6 +2,21 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.7.0] – 2026-10-29
+
+Sicherung, Wiederherstellung und Testdaten (E-47).
+
+### Neu
+
+- Team-Bereich → „Daten“ (nur Betreiber): Sicherung aller Daten (Tabellen und Fotos) als gzip-Datei auf dem Server, Liste mit Datum, Anlass und Größe; Herunterladen und Wiederherstellen nur mit dem eigenen Code aus der App; Wiederherstellen sichert vorher den jetzigen Stand und lehnt unvollständige oder neuere Sicherungen ab.
+- „Testdaten laden“ (nur Staging und Entwicklung): ersetzt Programm, Dozierende, Anmeldungen und Einstellungen durch den Beispieldatensatz; Team-Konten bleiben; vorher automatische Sicherung.
+- Mail-Umleitung für Staging: `mail.umleiten_an` in der `config.php` schickt alle Mails an eine Adresse, der Empfänger steht im Betreff.
+
+### Geändert
+
+- Der Test-Beispieldatensatz liegt jetzt in `server/testdaten/` (statt `tools/testdaten/`) und wird mit ausgeliefert, damit Staging ihn laden kann. Außerhalb des Webroots, nicht über das Web erreichbar.
+- Ein Testfall zur Mail-Warteschlange wartet jetzt kurz auf den Vermerk in der Datenbank (lief vereinzelt zu früh).
+
 ## [0.6.0] – 2026-10-29
 
 AP-4: Anmeldung, Einmal-Links, Warteliste und Nachrücken.
