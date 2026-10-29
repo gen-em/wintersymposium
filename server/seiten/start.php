@@ -4,37 +4,13 @@ declare(strict_types=1);
 /*
  * Startseite (AP-2). Texte aus der Tabelle inhalt (pflegbar, AP-5).
  * Eckdaten (Datum, Zeit, Ort, CME, freie Plätze) kommen aus den
- * Veranstaltungs-Einstellungen von AP-3; bis dahin ein fester Platzhalter,
- * ebenso das Beispielprogramm (teil_beispielprogramm.php). Das Programm folgt mit AP-3; bis dahin ein Hinweis.
+ * Veranstaltungs-Einstellungen (AP-3 Schritt 2, lib/veranstaltung_lib.php).
+ * Das Programm ist bis AP-3 Schritt 3 ein Beispiel (teil_beispielprogramm.php).
  */
 
-$eck = [];
-$datum = einstellung('veranstaltung_datum');
-if ($datum !== null && $datum !== '') {
-    $eck[] = ['Datum', tag_text($datum)];
-    $von = (string)einstellung('veranstaltung_beginn');
-    $bis = (string)einstellung('veranstaltung_ende');
-    if ($von !== '') {
-        $eck[] = ['Zeit', $von . ($bis !== '' ? '–' . $bis : '')];
-    }
-    foreach (['veranstaltung_ort' => 'Ort', 'veranstaltung_cme' => 'CME'] as $k => $label) {
-        $w = (string)einstellung($k);
-        if ($w !== '') {
-            $eck[] = [$label, $w];
-        }
-    }
-}
-if ($eck === []) {
-    // Vorübergehender Platzhalter auf Wunsch des Admins (Mockup-Kommentar
-    // 2026-10-29), bis die Einstellungen aus AP-3 und die Platzzählung aus
-    // AP-4 stehen; dann entfernen. Ort folgt, sobald er feststeht.
-    $eck = [
-        ['Datum', tag_text('2027-01-20')],
-        ['Zeit', '18:00–22:00'],
-        ['CME', 'Punkte beantragt'],
-        ['Freie Plätze', '240 / 240'],
-    ];
-}
+$eck = va_eckdaten();
+$anmeldungAb = va('anmeldung_start');
+$anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
 
 seite_kopf('Start', ['aktiv' => '/']);
 ?>
@@ -50,6 +26,7 @@ seite_kopf('Start', ['aktiv' => '/']);
         <?php foreach ($eck as [$dt, $dd]): ?><div><dt><?= e($dt) ?></dt><dd><?= e($dd) ?></dd></div><?php endforeach; ?>
     </dl>
     <?php endif; ?>
+    <?php if ($anmeldungHinweis !== ''): ?><p class="mono meta klein anmeldung-ab"><?= e($anmeldungHinweis) ?></p><?php endif; ?>
 </div>
 
 <?php $infos = text_abschnitte(inhalt('start_infos')); if ($infos !== []): ?>

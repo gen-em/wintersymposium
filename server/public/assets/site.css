@@ -179,6 +179,23 @@ a.knopf { color: var(--auf-akz); }
 .fuss nav ul { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
 .fuss a { color: var(--fg); }
 
+/* ---- Einstellungen (Team) ---- */
+.einstellungen { display: grid; gap: 18px; }
+.einstellungen .gruppe { margin: 0; min-width: 0; }
+.einstellungen legend { padding: 0; margin-bottom: 4px; font-size: 1.25rem; }
+.einstellungen .felder { display: grid; gap: 14px; margin-top: 12px; }
+@media (min-width: 760px) { .einstellungen .felder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.feld { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.feld.breit { grid-column: 1 / -1; }
+.feld label { font-weight: 700; font-size: .95rem; }
+.feld input, .feld select, .feld textarea { font: 400 1rem var(--f-text); min-height: 46px; padding: 10px 12px; border: 1px solid var(--meta); background: var(--bg); color: var(--fg); border-radius: 0; width: 100%; max-width: 100%; }
+.feld textarea { min-height: 150px; line-height: 1.5; }
+.feld [aria-invalid="true"] { border-color: var(--rot); border-width: 2px; }
+.feld .hilfe { margin: 0; font-size: .85rem; color: var(--meta); }
+.feldfehler { margin: 0; font-size: .88rem; color: var(--rot); font-weight: 700; }
+.einstellungen .knopf { justify-self: start; }
+.anmeldung-ab { margin: 12px 0 0; }
+
 /* ---- Einloggen und Team-Bereich (Mockup: Team, E-41) ---- */
 .schmal { max-width: 640px; }
 .formular .knopf { margin-top: 14px; justify-self: start; }
@@ -197,7 +214,7 @@ a.knopf { color: var(--auf-akz); }
 .knopf.klein { min-height: 36px; padding: 6px 14px; font-size: .88rem; }
 .team-kopf { padding-top: 30px; padding-bottom: 16px; }
 .team-kopf .titel { font-size: clamp(2rem, 7vw, 3.4rem); }
-.team-nav { display: flex; overflow-x: auto; background: var(--flaeche); border: 1px solid var(--linie); border-bottom: 3px solid var(--gruen); margin-bottom: 18px; }
+.team-nav { display: flex; flex-wrap: wrap; background: var(--flaeche); border: 1px solid var(--linie); border-bottom: 3px solid var(--gruen); margin-bottom: 18px; }
 .team-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--fg); text-decoration: none; border-bottom: 3px solid transparent; }
 .team-nav a[aria-current="page"] { color: var(--akz); border-bottom-color: var(--akz); background: var(--bg); }
 .kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }

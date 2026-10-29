@@ -82,11 +82,12 @@ function seite_fuss(): void
         . '</ul></nav></div></footer></body></html>';
 }
 
-/** Reiter des Team-Bereichs (Mockup E-41); in AP-3 die ersten drei, weitere folgen. */
+/** Reiter des Team-Bereichs (Mockup E-41); weitere folgen mit AP-3 Schritt 3 und AP-5. */
 function team_reiter(array $konto, string $aktiv): string
 {
     $reiter = [
         ['/team', 'Übersicht'],
+        ['/team/einstellungen', 'Einstellungen'],
         ['/team/profil', 'Mein Konto'],
     ];
     if ($konto['rolle'] === 'betreiber') {

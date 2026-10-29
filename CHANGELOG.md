@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.4.0] – 2026-10-29
+
+AP-3 Schritt 2: Veranstaltungs-Einstellungen.
+
+### Neu
+
+- Reiter „Einstellungen“ im Team-Bereich (Admin und Betreiber): Veranstaltung (Datum, Beginn, Ende, Ort, Gesamtkapazität), Fortbildungspunkte (Anzeige, Punkte, Kammer, Veranstaltungsnummer), Anmeldung (Zeitraum, Workshops je Person, Workshop-Wahl), Nachrücken (Annahmefrist, Grenze), Stichtage für Workshops, Essen und Storno, Berufsgruppen. Ein Katalog in `lib/veranstaltung_lib.php` beschreibt Typ, Startwert und Grenzen jeder Einstellung.
+- Prüfung beim Speichern mit Meldung am Feld (auch Zusammenhänge: Ende nach Beginn, Stichtage nicht nach der Veranstaltung); Zeiten in Ortszeit, gespeichert in UTC; Änderungen im Audit-Protokoll.
+- Startseite: Eckdaten kommen aus den Einstellungen; Hinweis „Anmeldung ab …“, solange die Anmeldung noch nicht offen ist.
+- Browser-Durchlauf: Einstellungsseite mit Fehlerfall und Speichern; Browser mit deutscher Sprache und Zeitzone.
+
+### Geändert
+
+- Team-Reiter brechen auf schmalen Bildschirmen in eine zweite Zeile um, statt rechts aus dem Bild zu laufen.
+
+### Entfernt
+
+- Fester Eckdaten-Platzhalter auf der Startseite (aus 0.2.1).
+
 ## [0.3.1] – 2026-10-29
 
 ### Behoben
