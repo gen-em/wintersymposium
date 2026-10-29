@@ -4,8 +4,8 @@ declare(strict_types=1);
 /*
  * Startseite (AP-2). Texte aus der Tabelle inhalt (pflegbar, AP-5).
  * Eckdaten (Datum, Zeit, Ort, CME, freie Plätze) kommen aus den
- * Veranstaltungs-Einstellungen von AP-3 und erscheinen erst, wenn sie
- * gesetzt sind. Das Programm folgt mit AP-3; bis dahin ein Hinweis.
+ * Veranstaltungs-Einstellungen von AP-3; bis dahin ein fester Platzhalter,
+ * ebenso das Beispielprogramm (teil_beispielprogramm.php). Das Programm folgt mit AP-3; bis dahin ein Hinweis.
  */
 
 $eck = [];
@@ -23,6 +23,17 @@ if ($datum !== null && $datum !== '') {
             $eck[] = [$label, $w];
         }
     }
+}
+if ($eck === []) {
+    // Vorübergehender Platzhalter auf Wunsch des Admins (Mockup-Kommentar
+    // 2026-10-29), bis die Einstellungen aus AP-3 und die Platzzählung aus
+    // AP-4 stehen; dann entfernen. Ort folgt, sobald er feststeht.
+    $eck = [
+        ['Datum', tag_text('2027-01-20')],
+        ['Zeit', '18:00–22:00'],
+        ['CME', 'Punkte beantragt'],
+        ['Freie Plätze', '240 / 240'],
+    ];
 }
 
 seite_kopf('Start', ['aktiv' => '/']);
@@ -58,8 +69,8 @@ seite_kopf('Start', ['aktiv' => '/']);
 
 <section class="abschnitt" id="programm" aria-labelledby="programm-titel"><div class="innen">
     <p class="kicker">Programm</p>
-    <h2 class="zwischen" id="programm-titel">Der Tag im Überblick</h2>
-    <div class="kasten"><p class="hinweis-leer">Das Programm erscheint hier, sobald es veröffentlicht ist.</p></div>
+    <h2 class="zwischen" id="programm-titel">Der Abend im Überblick</h2>
+    <?php require __DIR__ . '/teil_beispielprogramm.php'; // Platzhalter bis AP-3 ?>
 </div></section>
 
 <?php if (inhalt('start_cme') !== ''): ?>

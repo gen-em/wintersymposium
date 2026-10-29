@@ -98,6 +98,22 @@ function migration_katalog(): array
                     ('datenschutz', '', UTC_TIMESTAMP())",
             ],
         ],
+        3 => [
+            'beschreibung' => 'Startseite: Untertitel und Infokästen für die Abendveranstaltung überarbeitet',
+            'sql' => [
+                // Nur ändern, solange der Startwert noch unverändert ist.
+                "UPDATE inhalt SET text = 'Für alle, die da sind, wenn andere frei haben', geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos_titel' AND text = 'Für alle, die nachts den Piepser tragen'",
+                "UPDATE inhalt SET text = 'Ein Abend für Rettungsdienst, Notaufnahme und Krankenhaus. Vorträge, Workshops, ein Fall. Keine Ausreden.', geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_unter' AND text = 'Ein Tag für Notaufnahme und Rettungsdienst. Vorträge, Workshops, ein Fall. Keine Ausreden.'",
+                "UPDATE inhalt SET text = REPLACE(text, 'NotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.', 'Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen, RettungssanitäterInnen, Studierende und alle, die sonst interessiert sind. Alle Bereiche, alle Berufsgruppen.'), geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos' AND text LIKE '%NotärztInnen, NotfallsanitäterInnen, RettungssanitäterInnen, Pflege und MFA aus der Notaufnahme, StudentInnen. Alle Bereiche, alle Berufsgruppen.%'",
+                "UPDATE inhalt SET text = REPLACE(text, 'Vormittags Vorträge, dazwischen und nachmittags Workshops in kleinen Gruppen und offene Stationen ohne Anmeldung.', 'Erst Input, dann Hände dran: Nach den Vorträgen gibt''s Bier, Snacks und Workshops in kleinen Gruppen. Dazwischen übst du ganz entspannt an offenen Stationen.'), geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos' AND text LIKE '%Vormittags Vorträge, dazwischen und nachmittags Workshops in kleinen Gruppen und offene Stationen ohne Anmeldung.%'",
+                "UPDATE inhalt SET text = REPLACE(text, 'Nichts. Mittagessen inklusive (Fleisch oder vegetarisch). Kaffee gibt''s. Ausreden nicht.', 'Natürlich nichts. Dazu gibt''s Snacks, Bier und Alkoholfreies. Nur Ausreden gibt''s nicht.'), geaendert_am = UTC_TIMESTAMP()
+                 WHERE schluessel = 'start_infos' AND text LIKE '%Nichts. Mittagessen inklusive (Fleisch oder vegetarisch).%'",
+            ],
+        ],
     ];
 }
 

@@ -180,6 +180,8 @@ function http_tests(string $wurzel, string $tmp): void
         pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
         pruefe(str_contains($html, '<em>Notfallmedizin</em>'), 'Titel aus pflegbarem Text (mit Akzent)');
         pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
+        pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten-Platzhalter mit freien Plätzen');
+        pruefe(str_contains($html, 'Beispielprogramm') && str_contains($html, 'class="programm"') && str_contains($html, 'Tigerente'), 'Beispielprogramm als Platzhalter sichtbar und gekennzeichnet');
         pruefe(str_contains($html, 'href="/impressum"') && str_contains($html, 'href="/datenschutz"') && str_contains($html, 'Quelltext (AGPL)'), 'Fußzeile mit Impressum, Datenschutz, Quelltext');
         preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
         $fremd = array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/'));
@@ -190,7 +192,7 @@ function http_tests(string $wurzel, string $tmp): void
             pruefe($r['status'] === 200 && strlen($r['text']) > 10000, "Schrift $font ausgeliefert");
         }
         $r = http_anfrage($basis, 'GET', '/favicon.svg', $h);
-        pruefe($r['status'] === 200, 'Favicon ausgeliefert');
+        pruefe($r['status'] === 200 && str_contains($r['text'], 'prefers-color-scheme: dark'), 'Favicon ausgeliefert, passt sich hell/dunkel an');
         foreach (['/impressum' => 'Impressum', '/datenschutz' => 'Datenschutz'] as $pf => $titel) {
             $r = http_anfrage($basis, 'GET', $pf, $h);
             pruefe($r['status'] === 200 && str_contains($r['text'], $titel) && str_contains($r['text'], 'wird gerade erstellt'), "$titel erreichbar (noch leer)");

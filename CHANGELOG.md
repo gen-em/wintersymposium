@@ -2,6 +2,24 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.2.1] – 2026-10-29
+
+### Geändert
+
+- Konzept: offene Punkte O-23 bis O-32 aus der Mockup-Runde entschieden und als E-42 eingetragen (Nachrücken bei Überschneidung, Statusfarben, grüner Anmelde-Knopf, „Anmelden“/„Einloggen“, Konten mit Rollen, Mailings und Newsletter, EFN-Barcode Code 128, Anwesenheit nur mit Ausnahmen, Empfängerliste im Mail-Archiv); R-02, E-22, E-40 und E-41 angepasst; O-33 (Löschfrist der Empfängerlisten) neu.
+- Prüfprotokoll: AP-2 auf Staging abgenommen.
+- Konzept: Team-Login (Konten-Tabelle mit Rollen, Passwort, zweiter Faktor) aus AP-5 in AP-3 vorgezogen; O-33 entschieden; Symposium als Abendveranstaltung 18:00–22:00 eingetragen.
+- Startseite: Überschrift der Infokästen „Für alle, die da sind, wenn andere frei haben“ statt „… den Piepser tragen“ (passt für Notaufnahme und Rettungsdienst, Nächte und Wochenenden); Migration 3 ändert den Text, solange er noch nicht bearbeitet wurde. Mockup angepasst.
+- Startseite: Infokasten „Für wen“ mit neuer Aufzählung der Zielgruppen (Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen, RettungssanitäterInnen, Studierende und alle Interessierten); ebenfalls über Migration 3.
+- Startseite: Infokasten „Wie“ beschreibt die Abendveranstaltung (erst Vorträge, dann Bier, Snacks, Workshops und offene Stationen); ebenfalls über Migration 3.
+- Startseite: Infokasten „Was es kostet“: nichts, dazu Snacks, Bier und Alkoholfreies (statt Mittagessen); ebenfalls über Migration 3.
+- Startseite: Untertitel „Ein Abend für Rettungsdienst, Notaufnahme und Krankenhaus …“ statt „Ein Tag für …“; ebenfalls über Migration 3.
+- Konzept (E-10): Essenswahl „keine speziellen Wünsche / vegetarisch / kein Essen“.
+- Mockup und Konzept (E-42): Knopf „Anmelden“ in der Navigation ebenfalls grün.
+- Favicon passt sich hellen und dunklen Oberflächen an (wie bei GitHub): hell nachtblaue Kachel mit lila Bildzeichen, dunkel lila Bildzeichen allein; `favicon.ico` als Kachel; SVG wird vor der .ico bevorzugt.
+- Startseite: Beispielprogramm als Platzhalter bis AP-3 (ausgedacht, deutlich gekennzeichnet; Figuren aus der Sendung mit der Maus und die Tigerente als Dozierende), mit Programm-Darstellung nach Mockup in `site.css`.
+- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, 18:00–22:00, CME beantragt, freie Plätze 240 / 240; Ort folgt), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
+
 ## [0.2.0] – 2026-10-29
 
 AP-2 Design-Mockups und öffentliche Seiten.
