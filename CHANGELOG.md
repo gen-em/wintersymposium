@@ -10,7 +10,9 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 - Prüfprotokoll: AP-2 auf Staging abgenommen.
 - Startseite: Überschrift der Infokästen „Für alle, die da sind, wenn andere frei haben“ statt „… den Piepser tragen“ (passt für Notaufnahme und Rettungsdienst, Nächte und Wochenenden); Migration 3 ändert den Text, solange er noch nicht bearbeitet wurde. Mockup angepasst.
 - Startseite: Infokasten „Für wen“ mit neuer Aufzählung der Zielgruppen (Pflegende, NotfallsanitäterInnen, MFA, ÄrztInnen in Notaufnahmen, RettungssanitäterInnen, Studierende und alle Interessierten); ebenfalls über Migration 3.
-- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, 08:30–16:30, CME beantragt, freie Plätze 240 / 240), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
+- Startseite: Infokasten „Wie“ beschreibt die Abendveranstaltung (erst Vorträge, dann Bier, Snacks, Workshops und offene Stationen); ebenfalls über Migration 3.
+- Startseite: Infokasten „Was es kostet“: nichts, dazu Snacks, Bier und Alkoholfreies (statt Mittagessen); ebenfalls über Migration 3.
+- Startseite: Eckdaten als vorübergehender Platzhalter (Mi 20.01.2027, CME beantragt, freie Plätze 240 / 240; Zeit und Ort folgen), bis Einstellungen (AP-3) und Platzzählung (AP-4) stehen.
 
 ## [0.2.0] – 2026-10-29
 
