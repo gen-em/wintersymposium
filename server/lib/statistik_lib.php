@@ -126,7 +126,7 @@ const EXPORT_ARTEN = [
     'termine' => ['Listen je Workshop-Termin', 'alle Termine in einer Datei, sortiert nach Termin (einzeln unter „Workshops“)'],
     'wartelisten' => ['Wartelisten', 'je Termin in Reihenfolge'],
     'essen' => ['Essensliste', 'Namen je Essen'],
-    'cme' => ['CME-Liste', 'Name, Berufsgruppe und EFN der ÄrztInnen (Format für die Kammer folgt mit AP-10)'],
+    'cme' => ['CME-Liste', 'Name und EFN der anwesenden ÄrztInnen (ohne „nicht erschienen“, AP-10)'],
     'statistik' => ['Statistik', 'alle Zahlen dieser Seite'],
     'newsletter' => ['Newsletter-Listen', 'nur bestätigte Einträge, je Liste mit Zeitpunkt und Fassung der Einwilligung (ohne Berufsgruppen-Filter)'],
 ];
@@ -205,7 +205,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             $erste = va_liste('berufsgruppen')[0] ?? '';
             $z = [];
             foreach ($anm as $a) {
-                if ($a['berufsgruppe'] === $erste && anm_symposium_status((int)$a['id']) === 'fest') {
+                if ($a['berufsgruppe'] === $erste && tn_anwesend((int)$a['id'])) {
                     $z[] = [$a['nachname'], $a['vorname'], $a['berufsgruppe'], $a['efn'] ?? ''];
                 }
             }

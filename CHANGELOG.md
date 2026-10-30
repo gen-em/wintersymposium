@@ -2,6 +2,28 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.17.0] – 2026-10-30
+
+Teilnahme und Zertifikate (AP-10, E-57).
+
+### Neu
+
+- **Team → Anmeldungen → Teilnahme:** Alle mit Platz gelten als anwesend; „nicht erschienen“ (und „doch da“) beim Symposium und je Workshop eintragen, auch auf dem Handy; Suche und Filter; alles im Protokoll.
+- **Unterschriftenliste als PDF:** alle Teilnehmenden oder nur ÄrztInnen mit der EFN als Barcode (Code 128, `*EFN*`; ohne EFN ein Feld fürs Etikett), sortiert nach Nachname, Vorname oder Berufsgruppe.
+- **Teilnahmebescheinigung** nach Entwurf C: Name, EFN, Vorträge, besuchte Workshops, Punkte, Kammer, VNR, Unterschrift als Bild, Nummer; hell und zu Hause druckbar.
+- **Freischalten** einzeln oder für alle Anwesenden (ab dem Veranstaltungstag) mit Mail „Deine Teilnahmebescheinigung ist da“; Download unter „Meine Anmeldung“. Ohne Anwesenheit kein Zertifikat.
+- Neue Einstellungen: Name und Auflage der Veranstaltung, CME-Kategorie, Name und Rolle unter der Unterschrift.
+- Statistik: Kachel „Anwesenheit“ mit Zahlen.
+
+### Geändert
+
+- CME-Liste enthält nur noch anwesende ÄrztInnen.
+- Die Sicherung enthält auch die Unterschrift des Zertifikats.
+
+### Behoben
+
+- **Rundmails blieben liegen**, sobald am Tag 4–9 Mails verschickt waren: Das Tageslimit wurde in der Datenbank als Text verglichen (Fehler seit 0.6.0).
+
 ## [0.16.0] – 2026-10-30
 
 Export als Excel und PDF (E-56, O-35).

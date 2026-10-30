@@ -119,7 +119,7 @@ function seite_fuss(): void
  */
 const TEAM_BEREICHE = [
     'Übersicht' => [['/team', 'Übersicht']],
-    'Anmeldungen' => [['/team/personen', 'Personen'], ['/team/workshops', 'Workshops']],
+    'Anmeldungen' => [['/team/personen', 'Personen'], ['/team/workshops', 'Workshops'], ['/team/teilnahme', 'Teilnahme']],
     'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
     'Kommunikation' => [['/team/mailings', 'Mailings'], ['/team/newsletter', 'Newsletter'], ['/team/texte', 'Texte']],
     'Statistik' => [['/team/statistik', 'Statistik']],

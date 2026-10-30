@@ -23,7 +23,9 @@ function http_anfrage(string $basis, string $methode, string $pfad, string $host
         curl_setopt($ch, CURLOPT_COOKIEJAR, $keks);
     }
     if ($formular !== null) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($formular));
+        // Mit Datei (CURLFile) als multipart/form-data, sonst urlencoded
+        $mitDatei = array_filter($formular, fn($w) => $w instanceof CURLFile) !== [];
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $mitDatei ? $formular : http_build_query($formular));
     }
     $roh = (string)curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
@@ -454,7 +456,8 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'senden', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => $html], $b);
     pruefe($r['status'] === 303 && db_wert('SELECT status FROM rundmail WHERE id = ?', [$id]) === 'versand' && (int)db_wert('SELECT empfaenger_zahl FROM rundmail WHERE id = ?', [$id]) === $soll, 'Senden: Mailing in der Warteschlange');
     $erste = rm_empfaenger('angemeldet')[0]['email'] ?? '';
-    pruefe(preg_match('#/link\?t=[0-9a-f]{48}#', http_mail_an($tmp, $erste, 30, 'Ansehen')) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
+    $dbgm = http_mail_an($tmp, $erste, 30, 'Ansehen');
+    pruefe(preg_match('#/link\?t=[0-9a-f]{48}#', $dbgm) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
     $r = http_anfrage($basis, 'GET', '/team/mailings?id=' . $id, $h, [], null, $b);
     pruefe(str_contains($r['text'], 'Empfängerliste (' . $soll . ')') && str_contains($r['text'], 'Als neue Mail kopieren') && !str_contains($r['text'], 'data-editor='), 'Gesendetes Mailing: Archiv mit Empfängerliste, nicht mehr änderbar');
     $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'speichern', 'betreff' => 'Geändert', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'postfach' => 'system'], $b);
@@ -548,7 +551,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     einstellung_setzen('anmeldung_start', $start);
     // Einstellungen gesperrt
     $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'Gesperrt.') && str_contains($r['text'], '<fieldset class="kasten gruppe" disabled>') && !str_contains($r['text'], 'Einstellungen speichern'), 'Einstellungen zuerst gesperrt');
+    pruefe(str_contains($r['text'], 'Gesperrt.') && str_contains($r['text'], '<fieldset class="kasten gruppe" id="veranstaltung" disabled>') && !str_contains($r['text'], 'Einstellungen speichern'), 'Einstellungen zuerst gesperrt');
     $r = http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'Entsperrt.') && !str_contains($r['text'], ' disabled>') && str_contains($r['text'], 'Einstellungen speichern'), 'Entsperren zeigt die Felder zum Bearbeiten');
     // Texte: Bild hochladen, öffentlich sichtbar
@@ -771,6 +774,60 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export' AND text LIKE '%als PDF%'") >= 1, 'Export mit Format im Protokoll');
     $r = http_anfrage($basis, 'GET', '/team/statistik', $h, [], null, $b);
     pruefe(substr_count($r['text'], 'format=xlsx') === 7 && substr_count($r['text'], 'format=pdf') === 6, 'Statistik: Knöpfe Excel und PDF');
+    // Teilnahme und Zertifikate (AP-10, E-57)
+    $r = http_anfrage($basis, 'GET', '/team/teilnahme', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Person, Petra') && str_contains($r['text'], 'Unterschriftenliste') && str_contains($r['text'], 'aria-current="page">Teilnahme<'), 'Teilnahme: Seite mit Liste, Navigation unter Anmeldungen');
+    $c = http_csrf($r['text']);
+    $pPlatz = (int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = 0', [$pid]);
+    $r = http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '0'], $b);
+    pruefe($r['status'] === 303 && str_ends_with($r['kopf']['location'] ?? '', '#a' . $pid) && (int)db_wert('SELECT nicht_erschienen FROM platz WHERE id = ?', [$pPlatz]) === 1, 'Nicht erschienen eintragen');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/teilnahme?f=fehlt', $h, [], null, $b)['text'], 'Person, Petra'), 'Filter „nicht erschienen“');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '1'], $b);
+    pruefe((int)db_wert('SELECT nicht_erschienen FROM platz WHERE id = ?', [$pPlatz]) === 0, 'Doch da');
+    pruefe(http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '0'], $b)['status'] === 403, 'Ohne CSRF abgelehnt');
+    $r = http_anfrage($basis, 'GET', '/team/teilnahme/liste?liste=aerzte&sort=vorname', $h, [], null, $b);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/pdf' && str_starts_with($r['text'], '%PDF-') && str_contains($r['kopf']['content-disposition'] ?? '', 'attachment'), 'Unterschriftenliste als PDF');
+    $r = http_anfrage($basis, 'GET', '/team/teilnahme/zertifikat?beispiel=1', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_starts_with($r['text'], '%PDF-') && str_contains($r['kopf']['content-disposition'] ?? '', 'inline'), 'Vorschau mit Beispiel');
+    pruefe(http_anfrage($basis, 'GET', '/team/teilnahme/zertifikat?a=' . $pid, $h, [], null, $b)['status'] === 200 && http_anfrage($basis, 'GET', '/team/teilnahme/zertifikat?a=999999', $h, [], null, $b)['status'] === 404, 'Vorschau je Person, unbekannt 404');
+    pruefe(http_anfrage($basis, 'GET', '/team/teilnahme', $h)['status'] === 303 && http_anfrage($basis, 'GET', '/team/teilnahme/liste', $h)['status'] === 303, 'Teilnahme nur für das Team');
+    // Unterschrift hochladen
+    $bild = imagecreatetruecolor(200, 60);
+    imagefill($bild, 0, 0, imagecolorallocate($bild, 255, 255, 255));
+    imagepng($bild, "$tmp/unterschrift.png");
+    $r = http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'unterschrift', 'bild' => new CURLFile("$tmp/unterschrift.png", 'image/png', 'u.png')], $b);
+    $r2 = http_anfrage($basis, 'GET', '/team/teilnahme/unterschrift', $h, [], null, $b);
+    pruefe($r['status'] === 303 && $r2['status'] === 200 && ($r2['kopf']['content-type'] ?? '') === 'image/png' && str_starts_with($r2['text'], "\x89PNG"), 'Unterschrift hochladen und anzeigen');
+    file_put_contents("$tmp/falsch.png", '<?php echo 1;');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'unterschrift', 'bild' => new CURLFile("$tmp/falsch.png", 'image/png', 'f.png')], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/teilnahme', $h, [], null, $b)['text'], 'Bitte die Unterschrift als PNG'), 'Keine Bilddatei: abgelehnt');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'unterschrift_weg'], $b);
+    pruefe(http_anfrage($basis, 'GET', '/team/teilnahme/unterschrift', $h, [], null, $b)['status'] === 404, 'Unterschrift entfernen');
+    // Freischalten: vor dem Tag gesperrt, danach Mail und Download für die Person
+    $datumAlt = va('veranstaltung_datum');
+    einstellung_setzen('veranstaltung_datum', gmdate('Y-m-d', time() + 20 * 86400));
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'freischalten', 'a' => $pid], $b);
+    pruefe(db_wert('SELECT zertifikat_am FROM anmeldung WHERE id = ?', [$pid]) === null, 'Vor dem Veranstaltungstag: nicht freigeschaltet');
+    $kp = "$tmp/kekse-petra.txt";
+    $lt = anm_link_erzeugen($pid, 'zugang', time() + 3600);
+    $r = http_anfrage($basis, 'GET', '/link?t=' . $lt, $h, [], null, $kp);
+    http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => $lt], $kp);
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung/zertifikat', $h, [], null, $kp);
+    $r2 = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $kp)['text'];
+    pruefe($r['status'] === 303 && str_contains($r2, 'Teilnahmebescheinigung') && str_contains($r2, 'Person') && !str_contains($r2, 'Zertifikat herunterladen'), 'Ohne Freischaltung kein Download');
+    einstellung_setzen('veranstaltung_datum', gmdate('Y-m-d', time() - 86400));
+    $vorher = http_mail_anzahl($tmp, 'petra@example.org');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'freischalten', 'a' => $pid], $b);
+    pruefe(db_wert('SELECT zertifikat_am FROM anmeldung WHERE id = ?', [$pid]) !== null && http_mail_an($tmp, 'petra@example.org', 20, 'Teilnahmebescheinigung') !== '' && http_mail_anzahl($tmp, 'petra@example.org') === $vorher + 1, 'Freischalten mit Mail');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $kp)['text'], 'Zertifikat herunterladen'), 'Meine Anmeldung: Knopf zum Herunterladen');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung/zertifikat', $h, [], null, $kp);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/pdf' && str_starts_with($r['text'], '%PDF-') && str_contains($r['kopf']['content-disposition'] ?? '', 'Teilnahmebescheinigung-Person-'), 'Zertifikat herunterladen');
+    pruefe(http_anfrage($basis, 'GET', '/deine-anmeldung/zertifikat', $h)['status'] === 303, 'Ohne Sitzung kein Download');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '0'], $b);
+    pruefe(http_anfrage($basis, 'GET', '/deine-anmeldung/zertifikat', $h, [], null, $kp)['status'] === 303, 'Nachträglich „nicht erschienen“: kein Download');
+    http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '1'], $b);
+    einstellung_setzen('veranstaltung_datum', $datumAlt);
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'teilnahme'") >= 4, 'Teilnahme im Protokoll');
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export'") >= 1, 'Export im Protokoll');
     $r = http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => "## Verantwortlich\nTest Impressum"], $b);
     pruefe($r['status'] === 303 && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Gratis!') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert');

@@ -216,10 +216,108 @@ const PDF_FARBEN = [
     'zebra' => [246, 248, 250],  // blue-50
 ];
 
+/** Neues A4-Dokument mit den Schriften des Brandings und Fußzeile (Hinweis links, Seitenzahl rechts). */
+function export_pdf_neu(bool $quer, string $titel, string $fuss): tFPDF
+{
+    export_pdf_laden();
+    $pdf = new class ($quer ? 'L' : 'P', 'mm', 'A4') extends tFPDF {
+        public string $fuss = '';
+        public bool $seitenzahl = true;
+        /** Inhalt drehen (Grad, gegen den Uhrzeigersinn) um den Punkt x/y (mm); mit drehen_ende() schließen. */
+        public function drehen(float $grad, float $x, float $y): void
+        {
+            $w = deg2rad($grad);
+            $cx = $x * $this->k;
+            $cy = ($this->h - $y) * $this->k;
+            $this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm', cos($w), sin($w), -sin($w), cos($w), $cx, $cy, -$cx, -$cy));
+        }
+        public function drehen_ende(): void
+        {
+            // Q setzt Farben, Linienstärke und Schrift zurück; tFPDF merkt sich aber die zuletzt
+            // gesetzten Werte – deshalb neu ausgeben, sonst erscheint Text in einer falschen Farbe.
+            $this->_out('Q');
+            $this->_out($this->DrawColor);
+            $this->_out($this->FillColor);
+            $this->_out(sprintf('%.2F w', $this->LineWidth * $this->k));
+            if ($this->CurrentFont) {
+                $this->_out(sprintf('BT /F%d %.2F Tf ET', $this->CurrentFont['i'], $this->FontSizePt));
+            }
+        }
+        /** Kreis (Mittelpunkt, Radius in mm), nur Linie. */
+        public function kreis(float $x, float $y, float $r): void
+        {
+            $k = $this->k;
+            $hp = $this->h;
+            $m = 0.5523 * $r;
+            $p = fn(float $a, float $b): string => sprintf('%.2F %.2F', $a * $k, ($hp - $b) * $k);
+            $this->_out($p($x + $r, $y) . ' m ' . $p($x + $r, $y - $m) . ' ' . $p($x + $m, $y - $r) . ' ' . $p($x, $y - $r) . ' c '
+                . $p($x - $m, $y - $r) . ' ' . $p($x - $r, $y - $m) . ' ' . $p($x - $r, $y) . ' c '
+                . $p($x - $r, $y + $m) . ' ' . $p($x - $m, $y + $r) . ' ' . $p($x, $y + $r) . ' c '
+                . $p($x + $m, $y + $r) . ' ' . $p($x + $r, $y + $m) . ' ' . $p($x + $r, $y) . ' c S');
+        }
+        /** Linienzug mit runden Enden (Häkchen, Handstrich); Punkte als [[x, y], …] in mm. */
+        public function linienzug(array $punkte): void
+        {
+            $k = $this->k;
+            $teile = [];
+            foreach (array_values($punkte) as $i => [$x, $y]) {
+                $teile[] = sprintf('%.2F %.2F %s', $x * $k, ($this->h - $y) * $k, $i === 0 ? 'm' : 'l');
+            }
+            $this->_out('q 1 J 1 j ' . implode(' ', $teile) . ' S Q');
+        }
+        public function Footer(): void
+        {
+            if ($this->fuss === '' && !$this->seitenzahl) {
+                return;
+            }
+            $this->SetY(-12);
+            $this->SetFont('mono', '', 7.5);
+            $this->SetTextColor(...PDF_FARBEN['meta']);
+            $this->Cell(0, 5, $this->fuss, 0, 0, 'L');
+            if ($this->seitenzahl) {
+                $this->SetX($this->lMargin);
+                $this->Cell(0, 5, 'Seite ' . $this->PageNo() . ' von {nb}', 0, 0, 'R');
+            }
+        }
+    };
+    $pdf->AliasNbPages();
+    $pdf->SetAutoPageBreak(true, 18);
+    $pdf->SetMargins(16, 14, 16);
+    $pdf->AddFont('anton', '', 'Anton-Regular.ttf', true);
+    $pdf->AddFont('antonio', 'B', 'Antonio-Bold.ttf', true);
+    $pdf->AddFont('tajawal', '', 'Tajawal-Regular.ttf', true);
+    $pdf->AddFont('tajawal', 'B', 'Tajawal-Bold.ttf', true);
+    $pdf->AddFont('mono', '', 'IBMPlexMono-Regular.ttf', true);
+    $pdf->SetTitle('Wintersymposium – ' . $titel, true);
+    $pdf->SetAuthor('Wintersymposium', true);
+    $pdf->SetCreator('Wintersymposium', true);
+    $pdf->fuss = $fuss;
+    return $pdf;
+}
+
+/** Kopf einer Listenseite: Logo, Stand rechts, Kicker, Titel, Unterzeile. */
+function export_pdf_seitenkopf(tFPDF $pdf, string $kicker, string $titel, string $sub, string $stand): void
+{
+    $pdf->Image(export_pdf_ordner() . '/ALLGAEU-AKUT_Logo_quer_farbig-lila.png', 16, 12, 46);
+    $pdf->SetFont('mono', '', 8);
+    $pdf->SetTextColor(...PDF_FARBEN['meta']);
+    $pdf->SetXY(16, 14);
+    $pdf->Cell(0, 5, $stand, 0, 0, 'R');
+    $pdf->SetY(30);
+    $pdf->SetFont('antonio', 'B', 10);
+    $pdf->SetTextColor(...PDF_FARBEN['akzent']);
+    $pdf->Cell(0, 5, mb_strtoupper($kicker), 0, 1);
+    $pdf->SetFont('anton', '', 22);
+    $pdf->SetTextColor(...PDF_FARBEN['text']);
+    $pdf->MultiCell(0, 10, mb_strtoupper($titel), 0, 'L');
+    $pdf->SetFont('tajawal', '', 9.5);
+    $pdf->SetTextColor(...PDF_FARBEN['meta']);
+    $pdf->MultiCell(0, 5, $sub, 0, 'L');
+}
+
 /** PDF (Bytes) aus Kopf und Zeilen. */
 function export_pdf(array $x): string
 {
-    export_pdf_laden();
     $opt = $x['pdf'];
     $spalten = array_values(array_diff(array_keys($x['kopf']), $opt['ohne'], $opt['gruppe'] !== null ? [$opt['gruppe']] : []));
     // Gruppen (z. B. je Termin eine Seite); ohne Gruppe eine Liste
@@ -236,30 +334,7 @@ function export_pdf(array $x): string
     $kopfText = 'Wintersymposium · ' . tag_text(va('veranstaltung_datum'));
     $stand = 'Stand ' . datum_zeit_text(gmdate('Y-m-d H:i:s')) . ($x['bg'] !== '' ? ' · Berufsgruppe: ' . $x['bg'] : '');
 
-    $pdf = new class ($opt['quer'] ? 'L' : 'P', 'mm', 'A4') extends tFPDF {
-        public string $fuss = '';
-        public function Footer(): void
-        {
-            $this->SetY(-12);
-            $this->SetFont('mono', '', 7.5);
-            $this->SetTextColor(...PDF_FARBEN['meta']);
-            $this->Cell(0, 5, $this->fuss, 0, 0, 'L');
-            $this->SetX($this->lMargin);
-            $this->Cell(0, 5, 'Seite ' . $this->PageNo() . ' von {nb}', 0, 0, 'R');
-        }
-    };
-    $pdf->AliasNbPages();
-    $pdf->SetAutoPageBreak(true, 18);
-    $pdf->SetMargins(16, 14, 16);
-    $pdf->AddFont('anton', '', 'Anton-Regular.ttf', true);
-    $pdf->AddFont('antonio', 'B', 'Antonio-Bold.ttf', true);
-    $pdf->AddFont('tajawal', '', 'Tajawal-Regular.ttf', true);
-    $pdf->AddFont('tajawal', 'B', 'Tajawal-Bold.ttf', true);
-    $pdf->AddFont('mono', '', 'IBMPlexMono-Regular.ttf', true);
-    $pdf->SetTitle('Wintersymposium – ' . $x['titel'], true);
-    $pdf->SetAuthor('Wintersymposium', true);
-    $pdf->SetCreator('Wintersymposium', true);
-    $pdf->fuss = 'Vertraulich – nur für die Organisation · ' . $stand;
+    $pdf = export_pdf_neu($opt['quer'], $x['titel'], 'Vertraulich – nur für die Organisation · ' . $stand);
     $breite = ($opt['quer'] ? 297 : 210) - 32;
 
     // Spaltenbreiten nach Inhalt (Kopf und Zeilen), auf die Seitenbreite verteilt
@@ -286,26 +361,11 @@ function export_pdf(array $x): string
     };
     foreach ($gruppen as $gruppe => $zeilen) {
         $pdf->AddPage();
-        $logo = export_pdf_ordner() . '/ALLGAEU-AKUT_Logo_quer_farbig-lila.png';
-        $pdf->Image($logo, 16, 12, 46);
-        $pdf->SetFont('mono', '', 8);
-        $pdf->SetTextColor(...PDF_FARBEN['meta']);
-        $pdf->SetXY(16, 14);
-        $pdf->Cell(0, 5, $stand, 0, 0, 'R');
-        $pdf->SetY(30);
-        $pdf->SetFont('antonio', 'B', 10);
-        $pdf->SetTextColor(...PDF_FARBEN['akzent']);
-        $pdf->Cell(0, 5, mb_strtoupper($kopfText), 0, 1);
-        $pdf->SetFont('anton', '', 22);
-        $pdf->SetTextColor(...PDF_FARBEN['text']);
-        $pdf->MultiCell(0, 10, mb_strtoupper($gruppe !== '' ? $gruppe : $x['titel']), 0, 'L');
         $sub = $gruppe !== '' ? $x['titel'] . (($opt['info'][$gruppe] ?? '') !== '' ? ' · ' . $opt['info'][$gruppe] : '') : count($zeilen) . ' Einträge';
         if ($gruppe !== '') {
             $sub .= ' · ' . count($zeilen) . ' ' . (count($zeilen) === 1 ? 'Person' : 'Personen');
         }
-        $pdf->SetFont('tajawal', '', 9.5);
-        $pdf->SetTextColor(...PDF_FARBEN['meta']);
-        $pdf->MultiCell(0, 5, $sub, 0, 'L');
+        export_pdf_seitenkopf($pdf, $kopfText, $gruppe !== '' ? $gruppe : $x['titel'], $sub, $stand);
         $pdf->Ln(3);
         $kopfzeile();
         if ($zeilen === []) {

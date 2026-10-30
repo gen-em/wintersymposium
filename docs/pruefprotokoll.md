@@ -27,7 +27,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | Export xlsx und PDF | Excel und PDF im Branding neben CSV (E-56, O-35) | umgesetzt, Staging offen | lokal T-247 bis T-250 | Staging: Dateien in Excel, LibreOffice, am Handy öffnen und drucken (siehe unten) |
 | AP-7 | Newsletter | umgesetzt, Staging offen | lokal T-170 bis T-174 | Staging (siehe unten); Datenschutzerklärung ergänzen |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
-| AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
+| AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
 | AP-9 | Abschluss und Datenschutz | offen; Sicherung vorgezogen (E-47) | lokal T-201, T-223, T-224 | T-200 bis T-204 |
 
 ## 2. Geplante Prüfungen
@@ -173,12 +173,15 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 # AP-8 Kaneo-Instanz: entfallen (E-15), T-180 bis T-184 gestrichen
 
 # AP-10 Teilnahme und Zertifikate
-- {id: T-190, ap: AP-10, was: "Anwesenheit erfassen", wie: "Liste auf dem Handy: suchen, Haken setzen, Massenaktion mit Ausnahmen; Audit-Eintrag", status: offen}
-- {id: T-191, ap: AP-10, was: "Kein Zertifikat ohne Anwesenheit", wie: "Einmal-Link einer nicht anwesenden Person → kein Download; nach Erfassung → Download", status: offen}
-- {id: T-192, ap: AP-10, was: "PDF-Inhalt und Darstellung", wie: "Entwurf des Admins unverändert, Name mit Umlauten und Datum an der richtigen Stelle; öffnet in Acrobat, Browser, Handy", status: offen}
-- {id: T-193, ap: AP-10, was: "Freischaltung und Mail", wie: "Freischalten → Mail „Zertifikat verfügbar“ mit Einmal-Link; vor Freischaltung kein Download", status: offen}
-- {id: T-194, ap: AP-10, was: "CME-Export", wie: "Export enthält nur anwesende Personen mit Name und EFN", status: offen}
-- {id: T-195, ap: AP-10, was: "Zertifikat nicht fälschbar über fremden Link", wie: "Einmal-Link einer anderen Person liefert nur deren Zertifikat; manipulierte IDs → 404", status: offen}
+- {id: T-190, ap: AP-10, was: "Anwesenheit erfassen", wie: "Team → Teilnahme auf dem Handy: suchen, filtern, „nicht erschienen“ beim Symposium und je Workshop, „doch da“; Standard anwesend (E-42); Audit-Eintrag", status: "lokal bestanden (Browser auf dem Handy, HTTP, Protokoll)"}
+- {id: T-191, ap: AP-10, was: "Kein Zertifikat ohne Anwesenheit", wie: "Nicht erschienen → nicht freischaltbar, kein Download; nachträglich „nicht erschienen“ → Download gesperrt; doch da → wieder möglich", status: "lokal bestanden"}
+- {id: T-192, ap: AP-10, was: "PDF-Inhalt und Darstellung", wie: "Entwurf C: Name mit Umlauten, EFN (ohne Berufsgruppe), Vorträge, besuchte Workshops, Punkte, Kammer, VNR, Unterschrift (PNG), Nummer; öffnet in Acrobat, Browser, Handy; zu Hause druckbar", status: "lokal bestanden (pdftotext, Seite als Bild angesehen); Acrobat, Handy und Druck auf Staging"}
+- {id: T-193, ap: AP-10, was: "Freischaltung und Mail", wie: "Freischalten (einzeln oder alle, erst ab dem Veranstaltungstag) → Mail „Deine Teilnahmebescheinigung ist da“ mit Link; vor Freischaltung kein Download; zurücknehmen", status: "lokal bestanden"}
+- {id: T-194, ap: AP-10, was: "CME-Export", wie: "Export enthält nur anwesende ÄrztInnen mit Name und EFN", status: "lokal bestanden"}
+- {id: T-195, ap: AP-10, was: "Zertifikat nicht fälschbar über fremden Link", wie: "Download nur mit eigener Sitzung (Einmal-Link oder Konto) und nur das eigene; ohne Sitzung Weiterleitung; Team-Vorschau nur für das Team, unbekannte ID → 404", status: "lokal bestanden"}
+- {id: T-251, ap: AP-10, was: "Unterschriftenliste", wie: "PDF alle (mit Berufsgruppe) und nur ÄrztInnen (EFN als Code 128 *EFN*, ohne EFN Feld fürs Etikett), Sortierung Nachname/Vorname/Berufsgruppe; Barcode mit Scanner lesbar", status: "lokal bestanden (Barcode mit zxing gelesen); mit dem Scanner vor Ort offen"}
+- {id: T-252, ap: AP-10, was: "Unterschrift als Bild", wie: "PNG/JPG hochladen, Vorschau, entfernen; anderes Format abgelehnt; in der Sicherung enthalten", status: "lokal bestanden"}
+- {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
 # AP-9 Abschluss und Datenschutz
 - {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Symposium länger als 14 Monate her → vom Job anonymisiert (E-24); Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre", status: offen}
@@ -224,6 +227,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-190 bis T-195, T-251 bis T-253 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` LAUFOK ok, 0 Fehler (Anwesenheit Standard, „nicht erschienen“ je Symposium und Workshop, Protokoll; freischalten erst ab dem Veranstaltungstag, alle mit je einer Mail, einzeln ohne Mail, nicht doppelt, zurücknehmen; nicht erschienen → kein Zertifikat, auch nachträglich; CME-Liste nur Anwesende; Code 128 Muster und Prüfzeichen; Zertifikat-PDF mit Name, Workshop, Punkten, Kammer, Leitung, ohne Berufsgruppe; Unterschriftenlisten; Unterschrift als Bild und in der Sicherung; Tageslimit als Zahl; HTTP: Seite, Navigation, Eintragen mit CSRF, Filter, Listen, Vorschau, nur Team, Upload und Ablehnung, Freischalten mit Mail, Download mit Sitzung, ohne Sitzung und nachträglich gesperrt); Browser-Durchlauf BROWSEROK ok, 0 Fehler (Teilnahme in allen Breiten, auf dem Handy eintragen, Listen und Vorschau als PDF, Lea lädt ihr Zertifikat herunter); Zertifikat und Listen als Bild angesehen; Barcode mit zxing gelesen | Staging |
 | T-247 bis T-250 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 686 ok, 0 Fehler (xlsx: Zip mit Mappe, Blatt, Stilen; Kopf fixiert mit Filter; Text nie Formel, Steuerzeichen entfernt, Zahl und Datum als Zahl; Blattname ohne verbotene Zeichen; PDF: Teilnehmende ohne E-Mail mit Seitenzahl, je Termin eine Seite mit Belegung ohne E-Mail, leere Liste mit Hinweis, 120 Zeilen über mehrere Seiten ohne Verlust, Filter im Kopf; Newsletter ohne PDF; HTTP: Formate, Typen, Dateinamen, Protokoll); Browser-Durchlauf 5316 ok, 0 Fehler (Knöpfe in Statistik, Download von PDF und xlsx in Chromium, Firefox und WebKit; Seiten in allen Breiten); PDFs als Bild angesehen, xlsx in LibreOffice und openpyxl geöffnet | Staging |
 | T-243 bis T-246 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 668 ok, 0 Fehler (Bibliothek mit Software-Authenticator: ES256 und RS256 anlegen und einloggen, Herausforderung einmalig und je Konto, ohne UV, fremder Ursprung, fremde rpId, veränderte Signatur, Zähler zurück, COSE mit privatem Teil, Punkt außerhalb der Kurve abgelehnt, keine IP-Adresse; Team: Passkey als zweiter Faktor, letzter nicht entfernbar, Zurücksetzen entfernt Passkeys; HTTP: Login-Seite, Mein Konto, Anlegen nur mit Passwort, ohne CSRF abgelehnt, Anlegen und Einloggen über den Endpunkt, erster Team-Login mit Passkey und Codes, Team-Login nur mit Passkey); Browser-Durchlauf 5289 ok, 0 Fehler (Chromium: simuliertes Gerät mit Fingerabdruck – anlegen, ausloggen, mit Passkey einloggen; Firefox und WebKit: Knopf sichtbar; Seiten in allen Breiten) | Staging |
 | T-238 bis T-242 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 629 ok, 0 Fehler (Bereiniger: fett/kursiv, Skripte, Attribute, Links, Listen, Klartext, Inline, Bilder, Abschnitte; Löschfrist mit vorgestellter Uhr; HTTP: Team-Navigation, Personen-Menü, Mein Konto für Team, eingeloggt ohne Login-Feld, Team-Mitglied meldet sich an, Ausloggen beendet alles, Rolle angehoben → zweiter Faktor, Programm-Beschreibung bereinigt); Browser-Durchlauf 5268 ok, 0 Fehler (Editor: Fett an und aus, nummerierte Liste, Titel mit Editor; Mailing-Editor; alle Bereiche und Unterseiten in allen Breiten; Personen-Menü; Mein Konto und Zwei-Faktor für Team) | Staging |
@@ -272,6 +276,14 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-10 Teilnahme und Zertifikate (nach Merge auf Staging)
+
+1. Team → Verwaltung → Einstellungen: unter „Veranstaltung“ Name und Auflage, unter „Fortbildungspunkte“ Punkte, Kategorie, Kammer und VNR, unter „Teilnahmebescheinigung“ den Namen unter der Unterschrift eintragen.
+2. Team → Anmeldungen → Teilnahme: Unterschrift als PNG hochladen, dann „Vorschau mit Beispiel“ öffnen. Erwartet: Entwurf C, Unterschrift über der Linie, deine Angaben; am Rechner und am Handy öffnen und einmal zu Hause ausdrucken.
+3. Unterschriftenliste „Nur ÄrztInnen“ herunterladen, ausdrucken und den Barcode mit dem Scanner der Kammer bzw. einem Handy-Scanner lesen. Erwartet: `*EFN*`.
+4. Auf Staging das Veranstaltungsdatum kurz auf heute oder gestern setzen (Testdaten), eine Person als „nicht erschienen“ markieren, dann „Alle freischalten“. Erwartet: Mails an alle Anwesenden (Umleitung auf Staging), keine an die markierte Person; über den Link in der Mail das PDF unter „Meine Anmeldung“ herunterladen. Danach das Datum zurücksetzen.
+5. Rundmails: ein Mailing an mehr als 4 Personen schicken. Erwartet: Es geht vollständig raus (Fehler im Tageslimit behoben, T-253).
 
 ### Noch zu prüfen für Export xlsx und PDF (nach Merge auf Staging)
 

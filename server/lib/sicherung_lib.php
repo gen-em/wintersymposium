@@ -10,7 +10,7 @@ declare(strict_types=1);
  *   {"art":"kopf", format, version, migration, erstellt, anlass}
  *   {"art":"tabelle", name, ddl, spalten}       – Aufbau (SHOW CREATE TABLE)
  *   {"art":"zeilen", name, daten: [[…], …]}      – bis zu 500 Zeilen je Block
- *   {"art":"datei", ordner, name, inhalt}        – Fotos der Dozierenden und Bilder der Mailings (base64)
+ *   {"art":"datei", ordner, name, inhalt}        – Fotos der Dozierenden, Bilder der Mailings und Texte, Unterschrift des Zertifikats (base64)
  *   {"art":"ende", tabellen, zeilen}             – fehlt sie, ist die Datei unvollständig
  * Ohne Inhalt gesichert: rate_limit und mail_ausgang (kein erneuter Versand).
  *
@@ -108,6 +108,10 @@ function sicherung_anlegen(string $anlass, ?int $kontoId = null): string
     foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.png') ?: [], glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: []) as $f) {
         $schreib(['art' => 'datei', 'ordner' => 'bilder', 'name' => basename($f), 'inhalt' => base64_encode((string)file_get_contents($f))]);
     }
+    // Unterschrift auf dem Zertifikat (AP-10)
+    if (unterschrift_da()) {
+        $schreib(['art' => 'datei', 'ordner' => 'zertifikat', 'name' => 'unterschrift.png', 'inhalt' => base64_encode((string)file_get_contents(unterschrift_pfad()))]);
+    }
     $schreib(['art' => 'ende', 'tabellen' => $tabellen, 'zeilen' => $zeilen]);
     fclose($h);
     rename($tmp, $pfad);
@@ -176,7 +180,8 @@ function sicherung_pruefen(string $name): ?string
             $tabellen[$d['name']] = true;
         } elseif ($art === 'zeilen' && !isset($tabellen[$d['name'] ?? ''])) {
             break;
-        } elseif ($art === 'datei' && (($d['ordner'] ?? '') !== 'bilder' || preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|(mail|text)-[0-9a-f]{16}\.(jpg|png))$/', (string)($d['name'] ?? '')) !== 1)) {
+        } elseif ($art === 'datei' && !((($d['ordner'] ?? '') === 'bilder' && preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|(mail|text)-[0-9a-f]{16}\.(jpg|png))$/', (string)($d['name'] ?? '')) === 1)
+            || (($d['ordner'] ?? '') === 'zertifikat' && ($d['name'] ?? '') === 'unterschrift.png'))) {
             break;
         } elseif ($art === 'ende') {
             $ende = true;
@@ -243,7 +248,8 @@ function sicherung_wiederherstellen(string $name, ?int $kontoId): ?string
                     $pdo->commit();
                     break;
                 case 'datei':
-                    @file_put_contents(foto_ordner() . '/' . basename((string)$d['name']), base64_decode((string)$d['inhalt'], true) ?: '');
+                    $ziel = ($d['ordner'] ?? '') === 'zertifikat' ? unterschrift_pfad() : foto_ordner() . '/' . basename((string)$d['name']);
+                    @file_put_contents($ziel, base64_decode((string)$d['inhalt'], true) ?: '');
                     break;
             }
         }
