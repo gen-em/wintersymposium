@@ -166,7 +166,7 @@ if ($st['offen']):
             return '<div class="' . $klasse . '" data-art="' . $art . '" data-id="' . $zid . '" data-punkt="' . (int)$p['id'] . '" data-typ="' . e($p['typ']) . '" data-beginn="' . e($von) . '" data-ende="' . e($bis) . '">'
                 . '<a class="pg-link" href="/team/programm?id=' . $p['id'] . '"><span class="mono">' . ($von !== '' ? e($von . '–' . $bis) : '--:--') . '</span><span>' . $inhalt
                 . ($s !== 'veroeffentlicht' ? ' <span class="st ges">nicht veröffentlicht</span>' : '') . '</span></a>'
-                . (($p['typ'] !== 'workshop' || $art === 'termin' || $p['termine'] === []) ? '<span class="griff" draggable="true" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
+                . (($p['typ'] !== 'workshop' || $art === 'termin' || $p['termine'] === []) ? '<span class="griff" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
                 . '</div>';
         };
         $chip = function (array $p): string {
@@ -197,7 +197,6 @@ if ($st['offen']):
             <li><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], $chip($p) . e($p['titel']) . ($p['typ'] === 'workshop' ? ' <span class="meta klein">noch ohne Termin</span>' : '')) ?></li>
             <?php endif;
         endforeach; ?>
-        <?php if ($gliederung !== []): ?><li class="pg-ende" id="pg-ende" hidden>Hierher ziehen: ans Ende</li><?php endif; ?>
         </ol>
         <form method="post" action="/team/programm" id="verschieben-form" hidden>
             <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value=""><input type="hidden" name="nachruecken" value="1"><input type="hidden" name="block" value="">

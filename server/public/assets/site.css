@@ -237,13 +237,19 @@ span.gl { cursor: default; }
 .pg-zeile.geaendert { border-color: var(--rot-300); border-style: dashed; background: rgba(255, 90, 95, .12); }
 /* Einfügemarke weiß (ausgewählt = lila, Block = grün), Rückmeldung 2026-10-30 */
 .pg-zeile { position: relative; }
-.pg-zeile.ziel-vor::before, .pg-zeile.ziel-nach::after { content: ""; position: absolute; left: -6px; right: -6px; height: 4px; background: var(--weiss); border-radius: 2px; box-shadow: 0 0 0 2px var(--bg); z-index: 2; pointer-events: none; }
-.pg-zeile.ziel-vor::before { top: -5px; }
-.pg-zeile.ziel-nach::after { bottom: -5px; }
+.pg-liste li { position: relative; }
+.pg-liste li.ziel-vor::before, .pg-liste li.ziel-nach::after { content: ""; position: absolute; left: -6px; right: -6px; height: 4px; background: var(--weiss); border-radius: 2px; box-shadow: 0 0 0 2px var(--bg); z-index: 2; pointer-events: none; }
+/* mitten in die Lücke von 4 px zwischen zwei Einträgen */
+.pg-liste li.ziel-vor::before { top: -4px; }
+.pg-liste li.ziel-nach::after { bottom: -4px; }
+.pg-kinder > li.ziel-vor::before, .pg-kinder > li.ziel-nach::after { left: -10px; border-top: 0; width: auto; }
 .pg-zeile.ziel-in { outline: 2px dashed var(--gruen); outline-offset: 2px; background: rgba(181, 189, 0, .16); }
-.pg-ende { border: 1.5px dashed var(--meta); color: var(--meta); padding: 8px 12px; font-size: .85rem; text-align: center; }
-.pg-ende.ziel-vor { border-color: var(--weiss); color: var(--fg); }
 .pg-zeile.wird-gezogen { opacity: .5; }
+.griff { touch-action: none; }
+.pg-geist { position: fixed; z-index: 50; margin: 0; pointer-events: none; opacity: .92; box-shadow: 0 10px 28px rgba(0, 0, 0, .45); }
+html.pg-zieht, html.pg-zieht * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+/* Leere Unterliste eines Blocks nimmt keinen Platz weg (sonst sitzt die Linie schief) */
+.pg-kinder:not(:has(> li)) { display: none; }
 .st { display: inline-block; font-family: var(--f-text); font-size: .74rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
 .st.pub { border: 1.5px solid var(--gruen); background: rgba(181, 189, 0, .2); color: var(--fg); }
 .st.ges { border: 1.5px dashed var(--rot-300); background: rgba(255, 90, 95, .22); color: var(--fg); }
@@ -603,6 +609,8 @@ details > summary.knopf::-webkit-details-marker { display: none; }
    Dunkle Karte mit Rahmen in der Signalfarbe: grün = bestätigen, rot = löschen/verwerfen, lila = Info.
    Auf dem Handy von unten, Knöpfe groß untereinander. */
 dialog.dlg { border: 0; padding: 0; background: transparent; color: var(--fg); max-width: calc(100vw - 32px); width: 460px; overflow: visible; }
+/* [open] hebt die Regel über „.kasten > :last-child“ (Rand 0) – sonst rutscht der Dialog nach unten */
+dialog.dlg[open] { margin: auto; }
 dialog.dlg::backdrop { background: rgba(0, 18, 36, .74); backdrop-filter: blur(3px); }
 .dlg { --dlg-farbe: var(--rot); --dlg-schein: rgba(255, 90, 95, .14); }
 .dlg-gruen { --dlg-farbe: var(--gruen); --dlg-schein: rgba(181, 189, 0, .16); }
@@ -621,7 +629,7 @@ dialog.dlg::backdrop { background: rgba(0, 18, 36, .74); backdrop-filter: blur(3
   @keyframes dlg-auf { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 }
 @media (max-width: 560px) {
-  dialog.dlg { margin: auto 0 0; width: 100vw; max-width: 100vw; }
+  dialog.dlg, dialog.dlg[open] { margin: auto 0 0; width: 100vw; max-width: 100vw; }
   .dlg-karte { border-radius: 18px 18px 0 0; border-bottom: 0; padding-bottom: max(22px, env(safe-area-inset-bottom, 0px)); }
   .dlg-griff { display: block; }
   .dlg-knoepfe { flex-direction: column-reverse; }
