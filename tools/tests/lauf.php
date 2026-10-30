@@ -296,7 +296,7 @@ if (!$mitDb) {
         $mk(5, 'pause', '', ''),
     ]);
     pruefe(array_map(fn($x) => $x['art'] . ($x['termin']['id'] ?? $x['punkt']['id']), $g) === ['punkt5', 'punkt3', 'block1', 'termin8'], 'Gliederung: ohne Zeit oben, dann nach Uhrzeit; Termin außerhalb des Blocks einzeln');
-    pruefe(count($g[2]['kinder']) === 2 && $g[2]['kinder'][0]['art'] === 'termin' && $g[2]['kinder'][1]['art'] === 'station', 'Block sammelt Termin und Station');
+    pruefe(count($g[2]['kinder']) === 2 && $g[2]['kinder'][0]['art'] === 'termin' && $g[2]['kinder'][1]['art'] === 'punkt', 'Block sammelt Termin und Station');
     $st = programm_status([$mk(1, 'vortrag', '18:00', '18:30'), $mk(2, 'pause', '19:00', '19:15')], ['punkte' => [$mk(1, 'vortrag', '18:00', '18:30'), $mk(3, 'pause', '20:00', '20:15')], 'am' => '']);
     pruefe($st['status'] === [1 => 'veroeffentlicht', 2 => 'neu'] && count($st['geloescht']) === 1 && $st['offen'], 'Status: veröffentlicht, neu, gelöscht');
     pruefe(programm_hinweise([array_merge($mk(1, 'vortrag', '18:00', '18:30'), ['ort' => 'A']), array_merge($mk(2, 'station', '18:15', '19:00'), ['ort' => 'a'])]) !== [], 'Raum doppelt belegt (Groß-/Kleinschreibung egal)');
@@ -308,7 +308,7 @@ if (!$mitDb) {
     $pv = programm_veroeffentlicht()['punkte'] ?? [];
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));
-    pruefe(count($bl) === 1 && count($bl[0]['kinder']) === 6, 'Workshop-Block mit 5 Terminen und 1 Station');
+    pruefe(count($bl) === 1 && count($bl[0]['kinder']) === 7, 'Workshop-Block mit 5 Terminen, 1 Station und 1 Fallbesprechung');
     // Einfügen mit Nachrücken (Admin 2026-10-29): 30-min-Pause nach Fall #1 (endet 19:15)
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Eingefügt']);
     $neuId = programm_punkt_speichern(null, $r, null);
@@ -717,7 +717,37 @@ if (!$mitDb) {
     };
     $termineWs = (int)db_wert('SELECT COUNT(*) FROM workshop_termin WHERE punkt_id = ?', [$wsId]);
     pruefe($kind($neuWs) === 1, 'Workshop ohne Termin über das Formular einem Block zugeordnet');
-    pruefe(!programm_zuordnen($blockId, $blockId, null) && !programm_zuordnen($neuWs, $wsId, null), 'nur Workshops und Stationen, nur zu einem Block');
+    $pauseId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'pause' LIMIT 1");
+    pruefe(!programm_zuordnen($blockId, $blockId, null) && !programm_zuordnen($neuWs, $wsId, null) && !programm_zuordnen($pauseId, $blockId, null), 'nur Inhalte (keine Pause, kein Block), nur zu einem Block');
+    // Vorträge und Fallbesprechungen im Block (Rückmeldung 2026-10-30)
+    $fb2 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'FB 02'");
+    $vt1 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'VT 01'");
+    $haupt = fn() => array_map(fn($g) => $g['punkt']['id'], array_filter(programm_gliederung(programm_arbeitsstand()), fn($g) => $g['art'] !== 'termin'));
+    pruefe($kind($fb2) === 1 && !in_array($fb2, $haupt(), true), 'Fallbesprechung (Beispieldaten) steht im Block, nicht im Hauptprogramm');
+    pruefe($kind($vt1) === 0, 'Vortrag ohne Zuordnung bleibt im Hauptprogramm, auch wenn ein Block läuft');
+    $faelle = db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'");
+    pruefe(programm_verschieben('punkt', $fb2, '19:40', null, true) === '19:40–20:10' && db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'") == $faelle && (int)($GLOBALS['programm_nachgerueckt'] ?? 0) === 0, 'Punkt im Block verschieben schiebt die Hauptspur nicht');
+    $blockAlt = db_zeile('SELECT beginn FROM programmpunkt WHERE id = ?', [$blockId]);
+    programm_verschieben('punkt', $blockId, '19:40', null);
+    pruefe(hm((string)db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb2])) === '19:50', 'Block verschieben nimmt die zugeordnete Fallbesprechung mit');
+    programm_verwerfen(null);
+    pruefe($kind($fb2) === 1 && hm((string)db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb2])) === '20:00', 'Verwerfen: Fallbesprechung wieder im Block um 20:00');
+    // Dozierende je Termin
+    $ws1 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'WS 01'");
+    $ws1p = array_values(array_filter(programm_arbeitsstand(), fn($p) => $p['id'] === $ws1))[0];
+    pruefe(!isset($ws1p['termine'][0]['dozenten']) && array_column($ws1p['termine'][1]['dozenten'] ?? [], 'name') === ['Dr. Erika Muster'], 'Dozierende je Termin: erster wie Workshop, zweiter abweichend');
+    $pub = programm_veroeffentlicht()['punkte'];
+    $ws1v = array_values(array_filter($pub, fn($p) => $p['id'] === $ws1))[0];
+    pruefe(isset($ws1v['termine'][1]['dozenten']), 'abweichende Dozierende sind veröffentlicht');
+    $tids = array_column($ws1p['termine'], 'id');
+    $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => $ws1p['titel'], 'kuerzel' => 'WS 01', 'dozenten' => array_column($ws1p['dozenten'], 'id'),
+        't_id' => [$tids[0], $tids[1], 0], 't_key' => ['z0', 'z1', 'n1'], 't_beginn' => ['19:30', '20:30', '21:15'], 't_ende' => ['20:15', '21:15', '21:30'], 't_plaetze' => ['12', '12', '4'],
+        't_doz' => ['z0' => [(string)$ws1p['dozenten'][0]['id'], '999999'], 'n1' => []]], $ws1);
+    pruefe($r['fehler'] === [] && $r['termine'][0]['dozenten'] === [(int)$ws1p['dozenten'][0]['id']] && $r['termine'][1]['dozenten'] === [] && $r['termine'][2]['dozenten'] === [], 'Dozierende je Termin über den Zeilen-Schlüssel, unbekannte verworfen');
+    programm_punkt_speichern($ws1, $r, null);
+    pruefe((int)db_wert('SELECT COUNT(*) FROM termin_dozent td JOIN workshop_termin t ON t.id = td.termin_id WHERE t.punkt_id = ?', [$ws1]) === 1, 'gespeichert: nur der erste Termin weicht ab, der zweite wieder wie Workshop');
+    programm_verwerfen(null);
+    pruefe((int)db_wert('SELECT COUNT(*) FROM termin_dozent td JOIN workshop_termin t ON t.id = td.termin_id WHERE t.punkt_id = ? AND t.id = ?', [$ws1, $tids[1]]) === 1, 'Verwerfen stellt die abweichenden Dozierenden wieder her');
     db_ausfuehren("UPDATE workshop_termin SET beginn = '23:00:00', ende = '23:30:00' WHERE punkt_id = ? ORDER BY id LIMIT 1", [$wsId]);
     programm_zuordnen($wsId, $blockId, null);
     pruefe($kind($wsId) === $termineWs && array_filter(programm_hinweise(programm_arbeitsstand()), fn($x) => str_contains($x, 'liegt aber 23:00')) !== [], 'zugeordnet trotz Uhrzeit außerhalb, mit Hinweis');

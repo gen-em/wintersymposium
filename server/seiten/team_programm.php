@@ -42,13 +42,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/team/programm');
         case 'verschieben':
             $art = (string)($_POST['art'] ?? '') === 'termin' ? 'termin' : 'punkt';
-            $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich, !empty($_POST['nachruecken']));
-            $nr = (int)($GLOBALS['programm_nachgerueckt'] ?? 0);
             $pid = $art === 'termin' ? (int)db_wert('SELECT punkt_id FROM workshop_termin WHERE id = ?', [(int)($_POST['id'] ?? 0)]) : (int)($_POST['id'] ?? 0);
-            // In einen Block gezogen bzw. aus ihm heraus (Rückmeldung 2026-10-30): nur Workshops und Stationen
-            if ($neu !== null && ($_POST['block'] ?? '') !== '' && in_array(db_wert('SELECT typ FROM programmpunkt WHERE id = ?', [$pid]), ['workshop', 'station'], true)) {
+            // In einen Block gezogen bzw. aus ihm heraus (Rückmeldung 2026-10-30): zuerst zuordnen,
+            // damit ein Punkt im Block die Hauptspur nicht nach hinten schiebt
+            if (($_POST['block'] ?? '') !== '' && in_array(db_wert('SELECT typ FROM programmpunkt WHERE id = ?', [$pid]), PROGRAMM_IM_BLOCK, true)) {
                 programm_zuordnen($pid, (int)$_POST['block'] ?: null, $ich);
             }
+            $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich, !empty($_POST['nachruecken']));
+            $nr = (int)($GLOBALS['programm_nachgerueckt'] ?? 0);
             flash_setzen($neu === null ? 'fehler' : 'hinweis', $neu === null ? 'Verschieben ging nicht.' : "Neue Uhrzeit vorgeschlagen: $neu – bitte prüfen." . ($nr > 0 ? ' ' . ($nr === 1 ? 'Ein Punkt rückt' : "$nr Punkte rücken") . ' dahinter nach hinten.' : '') . ' Gespeichert, noch nicht veröffentlicht.');
             umleiten('/team/programm' . ($pid > 0 ? '?id=' . $pid : ''));
         case 'zuordnen':
@@ -103,11 +104,13 @@ $typ = $v('typ', $neuTyp ?? 'vortrag');
 $termineForm = [];
 if ($eingabe !== null) {
     foreach ((array)($eingabe['t_beginn'] ?? []) as $i => $b) {
-        $termineForm[] = ['id' => (int)(($eingabe['t_id'] ?? [])[$i] ?? 0), 'beginn' => (string)$b, 'ende' => (string)(($eingabe['t_ende'] ?? [])[$i] ?? ''), 'plaetze' => (string)(($eingabe['t_plaetze'] ?? [])[$i] ?? '')];
+        $schl = (string)(($eingabe['t_key'] ?? [])[$i] ?? '');
+        $termineForm[] = ['id' => (int)(($eingabe['t_id'] ?? [])[$i] ?? 0), 'beginn' => (string)$b, 'ende' => (string)(($eingabe['t_ende'] ?? [])[$i] ?? ''), 'plaetze' => (string)(($eingabe['t_plaetze'] ?? [])[$i] ?? ''),
+            'doz' => array_map('intval', (array)(($eingabe['t_doz'] ?? [])[$schl] ?? []))];
     }
     $termineForm = array_values(array_filter($termineForm, fn($t) => $t['beginn'] !== '' || $t['ende'] !== '' || $t['plaetze'] !== ''));
 } elseif ($bearbeiten !== null) {
-    $termineForm = $bearbeiten['termine'];
+    $termineForm = array_map(fn($t) => $t + ['doz' => array_column($t['dozenten'] ?? [], 'id')], $bearbeiten['termine']);
 }
 $gewaehlteDoz = $eingabe !== null ? array_map('intval', (array)($eingabe['dozenten'] ?? [])) : array_column($bearbeiten['dozenten'] ?? [], 'id');
 $dozenten = dozent_liste();
@@ -154,7 +157,7 @@ if ($st['offen']):
 <div class="pg-raster">
     <div class="kasten pg-plan">
         <p class="unterkopf"><?= e(tag_text(va('veranstaltung_datum'))) ?> · Tagesplan</p>
-        <p class="meta klein">Sortiert nach Uhrzeit. Am Griff ⋮⋮ zwischen zwei Punkte ziehen – die weiße Linie zeigt, wo: Der Punkt beginnt, wo der darüber endet, nachfolgende Punkte rücken bis zur nächsten Lücke nach hinten. Workshops und Stationen auf die Mitte eines Workshop-Blocks ziehen ordnet sie ihm zu (grün umrandet); sonst hängen sie unter dem Block, in dessen Zeit sie liegen. Punkte ohne Uhrzeit stehen oben hell-lila.</p>
+        <p class="meta klein">Sortiert nach Uhrzeit. Am Griff ⋮⋮ zwischen zwei Punkte ziehen – die weiße Linie zeigt, wo: Der Punkt beginnt, wo der darüber endet, nachfolgende Punkte rücken bis zur nächsten Lücke nach hinten. Workshops, Stationen, Vorträge und Fallbesprechungen auf die Mitte eines Workshop-Blocks ziehen ordnet sie ihm zu (grün umrandet), ebenso Ziehen zwischen zwei Punkte im Block; Workshops und Stationen ohne Zuordnung hängen unter dem Block, in dessen Zeit sie liegen. Punkte ohne Uhrzeit stehen oben hell-lila.</p>
         <?php if ($gliederung === []): ?><p class="hinweis-leer">Noch keine Programmpunkte. Lege mit „+ Programmpunkt“ den ersten an.</p><?php endif; ?>
         <ol class="pg-liste" id="pg-liste">
         <?php
@@ -166,7 +169,7 @@ if ($st['offen']):
             return '<div class="' . $klasse . '" data-art="' . $art . '" data-id="' . $zid . '" data-punkt="' . (int)$p['id'] . '" data-typ="' . e($p['typ']) . '" data-beginn="' . e($von) . '" data-ende="' . e($bis) . '">'
                 . '<a class="pg-link" href="/team/programm?id=' . $p['id'] . '"><span class="mono">' . ($von !== '' ? e($von . '–' . $bis) : '--:--') . '</span><span>' . $inhalt
                 . ($s !== 'veroeffentlicht' ? ' <span class="st ges">nicht veröffentlicht</span>' : '') . '</span></a>'
-                . (($p['typ'] !== 'workshop' || $art === 'termin' || $p['termine'] === []) ? '<span class="griff" draggable="true" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
+                . (($p['typ'] !== 'workshop' || $art === 'termin' || $p['termine'] === []) ? '<span class="griff" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
                 . '</div>';
         };
         $chip = function (array $p): string {
@@ -179,7 +182,7 @@ if ($st['offen']):
         foreach ($gliederung as $g):
             $p = $g['punkt'];
             if ($g['art'] === 'block'): ?>
-            <li class="pg-block"><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], '<strong>' . e($p['titel']) . '</strong> <span class="meta klein">Workshop-Block · ' . count($g['kinder']) . ' Termine</span>') ?>
+            <li class="pg-block"><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], '<strong>' . e($p['titel']) . '</strong> <span class="meta klein">Workshop-Block · ' . count($g['kinder']) . ' Einträge</span>') ?>
                 <ol class="pg-kinder">
                 <?php foreach ($g['kinder'] as $k):
                     $kp = $k['punkt'];
@@ -197,7 +200,6 @@ if ($st['offen']):
             <li><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], $chip($p) . e($p['titel']) . ($p['typ'] === 'workshop' ? ' <span class="meta klein">noch ohne Termin</span>' : '')) ?></li>
             <?php endif;
         endforeach; ?>
-        <?php if ($gliederung !== []): ?><li class="pg-ende" id="pg-ende" hidden>Hierher ziehen: ans Ende</li><?php endif; ?>
         </ol>
         <form method="post" action="/team/programm" id="verschieben-form" hidden>
             <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value=""><input type="hidden" name="nachruecken" value="1"><input type="hidden" name="block" value="">
@@ -237,8 +239,8 @@ if ($st['offen']):
             </div>
             <?php $bloeckeWahl = array_filter($arbeit, fn($b) => $b['typ'] === 'block');
             $blockJetzt = (string)($eingabe['block_id'] ?? ($bearbeiten['block_id'] ?? '')); ?>
-            <div class="feld"<?= $fuer(['workshop', 'station']) ?>><label for="pg-block">Gehört zu Workshop-Block</label>
-                <select id="pg-block" name="block_id"><option value="">automatisch (nach Uhrzeit)</option><?php foreach ($bloeckeWahl as $b): ?><option value="<?= $b['id'] ?>"<?= $blockJetzt === (string)$b['id'] ? ' selected' : '' ?>><?= e($b['titel'] . ($b['beginn'] !== '' ? ' · ' . $b['beginn'] . '–' . $b['ende'] : '')) ?></option><?php endforeach; ?></select>
+            <div class="feld"<?= $fuer(PROGRAMM_IM_BLOCK) ?>><label for="pg-block">Gehört zu Workshop-Block</label>
+                <select id="pg-block" name="block_id"><option value=""><?= in_array($typ, ['vortrag', 'fall'], true) ? 'keinem (Hauptprogramm)' : 'automatisch (nach Uhrzeit)' ?></option><?php foreach ($bloeckeWahl as $b): ?><option value="<?= $b['id'] ?>"<?= $blockJetzt === (string)$b['id'] ? ' selected' : '' ?>><?= e($b['titel'] . ($b['beginn'] !== '' ? ' · ' . $b['beginn'] . '–' . $b['ende'] : '')) ?></option><?php endforeach; ?></select>
                 <p class="hilfe">Auch im Plan: den Punkt auf die Mitte eines Blocks ziehen.</p></div>
             <div class="feld"><label for="pg-titel">Titel</label><input id="pg-titel" name="titel" type="text" maxlength="160" required value="<?= e($v('titel')) ?>"<?= $ungueltig('titel') ?>><?= $fehlerFeld('titel') ?></div>
             <div class="feld"<?= $fuer(['vortrag', 'fall', 'workshop']) ?>><label for="pg-untertitel">Untertitel</label><input id="pg-untertitel" name="untertitel" type="text" maxlength="200" value="<?= e($v('untertitel')) ?>"<?= $ungueltig('untertitel') ?>><?= $fehlerFeld('untertitel') ?></div>
@@ -260,21 +262,27 @@ if ($st['offen']):
             <div class="feld"<?= $fuer(['workshop']) ?>>
                 <p class="unterkopf">Termine</p>
                 <table class="pg-termine">
-                    <thead><tr><th>Beginn</th><th>Ende</th><th>Plätze</th><th>Belegt</th><th></th></tr></thead>
+                    <thead><tr><th>Beginn</th><th>Ende</th><th>Plätze</th><th>Dozierende</th><th>Belegt</th><th></th></tr></thead>
                     <tbody id="pg-termine">
-                    <?php foreach (array_merge($termineForm, [['id' => 0, 'beginn' => '', 'ende' => '', 'plaetze' => '']]) as $i => $t): $leer = (int)$t['id'] === 0 && $t['beginn'] === ''; ?>
+                    <?php foreach (array_merge($termineForm, [['id' => 0, 'beginn' => '', 'ende' => '', 'plaetze' => '', 'doz' => []]]) as $i => $t): $leer = (int)$t['id'] === 0 && $t['beginn'] === '';
+                        $schl = 'z' . $i; $tDoz = $t['doz'] ?? []; ?>
                         <tr<?= $leer ? ' class="vorlage"' : '' ?>>
-                            <td data-titel="Beginn"><input type="hidden" name="t_id[]" value="<?= (int)$t['id'] ?>"><input type="time" step="60" name="t_beginn[]" value="<?= e((string)$t['beginn']) ?>" aria-label="Beginn"></td>
+                            <td data-titel="Beginn"><input type="hidden" name="t_id[]" value="<?= (int)$t['id'] ?>"><input type="hidden" name="t_key[]" value="<?= $schl ?>"><input type="time" step="60" name="t_beginn[]" value="<?= e((string)$t['beginn']) ?>" aria-label="Beginn"></td>
                             <td data-titel="Ende"><input type="time" step="60" name="t_ende[]" value="<?= e((string)$t['ende']) ?>" aria-label="Ende"></td>
                             <td data-titel="Plätze"><input type="number" min="1" max="<?= PROGRAMM_MAX_PLAETZE ?>" name="t_plaetze[]" value="<?= e((string)$t['plaetze']) ?>" aria-label="Plätze"></td>
+                            <td data-titel="Dozierende"><?php if ($dozenten === []): ?><span class="meta klein">wie Workshop</span><?php else: ?>
+                                <details class="t-doz"><summary><?= $tDoz === [] ? 'wie Workshop' : e(implode(', ', array_column(array_filter($dozenten, fn($d) => in_array((int)$d['id'], $tDoz, true)), 'name'))) ?></summary>
+                                    <div class="t-doz-wahl"><p class="hilfe">Nur wenn dieser Termin abweicht (z. B. Pause einer Dozentin). Nichts gewählt = wie beim Workshop.</p>
+                                    <?php foreach ($dozenten as $d): ?><label class="tag-wahl"><input type="checkbox" name="t_doz[<?= $schl ?>][]" value="<?= (int)$d['id'] ?>"<?= in_array((int)$d['id'], $tDoz, true) ? ' checked' : '' ?>><span><?= e($d['name']) ?></span></label><?php endforeach; ?></div>
+                                </details><?php endif; ?></td>
                             <td class="n" data-titel="Belegt"><?= (int)$t['id'] > 0 ? termin_belegt((int)$t['id']) : '–' ?></td>
-                            <td class="t-aktion"><button type="button" class="mini" data-duplizieren>Duplizieren</button><?php if ((int)$t['id'] > 0): ?><label class="mini-haken"><input type="checkbox" name="t_weg[<?= $i ?>]" value="1"> entfernen</label><?php endif; ?></td>
+                            <td class="t-aktion"><button type="button" class="mini" data-duplizieren>Duplizieren</button><?php if ((int)$t['id'] > 0): ?><label class="mini-haken"><input type="checkbox" name="t_weg[<?= $i ?>]" value="1"> entfernen</label><?php else: ?><button type="button" class="mini" data-entfernen hidden>Entfernen</button><?php endif; ?></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
                 </table>
                 <?= $fehlerFeld('termine') ?>
-                <p class="hilfe">Die leere Zeile unten ist für einen neuen Termin. „Duplizieren“ legt den nächsten Termin direkt im Anschluss an, mit gleicher Dauer und gleichen Plätzen.</p>
+                <p class="hilfe">Die leere Zeile unten ist für einen neuen Termin. „Duplizieren“ legt den nächsten Termin direkt im Anschluss an, mit gleicher Dauer, Plätzen und Dozierenden. Neue Zeilen nimmt „Entfernen“ sofort weg; gespeicherte Termine mit „entfernen“ anhaken, sie verschwinden beim Speichern.</p>
                 <button type="button" class="mini" id="pg-termin-neu">+ Termin</button>
             </div>
             <div class="aktionen">

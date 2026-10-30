@@ -67,9 +67,13 @@ function beispieldaten_programm(): array
     $ids[] = $punkt(['typ' => 'fall', 'kuerzel' => 'FB 01', 'titel' => 'Fall #1', 'untertitel' => 'Was hättest du gemacht?', 'beschreibung' => 'Ein Fall zum Mitentscheiden.', 'ort' => 'Hörsaal', 'beginn' => '18:45', 'ende' => '19:15']);
     $ids[] = $punkt(['typ' => 'block', 'titel' => 'Workshops und offene Stationen', 'beginn' => '19:30', 'ende' => '21:30']);
     $ids[] = $punkt(['typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Atemweg. Plan B.', 'beschreibung' => 'Videolaryngoskop, Larynxtubus, Koniotomie.', 'ort' => 'Skills-Lab 1', 'bring' => 'Stethoskop', 'notiz' => 'Brille mitbringen.', 'dozenten' => [$d2],
-        't_beginn' => ['19:30', '20:30'], 't_ende' => ['20:15', '21:15'], 't_plaetze' => ['12', '12']]);
+        't_beginn' => ['19:30', '20:30'], 't_ende' => ['20:15', '21:15'], 't_plaetze' => ['12', '12'],
+        // zweiter Termin mit anderer Leitung (Rückmeldung 2026-10-30: Dozierende je Termin)
+        't_key' => ['a', 'b'], 't_doz' => ['b' => [$d1]]]);
     $ids[] = $punkt(['typ' => 'workshop', 'kuerzel' => 'WS 02', 'titel' => 'Kleine PatientInnen', 'beschreibung' => 'Kindernotfälle ohne Panik.', 'ort' => 'Seminarraum 2',
         't_beginn' => ['19:30', '20:00', '20:30'], 't_ende' => ['20:00', '20:30', '21:00'], 't_plaetze' => ['10', '10', '2']]);
+    // Fallbesprechung im Workshop-Block, ausdrücklich zugeordnet (Rückmeldung 2026-10-30)
+    $ids[] = $punkt(['typ' => 'fall', 'kuerzel' => 'FB 02', 'titel' => 'Fall im Block', 'beschreibung' => 'Kurzer Fall parallel zu den Workshops.', 'ort' => 'Seminarraum 3', 'beginn' => '20:00', 'ende' => '20:30', 'block_id' => (string)$ids[3], 'dozenten' => [$d1]]);
     $ids[] = $punkt(['typ' => 'station', 'titel' => 'Reanimation im Kreis', 'beschreibung' => 'Komm vorbei und drück mit.', 'ort' => 'Foyer', 'beginn' => '19:30', 'ende' => '21:30']);
     $ids[] = $punkt(['typ' => 'pause', 'titel' => 'Abschluss', 'ort' => 'Foyer', 'beginn' => '21:30', 'ende' => '22:00']);
     $fehler = programm_veroeffentlichen(null);

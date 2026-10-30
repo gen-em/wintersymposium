@@ -44,10 +44,11 @@
         Array.prototype.slice.call(inhalt.querySelectorAll("button[type=submit], button:not([type])")).forEach(function (b) {
             var f = b.form;
             if (f) {
-                if (!f.id) {
-                    f.id = "dlg-form-" + nr + "-" + Math.random().toString(36).slice(2, 7);
+                // getAttribute statt f.id: ein Feld name="id" im Formular überdeckt sonst die Eigenschaft
+                if (!f.getAttribute("id")) {
+                    f.setAttribute("id", "dlg-form-" + nr + "-" + Math.random().toString(36).slice(2, 7));
                 }
-                b.setAttribute("form", f.id);
+                b.setAttribute("form", f.getAttribute("id"));
             }
             b.classList.remove("gefahr", "zweit", "klein-knopf");
             b.classList.add("knopf", "dlg-ja");

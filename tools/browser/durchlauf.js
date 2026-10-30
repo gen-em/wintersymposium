@@ -138,6 +138,17 @@ async function pruefeBedienung(p, engine, breite, name) {
   }
 }
 
+/** Am Griff ziehen und über dem Ziel loslassen (Anteil = Höhe in der Zielzeile); waehrend() prüft die Anzeige vor dem Loslassen. */
+async function ziehen(p, griff, ziel, anteil, waehrend) {
+  const g = await griff.boundingBox();
+  const z = await ziel.boundingBox();
+  await p.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(z.x + 40, z.y + z.height * anteil, { steps: 8 });
+  if (waehrend) await waehrend();
+  await p.mouse.up();
+}
+
 /** Seite prüfen: Status, seitliches Scrollen, Fehler; Bildschirmfoto. */
 async function pruefeSeite(p, fehler, engine, breite, name, url) {
   fehler.length = 0;
@@ -214,6 +225,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const raster = await p.isVisible('.gantt-wrap');
         const liste = await p.isVisible('.ws-mobil');
         notiere(engine, breite, 'start', w >= 760 ? 'Workshop-Block als Zeitraster' : 'Workshop-Block als Liste', w >= 760 ? (raster && !liste) : (liste && !raster));
+        notiere(engine, breite, 'start', 'Fallbesprechung im Block sichtbar', w >= 760 ? await p.isVisible('.gb.fb') : await p.isVisible('.ws-mobil li.im-block.fb'));
         if (w >= 760) {
           const balken = await p.evaluate(() => [...document.querySelectorAll('.gb')].every(b => b.getBoundingClientRect().width > 8));
           notiere(engine, breite, 'start', 'Balken im Zeitraster gesetzt', balken);
@@ -224,6 +236,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           await ausloeser.click();
           await p.waitForSelector('dialog[open]');
           await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-${name}.png`) });
+          if (name === 'popup-workshop') notiere(engine, breite, 'start', 'Termin mit abweichenden Dozierenden im Popup', ((await p.textContent('dialog[open]')) || '').includes('mit Dr. Erika Muster'));
           await p.click('dialog[open] [data-schliessen]');
           notiere(engine, breite, 'start', `${name}: ✕ schließt`, await p.locator('dialog[open]').count() === 0);
         }
@@ -440,6 +453,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const nachher = await p.locator('#pg-termine tr').count();
         const dup = await p.locator('#pg-termine tr').last().locator('[name="t_beginn[]"]').inputValue();
         notiere(engine, breite, 'team-programm-workshop', '+ Termin und Duplizieren (Anschluss 20:15)', nachher === vorher + 2 && dup === '20:15', `${vorher}→${nachher}, ${dup}`);
+        // Neue Zeilen lassen sich entfernen; Dozierende je Termin (Rückmeldung 2026-10-30)
+        await p.locator('#pg-termine tr').last().locator('[data-entfernen]').click();
+        notiere(engine, breite, 'team-programm-workshop', 'Neue Termin-Zeile entfernen', await p.locator('#pg-termine tr').count() === nachher - 1);
+        notiere(engine, breite, 'team-programm-workshop', 'Zweiter Termin mit abweichenden Dozierenden', ((await p.locator('#pg-termine tr').nth(1).locator('.t-doz summary').textContent()) || '').includes('Erika Muster')
+          && ((await p.locator('#pg-termine tr').nth(0).locator('.t-doz summary').textContent()) || '').includes('wie Workshop'));
         await pruefeSeite(p, fehler, engine, breite, 'team-dozierende', basis + '/team/dozierende?id=1');
         await pruefeSeite(p, fehler, engine, breite, 'team-programm-vorschau', basis + '/team/programm/vorschau');
       }
@@ -454,30 +472,14 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       const neuZeile = p.locator('.pg-zeile.pg-neu-punkt', { hasText: 'Pause ' + engine });
       notiere(engine, 'desktop-breit', 'team-programm', 'neuer Punkt oben hell-lila', await neuZeile.count() === 1);
       const zielZeile = p.locator('.pg-zeile', { hasText: 'Fall #1' }).first();
-      if (engine === 'webkit') {
-        // Playwright kann in WebKit unter Linux kein natives Ziehen (HTML5 Drag and Drop) auslösen;
-        // dieselben Ereignisse werden deshalb im Browser selbst ausgelöst – die Logik in programm-team.js läuft gleich.
-        await Promise.all([p.waitForNavigation(), p.evaluate(([titel]) => {
-          const quelle = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes(titel)).querySelector('.griff');
-          const ziel = [...document.querySelectorAll('.pg-zeile')].find(z => z.textContent.includes('Fall #1'));
-          const r = ziel.getBoundingClientRect();
-          const unten = { clientX: r.left + 20, clientY: r.bottom - 4 }; // untere Hälfte: nach Fall #1 einfügen
-          const dt = new DataTransfer();
-          quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
-          ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
-          ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, ...unten }));
-        }, ['Pause ' + engine])]);
-      } else {
-        // Quelle und Ziel gleichzeitig sichtbar: sonst scrollt Playwright nach dem Drücken zum Ziel,
-        // und Chromium beginnt das Ziehen an der alten Mausposition (dort steht dann eine andere Zeile)
-        await p.setViewportSize({ width: 1440, height: 1800 });
-        const box = await zielZeile.boundingBox();
-        // untere Hälfte der Zeile: Einfügen nach Fall #1 (grüne Linie unten)
-        await Promise.all([p.waitForNavigation(), neuZeile.locator('.griff').dragTo(zielZeile, { targetPosition: { x: 20, y: box.height - 4 } })]);
-      }
+      // Ziehen mit der Maus (Zeiger-Ereignisse, in allen drei Engines echt); untere Hälfte: nach Fall #1 einfügen
+      await p.setViewportSize({ width: 1440, height: 1800 });
+      await Promise.all([p.waitForNavigation(), ziehen(p, neuZeile.locator('.griff'), zielZeile, 0.85, async () => {
+        notiere(engine, 'desktop-breit', 'team-programm', 'Einfügelinie beim Ziehen sichtbar', await p.locator('li.ziel-nach').count() === 1);
+      })]);
       await p.waitForLoadState('load');
       await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-programm-gezogen.png`), fullPage: true });
-      notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45') && (await p.textContent('body')).includes('2 Punkte rücken dahinter nach hinten'),
+      notiere(engine, 'desktop-breit', 'team-programm', 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45') && (await p.textContent('body')).includes('2 Punkte rücken dahinter nach hinten'),
         (await p.locator('.meldung').allTextContents()).join(' | ') + ' ' + p.url());
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.click('.entwurf-banner button:has-text("Verwerfen")');
@@ -491,20 +493,36 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.waitForLoadState('load');
       notiere(engine, 'desktop-breit', 'team-programm', 'Verwerfen über den Banner', (await p.textContent('body')).includes('Verworfen'));
 
-      // Station auf die Mitte des Workshop-Blocks ziehen: zuordnen (Rückmeldung 2026-10-30; Ereignisse im Browser ausgelöst)
+      // Station auf die Mitte des Workshop-Blocks ziehen: zuordnen (Rückmeldung 2026-10-30), auf dem Handy mit dem Finger
+      await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/team/programm');
       const stationVorher = await p.locator('.pg-kinder .pg-zeile[data-typ="station"]').count();
+      await p.locator('.pg-zeile.block').first().scrollIntoViewIfNeeded();
       await Promise.all([p.waitForNavigation(), p.evaluate(() => {
-        const quelle = document.querySelector('.pg-zeile[data-typ="station"] .griff');
+        // Finger: Zeiger-Ereignisse mit pointerType "touch" (Playwright kann Finger-Ziehen nicht selbst auslösen)
+        const griff = document.querySelector('.pg-zeile[data-typ="station"] .griff');
         const ziel = document.querySelector('.pg-zeile.block');
-        const r = ziel.getBoundingClientRect();
-        const mitte = { clientX: r.left + 20, clientY: r.top + r.height / 2 };
-        const dt = new DataTransfer();
-        quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
-        ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, ...mitte }));
-        ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, ...mitte }));
+        const g = griff.getBoundingClientRect(), r = ziel.getBoundingClientRect();
+        const ev = (typ, el, x, y) => el.dispatchEvent(new PointerEvent(typ, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, button: 0 }));
+        ev('pointerdown', griff, g.left + 4, g.top + 4);
+        ev('pointermove', griff, r.left + 40, r.top + r.height / 2);
+        ev('pointerup', griff, r.left + 40, r.top + r.height / 2);
       })]);
-      notiere(engine, 'desktop-breit', 'team-programm', 'Station auf den Block gezogen: zugeordnet', (await p.textContent('body')).includes('Zugeordnet') && await p.locator('.pg-kinder .pg-zeile[data-typ="station"]').count() >= stationVorher, `${stationVorher}`);
+      await p.setViewportSize({ width: 1440, height: 900 });
+      notiere(engine, 'handy', 'team-programm', 'Station mit dem Finger auf den Block gezogen: zugeordnet', (await p.textContent('body')).includes('Zugeordnet') && await p.locator('.pg-kinder .pg-zeile[data-typ="station"]').count() >= stationVorher, `${stationVorher}`);
+      await p.click('.entwurf-banner button:has-text("Verwerfen")');
+      await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, verwerfen")')]);
+
+      // Programmpunkt löschen über den Dialog (Rückmeldung 2026-10-30: Knopf ging nicht, Dialog unten)
+      await p.goto(basis + '/team/programm');
+      await p.click('.pg-link:has-text("Sepsis")');
+      await p.waitForLoadState('load');
+      await p.click('#pg-loeschen');
+      await p.waitForTimeout(400);
+      const lBox = await p.locator('dialog[open]').boundingBox();
+      notiere(engine, 'desktop-breit', 'team-programm', 'Löschen-Dialog mittig', lBox !== null && Math.abs((lBox.y + lBox.height / 2) - 450) < 40, JSON.stringify(lBox));
+      await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, löschen")')]);
+      notiere(engine, 'desktop-breit', 'team-programm', '„Ja, löschen“ löscht', (await p.textContent('body')).includes('Gelöscht'));
       await p.click('.entwurf-banner button:has-text("Verwerfen")');
       await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, verwerfen")')]);
 

@@ -68,6 +68,22 @@ function programm_arbeitsstand(): array
             $punkte[(int)$t['punkt_id']]['termine'][] = ['id' => (int)$t['id'], 'beginn' => hm($t['beginn']), 'ende' => hm($t['ende']), 'plaetze' => (int)$t['plaetze']];
         }
     }
+    // Abweichende Dozierende je Termin (Rückmeldung 2026-10-30); Schlüssel nur wenn gesetzt (gleicher Hash wie vorher)
+    $jeTermin = [];
+    foreach (db_zeilen('SELECT td.termin_id, d.id, d.name, d.funktion, d.kurzbio, d.foto FROM termin_dozent td JOIN dozent d ON d.id = td.dozent_id ORDER BY td.pos, d.name') as $d) {
+        $jeTermin[(int)$d['termin_id']][] = ['id' => (int)$d['id'], 'name' => $d['name'], 'funktion' => $d['funktion'], 'kurzbio' => $d['kurzbio'], 'foto' => $d['foto']];
+    }
+    if ($jeTermin !== []) {
+        foreach ($punkte as &$p) {
+            foreach ($p['termine'] as &$t) {
+                if (isset($jeTermin[$t['id']])) {
+                    $t['dozenten'] = $jeTermin[$t['id']];
+                }
+            }
+            unset($t);
+        }
+        unset($p);
+    }
     foreach (db_zeilen('SELECT pd.punkt_id, d.id, d.name, d.funktion, d.kurzbio, d.foto FROM punkt_dozent pd JOIN dozent d ON d.id = pd.dozent_id ORDER BY pd.pos, d.name') as $d) {
         if (isset($punkte[(int)$d['punkt_id']])) {
             $punkte[(int)$d['punkt_id']]['dozenten'][] = ['id' => (int)$d['id'], 'name' => $d['name'], 'funktion' => $d['funktion'], 'kurzbio' => $d['kurzbio'], 'foto' => $d['foto']];
@@ -142,7 +158,8 @@ function programm_sortieren(array $punkte): array
 /**
  * Gliederung für Plan und Startseite: Liste von Einträgen
  *   ['art' => 'punkt', 'punkt' => p]               Vortrag, Fall, Pause, Station/Workshop außerhalb von Blöcken
- *   ['art' => 'block', 'punkt' => p, 'kinder' => [['art' => 'termin'|'station', 'punkt' => p, 'termin' => t|null]]]
+ *   ['art' => 'block', 'punkt' => p, 'kinder' => [['art' => 'termin'|'punkt', 'punkt' => p, 'termin' => t|null]]]
+ *   (art 'punkt' im Block: Station, Vortrag oder Fallbesprechung)
  * Ein Workshop-Termin oder eine Station gehört zum ersten Block, in dessen Zeit er ganz liegt.
  */
 function programm_gliederung(array $punkte): array
@@ -181,19 +198,24 @@ function programm_gliederung(array $punkte): array
                 $aussen[] = ['art' => 'punkt', 'punkt' => $p];
             }
         } elseif ($p['typ'] === 'station' && (($b = $zugeordnet($p)) !== null || ($p['beginn'] !== '' && ($b = $imBlock($p['beginn'], $p['ende'])) !== null))) {
-            $kinder[$b][] = ['art' => 'station', 'punkt' => $p, 'termin' => null];
+            $kinder[$b][] = ['art' => 'punkt', 'punkt' => $p, 'termin' => null];
+        } elseif (in_array($p['typ'], ['vortrag', 'fall'], true) && ($b = $zugeordnet($p)) !== null) {
+            // Vorträge und Fallbesprechungen nur ausdrücklich zugeordnet, nicht über die Uhrzeit
+            $kinder[$b][] = ['art' => 'punkt', 'punkt' => $p, 'termin' => null];
         }
     }
     $liste = [];
     foreach ($punkte as $p) {
         if ($p['typ'] === 'block') {
             $k = $kinder[$p['id']] ?? [];
-            usort($k, fn($a, $b) => [($a['termin']['beginn'] ?? $a['punkt']['beginn']), $a['art'] === 'station' ? 1 : 0] <=> [($b['termin']['beginn'] ?? $b['punkt']['beginn']), $b['art'] === 'station' ? 1 : 0]);
+            usort($k, fn($a, $b) => [($a['termin']['beginn'] ?? $a['punkt']['beginn']), $a['art'] === 'punkt' ? 1 : 0] <=> [($b['termin']['beginn'] ?? $b['punkt']['beginn']), $b['art'] === 'punkt' ? 1 : 0]);
             $liste[] = ['art' => 'block', 'punkt' => $p, 'kinder' => $k, 'beginn' => $p['beginn']];
         } elseif ($p['typ'] === 'station') {
             if ($zugeordnet($p) === null && ($p['beginn'] === '' || $imBlock($p['beginn'], $p['ende']) === null)) {
                 $liste[] = ['art' => 'punkt', 'punkt' => $p, 'beginn' => $p['beginn']];
             }
+        } elseif (in_array($p['typ'], ['vortrag', 'fall'], true) && $zugeordnet($p) !== null) {
+            continue;
         } elseif ($p['typ'] !== 'workshop') {
             $liste[] = ['art' => 'punkt', 'punkt' => $p, 'beginn' => $p['beginn']];
         }
@@ -255,8 +277,8 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'ende' => trim((string)($e['ende'] ?? '')),
         'block_id' => (int)($e['block_id'] ?? 0) ?: null,
     ];
-    // Zuordnung zu einem Block nur für Workshops und Stationen, nur zu einem vorhandenen Block
-    if (!in_array($typ, ['workshop', 'station'], true) || ($w['block_id'] !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$w['block_id']]) != 1)) {
+    // Zuordnung zu einem Block nur für Inhalte (PROGRAMM_IM_BLOCK), nur zu einem vorhandenen Block
+    if (!in_array($typ, PROGRAMM_IM_BLOCK, true) || ($w['block_id'] !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$w['block_id']]) != 1)) {
         $w['block_id'] = null;
     }
     foreach (['kuerzel' => 12, 'titel' => 160, 'untertitel' => 200, 'beschreibung' => 4000, 'ort' => 120, 'bring' => 160, 'notiz' => 300] as $k => $max) {
@@ -301,6 +323,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
     }
     // Termine
     $termine = [];
+    $gibt = array_map('intval', array_column(db_zeilen('SELECT id FROM dozent'), 'id'));
     if ($typ === 'workshop') {
         $tb = (array)($e['t_beginn'] ?? []);
         foreach ($tb as $i => $von) {
@@ -309,6 +332,14 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
             $pl = trim((string)(($e['t_plaetze'] ?? [])[$i] ?? ''));
             $tid = (int)(($e['t_id'] ?? [])[$i] ?? 0);
             $weg = !empty(($e['t_weg'] ?? [])[$i]);
+            // Dozierende je Termin: Zeilen-Schlüssel statt Position (Zeilen lassen sich entfernen)
+            $schluessel = (string)(($e['t_key'] ?? [])[$i] ?? '');
+            $tDoz = [];
+            foreach ((array)(($e['t_doz'] ?? [])[$schluessel] ?? []) as $d) {
+                if (in_array((int)$d, $gibt, true) && !in_array((int)$d, $tDoz, true)) {
+                    $tDoz[] = (int)$d;
+                }
+            }
             if ($weg || ($von === '' && $bis === '' && $pl === '')) {
                 if ($weg && $tid > 0 && termin_belegt($tid) > 0) {
                     $f['termine'] = 'Ein Termin mit Anmeldungen kann nicht entfernt werden – zuerst die Personen umbuchen.';
@@ -325,7 +356,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
             } elseif ($tid > 0 && (int)$pl < termin_belegt($tid)) {
                 $f['termine'] = "Termin $n: " . (int)$pl . ' Plätze, aber schon ' . termin_belegt($tid) . ' vergeben. Plätze können nicht unter die vergebenen gesenkt werden – zuerst Personen umbuchen.';
             }
-            $termine[] = ['id' => $tid > 0 ? $tid : null, 'beginn' => $von, 'ende' => $bis, 'plaetze' => (int)$pl];
+            $termine[] = ['id' => $tid > 0 ? $tid : null, 'beginn' => $von, 'ende' => $bis, 'plaetze' => (int)$pl, 'dozenten' => $tDoz];
         }
         if (count($termine) > PROGRAMM_MAX_TERMINE) {
             $f['termine'] = 'Höchstens ' . PROGRAMM_MAX_TERMINE . ' Termine je Workshop.';
@@ -334,7 +365,6 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
     // Dozierende (nur vorhandene)
     $dozenten = [];
     if (in_array($typ, ['vortrag', 'fall', 'workshop', 'station'], true)) {
-        $gibt = array_map('intval', array_column(db_zeilen('SELECT id FROM dozent'), 'id'));
         foreach ((array)($e['dozenten'] ?? []) as $d) {
             if (in_array((int)$d, $gibt, true) && !in_array((int)$d, $dozenten, true)) {
                 $dozenten[] = (int)$d;
@@ -343,6 +373,9 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
     }
     return ['werte' => $w, 'termine' => $termine, 'dozenten' => $dozenten, 'fehler' => $f];
 }
+
+/** Was einem Workshop-Block zugeordnet werden kann (Rückmeldung 2026-10-30: auch Vorträge und Fallbesprechungen). */
+const PROGRAMM_IM_BLOCK = ['vortrag', 'fall', 'workshop', 'station'];
 
 /** Punkte nacheinander im Ablauf; offene Stationen und Workshop-Termine laufen parallel im Block. */
 const PROGRAMM_HAUPTSPUR = ['vortrag', 'fall', 'pause', 'block'];
@@ -358,7 +391,7 @@ function programm_nachruecken_kette(int $id, string $beginn, string $ende, ?int 
     $n = 0;
     $cursor = minuten($ende);
     $folgende = db_zeilen(
-        "SELECT id, beginn, ende FROM programmpunkt WHERE id <> ? AND beginn IS NOT NULL AND beginn >= ? AND typ IN ('" . implode("','", PROGRAMM_HAUPTSPUR) . "') ORDER BY beginn, id",
+        "SELECT id, beginn, ende FROM programmpunkt WHERE id <> ? AND beginn IS NOT NULL AND beginn >= ? AND block_id IS NULL AND typ IN ('" . implode("','", PROGRAMM_HAUPTSPUR) . "') ORDER BY beginn, id",
         [$id, $beginn . ':00']
     );
     foreach ($folgende as $f) {
@@ -449,10 +482,15 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
         foreach ($r['termine'] as $t) {
             if ($t['id'] !== null && db_wert('SELECT COUNT(*) FROM workshop_termin WHERE id = ? AND punkt_id = ?', [$t['id'], $id]) == 1) {
                 db_ausfuehren('UPDATE workshop_termin SET beginn = ?, ende = ?, plaetze = ? WHERE id = ?', [$t['beginn'], $t['ende'], $t['plaetze'], $t['id']]);
-                $behalten[] = $t['id'];
+                $tid = $t['id'];
             } else {
                 db_ausfuehren('INSERT INTO workshop_termin (punkt_id, beginn, ende, plaetze) VALUES (?, ?, ?, ?)', [$id, $t['beginn'], $t['ende'], $t['plaetze']]);
-                $behalten[] = (int)db()->lastInsertId();
+                $tid = (int)db()->lastInsertId();
+            }
+            $behalten[] = $tid;
+            db_ausfuehren('DELETE FROM termin_dozent WHERE termin_id = ?', [$tid]);
+            foreach ($t['dozenten'] ?? [] as $pos => $d) {
+                db_ausfuehren('INSERT INTO termin_dozent (termin_id, dozent_id, pos) VALUES (?, ?, ?)', [$tid, $d, $pos]);
             }
         }
         $platz = $behalten === [] ? '0' : implode(',', array_map('intval', $behalten));
@@ -514,21 +552,25 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             // Inhalte mitnehmen
             $versatz = minuten($beginn) - minuten($alt);
             $altEnde = hm($p['ende']);
-            foreach (db_zeilen('SELECT * FROM workshop_termin') as $t) {
-                if (hm($t['beginn']) >= $alt && hm($t['ende']) <= $altEnde) {
+            // im Zeitfenster (ohne andere Zuordnung) oder ausdrücklich zugeordnet
+            foreach (db_zeilen('SELECT t.*, p.block_id FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id') as $t) {
+                $zu = $t['block_id'] !== null ? (int)$t['block_id'] === $id : (hm($t['beginn']) >= $alt && hm($t['ende']) <= $altEnde);
+                if ($zu) {
                     db_ausfuehren('UPDATE workshop_termin SET beginn = ?, ende = ? WHERE id = ?', [hm_aus_minuten(minuten(hm($t['beginn'])) + $versatz), hm_aus_minuten(minuten(hm($t['ende'])) + $versatz), $t['id']]);
                     db_ausfuehren('UPDATE programmpunkt SET geaendert_am = ? WHERE id = ?', [db_jetzt(), (int)$t['punkt_id']]);
                 }
             }
-            foreach (db_zeilen("SELECT * FROM programmpunkt WHERE typ = 'station' AND beginn IS NOT NULL") as $s) {
-                if (hm($s['beginn']) >= $alt && hm($s['ende']) <= $altEnde) {
+            foreach (db_zeilen("SELECT * FROM programmpunkt WHERE typ IN ('vortrag', 'fall', 'station') AND beginn IS NOT NULL") as $s) {
+                $zu = $s['block_id'] !== null ? (int)$s['block_id'] === $id : ($s['typ'] === 'station' && hm($s['beginn']) >= $alt && hm($s['ende']) <= $altEnde);
+                if ($zu) {
                     db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [hm_aus_minuten(minuten(hm($s['beginn'])) + $versatz), hm_aus_minuten(minuten(hm($s['ende'])) + $versatz), db_jetzt(), $s['id']]);
                 }
             }
         }
         db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [$beginn, $ende, db_jetzt(), $id]);
         audit_schreiben('programm', 'Programmpunkt ' . $id . ' verschoben auf ' . $beginn, $kontoId);
-        if ($nachruecken && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
+        // Im Block läuft ein Punkt parallel: dann rückt die Hauptspur nicht nach
+        if ($nachruecken && $p['block_id'] === null && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
             $GLOBALS['programm_nachgerueckt'] = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
         }
         return "{$beginn}–{$ende}";
@@ -598,7 +640,7 @@ function programm_veroeffentlichen(?int $kontoId): array
 function programm_zuordnen(int $punktId, ?int $blockId, ?int $kontoId): bool
 {
     $p = db_zeile('SELECT id, typ, block_id FROM programmpunkt WHERE id = ?', [$punktId]);
-    if ($p === null || !in_array($p['typ'], ['workshop', 'station'], true)) {
+    if ($p === null || !in_array($p['typ'], PROGRAMM_IM_BLOCK, true)) {
         return false;
     }
     if ($blockId !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$blockId]) != 1) {
@@ -624,6 +666,14 @@ function programm_verwerfen(?int $kontoId): void
             );
             foreach ($p['termine'] as $t) {
                 db_ausfuehren('INSERT INTO workshop_termin (id, punkt_id, beginn, ende, plaetze) VALUES (?, ?, ?, ?, ?)', [$t['id'], $p['id'], $t['beginn'], $t['ende'], $t['plaetze']]);
+                foreach ($t['dozenten'] ?? [] as $pos => $d) {
+                    db_ausfuehren(
+                        'INSERT INTO dozent (id, name, funktion, kurzbio, foto, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE name = VALUES(name), funktion = VALUES(funktion), kurzbio = VALUES(kurzbio), foto = VALUES(foto)',
+                        [$d['id'], $d['name'], $d['funktion'], $d['kurzbio'], $d['foto'], $jetzt, $jetzt]
+                    );
+                    db_ausfuehren('INSERT INTO termin_dozent (termin_id, dozent_id, pos) VALUES (?, ?, ?)', [$t['id'], $d['id'], $pos]);
+                }
             }
             foreach ($p['dozenten'] as $pos => $d) {
                 // Dozierende zurück auf den veröffentlichten Stand (neu anlegen, falls gelöscht)

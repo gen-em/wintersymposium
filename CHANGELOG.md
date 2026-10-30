@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.13.0] – 2026-10-30
+
+Rückmeldungen des Admins vom 30.10. (2): Programm (E-53).
+
+### Neu
+
+- **Ziehen mit dem Finger** auf Handy und Tablet; die Zeile läuft mit, am Rand rollt die Seite.
+- **Dozierende je Termin**, wenn ein Termin vom Workshop abweicht; Startseite zeigt „mit …“.
+- **Vorträge, Fallbesprechungen und Stationen in Workshop-Blöcken** (Feld oder Ziehen), im Zeitraster und in der Handy-Liste.
+- Neue Termin-Zeilen mit „Entfernen“.
+
+### Geändert
+
+- Einfügelinie mittig zwischen zwei Einträgen, unter einem Block unter dem ganzen Block; Feld „Hierher ziehen: ans Ende“ entfällt.
+
+### Behoben
+
+- „Programmpunkt löschen“: Dialog erschien unten, „Ja, löschen“ wirkte nicht (betraf jeden Dialog, dessen Formular ein Feld „id“ hat).
+
 ## [0.12.0] – 2026-10-30
 
 AP-7: Newsletter (E-52).

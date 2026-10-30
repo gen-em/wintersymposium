@@ -433,6 +433,19 @@ function migration_katalog(): array
                 "ALTER TABLE rundmail_empfaenger ADD COLUMN nl_person_id INT UNSIGNED NULL AFTER anmeldung_id",
             ],
         ],
+        11 => [
+            'beschreibung' => 'Abweichende Dozierende je Workshop-Termin (Rückmeldung 2026-10-30)',
+            'sql' => [
+                "CREATE TABLE termin_dozent (
+                    termin_id INT UNSIGNED NOT NULL,
+                    dozent_id INT UNSIGNED NOT NULL,
+                    pos       SMALLINT     NOT NULL DEFAULT 0,
+                    PRIMARY KEY (termin_id, dozent_id),
+                    CONSTRAINT fk_termin_dozent_termin FOREIGN KEY (termin_id) REFERENCES workshop_termin (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_termin_dozent_dozent FOREIGN KEY (dozent_id) REFERENCES dozent (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

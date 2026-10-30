@@ -21,6 +21,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-5 | Team-Bereich | umgesetzt, Staging offen | lokal T-150, T-151, T-153, T-155 bis T-159; T-154 im Code | Staging (siehe unten); T-152 Passkey mit O-14 |
 | AP-6 | Mailversand und Rundmails | umgesetzt, Staging offen | lokal T-161 bis T-164, T-166 bis T-169 | Staging (siehe unten); T-160 und T-165 (Zustellbarkeit) durch den Admin |
 | Rückmeldungen 30.10. | Navigation, Programm, Texte, Zwei-Faktor, Protokoll, Einstellungen, Dialog (E-51) | umgesetzt, Staging offen | lokal T-225 bis T-232 | Staging (siehe unten) |
+| Rückmeldungen 30.10. (2) | Programm: Löschen, Ziehen mit dem Finger, Termine, Dozierende je Termin, Blöcke (E-53) | umgesetzt, Staging offen | lokal T-233 bis T-237 | Staging (siehe unten) |
 | AP-7 | Newsletter | umgesetzt, Staging offen | lokal T-170 bis T-174 | Staging (siehe unten); Datenschutzerklärung ergänzen |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
@@ -133,6 +134,13 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-231, ap: R-30.10., was: "Einheitlicher Bestätigungsdialog (Entwurf C)", wie: "jede Nachfrage als Dialog: grün/rot/lila, mittig auf dem Desktop, auf dem Handy von unten, Escape und Abbrechen schließen, Absenden wie vorher; ohne JavaScript Aufklappen", status: "lokal bestanden (Browser: Verwerfen, Senden, Testdaten laden; alle Auslöser öffnen und schließen)"}
 - {id: T-232, ap: R-30.10., was: "Kleinigkeiten", wie: "Kicker über Titel mit Umlaut ohne Überlappung; Rolle neben Name mittig; Statistik ohne Kachel „EFN angegeben“; Programmpunkt löschen neben Speichern", status: "lokal bestanden (Bildschirmfotos angesehen)"}
 
+# Rückmeldungen 2026-10-30 (2) (E-53)
+- {id: T-233, ap: R-30.10.-2, was: "Programmpunkt löschen", wie: "Dialog mittig (Desktop) bzw. von unten (Handy); „Ja, löschen“ löscht", status: "lokal bestanden (Browser in allen drei Engines)"}
+- {id: T-234, ap: R-30.10.-2, was: "Ziehen mit Maus und Finger", wie: "Linie mittig zwischen zwei Einträgen, unter einem Block unter dem ganzen Block; Ziehen mit dem Finger auf Handy/Tablet; kein Feld „ans Ende“", status: "lokal bestanden (Maus in allen Engines; Finger mit Zeiger-Ereignissen vom Typ touch); auf echtem Handy auf Staging prüfen"}
+- {id: T-235, ap: R-30.10.-2, was: "Termine entfernen", wie: "neue Zeile: „Entfernen“ nimmt sie sofort weg; gespeicherte: „entfernen“ anhaken und speichern (nicht bei vergebenen Plätzen)", status: "lokal bestanden"}
+- {id: T-236, ap: R-30.10.-2, was: "Dozierende je Termin", wie: "nichts gewählt = wie Workshop; abweichend gewählt wird gespeichert, veröffentlicht, beim Verwerfen wiederhergestellt; Startseite „mit …“", status: "lokal bestanden"}
+- {id: T-237, ap: R-30.10.-2, was: "Vorträge und Fallbesprechungen in Blöcken", wie: "Zuordnen per Feld oder Ziehen; Zeitraster und Handy-Liste zeigen sie; im Block keine Verschiebung der Hauptspur; Block nimmt sie beim Verschieben mit", status: "lokal bestanden"}
+
 # AP-7 Newsletter
 - {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: "lokal bestanden (unbestätigt kein Versand; Bestätigung mit Zeitpunkt und Fassung, Wortlaut gespeichert; Link gilt einmal)"}
 - {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: "lokal bestanden (Abmeldelink und List-Unsubscribe mit One-Click per POST ohne Login, Person sofort gelöscht); in Gmail/Outlook auf Staging prüfen"}
@@ -194,6 +202,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-233 bis T-237 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 609 ok, 0 Fehler (Fallbesprechung im Block, Vortrag ohne Zuordnung bleibt draußen, Punkt im Block schiebt die Hauptspur nicht, Block nimmt Zugeordnete mit, Verwerfen; Dozierende je Termin: laden, prüfen über Zeilen-Schlüssel, speichern, veröffentlichen, verwerfen); Browser-Durchlauf 4542 ok, 0 Fehler (Löschen-Dialog mittig und wirksam, Einfügelinie, Ziehen mit der Maus in allen Engines, Finger-Ziehen auf dem Handy, Termin-Zeile entfernen, abweichende Dozierende im Editor und im Popup, Fallbesprechung im Zeitraster und in der Handy-Liste) | Staging |
 | T-170 bis T-174 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 599 ok, 0 Fehler (Bibliothek: Listen, Anfrage, Bestätigen, Versand an zwei Listen mit List-Unsubscribe, Abmelden, Verwalten, Aufräumen, Häkchen bei der Anmeldung, CSV; HTTP: /newsletter mit Spamschutz, Bestätigen nur per Knopf, Verwalten, One-Click-Abmelden, Team-Reiter, Einladen, Löschen, Export, Empfängerart im Editor); Browser-Durchlauf 4371 ok, 0 Fehler (Newsletter-Seiten in allen Breiten, Reiter Newsletter, Empfängerart im Editor) | Staging |
 | T-225 bis T-232 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 562 ok, 0 Fehler (CommonMark-Teilmenge, Block-Zuordnung, E-Mail-Code, Protokoll-Sichtbarkeit; HTTP: Navigation mit Team-Login, Einstieg vor dem Start, Sperre, Text-Bild, Login mit Mail-Code, Mein Konto, Protokoll als Admin/Betreiber, Programm-Löschknopf); Browser-Durchlauf 4089 ok, 0 Fehler (Dialog mittig und von unten, Station auf Block ziehen, Werkzeugleiste Texte, Einstellungen entsperren) | Staging |
 | T-161 bis T-164, T-166 bis T-169 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 515 ok, 0 Fehler (Mailings: bereinigen, Auswahl, Limits je Postfach, Vorrang der Bestätigungen, Inhalt beim Versand, Storno dazwischen, Planen, Job, Abbrechen, Archiv-Löschfrist, Bilder; HTTP: Seiten, Hochladen, Vorschau-Richtlinie, Empfängerzahl, Testmail, Senden, Archiv; Team-Einladung und Passwort vergessen); Browser-Durchlauf 4227 ok, 0 Fehler (Mailings-Reiter, Entwurf, Archiv in allen Breiten; Editor: Platzhalter, Knopf, Bild hochladen, HTML-Ansicht, Empfängerzahl, Speichern, Vorschau) | Staging |
@@ -238,6 +247,13 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für die Rückmeldungen vom 30.10. (2) (nach Merge auf Staging)
+
+1. Programm: einen Punkt öffnen → „Programmpunkt löschen“ → Dialog in der Mitte, „Ja, löschen“ löscht (danach „Verwerfen“).
+2. Auf dem Handy oder Tablet einen Punkt am Griff ⋮⋮ mit dem Finger ziehen: Linie erscheint, Loslassen setzt die Zeit.
+3. „Paupanza“ (FB 01) auf die Mitte von „Maus Atemweg“ ziehen → steht im Block; Startseite-Vorschau zeigt ihn im Zeitraster.
+4. Workshop öffnen: „+ Termin“, dann bei der neuen Zeile „Entfernen“; bei einem Termin unter „Dozierende“ eine andere Person wählen, speichern → Vorschau zeigt „mit …“ beim Termin.
 
 ### Noch zu prüfen für AP-7 (nach Merge auf Staging)
 
