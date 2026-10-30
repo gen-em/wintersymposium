@@ -8,7 +8,8 @@ declare(strict_types=1);
  * Server prüft alles noch einmal (anm_wahl_pruefen).
  *
  * Erwartet: $wahl (['fest' => [wid => tid], 'warte' => [tid]]),
- *           $bisher (eigene Plätze bei Änderungen, sonst []).
+ *           $bisher (eigene Plätze bei Änderungen, sonst []),
+ *           optional $teamModus (Team-Bereich: volle Termine wählbar).
  */
 
 $eigen = [];
@@ -30,9 +31,10 @@ foreach (anm_workshops() as $w):
         $frei = anm_frei($tid);
         $zeit = '<span class="zeit-chip">' . e($t['beginn'] . '–' . $t['ende']) . '</span> <span class="meta">· ' . $dauerMin($t) . ' min</span>';
         $titel = e(trim($w['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']));
-        if ($frei > 0 || $st === 'fest') {
+        if ($frei > 0 || $st === 'fest' || !empty($teamModus)) {
             $an = ($wahl['fest'][$wid] ?? 0) === $tid;
-            $rechts = $st === 'fest' ? 'dein Platz' : $frei . ' frei';
+            // Team (AP-5): volle Termine wählbar, Überbuchen wird beim Speichern bestätigt
+            $rechts = $st === 'fest' ? (!empty($teamModus) ? 'fest' : 'dein Platz') : ($frei > 0 ? $frei . ' frei' : 'voll · überbuchen');
             $festeZeilen .= '<label><input type="radio" name="ws[' . $wid . ']" value="' . $tid . '" data-von="' . minuten($t['beginn']) . '" data-bis="' . minuten($t['ende']) . '" data-titel="' . $titel . '"' . ($an ? ' checked' : '') . '>'
                 . '<span>' . $zeit . '<span class="grund" data-grund></span></span><span class="rechts status">' . e($rechts) . '</span></label>';
         } else {

@@ -99,16 +99,21 @@ function seite_fuss(): void
 /** Reiter des Team-Bereichs (Mockup E-41); weitere folgen mit AP-3 Schritt 3 und AP-5. */
 function team_reiter(array $konto, string $aktiv): string
 {
+    // AP-5 (E-49): Admin und Betreiber; Team-Konten und Betrieb nur Betreiber
     $reiter = [
         ['/team', 'Übersicht'],
-        ['/team/anmeldungen', 'Anmeldungen'],
+        ['/team/personen', 'Personen'],
+        ['/team/workshops', 'Workshops'],
         ['/team/programm', 'Programm'],
+        ['/team/statistik', 'Statistik'],
         ['/team/einstellungen', 'Einstellungen'],
+        ['/team/texte', 'Texte'],
+        ['/team/protokoll', 'Protokoll'],
         ['/team/profil', 'Mein Konto'],
     ];
     if ($konto['rolle'] === 'betreiber') {
         $reiter[] = ['/team/konten', 'Team-Konten'];
-        $reiter[] = ['/team/daten', 'Daten'];
+        $reiter[] = ['/team/daten', 'Betrieb'];
     }
     $h = '<nav class="team-nav" aria-label="Team-Bereich">';
     foreach ($reiter as [$pfad, $text]) {

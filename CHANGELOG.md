@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.9.0] – 2026-10-29
+
+AP-5: Team-Bereich (E-49).
+
+### Neu
+
+- **Übersicht** wie im Mockup: Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste, Mail-Fehler, ablaufende Angebote, unveröffentlichtes Programm), Workshop-Termine, Essen.
+- **Personen:** Suche, Filter mit Zahlen, Person auswählen und daneben bearbeiten – auch nach den Stichtagen. Überbuchen und Tausch nur nach Bestätigung. Platz geben, Angebot schicken, von der Warteliste nehmen, stornieren, Person anlegen, Einmal-Link senden; Konten: Passwort-Link, sperren, löschen, Rolle vergeben (Betreiber, mit Code). Mail an die Person, außer „ohne Mail“.
+- **Workshops:** Termine mit Belegung, Teilnehmende und Warteliste je Termin, Aktionen und Liste als CSV.
+- **Statistik** mit Filter nach Berufsgruppe (Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen) und **Export** als CSV für Excel (Teilnehmende, Termine, Wartelisten, Essen, CME, Statistik).
+- **Texte:** Startseite bearbeiten; Impressum und Datenschutz für Betreiber.
+- **Protokoll:** Audit-Einträge mit Filter und Suche.
+- **Betrieb** (vorher „Daten“): Hostnamen und Absender der System-Mails.
+
+### Geändert
+
+- „Anmeldungen“ heißt jetzt „Personen“ (alte Adresse leitet weiter).
+- Tabellen zeigen in der Kartenansicht wieder ihre Spaltenbeschriftungen.
+- Browser-Durchlauf: Prüfung auf Abgeschnittenes ohne Screenreader-Beschriftungen und Eingabefelder.
+
 ## [0.8.1] – 2026-10-29
 
 Rückmeldungen des Admins.

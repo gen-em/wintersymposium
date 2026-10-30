@@ -275,8 +275,9 @@ function anm_ueberschneiden(array $a, array $b): bool
  * volle Termine, Limit (Workshops mit Platz oder Warteliste) und Pflicht.
  * $bisher: Plätze, die die Person schon hat (bei Änderungen).
  */
-function anm_wahl_pruefen(array $wahl, array $bisher = []): array
+function anm_wahl_pruefen(array $wahl, array $bisher = [], bool $team = false, bool $ueberbuchen = false): array
 {
+    // $team: Änderung durch das Team (AP-5) – ohne Limit und Pflicht, volle Termine nur mit $ueberbuchen
     $f = [];
     $eigenFest = [];
     $eigenWarte = [];
@@ -295,7 +296,11 @@ function anm_wahl_pruefen(array $wahl, array $bisher = []): array
             continue;
         }
         if (empty($eigenFest[$tid]) && anm_frei($tid) <= 0) {
-            $f[] = anm_termin_text($tid) . ' ist inzwischen voll. Du kannst dich dafür auf die Warteliste setzen.';
+            if (!$team) {
+                $f[] = anm_termin_text($tid) . ' ist inzwischen voll. Du kannst dich dafür auf die Warteliste setzen.';
+            } elseif (!$ueberbuchen) {
+                $f[] = anm_termin_text($tid) . ' ist voll (' . anm_belegt($tid) . ' / ' . anm_kapazitaet($tid) . '). Zum Überbuchen „Überbuchen bestätigen“ ankreuzen.';
+            }
         }
         $feste[] = $t;
     }
@@ -316,12 +321,15 @@ function anm_wahl_pruefen(array $wahl, array $bisher = []): array
         if (($wahl['fest'][(int)$t['workshop']['id']] ?? 0) === $tid) {
             continue; // fester Platz und Warteliste für denselben Termin: der feste zählt
         }
-        if (empty($eigenWarte[$tid]) && anm_frei($tid) > 0) {
+        if (!$team && empty($eigenWarte[$tid]) && anm_frei($tid) > 0) {
             $f[] = anm_termin_text($tid) . ' hat noch freie Plätze – wähle ihn als festen Termin statt der Warteliste.';
         }
         $workshops[(int)$t['workshop']['id']] = true;
     }
     $limit = va_zahl('workshop_limit');
+    if ($team) {
+        return array_values(array_unique($f));
+    }
     if ($limit > 0 && count($workshops) > $limit) {
         $f[] = "Du kannst höchstens $limit " . ($limit === 1 ? 'Workshop' : 'Workshops') . ' wählen (feste Plätze und Wartelisten zusammen).';
     }
@@ -593,15 +601,15 @@ function anm_platz_anlegen(int $anmId, int $terminId, string $status, int $jetzt
 /* ---- Ändern -------------------------------------------------------------- */
 
 /** Workshops neu setzen. Gibt eine Fehlerliste zurück (leer = gespeichert). */
-function anm_workshops_setzen(int $anmId, array $wahl, ?int $jetzt = null): array
+function anm_workshops_setzen(int $anmId, array $wahl, ?int $jetzt = null, bool $team = false, bool $ueberbuchen = false, bool $mail = true): array
 {
     $jetzt ??= time();
-    return anm_sperre(function () use ($anmId, $wahl, $jetzt): array {
+    return anm_sperre(function () use ($anmId, $wahl, $jetzt, $team, $ueberbuchen, $mail): array {
         if (anm_symposium_status($anmId) !== 'fest') {
             return ['Workshops kannst du wählen, sobald du einen Platz beim Symposium hast.'];
         }
         $bisher = array_values(array_filter(anm_plaetze($anmId), fn($p) => (int)$p['termin_id'] !== 0));
-        $f = anm_wahl_pruefen($wahl, $bisher);
+        $f = anm_wahl_pruefen($wahl, $bisher, $team, $ueberbuchen);
         if ($f !== []) {
             return $f;
         }
@@ -640,28 +648,30 @@ function anm_workshops_setzen(int $anmId, array $wahl, ?int $jetzt = null): arra
         foreach (array_unique($frei) as $tid) {
             anm_nachruecken($tid, $jetzt);
         }
-        anm_geaendert_melden($anmId, 'deine Workshops sind geändert.');
+        anm_geaendert_melden($anmId, 'deine Workshops sind geändert.', $mail, $team);
         return [];
     });
 }
 
-function anm_geaendert_melden(int $anmId, string $was): void
+function anm_geaendert_melden(int $anmId, string $was, bool $mail = true, bool $team = false): void
 {
     $a = anm_laden($anmId);
     db_ausfuehren('UPDATE anmeldung SET geaendert_am = ? WHERE id = ?', [db_jetzt(), $anmId]);
-    audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' geändert');
-    if ($a !== null && $a['status'] === 'bestaetigt') {
+    audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' geändert' . ($team ? ' (Team' . ($mail ? '' : ', ohne Mail') . ')' : ''), $team ? anm_team_konto() : null);
+    if ($mail && $a !== null && $a['status'] === 'bestaetigt') {
+        // „vom Team geändert“ (Admin 2026-10-29)
+        $was = $team ? 'das Team hat deine Anmeldung geändert: ' . $was : $was;
         mail_vorlage_einreihen($a['email'], 'geaendert', ['vorname' => $a['vorname'], 'was' => $was, 'uebersicht' => anm_uebersicht_text($anmId)]);
     }
 }
 
-function anm_essen_setzen(int $anmId, string $essen): bool
+function anm_essen_setzen(int $anmId, string $essen, bool $team = false, bool $mail = true): bool
 {
     if (!isset(ANM_ESSEN[$essen])) {
         return false;
     }
     db_ausfuehren('UPDATE anmeldung SET essen = ? WHERE id = ?', [$essen, $anmId]);
-    anm_geaendert_melden($anmId, 'deine Essenswahl ist geändert: ' . ANM_ESSEN[$essen] . '.');
+    anm_geaendert_melden($anmId, 'deine Essenswahl ist geändert: ' . ANM_ESSEN[$essen] . '.', $mail, $team);
     return true;
 }
 
@@ -941,6 +951,12 @@ function anm_aus_keks(): ?array
 }
 
 /* ---- Team ---------------------------------------------------------------- */
+
+/** Konto-ID des Team-Mitglieds dieser Anfrage (für das Audit-Protokoll) oder null. */
+function anm_team_konto(): ?int
+{
+    return isset($GLOBALS['ws_team_konto']) ? (int)$GLOBALS['ws_team_konto'] : null;
+}
 
 /** Alle Anmeldungen mit ihren Plätzen (Team-Liste). */
 function anm_liste(): array

@@ -484,3 +484,58 @@ form.inline { display: inline; }
 .gefahrzone-kasten { border-color: var(--rot); }
 .abstand-oben-klein { margin-top: 14px; }
 .team-raster .kasten p { margin: 0 0 12px; }
+
+/* ---- Team-Bereich AP-5: Personen, Workshops, Übersicht, Statistik, Texte, Protokoll (Mockups E-41/E-49) ---- */
+.legende { font-size: .82rem; margin: 0 0 10px; }
+.filterzeile { align-items: center; }
+.filterzeile input[type=search], .filterzeile input[type=text] { flex: 1 1 220px; min-height: 40px; padding: 8px 12px; font: 400 1rem var(--f-text); border: 1px solid var(--meta); background: var(--bg); color: var(--fg); border-radius: 0; min-width: 0; }
+.filterzeile select { min-height: 40px; padding: 6px 10px; font: 400 1rem var(--f-text); border: 1px solid var(--meta); background: var(--bg); color: var(--fg); border-radius: 0; max-width: 100%; }
+.filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.filter .mono { font-size: .8rem; opacity: .85; }
+.personen-raster { display: grid; gap: 18px; }
+@media (min-width: 1000px) { .personen-raster { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; } }
+table.t tr.gewaehlt td { background: rgba(180, 140, 255, .12); }
+table.t tr.gewaehlt td:first-child { box-shadow: inset 4px 0 0 var(--akz); }
+.rolle-tag { font-family: var(--f-mono); font-size: .72rem; font-weight: 700; text-transform: uppercase; padding: 2px 8px; background: var(--akz); color: var(--auf-akz); }
+.detail { display: grid; gap: 12px; }
+.detail > p, .detail .form { margin: 0; }
+.detail .unterkopf { margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--linie); }
+.gefahrenzone { display: grid; gap: 8px; padding: 12px 14px; margin-top: 8px; border: 1.5px solid var(--rot); background: repeating-linear-gradient(135deg, rgba(255, 90, 95, .14) 0 8px, transparent 8px 16px); }
+.gefahrenzone .unterkopf { margin: 0; padding: 0; border: 0; color: var(--rot); }
+.gefahrenzone p { margin: 0; }
+.team-liste { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.team-liste li { padding-left: 2px; }
+.team-liste .zellen-aktionen { margin-top: 4px; }
+.inline-details { display: inline-block; vertical-align: middle; margin-left: 6px; }
+.aufgaben { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.aufgaben li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding-bottom: 10px; border-bottom: 1px solid var(--linie); }
+.aufgaben li > span:nth-child(2) { flex: 1 1 220px; }
+/* Balken (SVG, eine Farbe; Zahl als Text) */
+.balken-liste { display: grid; gap: 8px; }
+.balken-zeile { display: grid; grid-template-columns: minmax(90px, 38%) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: .9rem; }
+.balken-label { min-width: 0; overflow-wrap: anywhere; }
+.balken-svg { width: 100%; height: 14px; display: block; }
+.balken-wert { fill: var(--lila); }
+.balken-grund { fill: var(--linie); }
+.balken-zahl { font-size: .82rem; color: var(--fg); white-space: nowrap; }
+.verlauf-svg { width: 100%; height: 160px; display: block; }
+.verlauf-flaeche { fill: rgba(180, 140, 255, .22); }
+.verlauf-linie { fill: none; stroke: var(--lila); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.verlauf-achse { stroke: var(--linie); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.verlauf-punkt { fill: var(--lila); stroke: var(--flaeche); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.verlauf-skala { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .72rem; color: var(--meta); margin-top: 4px; }
+.tabelle-details { margin-top: 10px; }
+.tabelle-details > summary { cursor: pointer; font-size: .9rem; color: var(--akz); }
+.breit-form { max-width: 900px; }
+
+/* In der schmalen Listenspalte (Personen, Workshops) Tabellen immer als Karten */
+.personen-raster table.t.karten { min-width: 0; }
+.personen-raster table.t.karten thead { display: none; }
+.personen-raster table.t.karten, .personen-raster table.t.karten tbody, .personen-raster table.t.karten tr, .personen-raster table.t.karten td { display: block; width: 100%; }
+.personen-raster table.t.karten tr { padding: 10px 0; border-bottom: 1px solid var(--linie); }
+.personen-raster table.t.karten td { border: 0; padding: 3px 14px; }
+.personen-raster table.t.karten td[data-label]:not([data-label="Name"]):not([data-label="Termin"])::before { content: attr(data-label); display: inline-block; min-width: 90px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; color: var(--meta); }
+.personen-raster .tabelle-wrap:has(table.karten) { overflow-x: visible; }
+.tabelle-details table.t { min-width: 0; width: 100%; }
+/* Auf schmalen Bildschirmen steht die Auswahl über der Liste */
+@media (max-width: 999px) { .personen-raster.mit-auswahl > .spalte:last-child { order: -1; } }

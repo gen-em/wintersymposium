@@ -109,7 +109,29 @@ function host_tor(): string
     return $host;
 }
 
-/** Hosts hinzufügen (Installer; später Betreiber-Einstellungen in AP-5). */
+/** Haupt-Host wechseln oder einen weiteren Host abschalten (Betrieb, AP-5). */
+function host_aendern(string $name, string $was, ?int $kontoId): bool
+{
+    $h = db_zeile('SELECT * FROM host WHERE name = ? AND aktiv = 1', [$name]);
+    if ($h === null) {
+        return false;
+    }
+    if ($was === 'haupt') {
+        db_transaktion(function () use ($name): void {
+            db_ausfuehren('UPDATE host SET haupt = 0');
+            db_ausfuehren('UPDATE host SET haupt = 1 WHERE name = ?', [$name]);
+        });
+    } elseif ($was === 'aus' && (int)$h['haupt'] === 0) {
+        db_ausfuehren('UPDATE host SET aktiv = 0 WHERE name = ?', [$name]);
+    } else {
+        return false;
+    }
+    host_liste(true);
+    audit_schreiben('host', 'Host ' . $name . ($was === 'haupt' ? ' ist Haupt-Host' : ' abgeschaltet'), $kontoId);
+    return true;
+}
+
+/** Hosts hinzufügen (Installer und Betrieb, AP-5). */
 function host_anlegen(string $name, bool $haupt = false): void
 {
     $n = host_normalisieren($name);

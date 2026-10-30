@@ -301,8 +301,9 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     $f1 = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
     pruefe($r1['status'] === 303 && $r2['status'] === 303 && abs($d1 - $d2) < 0.3 && str_contains($f1['text'], 'Wenn die Adresse bei uns angemeldet ist'), 'Link anfordern: gleiche Antwort und Dauer (T-134)');
     pruefe(http_mail_an($tmp, 'unbekannt@example.org', 3) === '' && http_mail_an($tmp, 'neu@example.org', 20, 'siehst und änderst du deine Anmeldung') !== '', 'Mail nur an bekannte Adresse');
-    $r = http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, $b);
-    pruefe($r['status'] === 200 && str_contains($r['text'], 'Lena Test') && str_contains($r['text'], 'neu@example.org') && str_contains($r['text'], 'href="/team/anmeldungen" aria-current'), 'Team: Liste der Anmeldungen');
+    pruefe((http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, $b)['kopf']['location'] ?? '') === '/team/personen', 'alte Adresse /team/anmeldungen leitet auf Personen');
+    $r = http_anfrage($basis, 'GET', '/team/personen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Lena Test') && str_contains($r['text'], 'neu@example.org') && str_contains($r['text'], 'href="/team/personen" aria-current'), 'Team: Personen');
     pruefe(http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'Team-Liste nur mit Login');
     $r = http_anfrage($basis, 'GET', '/', $h);
     pruefe(preg_match('~Freie Plätze</dt><dd>239 / 240~u', $r['text']) === 1, 'Startseite: freie Plätze X / Y (E-40)');
@@ -380,14 +381,55 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
     pruefe(str_contains($r['text'], 'Passwort festlegen'), 'und gleich Passwort festlegen');
     $c5 = http_csrf($r['text']);
     http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'passwort_setzen', 'passwort' => 'hannas-passwort', 'passwort2' => 'hannas-passwort'], $k5);
-    $r = http_anfrage($basis, 'GET', '/team/anmeldungen', $h, [], null, "$tmp/kekse-betreiber.txt");
-    pruefe(preg_match('~Hanna Haken.*?chip ok">ja~s', $r['text']) === 1, 'Team-Liste: Spalte Konto');
+    $r = http_anfrage($basis, 'GET', '/team/personen?f=konto', $h, [], null, "$tmp/kekse-betreiber.txt");
+    pruefe(preg_match('~Hanna Haken.*?data-label="Konto">Konto<~s', $r['text']) === 1, 'Personen: Filter „Mit Konto“, Spalte Konto');
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'loeschen', 'passwort' => 'falsch', 'anmeldung' => 'behalten'], $k5);
     pruefe(str_contains($r['text'], 'Das Passwort stimmt nicht') && konto_per_email('hanna@example.org') !== null, 'Löschen nur mit Passwort');
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'loeschen', 'passwort' => 'hannas-passwort', 'anmeldung' => 'behalten'], $k5);
     pruefe($r['status'] === 303 && konto_per_email('hanna@example.org') === null && db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ?', ['hanna@example.org']) == 1, 'Konto gelöscht, Anmeldung bleibt (Wahl)');
     db_ausfuehren("DELETE FROM anmeldung WHERE email = 'hanna@example.org'");
     db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+}
+
+/** Team-Bereich AP-5: Seiten, Person anlegen und ändern, Export, Texte, Protokoll, Betrieb. */
+function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Team-Bereich (AP-5)');
+    foreach (['/team' => 'Zu erledigen', '/team/personen' => '+ Person anlegen', '/team/workshops' => 'Termin anklicken', '/team/statistik' => 'Anmeldungen seit Start', '/team/texte' => 'Datenschutzerklärung', '/team/protokoll' => 'Einträge', '/team/daten' => 'Hostnamen'] as $pfad => $text) {
+        $r = http_anfrage($basis, 'GET', $pfad, $h, [], null, $b);
+        pruefe($r['status'] === 200 && str_contains($r['text'], $text), "Seite $pfad");
+    }
+    pruefe(http_anfrage($basis, 'GET', '/team/personen', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'Personen nur mit Login');
+    $r = http_anfrage($basis, 'GET', '/team/personen?neu=1', $h, [], null, $b);
+    $c = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/team/personen', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'vorname' => 'Petra', 'nachname' => 'Person', 'email' => 'petra@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 3', 'essen' => 'vegetarisch'], $b);
+    $pid = (int)db_wert("SELECT id FROM anmeldung WHERE email = 'petra@example.org'");
+    pruefe($r['status'] === 303 && str_contains($r['kopf']['location'] ?? '', '?a=' . $pid) && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$pid]) === 'bestaetigt', 'Person anlegen: bestätigt, weiter zur Person');
+    pruefe(http_mail_an($tmp, 'petra@example.org', 20, 'ist bestätigt') !== '', 'Mail an die angelegte Person');
+    $r = http_anfrage($basis, 'GET', '/team/personen?a=' . $pid, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Anmeldung bearbeiten – auch nach den Stichtagen') && str_contains($r['text'], 'Gefahrenzone') && str_contains($r['text'], 'class="gewaehlt"'), 'Person ausgewählt: Bearbeiten, Gefahrenzone');
+    $vorher = http_mail_anzahl($tmp, 'petra@example.org');
+    $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'speichern', 'a' => $pid, 'vorname' => 'Petra', 'nachname' => 'Person', 'email' => 'petra@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 4', 'essen' => 'kein', 'ohne_mail' => '1'], $b);
+    usleep(400_000);
+    pruefe($r['status'] === 303 && db_wert('SELECT essen FROM anmeldung WHERE id = ?', [$pid]) === 'kein' && db_wert('SELECT institution FROM anmeldung WHERE id = ?', [$pid]) === 'Station 4' && http_mail_anzahl($tmp, 'petra@example.org') === $vorher, 'Ändern „ohne Mail“: gespeichert, keine Mail');
+    einstellung_setzen('stichtag_essen', gmdate('Y-m-d', time() - 86400));
+    $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'speichern', 'a' => $pid, 'vorname' => 'Petra', 'nachname' => 'Person', 'email' => 'petra@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 4', 'essen' => 'egal'], $b);
+    pruefe(db_wert('SELECT essen FROM anmeldung WHERE id = ?', [$pid]) === 'egal' && http_mail_an($tmp, 'petra@example.org', 20, 'das Team hat deine Anmeldung aktualisiert') !== '', 'Team ändert nach dem Stichtag, Mail „vom Team“ (T-144)');
+    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'stichtag_essen'");
+    http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'link', 'a' => $pid], $b);
+    pruefe(http_mail_an($tmp, 'petra@example.org', 20, 'siehst und änderst du deine Anmeldung') !== '', 'Einmal-Link senden');
+    $r = http_anfrage($basis, 'GET', '/team/workshops?t=0', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Petra Person') && str_contains($r['text'], 'Warteliste in Reihenfolge'), 'Workshops: Symposium mit Teilnehmenden');
+    $r = http_anfrage($basis, 'GET', '/team/export?art=teilnehmende', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_starts_with($r['kopf']['content-type'] ?? '', 'text/csv') && str_starts_with($r['text'], "\u{FEFF}") && str_contains($r['text'], 'Petra') && str_contains($r['kopf']['content-disposition'] ?? '', '.csv'), 'Export als CSV (Excel)');
+    pruefe(http_anfrage($basis, 'GET', '/team/export?art=gibtsnicht', $h, [], null, $b)['status'] === 404, 'unbekannter Export: 404');
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export'") >= 1, 'Export im Protokoll');
+    $r = http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => "## Verantwortlich\nTest Impressum"], $b);
+    pruefe($r['status'] === 303 && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Gratis!') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert');
+    $r = http_anfrage($basis, 'GET', '/team/protokoll?art=texte', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'start_sticker'), 'Protokoll mit Filter');
+    $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'storno', 'a' => $pid, 'ohne_mail' => '1'], $b);
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE id = ?', [$pid]) == 0, 'Storno durch das Team');
 }
 
 /** Sicherung, Wiederherstellung, Testdaten (E-47); $codes: zwei unbenutzte Wiederherstellungscodes. */
@@ -572,6 +614,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     anmeldung_http_tests($basis, $h, $tmp, $b);
     konto_http_tests($basis, $h, $tmp, $pw);
     daten_http_tests($basis, $h, $tmp, $b, [$codes[5], $codes[6]]);
+    team_ap5_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";

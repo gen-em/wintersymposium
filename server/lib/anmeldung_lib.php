@@ -109,6 +109,7 @@ function team_tor(array $rollen = TEAM_ROLLEN): array
     if (!in_array($k['rolle'], $rollen, true)) {
         seite_meldung(403, 'Kein Zugriff', 'Diese Seite ist für deine Rolle nicht freigegeben.');
     }
+    $GLOBALS['ws_team_konto'] = (int)$k['id']; // für das Audit-Protokoll bei Team-Änderungen
     return $k;
 }
 
