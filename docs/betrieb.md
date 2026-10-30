@@ -115,34 +115,27 @@ node tools/browser/durchlauf.js <Ausgabeordner>
 
 **Test-Beispieldatensatz:** `server/testdaten/beispieldaten.php` legt erfundene Daten an: Einstellungen relativ zu heute (Veranstaltung in 60 Tagen, Anmeldung offen), zwei Dozierende, ein veröffentlichtes Programm mit Vortrag, Fallbesprechung, Workshop-Block mit zwei Workshops (ein Termin mit nur 2 Plätzen, einer mit anderer Leitung), einer Station und einer zugeordneten Fallbesprechung, Pausen, dazu Anmeldungen: drei bestätigte mit Workshops, eine unbestätigte, ein voller Termin mit Warteliste und ein offenes Nachrück-Angebot mit Tausch. Der Browser-Durchlauf lädt ihn nach der Installation, `lauf.php` prüft, dass er sich fehlerfrei laden lässt. Neue Bereiche (Anmeldungen ab AP-4 usw.) dort als eigene Funktion ergänzen und in `beispieldaten_laden()` aufrufen, damit spätere Prüfungen auf realistischen Daten laufen. Nur erfundene Namen und `example.org`-Adressen.
 
-## 7. Pflegbare Texte
+## 7. Pflegbare Texte und der Editor
 
-Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie unter Team-Bereich → „Texte“ (Impressum und Datenschutz nur Betreiber). Über jedem Textfeld steht eine Werkzeugleiste (fett, kursiv, Überschrift, Liste, Link, Bild), die die Auszeichnung schreibt.
+Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie unter Team-Bereich → Kommunikation → „Texte“ (Impressum und Datenschutz nur Betreiber).
 
-Auszeichnung ist eine Teilmenge von **CommonMark** (commonmark.org, der Standard hinter Markdown), ohne HTML (Rückmeldung 2026-10-30):
+**Ein Editor überall** (Admin 2026-10-30, E-54): Texte, Programm-Beschreibungen, Kurzbios der Dozierenden, Beschreibungen der Newsletter-Listen und Mailings nutzen denselben Editor (`assets/editor.js`). Man sieht den Text gleich formatiert. Knöpfe: fett, kursiv, Zwischenüberschrift (H), Liste, nummerierte Liste, Link, in Texten und Mailings auch Bild (in Mailings zusätzlich Knopf, Platzhalter, HTML). Die Knöpfe zeigen, was an der Schreibmarke gilt, und schalten es an und aus. Einzeilige Felder (Titel, Untertitel, Zeile über dem Titel, Listen-Beschreibung) kennen nur fett, kursiv und Link; kursiv erscheint im Titel der Startseite in Lila. Infokästen der Startseite: ein Kasten je Zwischenüberschrift.
 
-| Schreibweise | Ergebnis |
-|---|---|
-| Leerzeile | neuer Absatz; ein einfacher Zeilenumbruch bleibt erhalten (wie in GitHub-Kommentaren) |
-| `# …`, `## …` / `### …` | Zwischenüberschrift (Infokästen der Startseite: ein Kasten je `##`) |
-| `- Punkt` (auch `*`, `+`), `1. Punkt` | Aufzählung, nummerierte Liste |
-| `**fett**` / `__fett__` | fett |
-| `*kursiv*` / `_kursiv_` | hervorgehoben (im Titel der Startseite in Lila) |
-| `[Text](https://…)`, `[Text](mailto:…)` | Link (nur https und mailto) |
-| `![Beschreibung](/bild/text-….jpg)` | Bild – nur über „Bild“ hochgeladene (JPG/PNG, verkleinert auf höchstens 1200 px, in `var/bilder/`, mit gesichert; unbenutzte nach einem Tag gelöscht) |
-| `---` | Trennlinie |
-| `\*` | Zeichen ohne Wirkung |
-
-HTML wird nicht übernommen, sondern als Text angezeigt.
+Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenüberschrift, Listen, fett, kursiv, Link nur https und mailto, eigene Bilder). Alles andere entfernt der Server beim Speichern und noch einmal beim Anzeigen. Bilder (JPG/PNG) werden auf höchstens 1200 px verkleinert und in `var/bilder/` abgelegt, mit gesichert; unbenutzte löscht der Job nach einem Tag. Klick aufs Bild im Editor: halbe oder volle Breite. Ohne JavaScript bleibt ein Textfeld; Klartext wird dann als Absätze übernommen.
 
 ## 8. Team-Login und Konten
 
+**Ein Konto für alles** (Admin 2026-10-30, E-54): Team und Teilnehmende loggen sich gleich ein und haben eine gemeinsame Sitzung (Keks `ws_sitzung`). Team-Konten fragen direkt beim Login den zweiten Faktor ab und gelten danach auch als Konto für die eigene Anmeldung (Team-Mitglieder melden sich mit ihrem Konto selbst an, ohne Bestätigungsmail). Wird ein Konto später zum Team-Konto, endet seine Sitzung; beim nächsten Login wird der zweite Faktor eingerichtet. Ausloggen beendet alles.
+
+**Personen-Menü oben rechts:** ausgeloggt „Einloggen“, sonst Kürzel und Vorname mit Menü: Name und Adresse, Meine Anmeldung, Mein Konto, Team-Bereich (nur Team), Ausloggen. Wer eingeloggt ist, sieht auf „Meine Anmeldung“ kein Login-Feld, sondern die eigene Anmeldung oder „Jetzt anmelden“.
+
+
 - **Einloggen:** über „Anmelden“ in der Navigation (Kasten „Einloggen“) oder direkt `/einloggen`; der Link „Team“ in der Fußzeile ist weg (Rückmeldung 2026-10-30). Passwort, dann der zweite Faktor (Zwei-Faktor-Authentifizierung): Code aus einer Authenticator-App (TOTP), Code per E-Mail (frei wählbar, gilt 10 Minuten und einmal) oder ein Wiederherstellungscode. Beim ersten Login wählt man App (QR-Code oder Schlüssel zum Abtippen) oder Code per E-Mail; danach erscheinen zehn Wiederherstellungscodes **einmal**. Der E-Mail-Code ist nur so sicher wie das Postfach.
-- **Mein Konto:** Abschnitt „Zwei-Faktor-Authentifizierung“: App einrichten, Code per E-Mail ein- oder ausschalten (aus nur, wenn die App eingerichtet ist), neue Wiederherstellungscodes – jeweils mit dem Passwort bestätigt. Passkeys folgen später (O-14).
-- **Team-Login auf öffentlichen Seiten:** Wer im Team eingeloggt ist, sieht auch auf „Meine Anmeldung“ und der Startseite seinen Namen und „Team-Bereich“ (die Team-Sitzung wird dort nur gelesen); eine eigene Anmeldung mit derselben Adresse erscheint unter „Meine Anmeldung“.
+- **Mein Konto** (`/konto`, für Team und Teilnehmende) → „Zwei-Faktor einstellen“ (`/konto/zweitfaktor`): App einrichten, Code per E-Mail ein- oder ausschalten (aus nur, wenn die App eingerichtet ist), neue Wiederherstellungscodes – jeweils mit dem Passwort bestätigt. Passkeys folgen später (O-14).
+- **Team-Login auf öffentlichen Seiten:** dieselbe Sitzung; Personen-Menü und „Team-Bereich“ erscheinen überall, eine eigene Anmeldung (verknüpft oder mit derselben Adresse) unter „Meine Anmeldung“.
 - **Neues Team-Mitglied:** Betreiber → Team-Bereich → „Team-Konten“ → Name, E-Mail, Rolle → die Einladung kommt per Mail (AP-6); mit „Keine Mail“ wird der Link stattdessen einmal angezeigt. Er gilt 72 Stunden und einmal. Dort setzt die Person ihr Passwort und richtet den zweiten Faktor ein.
 - **Passwort vergessen:** „Passwort vergessen?“ beim Einloggen (Link per Mail, 72 Stunden; der zweite Faktor bleibt) oder ein Betreiber mailt unter „Team-Konten“ einen Passwort-Link.
-- **Handy weg:** mit einem Wiederherstellungscode einloggen und unter „Mein Konto“ neue Codes erzeugen; oder ein Betreiber setzt den zweiten Faktor zurück, beim nächsten Login wird er neu eingerichtet.
+- **Handy weg:** mit einem Wiederherstellungscode einloggen und unter „Mein Konto“ → „Zwei-Faktor einstellen“ neue Codes erzeugen; oder ein Betreiber setzt den zweiten Faktor zurück, beim nächsten Login wird er neu eingerichtet.
 - **Rollen:** Admin (Programm, Einstellungen, Anmeldungen …), Betreiber (zusätzlich Team-Konten und Technik). Rolle ändern verlangt den eigenen Code; das eigene Konto lässt sich dort nicht ändern, und es bleibt immer ein aktiver Betreiber.
 - **Notzugang** (Betreiber hat Handy und Wiederherstellungscodes verloren): `https://<domain>/notzugang` öffnen (nicht verlinkt), den `installations_schluessel` aus der config.php und die E-Mail-Adresse des Betreiber-Kontos eingeben. Der zweite Faktor wird zurückgesetzt und ein Passwort-Link angezeigt: öffnen, Passwort setzen, zweiten Faktor neu einrichten. 3 Versuche je Stunde; jede Nutzung steht im Audit-Protokoll. **Danach den Installationsschlüssel in der config.php durch einen neuen ersetzen.** Der Schlüssel ist damit so wichtig wie das Betreiber-Passwort: nur im Passwortmanager aufbewahren.
 - **Notweg auf der Kommandozeile** (nur wo der Webspace eine Kommandozeile bietet):
@@ -207,7 +200,7 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 **Nachfragen** (löschen, verwerfen, senden …) erscheinen überall als derselbe Dialog über der Seite (Rückmeldung 2026-10-30, Entwurf C): Rahmen grün = bestätigen, rot = löschen/verwerfen, lila = Info; auf dem Handy von unten mit großen Knöpfen. Ohne JavaScript bleibt die Nachfrage zum Aufklappen.
 
-Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12), Newsletter (AP-7, Abschnitt 14), Statistik, Einstellungen, Texte, Protokoll, Mein Konto; für Betreiber zusätzlich Team-Konten und Betrieb (E-49).
+Sechs Bereiche (Admin 2026-10-30, Variante A), darunter angehängt die Unterseiten des aktiven Bereichs: **Übersicht** · **Anmeldungen** (Personen, Workshops) · **Programm** (Programm, Dozierende) · **Kommunikation** (Mailings – Abschnitt 12, Newsletter – Abschnitt 14, Texte) · **Statistik** · **Verwaltung** (Einstellungen, Protokoll; für Betreiber zusätzlich Team-Konten und Betrieb, E-49). „Mein Konto“ steckt im Personen-Menü oben rechts.
 
 - **Übersicht:** Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste – nach der Grenze manuell vergeben –, Mail-Fehler, Angebote, die in 24 h ablaufen, unveröffentlichtes Programm), Workshop-Termine, Essen.
 - **Personen:** Suche und Filter (Angemeldet, Warteliste, Mail nicht bestätigt, Mit Konto, Team). Eine Person auswählen: Daten, Essen und Workshops ändern – auch nach den Stichtagen und ohne Workshop-Limit. Volle Termine nur mit „Überbuchen bestätigen“. Plätze, Wartelisten und Angebote: „Platz geben“ (fragt bei Überbuchen oder Tausch nach), „Angebot schicken“, „Entfernen“. „Einmal-Link senden“, „+ Person anlegen“ (gilt sofort als bestätigt). Konto: Passwort-Link, sperren, löschen (mit Wahl), Rolle vergeben (nur Betreiber, mit Code). Jede Änderung schickt der Person eine Mail, außer „ohne Mail“ ist angekreuzt; alles steht im Protokoll.
@@ -233,7 +226,8 @@ Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
 - **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
 - **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Meine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
 - **Einloggen:** ein Login für alle unter `/einloggen` oder im Kasten „Einloggen“ auf der Seite „Anmelden“. Teilnehmende brauchen keinen zweiten Faktor; Team-Konten werden danach nach dem Code gefragt. Passwort mindestens 10 Zeichen (Team 12).
-- **Mein Konto** (`/konto`): Profil (Name, Berufsgruppe, Institution, EFN), neue Adresse (gilt nach Bestätigung, die Anmeldung zieht mit), Passwort ändern, Konto löschen – wahlweise mit oder ohne Anmeldung, mit Passwort bestätigt.
+- **Mein Konto** (`/konto`): Profil (Name, Berufsgruppe, Institution, EFN), Newsletter, neue Adresse (gilt nach Bestätigung, die Anmeldung zieht mit), Passwort ändern, Konto löschen – wahlweise mit oder ohne Anmeldung, mit Passwort bestätigt. Team-Konten sehen statt Adresse und Löschen den Kasten „Team-Konto“ mit dem zweiten Faktor; beides erledigt ein Betreiber.
+- **Löschfrist** (Admin 2026-10-30, E-54): Konten Teilnehmender werden nach **14 Monaten ohne Login** gelöscht; **30 Tage vorher** kommt eine Erinnerung per Mail (Systemabsender). Jeder Login setzt die Frist neu. Gelöscht wird frühestens 30 Tage nach der Erinnerung (Job „anmeldung“). Die Anmeldung bleibt, ohne Konto, per Link erreichbar. Team-Konten sind ausgenommen.
 - **Passwort vergessen** (`/konto/passwort-vergessen`): Link per Mail, 48 h, einmal. Nur für Teilnehmende; Team-Passwörter setzt weiter ein Betreiber zurück.
 - Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.
 - **Testdaten:** Lea (`lea@example.org`) hat ein Konto; das erfundene Test-Passwort steht in `server/testdaten/beispieldaten.php` (`BEISPIEL_PASSWORT`). Nur auf Staging.

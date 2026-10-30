@@ -31,7 +31,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         // Gemeinsamer Login (E-48): Teilnehmende hier, Team weiter zum zweiten Faktor
         $r = tk_login_pruefen(trim((string)($_POST['email'] ?? '')), (string)($_POST['passwort'] ?? ''));
         if (isset($r['konto']) && konto_ist_team($r['konto'])) {
-            sitzung_wechseln('team');
             anmeldung_halb_setzen($r['konto']);
             umleiten('/einloggen');
         }
@@ -161,6 +160,25 @@ if ($a === null) {
 </div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
+<?php if (($ich = tk_aktuell() ?? team_gesehen()) !== null): // Eingeloggt, aber noch nicht angemeldet (E-54): kein Login-Feld ?>
+    <div class="kasten zg schmal-kasten">
+        <p class="kicker">Eingeloggt als <?= e($ich['name']) ?></p>
+        <h2 class="zwischen"><?= $zr === 'vorher' ? 'Anmeldung noch nicht möglich' : 'Noch nicht angemeldet' ?></h2>
+        <?php if ($zr === 'vorher'): ?>
+            <p>Die Anmeldung öffnet am <strong><?= e(datum_zeit_text(va('anmeldung_start'))) ?> Uhr</strong>. Dann meldest du dich hier mit deinem Konto an – Name und Adresse sind schon ausgefüllt.</p>
+        <?php elseif ($zr === 'offen'): ?>
+            <p>Mit deinem Konto sind Name und Adresse schon ausgefüllt, eine Bestätigung per Mail entfällt.</p>
+            <a class="knopf gruen" href="/anmelden">Jetzt anmelden</a>
+            <p class="meta klein"><?= $kap !== null ? 'Noch ' . anm_frei(0) . ' von ' . $kap . ' Plätzen frei · ' : '' ?>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></p>
+        <?php else: ?>
+            <p class="meta">Die Anmeldung ist geschlossen.</p>
+        <?php endif; ?>
+    </div>
+</div>
+<?php
+    seite_fuss();
+    return;
+endif; ?>
     <div class="zg-raster drei-spalten">
 <?php if ($zr === 'vorher'): ?>
         <div class="kasten zg zg-zwei">

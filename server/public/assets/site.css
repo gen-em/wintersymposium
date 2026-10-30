@@ -363,9 +363,19 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .knopf.klein { min-height: 36px; padding: 6px 14px; font-size: .88rem; }
 .team-kopf { padding-top: 30px; padding-bottom: 16px; }
 .team-kopf .titel { font-size: clamp(2rem, 7vw, 3.4rem); }
-.team-nav { display: flex; flex-wrap: wrap; background: var(--flaeche); border: 1px solid var(--linie); border-bottom: 3px solid var(--gruen); margin-bottom: 18px; }
+/* Team-Navigation (Admin 2026-10-30, Variante A): Bereiche, darunter angehängt die Unterseiten */
+.team-navi { border: 1px solid var(--linie); border-bottom: 3px solid var(--gruen); margin-bottom: 18px; }
+.team-nav { display: flex; flex-wrap: wrap; align-items: flex-end; background: var(--flaeche); }
+.team-navi > .team-nav:only-child { border-bottom: 0; }
+.team-navi > .team-nav:not(:only-child) { border-bottom: 1px solid var(--linie); }
 .team-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--fg); text-decoration: none; border-bottom: 3px solid transparent; }
-.team-nav a[aria-current="page"] { color: var(--akz); border-bottom-color: var(--akz); background: var(--bg); }
+.team-nav a.an { color: var(--akz); background: var(--bg); border-top: 3px solid var(--akz); border-bottom-color: var(--bg); margin-bottom: -1px; }
+.team-navi > .team-nav:only-child a.an { margin-bottom: 0; border-bottom-color: transparent; }
+.team-unter { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; padding: 0 14px; background: var(--bg); }
+.team-unter-kopf { font: 600 .74rem var(--f-zwischen); letter-spacing: .08em; text-transform: uppercase; color: var(--akz); }
+.team-unter a { display: inline-flex; align-items: center; min-height: 42px; padding: 0 2px; font: 600 .85rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .05em; color: var(--meta); text-decoration: none; border-bottom: 2px solid transparent; }
+.team-unter a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--akz); }
+.team-unter a:hover { color: var(--fg); }
 .kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
 .kachel { background: var(--flaeche); border: 1px solid var(--linie); padding: 14px 16px; }
 .kachel p { margin: 6px 0 0; }
@@ -404,9 +414,6 @@ table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: u
 .nav-person .nav-name small { line-height: 1; }
 .nav-person .nav-name small { color: var(--meta); font-weight: 400; }
 .nav-person form { margin: 0; display: flex; }
-.nav-ab { font: 700 .8rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; background: var(--akz); color: var(--auf-akz); border: 0; padding: 0 12px; min-height: 40px; cursor: pointer; }
-.menue .nav-person { margin-top: 10px; border-top: 1px solid var(--akz); }
-.menue .nav-person .nav-name { flex: 1; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
@@ -679,9 +686,28 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .nl-hinweis { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin: 0; padding: 12px 16px; border: 1px dashed var(--linie); }
 .nl-hinweis a { color: var(--akz); }
 /* Ein Editor überall (E-54): einzeilige Felder, Status */
-.schreibfeld-zeile { min-height: 0; padding: 9px 12px; white-space: nowrap; overflow-x: auto; }
+.schreibfeld-zeile { min-height: 0; padding: 9px 12px; }
 .schreibfeld-zeile p { margin: 0; display: inline; }
 .schreibfeld ol { padding-left: 22px; }
 .schreibfeld ul { padding-left: 22px; }
 .text-bild[data-breite="50"] { width: 50%; }
 .editor-status:empty { display: none; }
+/* Personen-Menü oben rechts (ein Konto für alles, E-54; Mockup Variante A) */
+.nav-liste li.person { position: relative; }
+.person-knopf { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1.5px solid var(--meta); border-radius: 999px; color: var(--fg); text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
+.person-knopf[aria-current="page"] { border-color: var(--akz); }
+.person-menue > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 3px 14px 3px 3px; border: 1.5px solid var(--akz); border-radius: 999px; cursor: pointer; font-family: var(--f-text); text-transform: none; letter-spacing: 0; }
+.person-menue > summary::-webkit-details-marker { display: none; }
+.person-menue > summary:focus-visible { outline: 2px solid var(--akz); outline-offset: 2px; }
+.person-kuerzel { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: var(--akz); color: var(--auf-akz); font: 700 .78rem var(--f-mono); }
+.person-liste { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 300px; max-width: calc(100vw - 32px); background: var(--flaeche); border: 1.5px solid var(--akz); box-shadow: 6px 6px 0 var(--gruen); text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 400; }
+.person-kopf { margin: 0; padding: 12px 16px; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.person-kopf span { font-size: .82rem; color: var(--meta); }
+.person-liste a { display: grid; gap: 1px; padding: 10px 16px; border-top: 1px solid var(--linie); color: var(--fg); text-decoration: none; font-weight: 700; }
+.person-liste a small { font-weight: 400; font-size: .8rem; color: var(--meta); }
+.person-liste a:hover, .person-liste a[aria-current="page"] { background: var(--bg); color: var(--akz); }
+.person-liste form, .person-flach + li form, .menue form { margin: 0; }
+.person-ab { width: 100%; text-align: left; padding: 12px 16px; border: 0; border-top: 1px solid var(--linie); background: transparent; color: var(--akz); font: 700 1rem var(--f-text); cursor: pointer; }
+.menue .person-ab { padding: 12px 0; font-family: var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; }
+.menue .person-kopf { padding: 12px 0 4px; border-top: 1px solid var(--akz); margin-top: 6px; text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
+.feld > .werkzeug + .schreibfeld { margin-top: -6px; }

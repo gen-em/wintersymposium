@@ -2,6 +2,28 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.14.0] – 2026-10-30
+
+Ein Editor, ein Konto, Navigation, Löschfrist (E-54).
+
+### Neu
+
+- **Ein Editor überall:** derselbe Editor wie bei den Mailings für Texte, Programm-Beschreibungen, Kurzbios und Listen-Beschreibungen; Knöpfe zeigen den Zustand und schalten an und aus; **nummerierte Liste**.
+- **Ein Konto für alles:** eine Sitzung für Team und Teilnehmende; Team-Mitglieder melden sich mit dem eigenen Konto zum Symposium an.
+- **Personen-Menü** oben rechts: Meine Anmeldung, Mein Konto, Team-Bereich, Ausloggen.
+- **Team-Navigation** in sechs Bereichen mit angehängten Unterseiten.
+- **Löschfrist:** Konten Teilnehmender nach 14 Monaten ohne Login gelöscht, Erinnerung 30 Tage vorher; Login setzt die Frist neu.
+
+### Geändert
+
+- Team-Konten fragen den zweiten Faktor direkt beim Login ab; „Mein Konto“ ist eine Seite für alle, der zweite Faktor unter `/konto/zweitfaktor`.
+- Eingeloggt zeigt „Meine Anmeldung“ kein Login-Feld mehr.
+- Texte werden als bereinigtes HTML gespeichert; die Markdown-Auszeichnung entfällt (Start-Texte einmal umgewandelt, Migration 12).
+
+### Entfernt
+
+- Werkzeugleiste für Markdown (`texte.js`) und der Reiter „Mein Konto“ im Team-Bereich (`/team/profil` leitet zu `/konto`).
+
 ## [0.13.0] – 2026-10-30
 
 Rückmeldungen des Admins vom 30.10. (2): Programm (E-53).

@@ -544,6 +544,12 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . "mit dieser Adresse gibt es schon eine Anmeldung. Eine zweite legen wir nicht an. Mit diesem Link siehst und änderst du die bestehende:\n\n"
                 . $d['link'] . "\n\nEr gilt bis " . $d['gueltig'] . ' und nur einmal.'
                 . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'konto_loeschen_bald':
+            // Löschfrist (E-54): 14 Monate ohne Login, Erinnerung 30 Tage vorher
+            return ['Dein Konto beim Wintersymposium wird bald gelöscht',
+                $hallo . 'du hast dich seit längerer Zeit nicht in deinem Konto beim Wintersymposium eingeloggt. Wir löschen Konten nach ' . KONTO_LOESCHEN_MONATE . ' Monaten ohne Login – deins am '
+                . $d['datum'] . ".\n\nWillst du es behalten? Dann logg dich einfach bis dahin einmal ein:\n\n" . $d['link']
+                . "\n\nWillst du es nicht mehr? Dann musst du nichts tun. Eine Anmeldung zum Symposium bleibt bestehen; du erreichst sie weiter über einen Link per Mail." . mail_gruss()];
         case 'geaendert':
             return ['Deine Anmeldung zum Wintersymposium wurde geändert',
                 $hallo . ($d['was'] ?? 'deine Anmeldung wurde geändert.') . $u . mail_gruss()];

@@ -6,13 +6,18 @@ declare(strict_types=1);
  * Code aus der Authenticator-App, aus einer Mail (frei wählbar, Admin
  * 2026-10-30) oder ein Wiederherstellungscode; beim ersten Login wird der
  * zweite Faktor eingerichtet (Pflicht, E-11). Teilnehmende
- * (AP-4b) nur mit Passwort, danach weiter zu ihrem Konto (Sitzung 'link').
+ * (AP-4b) nur mit Passwort. Eine Sitzung für alles (E-54): Team-Konten gelten
+ * nach dem zweiten Faktor auch als Konto für die eigene Anmeldung.
  * Passkeys folgen später (O-14).
  */
 
 team_sitzung();
 if (anmeldung_konto() !== null) {
     umleiten('/team');
+}
+// Ein Konto für alles (E-54): schon eingeloggt → zum Konto
+if (($eingeloggt = tk_aktuell()) !== null && !konto_ist_team($eingeloggt)) {
+    umleiten('/konto');
 }
 
 $fehler = [];
@@ -30,8 +35,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/einloggen');
         }
         if (isset($r['konto'])) {
-            // Teilnehmende: in die Sitzung der Teilnehmenden wechseln
-            sitzung_wechseln('link');
+            // Teilnehmende: direkt eingeloggt (eine Sitzung für alles, E-54)
             tk_einloggen($r['konto']);
             umleiten(tk_anmeldung((int)$r['konto']['id']) !== null ? '/deine-anmeldung' : '/konto');
         }

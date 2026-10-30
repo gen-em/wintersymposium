@@ -784,6 +784,34 @@ if (!$mitDb) {
     pruefe(!audit_ausblenden((int)db_wert("SELECT id FROM audit WHERE art = 'protokoll' ORDER BY id DESC LIMIT 1"), true, 1), 'Protokoll-Einträge zum Ausblenden lassen sich nicht ausblenden');
     db_ausfuehren('DELETE FROM konto WHERE id = ?', [$zk]);
 
+    abschnitt('Löschfrist für Konten (E-54)');
+    $jetzt = time();
+    $alt = gmdate('Y-m-d H:i:s', $jetzt - (14 * 30 - 20) * 86400); // in knapp 20 Tagen 14 Monate ohne Login
+    $kl = konto_anlegen('Lotte Lange', 'lotte@example.org', 'teilnehmend', 'lottes-passwort', null);
+    $kt = konto_anlegen('Tara Team', 'tara@example.org', 'admin', 'taras-passwort-12', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id IN (?, ?)', [$alt, $alt, $alt, $kl, $kt]);
+    db_ausfuehren("INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, institution, essen, status, einwilligung_am, erstellt_am, geaendert_am)
+        VALUES (?, 'Lotte', 'Lange', 'lotte@example.org', 'Pflege/MFA', '', 'egal', 'bestaetigt', ?, ?, ?)", [$kl, $alt, $alt, $alt]);
+    $anmL = (int)db()->lastInsertId();
+    $r = tk_loeschfrist($jetzt);
+    $mailL = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'lotte@example.org' ORDER BY id DESC LIMIT 1");
+    pruefe($r['erinnert'] >= 1 && str_contains($mailL, 'einmal ein') && db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kl]) !== null, 'Erinnerung 30 Tage vor der Löschung, per Mail');
+    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kt]) === null, 'Team-Konten ausgenommen');
+    pruefe(tk_loeschfrist($jetzt)['erinnert'] === 0, 'Keine zweite Erinnerung');
+    pruefe(tk_loeschfrist($jetzt + 25 * 86400)['geloescht'] === 0 && konto_laden($kl) !== null, 'Nicht vor Ablauf von 30 Tagen nach der Erinnerung gelöscht');
+    $r = tk_loeschfrist($jetzt + 31 * 86400);
+    pruefe($r['geloescht'] >= 1 && konto_laden($kl) === null && konto_laden($kt) !== null, 'Nach der Frist gelöscht, Team-Konto bleibt');
+    pruefe(db_wert('SELECT konto_id FROM anmeldung WHERE id = ?', [$anmL]) === null && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$anmL]) === 'bestaetigt', 'Anmeldung bleibt (ohne Konto)');
+    $km = konto_anlegen('Mo Login', 'mo@example.org', 'teilnehmend', 'mos-passwort-1', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id = ?', [$alt, $alt, $alt, $km]);
+    tk_loeschfrist($jetzt);
+    $_SESSION = [];
+    tk_einloggen(konto_laden($km));
+    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$km]) === null && tk_loeschfrist($jetzt + 31 * 86400)['geloescht'] === 0 && konto_laden($km) !== null, 'Login setzt die Frist neu');
+    $_SESSION = [];
+    db_ausfuehren("DELETE FROM konto WHERE id IN (?, ?)", [$kt, $km]);
+    db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmL]);
+
     abschnitt('Newsletter (AP-7)');
     $ls = array_column(nl_listen(), 'id', 'name');
     $lw = (int)$ls['Wintersymposium'];

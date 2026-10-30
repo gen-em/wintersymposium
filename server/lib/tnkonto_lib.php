@@ -20,10 +20,22 @@ declare(strict_types=1);
 
 /** Mindestlänge für Passwörter Teilnehmender (Admin 2026-10-29; Team bleibt bei 12). */
 const PASSWORT_MIN_TN = 10;
+/**
+ * Löschfrist (Admin 2026-10-30, E-54): Konten Teilnehmender ohne Login seit
+ * 14 Monaten werden gelöscht, 30 Tage vorher kommt eine Erinnerung; jeder
+ * Login setzt die Frist neu. Team-Konten sind ausgenommen. Die Anmeldung
+ * bleibt (wie „Konto löschen, Anmeldung behalten“, E-48).
+ */
+const KONTO_LOESCHEN_MONATE = 14;
+const KONTO_ERINNERN_TAGE = 30;
 /** Links für Teilnehmenden-Konten gelten 48 h (wie die Einmal-Links, E-46). */
 const TK_LINK_GUELTIG_S = 48 * 3600;
 
-/** Gültiges, eingeloggtes Teilnehmenden-Konto dieser Sitzung oder null. */
+/**
+ * Eingeloggtes Konto dieser Sitzung oder null (ein Konto für alles, E-54):
+ * Teilnehmende mit bestätigter Adresse; Team-Konten nur nach vollständigem
+ * Login mit zweitem Faktor.
+ */
 function tk_aktuell(): ?array
 {
     $s = $_SESSION['tk'] ?? null;
@@ -31,7 +43,9 @@ function tk_aktuell(): ?array
         return null;
     }
     $k = konto_laden((int)$s['id']);
-    if ($k === null || $k['rolle'] !== 'teilnehmend' || (int)$k['aktiv'] !== 1 || $k['email_bestaetigt_am'] === null || (int)$k['sitzung_version'] !== (int)$s['version']) {
+    $ok = $k !== null && (int)$k['aktiv'] === 1 && (int)$k['sitzung_version'] === (int)$s['version']
+        && (konto_ist_team($k) ? (int)(anmeldung_konto()['id'] ?? 0) === (int)$k['id'] : ($k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null));
+    if (!$ok) {
         unset($_SESSION['tk']);
         return null;
     }
@@ -44,17 +58,23 @@ function tk_einloggen(array $k): void
     sitzung_erneuern();
     $k = konto_laden((int)$k['id']) ?? $k;
     $_SESSION['tk'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
-    db_ausfuehren('UPDATE konto SET letzte_anmeldung = ? WHERE id = ?', [db_jetzt(), (int)$k['id']]);
+    // Login setzt die Löschfrist neu (14 Monate ohne Login, E-54)
+    db_ausfuehren('UPDATE konto SET letzte_anmeldung = ?, loesch_erinnert_am = NULL WHERE id = ?', [db_jetzt(), (int)$k['id']]);
     $a = tk_anmeldung((int)$k['id']);
     if ($a !== null) {
         $_SESSION['anm'] = ['id' => (int)$a['id'], 'version' => (int)$a['sitzung_version']];
     }
 }
 
+/** Ausloggen: beendet die ganze Sitzung (Team, Konto und Link, E-54) und startet eine leere. */
 function tk_ausloggen(): void
 {
-    unset($_SESSION['tk'], $_SESSION['anm'], $_SESSION['tk_pw']);
-    sitzung_erneuern();
+    $k = tk_aktuell();
+    if ($k !== null && konto_ist_team($k)) {
+        audit_schreiben('login', 'Ausgeloggt', (int)$k['id']);
+    }
+    sitzung_beenden();
+    sitzung_starten('link');
 }
 
 /** Verknüpfte Anmeldung eines Kontos oder null. */
@@ -74,7 +94,7 @@ function tk_namen(array $k): array
 function tk_verknuepfen(int $kontoId): void
 {
     $k = konto_laden($kontoId);
-    if ($k === null || $k['email_bestaetigt_am'] === null || tk_anmeldung($kontoId) !== null) {
+    if ($k === null || ($k['email_bestaetigt_am'] === null && !konto_ist_team($k)) || tk_anmeldung($kontoId) !== null) {
         return;
     }
     $a = db_zeile("SELECT * FROM anmeldung WHERE email = ? AND konto_id IS NULL AND status = 'bestaetigt'", [$k['email']]);
@@ -321,4 +341,43 @@ function tk_aufraeumen(int $jetzt): int
         "DELETE FROM konto WHERE rolle = 'teilnehmend' AND email_bestaetigt_am IS NULL AND erstellt_am < ?",
         [gmdate('Y-m-d H:i:s', $jetzt - TK_LINK_GUELTIG_S)]
     )->rowCount();
+}
+
+/**
+ * Löschfrist der Konten (Job 'anmeldung'): erinnern, dann löschen.
+ * Stichtag = letzter Login (sonst Bestätigung, sonst Anlage) + 14 Monate.
+ * Gelöscht wird erst, wenn die Erinnerung mindestens 30 Tage alt ist – auch
+ * wenn der Job einmal ausfällt, hat jede Person die volle Frist.
+ */
+function tk_loeschfrist(int $jetzt): array
+{
+    $j = gmdate('Y-m-d H:i:s', $jetzt);
+    $basis = 'COALESCE(letzte_anmeldung, email_bestaetigt_am, erstellt_am)';
+    $erinnert = 0;
+    $faellig = db_zeilen(
+        "SELECT id, name, email, DATE_ADD($basis, INTERVAL " . KONTO_LOESCHEN_MONATE . " MONTH) AS loeschen_am FROM konto
+         WHERE rolle = 'teilnehmend' AND aktiv = 1 AND email_bestaetigt_am IS NOT NULL AND loesch_erinnert_am IS NULL
+           AND DATE_SUB(DATE_ADD($basis, INTERVAL " . KONTO_LOESCHEN_MONATE . " MONTH), INTERVAL " . KONTO_ERINNERN_TAGE . " DAY) <= ?",
+        [$j]
+    );
+    foreach ($faellig as $k) {
+        // Frühestens 30 Tage nach der Erinnerung löschen
+        $am = max(strtotime($k['loeschen_am'] . ' UTC'), $jetzt + KONTO_ERINNERN_TAGE * 86400);
+        mail_vorlage_einreihen((string)$k['email'], 'konto_loeschen_bald', ['vorname' => tk_namen($k)['vorname'], 'datum' => datum_text(gmdate('Y-m-d', $am)), 'link' => url('/einloggen')]);
+        db_ausfuehren('UPDATE konto SET loesch_erinnert_am = ? WHERE id = ?', [$j, (int)$k['id']]);
+        $erinnert++;
+    }
+    $geloescht = 0;
+    foreach (db_zeilen(
+        "SELECT id FROM konto WHERE rolle = 'teilnehmend' AND loesch_erinnert_am IS NOT NULL AND loesch_erinnert_am <= ?
+           AND DATE_ADD($basis, INTERVAL " . KONTO_LOESCHEN_MONATE . " MONTH) <= ?",
+        [gmdate('Y-m-d H:i:s', $jetzt - KONTO_ERINNERN_TAGE * 86400), $j]
+    ) as $k) {
+        tk_loeschen((int)$k['id'], false);
+        $geloescht++;
+    }
+    if ($erinnert + $geloescht > 0) {
+        audit_schreiben('konto', "Löschfrist: $erinnert erinnert, $geloescht Konten gelöscht (Anmeldungen bleiben)");
+    }
+    return ['erinnert' => $erinnert, 'geloescht' => $geloescht];
 }

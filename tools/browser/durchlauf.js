@@ -141,6 +141,12 @@ async function pruefeBedienung(p, engine, breite, name) {
   }
 }
 
+/** Ausloggen über das Personen-Menü oben rechts (Desktop). */
+async function ausloggen(p) {
+  await p.click('.nav-gross .person-menue summary');
+  await Promise.all([p.waitForNavigation(), p.click('.nav-gross .person-ab')]);
+}
+
 /** Am Griff ziehen und über dem Ziel loslassen (Anteil = Höhe in der Zielzeile); waehrend() prüft die Anzeige vor dem Loslassen. */
 async function ziehen(p, griff, ziel, anteil, waehrend) {
   const g = await griff.boundingBox();
@@ -320,8 +326,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.waitForLoadState('load');
       }
       await p.setViewportSize({ width: 1440, height: 900 });
-      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
-      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
+      await ausloggen(p);
+      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen über das Personen-Menü', (await p.textContent('body')).includes('Wie willst du rein?'));
 
       // ---- Konten für Teilnehmende (AP-4b) ----
       for (const [breite, w, h] of BREITEN) {
@@ -343,8 +349,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       }
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/konto');
-      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ in der Navigation', await p.isVisible('.nav-gross a[href="/konto"]'));
-      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
+      await p.click('.nav-gross .person-menue summary');
+      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ im Personen-Menü', await p.isVisible('.nav-gross .person-liste a[href="/konto"]'));
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-personen-menue.png`) });
+      await p.click('.nav-gross .person-menue summary');
+      await ausloggen(p);
       notiere(engine, 'desktop-breit', 'konto', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
 
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
@@ -371,12 +380,21 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Mailings', '/team/mailings', 'team-mailings'], ['Newsletter', '/team/newsletter', 'team-newsletter'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
-          await p.click(`.team-nav a:has-text("${text}")`);
+        // Team-Navigation (Variante A): Bereiche und angehängte Unterseiten
+        for (const [wahl, ziel, name] of [['.team-nav a:has-text("Anmeldungen")', '/team/personen', 'team-personen'], ['.team-unter a:has-text("Workshops")', '/team/workshops', 'team-workshops'],
+          ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
+          ['.team-nav a:has-text("Kommunikation")', '/team/mailings', 'team-mailings'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'],
+          ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
+          await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
+        // Mein Konto des Team-Kontos (ein Konto für alles, E-54) und Zwei-Faktor
+        await pruefeSeite(p, fehler, engine, breite, 'team-mein-konto', basis + '/konto');
+        notiere(engine, breite, 'team-mein-konto', 'Team-Konto mit Zwei-Faktor, ohne Löschen', (await p.textContent('body')).includes('Team-Konto') && await p.locator('a[href="/konto/zweitfaktor"]').count() >= 1);
+        await pruefeSeite(p, fehler, engine, breite, 'team-zweitfaktor', basis + '/konto/zweitfaktor');
       }
 
       // AP-5: ausgewählte Person, voller Termin, Person anlegen
@@ -611,8 +629,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Ausloggen über den Knopf in der Navigation (Desktop) und Login mit Wiederherstellungscode
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team');
-      await p.click('.nav-gross .nav-ab');
-      await p.waitForLoadState('load');
+      await ausloggen(p);
       notiere(engine, 'desktop-breit', 'ausloggen', 'ausgeloggt', new URL(p.url()).pathname === '/einloggen' && (await p.textContent('body')).includes('ausgeloggt'));
       await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
       await p.click('form:has(input[value=passwort]) button');

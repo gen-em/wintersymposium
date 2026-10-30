@@ -23,7 +23,7 @@ $aufgaben = team_aufgaben();
 team_seite_kopf($konto, 'Übersicht', '/team');
 if ($zf['codes_offen'] <= 2) {
     echo '<div class="meldung fehler" role="alert">Du hast nur noch ' . $zf['codes_offen'] . ' Wiederherstellungscodes. '
-        . 'Erzeuge unter <a href="/team/profil">Mein Konto</a> neue.</div>';
+        . 'Erzeuge unter <a href="/konto/zweitfaktor">Mein Konto › Zwei-Faktor</a> neue.</div>';
 }
 ?>
 <p>Hallo <?= e($konto['name']) ?>. <span class="meta klein mono">Stand <?= e(datum_zeit_text(db_jetzt())) ?> · Version <?= e(app_version()) ?> · <?= e(ucfirst(umgebung())) ?></span></p>
