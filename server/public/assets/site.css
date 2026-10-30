@@ -67,6 +67,8 @@ img { max-width: 100%; }
 .titel { font-family: var(--f-titel); font-weight: 400; text-transform: uppercase; line-height: 1.05; letter-spacing: .005em; text-wrap: balance; margin: 0; }
 .titel em { font-style: normal; color: var(--akz); }
 .kicker { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .82rem; color: var(--akz); margin: 0; }
+/* Ü, Ä, Ö im großen Titel ragen über die Zeile: Abstand zum Kicker darüber (Rückmeldung 2026-10-30) */
+.kicker + .titel { margin-top: .22em; }
 .zwischen { font-family: var(--f-zwischen); font-weight: 700; font-size: 1.45rem; line-height: 1.2; margin: 0; text-wrap: balance; }
 .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
 .meta { color: var(--meta); }
@@ -203,11 +205,11 @@ span.gl { cursor: default; }
 .zettel .zettel-kopf { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; color: #A6363B; margin-bottom: 6px; }
 
 /* Team: Programm pflegen */
-.entwurf-banner { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; margin: 0 0 16px; background: var(--rot); color: var(--nachtblau); }
-.entwurf-banner.vorschau { background: var(--lila); margin-top: 20px; }
+.entwurf-banner { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; margin: 0 0 16px; background: rgba(255, 90, 95, .16); border: 1.5px solid var(--rot-300); border-radius: 14px; color: var(--fg); }
+.entwurf-banner.vorschau { background: rgba(180, 140, 255, .16); border-color: var(--lila); margin-top: 20px; }
 .entwurf-banner .eb-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
 .entwurf-banner .eb-knoepfe form { margin: 0; }
-.entwurf-banner .knopf.zweit, .entwurf-banner a.knopf.zweit { color: var(--nachtblau); border-color: var(--nachtblau); }
+.entwurf-banner .knopf.zweit, .entwurf-banner a.knopf.zweit { color: var(--fg); border-color: var(--fg); }
 .bestaetigen > summary { list-style: none; cursor: pointer; }
 .bestaetigen > summary::-webkit-details-marker { display: none; }
 .bestaetigen[open] > form { margin-top: 8px; padding: 10px 12px; background: var(--bg); color: var(--fg); border: 1.5px solid var(--rot); display: grid; gap: 8px; max-width: 360px; }
@@ -228,13 +230,19 @@ span.gl { cursor: default; }
 .pg-zeile.pause { background: transparent; }
 .pg-zeile.pause .pg-link { color: var(--meta); }
 .pg-zeile.aktiv { border-color: var(--akz); box-shadow: inset 4px 0 0 var(--akz); }
-.pg-zeile.block { border-color: var(--gruen); border-left-width: 4px; }
+.pg-zeile.block { border-color: var(--gruen); }
 .pg-zeile.pg-neu-punkt { background: #E6D8FF; border: 1.5px dashed var(--lila-600); }
 .pg-zeile.pg-neu-punkt .pg-link, .pg-zeile.pg-neu-punkt .griff { color: var(--nachtblau); }
 .pg-zeile.pg-neu-punkt .meta, .pg-zeile.pg-neu-punkt .st { color: #3C2768; border-color: var(--lila-600); }
 .pg-zeile.geaendert { border-color: var(--rot-300); border-style: dashed; background: rgba(255, 90, 95, .12); }
-.pg-zeile.ziel-vor { box-shadow: 0 -4px 0 var(--gruen); }
-.pg-zeile.ziel-nach { box-shadow: 0 4px 0 var(--gruen); }
+/* Einfügemarke weiß (ausgewählt = lila, Block = grün), Rückmeldung 2026-10-30 */
+.pg-zeile { position: relative; }
+.pg-zeile.ziel-vor::before, .pg-zeile.ziel-nach::after { content: ""; position: absolute; left: -6px; right: -6px; height: 4px; background: var(--weiss); border-radius: 2px; box-shadow: 0 0 0 2px var(--bg); z-index: 2; pointer-events: none; }
+.pg-zeile.ziel-vor::before { top: -5px; }
+.pg-zeile.ziel-nach::after { bottom: -5px; }
+.pg-zeile.ziel-in { outline: 2px dashed var(--gruen); outline-offset: 2px; background: rgba(181, 189, 0, .16); }
+.pg-ende { border: 1.5px dashed var(--meta); color: var(--meta); padding: 8px 12px; font-size: .85rem; text-align: center; }
+.pg-ende.ziel-vor { border-color: var(--weiss); color: var(--fg); }
 .pg-zeile.wird-gezogen { opacity: .5; }
 .st { display: inline-block; font-family: var(--f-text); font-size: .74rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
 .st.pub { border: 1.5px solid var(--gruen); background: rgba(181, 189, 0, .2); color: var(--fg); }
@@ -378,7 +386,8 @@ table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: u
 .chip.offen { background: transparent; color: var(--fg); border: 1px dashed var(--meta); }
 .chip.gesperrt { background: var(--meta); color: var(--bg); }
 .nav-person { display: flex; align-items: stretch; border: 1px solid var(--akz); }
-.nav-person .nav-name { padding: 8px 12px; color: var(--akz); text-transform: none; letter-spacing: 0; }
+.nav-person .nav-name { padding: 8px 12px; color: var(--akz); text-transform: none; letter-spacing: 0; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.nav-person .nav-name small { line-height: 1; }
 .nav-person .nav-name small { color: var(--meta); font-weight: 400; }
 .nav-person form { margin: 0; display: flex; }
 .nav-ab { font: 700 .8rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; background: var(--akz); color: var(--auf-akz); border: 0; padding: 0 12px; min-height: 40px; cursor: pointer; }
@@ -586,3 +595,58 @@ details > summary.knopf::-webkit-details-marker { display: none; }
 .ml-vorschau-frame { display: block; width: 100%; height: 640px; border: 0; background: #EEF1F5; }
 .formular .haken { font-weight: 400; margin-top: 10px; }
 .formular .haken input[type=checkbox] { min-height: 0; padding: 0; }
+
+/* Einstieg vor dem Anmeldestart: Hinweis über zwei Kacheln (Rückmeldung 2026-10-30) */
+@media (min-width: 760px) { .zg-zwei { grid-column: span 2; } }
+
+/* ---- Einheitlicher Bestätigungsdialog (Rückmeldung 2026-10-30, Entwurf C) ----
+   Dunkle Karte mit Rahmen in der Signalfarbe: grün = bestätigen, rot = löschen/verwerfen, lila = Info.
+   Auf dem Handy von unten, Knöpfe groß untereinander. */
+dialog.dlg { border: 0; padding: 0; background: transparent; color: var(--fg); max-width: calc(100vw - 32px); width: 460px; overflow: visible; }
+dialog.dlg::backdrop { background: rgba(0, 18, 36, .74); backdrop-filter: blur(3px); }
+.dlg { --dlg-farbe: var(--rot); --dlg-schein: rgba(255, 90, 95, .14); }
+.dlg-gruen { --dlg-farbe: var(--gruen); --dlg-schein: rgba(181, 189, 0, .16); }
+.dlg-lila { --dlg-farbe: var(--lila); --dlg-schein: rgba(180, 140, 255, .14); }
+.dlg-karte { background: var(--bg); border: 2px solid var(--dlg-farbe); border-radius: 18px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 0 0 6px var(--dlg-schein), 0 18px 48px rgba(0, 0, 0, .5); }
+.dlg-griff { display: none; width: 40px; height: 4px; border-radius: 4px; background: var(--meta); justify-self: center; opacity: .6; }
+.dlg-titel { font: 700 1.4rem/1.2 var(--f-zwischen); text-transform: uppercase; letter-spacing: .02em; margin: 0; }
+.dlg-inhalt { display: grid; gap: 10px; }
+.dlg-inhalt form, .dlg-inhalt .bestaetigen-feld { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; background: transparent; max-width: none; }
+.dlg-inhalt p { margin: 0; }
+.dlg-knoepfe { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.dlg-knoepfe .knopf { margin: 0; flex: 1 1 0; justify-content: center; text-align: center; }
+.dlg .dlg-ja { background: var(--dlg-farbe); border-color: var(--dlg-farbe); color: var(--nachtblau); }
+@media (prefers-reduced-motion: no-preference) {
+  dialog.dlg[open] { animation: dlg-auf .16s ease-out; }
+  @keyframes dlg-auf { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 560px) {
+  dialog.dlg { margin: auto 0 0; width: 100vw; max-width: 100vw; }
+  .dlg-karte { border-radius: 18px 18px 0 0; border-bottom: 0; padding-bottom: max(22px, env(safe-area-inset-bottom, 0px)); }
+  .dlg-griff { display: block; }
+  .dlg-knoepfe { flex-direction: column-reverse; }
+  .dlg-knoepfe .knopf { width: 100%; }
+}
+.aktionen .rechts { margin-left: auto; }
+/* Texte: Hilfe als Kasten, Werkzeugleiste über dem Textfeld, Bilder in Texten (Rückmeldung 2026-10-30) */
+.hilfe-kasten { margin-bottom: 18px; }
+.hilfe-kasten > summary { cursor: pointer; }
+.hilfe-kasten[open] > summary { margin-bottom: 10px; }
+.hilfe-liste dt { color: var(--fg); font-size: .85rem; overflow-wrap: anywhere; }
+@media (min-width: 600px) { .hilfe-liste > div { grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); } }
+.feld .werkzeug + textarea { border-top-left-radius: 0; }
+.text-bild { display: block; max-width: 100%; height: auto; margin: 10px 0; }
+.zf .liste-def { margin-bottom: 12px; }
+.zf-aktionen { display: grid; gap: 18px; margin-top: 10px; }
+.zf-wahl { display: grid; gap: 8px; margin: 12px 0 18px; }
+.zf-wahl p { margin: 0; }
+table.t tr.ausgeblendet td { opacity: .62; }
+.inline-form { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+/* Einstellungen: Sperre (Rückmeldung 2026-10-30) */
+.sperre { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 12px 16px; margin: 0 0 16px; border: 1.5px solid var(--linie); border-radius: 14px; background: var(--flaeche); }
+.sperre.offen { border-color: var(--gruen); background: rgba(181, 189, 0, .12); }
+.sperre-text { flex: 1 1 260px; }
+.sperre-symbol { color: var(--meta); flex: none; }
+.sperre.offen .sperre-symbol { color: var(--gruen); }
+fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea { opacity: .7; cursor: not-allowed; }
+.liste-def dt { overflow-wrap: anywhere; hyphens: auto; }

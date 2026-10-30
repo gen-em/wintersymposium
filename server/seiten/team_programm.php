@@ -45,8 +45,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich, !empty($_POST['nachruecken']));
             $nr = (int)($GLOBALS['programm_nachgerueckt'] ?? 0);
             $pid = $art === 'termin' ? (int)db_wert('SELECT punkt_id FROM workshop_termin WHERE id = ?', [(int)($_POST['id'] ?? 0)]) : (int)($_POST['id'] ?? 0);
+            // In einen Block gezogen bzw. aus ihm heraus (Rückmeldung 2026-10-30): nur Workshops und Stationen
+            if ($neu !== null && ($_POST['block'] ?? '') !== '' && in_array(db_wert('SELECT typ FROM programmpunkt WHERE id = ?', [$pid]), ['workshop', 'station'], true)) {
+                programm_zuordnen($pid, (int)$_POST['block'] ?: null, $ich);
+            }
             flash_setzen($neu === null ? 'fehler' : 'hinweis', $neu === null ? 'Verschieben ging nicht.' : "Neue Uhrzeit vorgeschlagen: $neu – bitte prüfen." . ($nr > 0 ? ' ' . ($nr === 1 ? 'Ein Punkt rückt' : "$nr Punkte rücken") . ' dahinter nach hinten.' : '') . ' Gespeichert, noch nicht veröffentlicht.');
             umleiten('/team/programm' . ($pid > 0 ? '?id=' . $pid : ''));
+        case 'zuordnen':
+            $ok = programm_zuordnen((int)($_POST['id'] ?? 0), (int)($_POST['block'] ?? 0) ?: null, $ich);
+            flash_setzen($ok ? 'ok' : 'fehler', $ok ? 'Zugeordnet – gespeichert, noch nicht veröffentlicht. Liegt ein Termin außerhalb der Blockzeit, steht unten ein Hinweis.' : 'Zuordnen ging nicht (nur Workshops und Stationen, nur zu einem Workshop-Block).');
+            umleiten('/team/programm?id=' . (int)($_POST['id'] ?? 0));
         case 'veroeffentlichen':
             $pubFehler = programm_veroeffentlichen($ich);
             if ($pubFehler === []) {
@@ -107,7 +115,8 @@ $vorschlaege = [];
 foreach (PROGRAMM_TYPEN as $t => $_) {
     $vorschlaege[$t] = kuerzel_vorschlag($t);
 }
-$statusText = ['veroeffentlicht' => ['pub', '✓ veröffentlicht'], 'geaendert' => ['ges', '✎ gespeichert · nicht veröffentlicht'], 'neu' => ['neu', '+ neu']];
+// Ein Label für alles noch nicht Veröffentlichte (Rückmeldung 2026-10-30: gespeichert ist immer alles)
+$statusText = ['veroeffentlicht' => ['pub', '✓ veröffentlicht'], 'geaendert' => ['ges', 'nicht veröffentlicht'], 'neu' => ['ges', 'nicht veröffentlicht']];
 $fehlerFeld = fn(string $k) => isset($fehler[$k]) ? '<p class="feldfehler" id="f-' . $k . '">' . e($fehler[$k]) . '</p>' : '';
 $ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-describedby="f-' . $k . '"' : '';
 $fuer = fn(array $typen) => ' data-fuer="' . implode(' ', $typen) . '"';
@@ -126,7 +135,7 @@ if ($st['offen']):
     <span class="eb-knoepfe">
         <a class="knopf zweit" href="/team/programm/vorschau">Vorschau</a>
         <?php if ($pub !== null): ?>
-        <details class="bestaetigen"><summary class="knopf zweit">Verwerfen</summary>
+        <details class="bestaetigen" data-titel="Änderungen verwerfen?"><summary class="knopf zweit">Verwerfen</summary>
             <form method="post" action="/team/programm"><?= csrf_feld() ?><input type="hidden" name="aktion" value="verwerfen"><p>Alle Änderungen seit dem letzten Veröffentlichen gehen verloren.</p><button type="submit" class="knopf gefahr">Ja, verwerfen</button></form>
         </details>
         <?php endif; ?>
@@ -145,8 +154,7 @@ if ($st['offen']):
 <div class="pg-raster">
     <div class="kasten pg-plan">
         <p class="unterkopf"><?= e(tag_text(va('veranstaltung_datum'))) ?> · Tagesplan</p>
-        <p class="meta klein">Sortiert nach Uhrzeit. Workshop-Termine und offene Stationen hängen automatisch unter dem Workshop-Block, in dessen Zeit sie liegen. Neue Punkte ohne Uhrzeit stehen oben hell-lila. Am Griff ⋮⋮ zwischen zwei Punkte ziehen – die grüne Linie zeigt, wo: Der Punkt beginnt, wo der darüber endet, und nachfolgende Punkte rücken bis zur nächsten Lücke nach hinten.</p>
-        <p class="meta klein">Markiert: <span class="st ges">✎ gespeichert · nicht veröffentlicht</span> <span class="st neu">+ neu</span> – alles ohne Markierung ist veröffentlicht.</p>
+        <p class="meta klein">Sortiert nach Uhrzeit. Am Griff ⋮⋮ zwischen zwei Punkte ziehen – die weiße Linie zeigt, wo: Der Punkt beginnt, wo der darüber endet, nachfolgende Punkte rücken bis zur nächsten Lücke nach hinten. Workshops und Stationen auf die Mitte eines Workshop-Blocks ziehen ordnet sie ihm zu (grün umrandet); sonst hängen sie unter dem Block, in dessen Zeit sie liegen. Punkte ohne Uhrzeit stehen oben hell-lila.</p>
         <?php if ($gliederung === []): ?><p class="hinweis-leer">Noch keine Programmpunkte. Lege mit „+ Programmpunkt“ den ersten an.</p><?php endif; ?>
         <ol class="pg-liste" id="pg-liste">
         <?php
@@ -155,10 +163,10 @@ if ($st['offen']):
             $klasse = 'pg-zeile' . ($p['typ'] === 'pause' ? ' pause' : '') . ($p['typ'] === 'block' ? ' block' : '')
                 . ($von === '' ? ' pg-neu-punkt' : '') . ($s === 'geaendert' ? ' geaendert' : '') . ($s === 'neu' && $von !== '' ? ' neu' : '')
                 . (($bearbeiten['id'] ?? 0) === $p['id'] ? ' aktiv' : '');
-            return '<div class="' . $klasse . '" data-art="' . $art . '" data-id="' . $zid . '" data-beginn="' . e($von) . '" data-ende="' . e($bis) . '">'
+            return '<div class="' . $klasse . '" data-art="' . $art . '" data-id="' . $zid . '" data-punkt="' . (int)$p['id'] . '" data-typ="' . e($p['typ']) . '" data-beginn="' . e($von) . '" data-ende="' . e($bis) . '">'
                 . '<a class="pg-link" href="/team/programm?id=' . $p['id'] . '"><span class="mono">' . ($von !== '' ? e($von . '–' . $bis) : '--:--') . '</span><span>' . $inhalt
-                . ($s === 'neu' ? ' <span class="st neu">+ neu</span>' : '') . ($s === 'geaendert' ? ' <span class="st ges">✎ nicht veröffentlicht</span>' : '') . '</span></a>'
-                . (($p['typ'] !== 'workshop' || $art === 'termin') ? '<span class="griff" draggable="true" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
+                . ($s !== 'veroeffentlicht' ? ' <span class="st ges">nicht veröffentlicht</span>' : '') . '</span></a>'
+                . (($p['typ'] !== 'workshop' || $art === 'termin' || $p['termine'] === []) ? '<span class="griff" draggable="true" title="Ziehen zum Verschieben" aria-hidden="true">⋮⋮</span>' : '')
                 . '</div>';
         };
         $chip = function (array $p): string {
@@ -189,9 +197,13 @@ if ($st['offen']):
             <li><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], $chip($p) . e($p['titel']) . ($p['typ'] === 'workshop' ? ' <span class="meta klein">noch ohne Termin</span>' : '')) ?></li>
             <?php endif;
         endforeach; ?>
+        <?php if ($gliederung !== []): ?><li class="pg-ende" id="pg-ende" hidden>Hierher ziehen: ans Ende</li><?php endif; ?>
         </ol>
         <form method="post" action="/team/programm" id="verschieben-form" hidden>
-            <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value=""><input type="hidden" name="nachruecken" value="1">
+            <?= csrf_feld() ?><input type="hidden" name="aktion" value="verschieben"><input type="hidden" name="art" value=""><input type="hidden" name="id" value=""><input type="hidden" name="beginn" value=""><input type="hidden" name="nachruecken" value="1"><input type="hidden" name="block" value="">
+        </form>
+        <form method="post" action="/team/programm" id="zuordnen-form" hidden>
+            <?= csrf_feld() ?><input type="hidden" name="aktion" value="zuordnen"><input type="hidden" name="id" value=""><input type="hidden" name="block" value="">
         </form>
         <?php foreach ($hinweise as $h): ?><p class="pruef"><span class="chip offen">Hinweis</span> <?= e($h) ?></p><?php endforeach; ?>
     </div>
@@ -223,6 +235,11 @@ if ($st['offen']):
                     <input id="pg-kuerzel" name="kuerzel" type="text" maxlength="12" value="<?= e($v('kuerzel', $bearbeiten === null ? $vorschlaege[$typ] : '')) ?>"<?= $ungueltig('kuerzel') ?>><p class="hilfe">Vorschlag automatisch, änderbar</p><?= $fehlerFeld('kuerzel') ?>
                 </div>
             </div>
+            <?php $bloeckeWahl = array_filter($arbeit, fn($b) => $b['typ'] === 'block');
+            $blockJetzt = (string)($eingabe['block_id'] ?? ($bearbeiten['block_id'] ?? '')); ?>
+            <div class="feld"<?= $fuer(['workshop', 'station']) ?>><label for="pg-block">Gehört zu Workshop-Block</label>
+                <select id="pg-block" name="block_id"><option value="">automatisch (nach Uhrzeit)</option><?php foreach ($bloeckeWahl as $b): ?><option value="<?= $b['id'] ?>"<?= $blockJetzt === (string)$b['id'] ? ' selected' : '' ?>><?= e($b['titel'] . ($b['beginn'] !== '' ? ' · ' . $b['beginn'] . '–' . $b['ende'] : '')) ?></option><?php endforeach; ?></select>
+                <p class="hilfe">Auch im Plan: den Punkt auf die Mitte eines Blocks ziehen.</p></div>
             <div class="feld"><label for="pg-titel">Titel</label><input id="pg-titel" name="titel" type="text" maxlength="160" required value="<?= e($v('titel')) ?>"<?= $ungueltig('titel') ?>><?= $fehlerFeld('titel') ?></div>
             <div class="feld"<?= $fuer(['vortrag', 'fall', 'workshop']) ?>><label for="pg-untertitel">Untertitel</label><input id="pg-untertitel" name="untertitel" type="text" maxlength="200" value="<?= e($v('untertitel')) ?>"<?= $ungueltig('untertitel') ?>><?= $fehlerFeld('untertitel') ?></div>
             <div class="feld"<?= $fuer(['vortrag', 'fall', 'workshop', 'station', 'pause']) ?>><label for="pg-beschreibung">Beschreibung</label><textarea id="pg-beschreibung" name="beschreibung" rows="4"<?= $ungueltig('beschreibung') ?>><?= e($v('beschreibung')) ?></textarea><p class="hilfe">Erscheint im Popup. Leerzeile = neuer Absatz.</p><?= $fehlerFeld('beschreibung') ?></div>
@@ -263,10 +280,11 @@ if ($st['offen']):
             <div class="aktionen">
                 <button type="submit" class="knopf">Speichern</button>
                 <a class="knopf zweit" href="/team/programm">Abbrechen</a>
+                <?php if ($bearbeiten !== null): ?><button type="button" class="knopf gefahr rechts" id="pg-loeschen" hidden>Programmpunkt löschen</button><?php endif; ?>
             </div>
         </form>
         <?php if ($bearbeiten !== null): ?>
-        <details class="bestaetigen gefahrzone"><summary class="knopf gefahr">Programmpunkt löschen</summary>
+        <details class="bestaetigen gefahrzone" data-ausloeser="pg-loeschen"><summary class="knopf gefahr">Programmpunkt löschen</summary>
             <form method="post" action="/team/programm"><?= csrf_feld() ?><input type="hidden" name="aktion" value="loeschen"><input type="hidden" name="id" value="<?= $bearbeiten['id'] ?>">
                 <p>„<?= e(trim($bearbeiten['kuerzel'] . ' ' . $bearbeiten['titel'])) ?>“ wird gelöscht. Auf der Startseite bleibt er, bis du veröffentlichst.</p>
                 <button type="submit" class="knopf gefahr">Ja, löschen</button>

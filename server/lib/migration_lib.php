@@ -363,6 +363,15 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        9 => [
+            'beschreibung' => 'Rückmeldung 2026-10-30: Block-Zuordnung im Programm, Protokoll ausblenden, zweiter Faktor per E-Mail-Code',
+            'sql' => [
+                "ALTER TABLE programmpunkt ADD COLUMN block_id INT UNSIGNED NULL AFTER typ",
+                "ALTER TABLE audit ADD COLUMN ausgeblendet_von INT UNSIGNED NULL, ADD COLUMN ausgeblendet_am DATETIME NULL",
+                // Zweiter Faktor per E-Mail-Code, frei wählbar (Admin 2026-10-30); Code nur als Hash, 10 min, einmal
+                "ALTER TABLE konto ADD COLUMN zweitfaktor_mail TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN mailcode_hash VARCHAR(255) NULL, ADD COLUMN mailcode_bis DATETIME NULL",
+            ],
+        ],
     ];
 }
 

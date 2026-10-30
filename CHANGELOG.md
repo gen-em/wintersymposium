@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.11.0] – 2026-10-30
+
+Rückmeldungen des Admins zu Staging (E-51).
+
+### Neu
+
+- **Einheitlicher Bestätigungsdialog** (Entwurf C): jede Nachfrage als Fenster über der Seite, grün bestätigen, rot löschen/verwerfen, lila Info; auf dem Handy von unten.
+- **Zwei-Faktor-Authentifizierung per E-Mail-Code**, für alle frei wählbar; neuer Abschnitt unter „Mein Konto“ (App einrichten, Code per E-Mail, Wiederherstellungscodes).
+- **Programm:** Workshops und Stationen ausdrücklich einem Block zuordnen (Feld oder auf den Block ziehen); „ans Ende“ ziehen.
+- **Texte:** Auszeichnung nach CommonMark (Teilmenge), Werkzeugleiste und Bilder.
+- **Protokoll:** Admins sehen nur ihre Bereiche; Betreiber können Einträge ausblenden; Filter als Knöpfe.
+- **Einstellungen** sind gesperrt, bis man „Entsperren“ wählt.
+
+### Geändert
+
+- Navigation: grüner Knopf „Anmelden“ bzw. „Meine Anmeldung“; vor dem Anmeldestart Hinweis statt „Link per Mail“; kein „Team“-Link in der Fußzeile; kürzere Login-Texte.
+- Programm: weiße Einfügemarke, ein Label „nicht veröffentlicht“, hellroter Hinweisbalken, „Programmpunkt löschen“ neben Speichern.
+- Statistik ohne Kachel „EFN angegeben“; Abstand Kicker–Titel bei Umlauten; Rolle neben dem Namen mittig.
+
+### Behoben
+
+- Als Team-Mitglied wirkte „Deine Anmeldung“ wie ausgeloggt.
+
 ## [0.10.0] – 2026-10-30
 
 AP-6: Mailings und Team-Mails (E-50).

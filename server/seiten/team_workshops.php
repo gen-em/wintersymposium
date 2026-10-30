@@ -96,7 +96,7 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
                 <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e($p['vorname'] . ' ' . $p['nachname']) ?></a> <span class="meta klein"><?= e($p['berufsgruppe']) ?></span>
                     <?= $p['status'] === 'angebot' ? '<span class="chip wl">Angebot bis ' . e(datum_zeit_text($p['angebot_bis'])) . '</span>' : '' ?><?= $p['anm_status'] === 'unbestaetigt' ? ' <span class="chip offen">unbestätigt</span>' : '' ?>
                     <?php if ($auswahl['id'] !== 0): ?>
-                    <details class="bestaetigen inline-details"><summary class="knopf zweit klein-knopf">Entfernen</summary>
+                    <details class="bestaetigen inline-details" data-titel="Platz entfernen?"><summary class="knopf zweit klein-knopf">Entfernen</summary>
                         <form method="post" action="<?= e($ziel) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="entfernen"><input type="hidden" name="t" value="<?= $auswahl['id'] ?>"><input type="hidden" name="platz" value="<?= (int)$p['id'] ?>">
                             <p>Platz von <?= e($p['vorname'] . ' ' . $p['nachname']) ?> entfernen? Er geht ans Nachrücken.</p>
                             <label class="haken"><input type="checkbox" name="ohne_mail" value="1"><span>ohne Mail</span></label>

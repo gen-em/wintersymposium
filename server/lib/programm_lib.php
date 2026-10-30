@@ -58,6 +58,10 @@ function programm_arbeitsstand(): array
             'beginn' => hm($z['beginn']), 'ende' => hm($z['ende']), 'bring' => $z['bring'], 'notiz' => $z['notiz'],
             'termine' => [], 'dozenten' => [],
         ];
+        // Nur wenn gesetzt: ältere veröffentlichte Stände bleiben so unverändert (gleicher Hash)
+        if ($z['block_id'] !== null) {
+            $punkte[(int)$z['id']]['block_id'] = (int)$z['block_id'];
+        }
     }
     foreach (db_zeilen('SELECT * FROM workshop_termin ORDER BY beginn, id') as $t) {
         if (isset($punkte[(int)$t['punkt_id']])) {
@@ -145,6 +149,9 @@ function programm_gliederung(array $punkte): array
 {
     $punkte = programm_sortieren($punkte);
     $bloecke = array_values(array_filter($punkte, fn($p) => $p['typ'] === 'block' && $p['beginn'] !== '' && $p['ende'] !== ''));
+    $blockIds = array_column(array_filter($punkte, fn($p) => $p['typ'] === 'block'), 'id');
+    // Ausdrücklich zugeordnet (Rückmeldung 2026-10-30) geht vor der Uhrzeit
+    $zugeordnet = fn(array $p): ?int => isset($p['block_id']) && in_array($p['block_id'], $blockIds, true) ? (int)$p['block_id'] : null;
     $imBlock = function (string $von, string $bis) use ($bloecke): ?int {
         foreach ($bloecke as $b) {
             if ($von >= $b['beginn'] && $bis <= $b['ende']) {
@@ -157,8 +164,13 @@ function programm_gliederung(array $punkte): array
     $aussen = [];
     foreach ($punkte as $p) {
         if ($p['typ'] === 'workshop') {
+            $zb = $zugeordnet($p);
+            if ($zb !== null && $p['termine'] === []) {
+                $kinder[$zb][] = ['art' => 'punkt', 'punkt' => $p, 'termin' => null];
+                continue;
+            }
             foreach ($p['termine'] as $t) {
-                $b = $imBlock($t['beginn'], $t['ende']);
+                $b = $zb ?? $imBlock($t['beginn'], $t['ende']);
                 if ($b !== null) {
                     $kinder[$b][] = ['art' => 'termin', 'punkt' => $p, 'termin' => $t];
                 } else {
@@ -168,7 +180,7 @@ function programm_gliederung(array $punkte): array
             if ($p['termine'] === []) {
                 $aussen[] = ['art' => 'punkt', 'punkt' => $p];
             }
-        } elseif ($p['typ'] === 'station' && $p['beginn'] !== '' && ($b = $imBlock($p['beginn'], $p['ende'])) !== null) {
+        } elseif ($p['typ'] === 'station' && (($b = $zugeordnet($p)) !== null || ($p['beginn'] !== '' && ($b = $imBlock($p['beginn'], $p['ende'])) !== null))) {
             $kinder[$b][] = ['art' => 'station', 'punkt' => $p, 'termin' => null];
         }
     }
@@ -179,7 +191,7 @@ function programm_gliederung(array $punkte): array
             usort($k, fn($a, $b) => [($a['termin']['beginn'] ?? $a['punkt']['beginn']), $a['art'] === 'station' ? 1 : 0] <=> [($b['termin']['beginn'] ?? $b['punkt']['beginn']), $b['art'] === 'station' ? 1 : 0]);
             $liste[] = ['art' => 'block', 'punkt' => $p, 'kinder' => $k, 'beginn' => $p['beginn']];
         } elseif ($p['typ'] === 'station') {
-            if ($p['beginn'] === '' || $imBlock($p['beginn'], $p['ende']) === null) {
+            if ($zugeordnet($p) === null && ($p['beginn'] === '' || $imBlock($p['beginn'], $p['ende']) === null)) {
                 $liste[] = ['art' => 'punkt', 'punkt' => $p, 'beginn' => $p['beginn']];
             }
         } elseif ($p['typ'] !== 'workshop') {
@@ -241,7 +253,12 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'notiz' => $text('notiz', 300),
         'beginn' => trim((string)($e['beginn'] ?? '')),
         'ende' => trim((string)($e['ende'] ?? '')),
+        'block_id' => (int)($e['block_id'] ?? 0) ?: null,
     ];
+    // Zuordnung zu einem Block nur für Workshops und Stationen, nur zu einem vorhandenen Block
+    if (!in_array($typ, ['workshop', 'station'], true) || ($w['block_id'] !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$w['block_id']]) != 1)) {
+        $w['block_id'] = null;
+    }
     foreach (['kuerzel' => 12, 'titel' => 160, 'untertitel' => 200, 'beschreibung' => 4000, 'ort' => 120, 'bring' => 160, 'notiz' => 300] as $k => $max) {
         if (mb_strlen($w[$k]) > $max) {
             $f[$k] = "Höchstens $max Zeichen.";
@@ -385,6 +402,25 @@ function programm_hinweise(array $punkte): array
             }
         }
     }
+    // Zugeordnet, aber zeitlich außerhalb des Blocks
+    $bloecke = [];
+    foreach ($punkte as $p) {
+        if ($p['typ'] === 'block' && $p['beginn'] !== '') {
+            $bloecke[$p['id']] = $p;
+        }
+    }
+    foreach ($punkte as $p) {
+        $b = isset($p['block_id']) ? ($bloecke[$p['block_id']] ?? null) : null;
+        if ($b === null) {
+            continue;
+        }
+        $zeiten = $p['typ'] === 'workshop' ? $p['termine'] : ($p['beginn'] !== '' ? [['beginn' => $p['beginn'], 'ende' => $p['ende']]] : []);
+        foreach ($zeiten as $z) {
+            if ($z['beginn'] < $b['beginn'] || $z['ende'] > $b['ende']) {
+                $h[] = trim($p['kuerzel'] . ' ' . $p['titel']) . ' gehört zu „' . $b['titel'] . '“ (' . $b['beginn'] . '–' . $b['ende'] . '), liegt aber ' . $z['beginn'] . '–' . $z['ende'] . '.';
+            }
+        }
+    }
     return array_values(array_unique($h));
 }
 
@@ -394,17 +430,17 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
     $w = $r['werte'];
     $jetzt = db_jetzt();
     return db_transaktion(function () use ($id, $w, $r, $jetzt, $kontoId): int {
-        $felder = [$w['typ'], $w['kuerzel'], $w['titel'], $w['untertitel'], $w['beschreibung'], $w['ort'],
+        $felder = [$w['typ'], $w['block_id'], $w['kuerzel'], $w['titel'], $w['untertitel'], $w['beschreibung'], $w['ort'],
             $w['beginn'] === '' ? null : $w['beginn'], $w['ende'] === '' ? null : $w['ende'], $w['bring'], $w['notiz']];
         if ($id === null) {
             db_ausfuehren(
-                'INSERT INTO programmpunkt (typ, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO programmpunkt (typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 array_merge($felder, [$jetzt, $jetzt])
             );
             $id = (int)db()->lastInsertId();
         } else {
             db_ausfuehren(
-                'UPDATE programmpunkt SET typ = ?, kuerzel = ?, titel = ?, untertitel = ?, beschreibung = ?, ort = ?, beginn = ?, ende = ?, bring = ?, notiz = ?, geaendert_am = ? WHERE id = ?',
+                'UPDATE programmpunkt SET typ = ?, block_id = ?, kuerzel = ?, titel = ?, untertitel = ?, beschreibung = ?, ort = ?, beginn = ?, ende = ?, bring = ?, notiz = ?, geaendert_am = ? WHERE id = ?',
                 array_merge($felder, [$jetzt, $id])
             );
         }
@@ -437,6 +473,7 @@ function programm_punkt_loeschen(int $id, ?int $kontoId): bool
             return false;
         }
     }
+    db_ausfuehren('UPDATE programmpunkt SET block_id = NULL WHERE block_id = ?', [$id]);
     db_ausfuehren('DELETE FROM programmpunkt WHERE id = ?', [$id]);
     audit_schreiben('programm', 'Programmpunkt ' . $id . ' gelöscht', $kontoId);
     return true;
@@ -554,6 +591,24 @@ function programm_veroeffentlichen(?int $kontoId): array
     });
 }
 
+/**
+ * Workshop oder Station einem Block zuordnen (null: lösen). Rückmeldung
+ * 2026-10-30: im Plan auf den Block ziehen. Gibt false zurück, wenn es nicht geht.
+ */
+function programm_zuordnen(int $punktId, ?int $blockId, ?int $kontoId): bool
+{
+    $p = db_zeile('SELECT id, typ, block_id FROM programmpunkt WHERE id = ?', [$punktId]);
+    if ($p === null || !in_array($p['typ'], ['workshop', 'station'], true)) {
+        return false;
+    }
+    if ($blockId !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$blockId]) != 1) {
+        return false;
+    }
+    db_ausfuehren('UPDATE programmpunkt SET block_id = ?, geaendert_am = ? WHERE id = ?', [$blockId, db_jetzt(), $punktId]);
+    audit_schreiben('programm', 'Programmpunkt ' . $punktId . ($blockId !== null ? ' dem Block ' . $blockId . ' zugeordnet' : ' aus dem Block gelöst'), $kontoId);
+    return true;
+}
+
 /** Arbeitsstand auf den veröffentlichten Stand zurücksetzen. */
 function programm_verwerfen(?int $kontoId): void
 {
@@ -564,8 +619,8 @@ function programm_verwerfen(?int $kontoId): void
         $jetzt = db_jetzt();
         foreach ($punkte as $p) {
             db_ausfuehren(
-                'INSERT INTO programmpunkt (id, typ, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [$p['id'], $p['typ'], $p['kuerzel'], $p['titel'], $p['untertitel'], $p['beschreibung'], $p['ort'], $p['beginn'] ?: null, $p['ende'] ?: null, $p['bring'], $p['notiz'], $jetzt, $jetzt]
+                'INSERT INTO programmpunkt (id, typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$p['id'], $p['typ'], $p['block_id'] ?? null, $p['kuerzel'], $p['titel'], $p['untertitel'], $p['beschreibung'], $p['ort'], $p['beginn'] ?: null, $p['ende'] ?: null, $p['bring'], $p['notiz'], $jetzt, $jetzt]
             );
             foreach ($p['termine'] as $t) {
                 db_ausfuehren('INSERT INTO workshop_termin (id, punkt_id, beginn, ende, plaetze) VALUES (?, ?, ?, ?, ?)', [$t['id'], $p['id'], $t['beginn'], $t['ende'], $t['plaetze']]);

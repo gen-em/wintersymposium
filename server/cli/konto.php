@@ -30,7 +30,7 @@ $email = $argv[2] ?? '';
 
 if ($befehl === 'liste') {
     foreach (konto_team_liste() as $k) {
-        printf("%-30s %-10s %s%s\n", $k['email'], $k['rolle'], (int)$k['aktiv'] === 1 ? 'aktiv' : 'gesperrt', $k['totp_seit'] ? '' : ', ohne zweiten Faktor');
+        printf("%-30s %-10s %s%s\n", $k['email'], $k['rolle'], (int)$k['aktiv'] === 1 ? 'aktiv' : 'gesperrt', zweitfaktor_da($k) ? '' : ', ohne zweiten Faktor');
     }
     exit(0);
 }

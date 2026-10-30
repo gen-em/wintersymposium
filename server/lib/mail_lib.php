@@ -584,6 +584,10 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'du bist jetzt im Team des Wintersymposiums (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
                 . "\n\nDer Link gilt 72 Stunden und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter " . url('/einloggen') . '.'
                 . "\n\nDu erwartest diese Mail nicht? Dann ignoriere sie und sag dem Team Bescheid." . mail_gruss()];
+        case 'zweitfaktor_code':
+            return ['Dein Code zum Einloggen: ' . $d['code'],
+                $hallo . 'dein Code zum Einloggen in den Team-Bereich:' . "\n\n    " . $d['code'] . "\n\nEr gilt 10 Minuten und nur einmal."
+                . "\n\nDu loggst dich gerade nicht ein? Dann hat jemand dein Passwort. Ändere es unter " . url('/konto/passwort-vergessen') . ' und sag dem Team Bescheid.' . mail_gruss()];
         case 'team_passwort':
             return ['Neues Passwort für den Team-Bereich des Wintersymposiums',
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']

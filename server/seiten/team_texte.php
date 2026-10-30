@@ -4,8 +4,8 @@ declare(strict_types=1);
 /*
  * Texte (AP-5, E-49; pflegbare Texte aus AP-2): Startseite für Admin und
  * Betreiber, Impressum und Datenschutz nur für Betreiber (Admin 2026-10-29).
- * Auszeichnung: **fett**, *kursiv*, [Link](https://…), ## Überschrift,
- * Listen mit „- “; Änderungen gelten sofort und stehen im Protokoll.
+ * Auszeichnung: CommonMark-Teilmenge (inhalt_lib.php), mit Werkzeugleiste und
+ * Bildern (Rückmeldung 2026-10-30); Änderungen gelten sofort und stehen im Protokoll.
  */
 
 $konto = team_tor();
@@ -47,16 +47,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         umleiten('/team/texte');
     }
 }
-team_seite_kopf($konto, 'Texte', '/team/texte');
+team_seite_kopf($konto, 'Texte', '/team/texte', ['skripte' => ['texte.js']]);
 ?>
 <?= fehler_html($fehler) ?>
-<p class="meta klein">Auszeichnung: <span class="mono">**fett**</span>, <span class="mono">*kursiv*</span>, <span class="mono">[Linktext](https://…)</span>, Überschrift mit <span class="mono">## </span>, Liste mit <span class="mono">- </span> am Zeilenanfang, Leerzeile = neuer Absatz.</p>
+<details class="kasten hilfe-kasten">
+    <summary><strong>So zeichnest du Text aus</strong> <span class="meta klein">– Markdown nach dem Standard CommonMark, wie auf GitHub; die Werkzeugleiste über jedem Feld schreibt es für dich</span></summary>
+    <dl class="liste-def hilfe-liste">
+        <div><dt class="mono">**fett**</dt><dd><strong>fett</strong></dd></div>
+        <div><dt class="mono">*kursiv*</dt><dd><em>kursiv</em> (in Titeln: Lila)</dd></div>
+        <div><dt class="mono">## Überschrift</dt><dd>Zwischenüberschrift (Infokästen: ein Kasten je Überschrift)</dd></div>
+        <div><dt class="mono">- Punkt</dt><dd>Aufzählung; <span class="mono">1. Punkt</span> nummeriert</dd></div>
+        <div><dt class="mono">[Linktext](https://…)</dt><dd>Link (auch <span class="mono">mailto:</span>)</dd></div>
+        <div><dt class="mono">![Beschreibung](/bild/…)</dt><dd>Bild – über „Bild“ in der Werkzeugleiste hochladen</dd></div>
+        <div><dt class="mono">Leerzeile</dt><dd>neuer Absatz; ein einfacher Zeilenumbruch bleibt erhalten</dd></div>
+        <div><dt class="mono">\*</dt><dd>Zeichen ohne Wirkung (Backslash davor)</dd></div>
+    </dl>
+    <p class="meta klein">HTML ist in diesen Texten nicht erlaubt. In den Mailings gibt es dieselbe Werkzeugleiste mit einem Editor, der gleich so aussieht wie die Mail.</p>
+</details>
 <form class="form breit-form" method="post" action="/team/texte">
     <?= csrf_feld() ?>
     <?php foreach (TEXTE_KATALOG as $k => [$titel, $zeilen, $nurBetreiber]): if ($nurBetreiber && !$betreiber) continue; ?>
     <div class="feld"><label for="t-<?= e($k) ?>"><?= e($titel) ?></label>
         <?php if ($zeilen === 1): ?><input id="t-<?= e($k) ?>" name="<?= e($k) ?>" type="text" maxlength="300" value="<?= e(inhalt($k)) ?>">
-        <?php else: ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="<?= $zeilen ?>"><?= e(inhalt($k)) ?></textarea><?php endif; ?>
+        <?php else: ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="<?= $zeilen ?>" data-markdown><?= e(inhalt($k)) ?></textarea><?php endif; ?>
         <?php if ($k === 'datenschutz'): ?><p class="hilfe">Muss Anmeldung, Konten, Mails und Löschfristen beschreiben (betrieb.md, Abschnitt Anmeldung).</p><?php endif; ?>
     </div>
     <?php endforeach; ?>

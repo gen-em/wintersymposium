@@ -321,7 +321,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                     <form method="post" action="<?= e($ziel()) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="sperren"><input type="hidden" name="k" value="<?= (int)$k['id'] ?>"><button class="knopf zweit klein-knopf" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Konto sperren' : 'Konto entsperren' ?></button></form>
                 </div>
                 <?php if ($betreiber): ?>
-                <details class="bestaetigen"><summary class="knopf zweit klein-knopf">Rolle ändern</summary>
+                <details class="bestaetigen" data-art="gruen"><summary class="knopf zweit klein-knopf">Rolle ändern</summary>
                     <form method="post" action="<?= e($ziel()) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="rolle"><input type="hidden" name="k" value="<?= (int)$k['id'] ?>">
                         <div class="feld"><label for="rolle">Neue Rolle</label><select id="rolle" name="rolle"><option value="admin">Admin (Team)</option><option value="betreiber">Betreiber</option></select></div>
                         <p><?= e($auswahl['name']) ?> sieht dann alle Anmeldungen mit E-Mail, Institution und EFN. Beim nächsten Login wird ein zweiter Faktor eingerichtet; die Person bekommt eine Mail. Die Änderung steht im Protokoll.</p>

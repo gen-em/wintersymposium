@@ -899,6 +899,7 @@ function anm_job(int $jetzt): array
 
 function anm_sitzung(): void
 {
+    team_gesehen();
     sitzung_starten('link');
 }
 
@@ -918,6 +919,10 @@ function anm_aktuell(): ?array
 {
     // Mit Konto eingeloggt: die verknüpfte Anmeldung (AP-4b)
     if (!isset($_SESSION['anm']) && ($k = tk_aktuell()) !== null && ($va = tk_anmeldung((int)$k['id'])) !== null) {
+        $_SESSION['anm'] = ['id' => (int)$va['id'], 'version' => (int)$va['sitzung_version']];
+    }
+    // Team-Mitglied mit eigener Anmeldung (verknüpft oder gleiche, durch den Login bestätigte Adresse)
+    if (!isset($_SESSION['anm']) && ($tk = team_gesehen()) !== null && ($va = tk_anmeldung((int)$tk['id']) ?? anm_per_email((string)$tk['email'])) !== null) {
         $_SESSION['anm'] = ['id' => (int)$va['id'], 'version' => (int)$va['sitzung_version']];
     }
     $s = $_SESSION['anm'] ?? null;

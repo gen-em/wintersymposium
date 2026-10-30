@@ -150,7 +150,7 @@ $ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-de
 
 /* ---- Einstieg ohne Sitzung ---- */
 if ($a === null) {
-    seite_kopf('Deine Anmeldung', ['aktiv' => '/deine-anmeldung']);
+    seite_kopf('Anmelden', ['aktiv' => '/deine-anmeldung']);
     $zr = anm_zeitraum();
     $kap = anm_kapazitaet(0);
     ?>
@@ -162,6 +162,13 @@ if ($a === null) {
 <div class="innen">
     <?= meldung_html($meldung) ?>
     <div class="zg-raster drei-spalten">
+<?php if ($zr === 'vorher'): ?>
+        <div class="kasten zg zg-zwei">
+            <p class="kicker">Noch nicht möglich</p>
+            <h2 class="zwischen">Anmeldung noch nicht möglich</h2>
+            <p>Die Anmeldung öffnet am <strong><?= e(datum_zeit_text(va('anmeldung_start'))) ?> Uhr</strong>. Dann kannst du dich hier anmelden.</p>
+        </div>
+<?php else: ?>
         <div class="kasten zg">
             <p class="kicker">Noch nicht angemeldet</p>
             <h2 class="zwischen">Neu anmelden</h2>
@@ -169,8 +176,6 @@ if ($a === null) {
             <?php if ($zr === 'offen'): ?>
                 <a class="knopf gruen" href="/anmelden">Zur Anmeldung</a>
                 <p class="meta klein"><?= $kap !== null ? 'Noch ' . anm_frei(0) . ' von ' . $kap . ' Plätzen frei · ' : '' ?>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></p>
-            <?php elseif ($zr === 'vorher'): ?>
-                <p class="meta">Die Anmeldung öffnet am <?= e(datum_zeit_text(va('anmeldung_start'))) ?> Uhr.</p>
             <?php else: ?>
                 <p class="meta">Die Anmeldung ist geschlossen.</p>
             <?php endif; ?>
@@ -186,6 +191,7 @@ if ($a === null) {
                 <button class="knopf" type="submit">Link schicken</button>
             </form>
         </div>
+<?php endif; ?>
         <div class="kasten zg">
             <p class="kicker">Mit Konto</p>
             <h2 class="zwischen">Einloggen</h2>
@@ -196,7 +202,7 @@ if ($a === null) {
                 <div class="feld"><label for="zg-pw">Passwort</label><input id="zg-pw" name="passwort" type="password" autocomplete="current-password" required></div>
                 <div class="aktionen"><button class="knopf" type="submit">Einloggen</button><a class="klein-link" href="/konto/passwort-vergessen">Passwort vergessen?</a></div>
             </form>
-            <p class="meta klein">Noch kein Konto? <a href="/konto/neu">Konto anlegen</a> – oder erst anmelden und dabei ankreuzen. Team-Mitglieder loggen sich hier genauso ein; danach wird der zweite Faktor abgefragt.</p>
+            <p class="meta klein">Noch kein Konto? <a href="/konto/neu">Konto anlegen</a></p>
         </div>
     </div>
 </div>
@@ -217,7 +223,7 @@ $fristText = function (string $schluessel): string {
 };
 $status = $a['status'] === 'unbestaetigt' ? 'Noch nicht bestätigt' : ($sym === 'fest' ? 'Anmeldung bestätigt' : ($sym === 'angebot' ? 'Platz frei für dich' : 'Warteliste'));
 
-seite_kopf('Deine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a, 'skripte' => ['anmelden.js']]);
+seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a, 'skripte' => ['anmelden.js']]);
 ?>
 <div class="innen form-kopf">
     <p class="kicker">Deine Anmeldung</p>

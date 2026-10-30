@@ -195,17 +195,17 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
             <td data-label="Anlass"><?= $k !== null ? e($k['anlass']) . '<br><span class="meta klein">Version ' . e($k['version']) . '</span>' : '<span class="chip wl">nicht lesbar</span>' ?></td>
             <td data-label="Größe" class="mono"><?= e($groesse($s['groesse'])) ?></td>
             <td data-label="Aktionen"><div class="zellen-aktionen">
-                <details class="bestaetigen"><summary class="knopf zweit klein-knopf">Herunterladen</summary>
+                <details class="bestaetigen" data-art="gruen" data-titel="Sicherung herunterladen?"><summary class="knopf zweit klein-knopf">Herunterladen</summary>
                     <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="herunterladen"><input type="hidden" name="name" value="<?= e($s['name']) ?>">
                         <p>Die Datei enthält personenbezogene Daten. Nur verschlüsselt aufbewahren.</p>
                         <?= $codeFeld('totp-dl-' . $i) ?><button type="submit" class="knopf">Herunterladen</button></form>
                 </details>
-                <details class="bestaetigen"><summary class="knopf gefahr klein-knopf">Wiederherstellen</summary>
+                <details class="bestaetigen" data-titel="Sicherung wiederherstellen?"><summary class="knopf gefahr klein-knopf">Wiederherstellen</summary>
                     <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="wiederherstellen"><input type="hidden" name="name" value="<?= e($s['name']) ?>">
                         <p>Alle Daten werden durch diesen Stand ersetzt, auch die Team-Konten. Der jetzige Stand wird vorher gesichert.</p>
                         <?= $codeFeld('totp-wh-' . $i) ?><button type="submit" class="knopf gefahr">Ja, wiederherstellen</button></form>
                 </details>
-                <details class="bestaetigen"><summary class="knopf zweit klein-knopf">Löschen</summary>
+                <details class="bestaetigen" data-titel="Sicherung löschen?"><summary class="knopf zweit klein-knopf">Löschen</summary>
                     <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="loeschen"><input type="hidden" name="name" value="<?= e($s['name']) ?>">
                         <p>Diese Sicherung wird endgültig gelöscht.</p>
                         <button type="submit" class="knopf gefahr">Ja, löschen</button></form>

@@ -102,7 +102,7 @@ if (is_array($link)): ?>
     <tbody>
     <?php foreach (konto_team_liste() as $k):
         $eigen = (int)$k['id'] === $ich;
-        $status = (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($k['hat_passwort'] ? ($k['totp_seit'] !== null ? 'aktiv' : 'zweiter Faktor fehlt') : 'Einrichtung offen'); ?>
+        $status = (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($k['hat_passwort'] ? (zweitfaktor_da($k) ? 'aktiv' : 'zweiter Faktor fehlt') : 'Einrichtung offen'); ?>
         <tr>
             <td data-label="Name"><strong><?= e($k['name']) ?></strong><?= $eigen ? ' <span class="meta">(du)</span>' : '' ?><br><span class="meta klein"><?= e($k['email']) ?></span></td>
             <td data-label="Rolle"><?= e(ROLLEN[$k['rolle']]) ?></td>
@@ -111,7 +111,7 @@ if (is_array($link)): ?>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
             <?php if (!$eigen): ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="link"><button class="knopf zweit klein" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link mailen' : 'Einladung neu mailen' ?></button></form>
-                <?php if ($k['totp_seit'] !== null): ?>
+                <?php if (zweitfaktor_da($k)): ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="zweitfaktor"><button class="knopf zweit klein" type="submit">2. Faktor zurücksetzen</button></form>
                 <?php endif; ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="sperren"><button class="knopf zweit klein" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></button></form>

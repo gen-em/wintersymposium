@@ -117,24 +117,31 @@ node tools/browser/durchlauf.js <Ausgabeordner>
 
 ## 7. Pflegbare Texte
 
-Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie im Betreiber-Bereich (ab AP-5). Erlaubte Auszeichnung:
+Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (Startwerte kommen mit der Migration). Bearbeitet werden sie unter Team-Bereich → „Texte“ (Impressum und Datenschutz nur Betreiber). Über jedem Textfeld steht eine Werkzeugleiste (fett, kursiv, Überschrift, Liste, Link, Bild), die die Auszeichnung schreibt.
+
+Auszeichnung ist eine Teilmenge von **CommonMark** (commonmark.org, der Standard hinter Markdown), ohne HTML (Rückmeldung 2026-10-30):
 
 | Schreibweise | Ergebnis |
 |---|---|
-| Leerzeile | neuer Absatz |
-| `## Überschrift` / `### Überschrift` | Zwischenüberschrift |
-| `- Punkt` | Aufzählung |
-| `**fett**` | fett |
-| `*Akzent*` | hervorgehoben (im Titel der Startseite in Lila) |
+| Leerzeile | neuer Absatz; ein einfacher Zeilenumbruch bleibt erhalten (wie in GitHub-Kommentaren) |
+| `# …`, `## …` / `### …` | Zwischenüberschrift (Infokästen der Startseite: ein Kasten je `##`) |
+| `- Punkt` (auch `*`, `+`), `1. Punkt` | Aufzählung, nummerierte Liste |
+| `**fett**` / `__fett__` | fett |
+| `*kursiv*` / `_kursiv_` | hervorgehoben (im Titel der Startseite in Lila) |
 | `[Text](https://…)`, `[Text](mailto:…)` | Link (nur https und mailto) |
+| `![Beschreibung](/bild/text-….jpg)` | Bild – nur über „Bild“ hochgeladene (JPG/PNG, verkleinert auf höchstens 1200 px, in `var/bilder/`, mit gesichert; unbenutzte nach einem Tag gelöscht) |
+| `---` | Trennlinie |
+| `\*` | Zeichen ohne Wirkung |
 
-HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Startseite (`start_infos`) werden an `##`-Überschriften getrennt: je Überschrift ein Kasten.
+HTML wird nicht übernommen, sondern als Text angezeigt.
 
 ## 8. Team-Login und Konten
 
-- **Einloggen:** `/einloggen` (Link „Team“ in der Fußzeile). Passwort, dann Code aus einer Authenticator-App (TOTP) oder ein Wiederherstellungscode. Beim ersten Login wird der zweite Faktor eingerichtet (QR-Code oder Schlüssel zum Abtippen); danach erscheinen zehn Wiederherstellungscodes **einmal**.
-- **Neues Team-Mitglied:** Betreiber → Team-Bereich → „Team-Konten“ → Name, E-Mail, Rolle → der Einrichtungslink wird einmal angezeigt. Weitergeben (persönlich oder über einen sicheren Weg); er gilt 72 Stunden und einmal. Dort setzt die Person ihr Passwort und richtet den zweiten Faktor ein.
-- **Passwort vergessen:** Betreiber erzeugt unter „Team-Konten“ einen Passwort-Link (gleicher Weg).
+- **Einloggen:** über „Anmelden“ in der Navigation (Kasten „Einloggen“) oder direkt `/einloggen`; der Link „Team“ in der Fußzeile ist weg (Rückmeldung 2026-10-30). Passwort, dann der zweite Faktor (Zwei-Faktor-Authentifizierung): Code aus einer Authenticator-App (TOTP), Code per E-Mail (frei wählbar, gilt 10 Minuten und einmal) oder ein Wiederherstellungscode. Beim ersten Login wählt man App (QR-Code oder Schlüssel zum Abtippen) oder Code per E-Mail; danach erscheinen zehn Wiederherstellungscodes **einmal**. Der E-Mail-Code ist nur so sicher wie das Postfach.
+- **Mein Konto:** Abschnitt „Zwei-Faktor-Authentifizierung“: App einrichten, Code per E-Mail ein- oder ausschalten (aus nur, wenn die App eingerichtet ist), neue Wiederherstellungscodes – jeweils mit dem Passwort bestätigt. Passkeys folgen später (O-14).
+- **Team-Login auf öffentlichen Seiten:** Wer im Team eingeloggt ist, sieht auch auf „Meine Anmeldung“ und der Startseite seinen Namen und „Team-Bereich“ (die Team-Sitzung wird dort nur gelesen); eine eigene Anmeldung mit derselben Adresse erscheint unter „Meine Anmeldung“.
+- **Neues Team-Mitglied:** Betreiber → Team-Bereich → „Team-Konten“ → Name, E-Mail, Rolle → die Einladung kommt per Mail (AP-6); mit „Keine Mail“ wird der Link stattdessen einmal angezeigt. Er gilt 72 Stunden und einmal. Dort setzt die Person ihr Passwort und richtet den zweiten Faktor ein.
+- **Passwort vergessen:** „Passwort vergessen?“ beim Einloggen (Link per Mail, 72 Stunden; der zweite Faktor bleibt) oder ein Betreiber mailt unter „Team-Konten“ einen Passwort-Link.
 - **Handy weg:** mit einem Wiederherstellungscode einloggen und unter „Mein Konto“ neue Codes erzeugen; oder ein Betreiber setzt den zweiten Faktor zurück, beim nächsten Login wird er neu eingerichtet.
 - **Rollen:** Admin (Programm, Einstellungen, Anmeldungen …), Betreiber (zusätzlich Team-Konten und Technik). Rolle ändern verlangt den eigenen Code; das eigene Konto lässt sich dort nicht ändern, und es bleibt immer ein aktiver Betreiber.
 - **Notzugang** (Betreiber hat Handy und Wiederherstellungscodes verloren): `https://<domain>/notzugang` öffnen (nicht verlinkt), den `installations_schluessel` aus der config.php und die E-Mail-Adresse des Betreiber-Kontos eingeben. Der zweite Faktor wird zurückgesetzt und ein Passwort-Link angezeigt: öffnen, Passwort setzen, zweiten Faktor neu einrichten. 3 Versuche je Stunde; jede Nutzung steht im Audit-Protokoll. **Danach den Installationsschlüssel in der config.php durch einen neuen ersetzen.** Der Schlüssel ist damit so wichtig wie das Betreiber-Passwort: nur im Passwortmanager aufbewahren.
@@ -148,23 +155,23 @@ HTML wird nicht übernommen, sondern als Text angezeigt. Die Infokästen der Sta
 
 ## 9. Veranstaltungs-Einstellungen
 
-Team-Bereich → „Einstellungen“ (Admin und Betreiber). Alles, was die Veranstaltung betrifft (R-11): Datum, Zeit, Ort, Kapazität, CME-Angaben, Anmeldezeitraum, Workshop-Limit und -Pflicht, Nachrücken, Stichtage, Berufsgruppen. Zeiten werden in Ortszeit eingegeben. Stichtage gelten bis einschließlich des genannten Tages; leere Stichtage gelten bis zur Veranstaltung. Bis jemand speichert, gelten die Startwerte aus `server/lib/veranstaltung_lib.php`. Änderungen stehen im Audit-Protokoll und erscheinen sofort auf der Startseite. Die Werte zur Anmeldung wirken ab AP-4.
+Team-Bereich → „Einstellungen“ (Admin und Betreiber). Alles, was die Veranstaltung betrifft (R-11): Datum, Zeit, Ort, Kapazität, CME-Angaben, Anmeldezeitraum, Workshop-Limit und -Pflicht, Nachrücken, Stichtage, Berufsgruppen. Zeiten werden in Ortszeit eingegeben. Stichtage gelten bis einschließlich des genannten Tages; leere Stichtage gelten bis zur Veranstaltung. Bis jemand speichert, gelten die Startwerte aus `server/lib/veranstaltung_lib.php`. Änderungen stehen im Audit-Protokoll und erscheinen sofort auf der Startseite. Die Werte zur Anmeldung wirken ab AP-4. Die Seite ist zuerst **gesperrt** (Balken oben, Felder grau); „Entsperren“ schaltet die Felder frei, nach dem Speichern ist sie wieder gesperrt (Rückmeldung 2026-10-30).
 
 ## 10. Programm
 
 Team-Bereich → „Programm“ (Admin und Betreiber).
 
 - **Typen:** Vortrag (VT), Fallbesprechung (FB), Workshop (WS, mit Terminen und Plätzen je Termin), offene Station (ohne Anmeldung), Workshop-Block (nur Zeitfenster), Pause/Info. Das Kürzel wird beim Anlegen vorgeschlagen (z. B. „VT 02“) und ist änderbar.
-- **Workshop-Block:** sammelt im Plan und auf der Startseite alle Workshop-Termine und Stationen, die ganz in seiner Zeit liegen. Termine außerhalb eines Blocks stehen einzeln im Plan.
-- **Speichern ≠ Veröffentlichen:** Gespeichertes steht sofort im Plan, auf der Startseite aber erst nach „Jetzt veröffentlichen“ im roten Banner. „Vorschau“ zeigt die Startseite mit dem Arbeitsstand, „Verwerfen“ stellt den veröffentlichten Stand wieder her (auch Gelöschtes). Punkte ohne Uhrzeit verhindern das Veröffentlichen.
-- **Ziehen:** am Griff ⋮⋮ eine Zeile zwischen zwei andere ziehen; die grüne Linie zeigt, ob davor oder dahinter eingefügt wird. Neuer Beginn = Ende des Punkts darüber (direkt unter einem Workshop-Block: dessen Beginn), die Dauer bleibt. Punkte der Hauptspur (Vorträge, Fälle, Pausen, Workshop-Blöcke samt Inhalt), die sich danach überschneiden würden, rücken nach hinten, bis eine Lücke reicht (Admin 2026-10-29). Alles ist gespeichert, aber nicht veröffentlicht – Uhrzeiten prüfen. Ohne Ziehen geht alles über die Felder Beginn und Ende.
+- **Workshop-Block:** sammelt im Plan und auf der Startseite alle Workshop-Termine und Stationen, die ganz in seiner Zeit liegen. Workshops und Stationen lassen sich auch **ausdrücklich zuordnen** (Feld „Gehört zu Workshop-Block“ oder im Plan auf die Mitte des Blocks ziehen); dann stehen sie unabhängig von der Uhrzeit darunter, und ein Hinweis meldet Termine außerhalb der Blockzeit. Termine ohne Block stehen einzeln im Plan.
+- **Speichern ≠ Veröffentlichen:** Gespeichertes steht sofort im Plan (Label „nicht veröffentlicht“), auf der Startseite aber erst nach „Jetzt veröffentlichen“ im hellroten Hinweisbalken. „Vorschau“ zeigt die Startseite mit dem Arbeitsstand, „Verwerfen“ stellt den veröffentlichten Stand wieder her (auch Gelöschtes). Punkte ohne Uhrzeit verhindern das Veröffentlichen.
+- **Ziehen:** am Griff ⋮⋮ eine Zeile zwischen zwei andere ziehen; die weiße Linie zeigt, ob davor oder dahinter eingefügt wird (ausgewählt = lila, Block = grün). Neuer Beginn = Ende des Punkts darüber (als erster Punkt in einem Workshop-Block: dessen Beginn; unteres Viertel eines Blocks: nach dem ganzen Block; Feld „ans Ende“ unter dem letzten Punkt), die Dauer bleibt. Punkte der Hauptspur (Vorträge, Fälle, Pausen, Workshop-Blöcke samt Inhalt), die sich danach überschneiden würden, rücken nach hinten, bis eine Lücke reicht (Admin 2026-10-29). Alles ist gespeichert, aber nicht veröffentlicht – Uhrzeiten prüfen. Ohne Ziehen geht alles über die Felder Beginn und Ende.
 - **Termine:** „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ den nächsten Termin im Anschluss. Höchstens 12 Termine je Workshop. Plätze lassen sich nicht unter die vergebenen senken (wirkt mit AP-4).
 - **Dozierende:** „Dozierende verwalten“; Foto optional (JPG, PNG oder WebP, höchstens 8 MB), wird quadratisch auf 480 px verkleinert und ohne Metadaten in `var/bilder/` gespeichert. Nur mit Einverständnis der Person. Fotos ohne Zuordnung räumt der Job „aufraeumen“ weg. Ohne die PHP-Erweiterung GD ist der Upload ausgeblendet.
 
 ## 11. Anmeldung (AP-4)
 
 - **Ablauf:** `/anmelden` → Mail mit Bestätigungslink → erst der Klick macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze (Einstellung „Bestätigungsfrist“, Start 48 h, so lange wie der Link gilt); danach löscht der Job sie und die Plätze gehen ans Nachrücken.
-- **„Deine Anmeldung“** (`/deine-anmeldung`): Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse); nach dem Link Übersicht, Workshops, Essen und Daten ändern, stornieren, Nachrück-Angebote annehmen oder ablehnen. Einmal-Links gelten 48 Stunden und einmal; erst der Klick auf „Weiter“ auf der Link-Seite verbraucht sie. Danach endet die Sitzung nach 30 min ohne Aktivität.
+- **„Anmelden“ / „Meine Anmeldung“** (`/deine-anmeldung`, Rückmeldung 2026-10-30): Wer nicht erkannt ist, sieht in der Navigation den grünen Knopf „Anmelden“; die Seite dahinter bietet „Neu anmelden“, „Link per Mail“ und „Einloggen“. Vor dem Anmeldestart steht statt der ersten beiden Kacheln „Anmeldung noch nicht möglich – öffnet am …“. Erkannte Personen (Link, Konto, Team) sehen „Meine Anmeldung“. Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse); nach dem Link Übersicht, Workshops, Essen und Daten ändern, stornieren, Nachrück-Angebote annehmen oder ablehnen. Einmal-Links gelten 48 Stunden und einmal; erst der Klick auf „Weiter“ auf der Link-Seite verbraucht sie. Danach endet die Sitzung nach 30 min ohne Aktivität.
 - **Stichtage** (Einstellungen): nach dem Tag sind Workshops, Essen bzw. Storno für Teilnehmende gesperrt; die Seite zeigt den Stichtag am Knopf.
 - **Plätze:** je Workshop ein fester Termin, keine Überschneidungen, Warteliste für volle Termine (auch überschneidend). Ist das Symposium voll, kommt die Person auf dessen Warteliste und wählt Workshops erst nach dem Nachrücken. Plätze beziehen sich auf das veröffentlichte Programm; ein Termin mit vergebenen Plätzen lässt sich nicht löschen oder verkleinern.
 - **Nachrücken:** Wird ein Platz frei, bekommt die erste bestätigte Person der Warteliste ein Angebot per Mail (Annahmefrist aus den Einstellungen). Lässt sie es verstreichen, kommt sie ans Ende der Liste und das Angebot geht weiter. Ab der Grenze (Tage vor der Veranstaltung) keine automatischen Angebote mehr; dann vergibt das Team (AP-5).
@@ -198,21 +205,23 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 ## 13. Team-Bereich (AP-5)
 
+**Nachfragen** (löschen, verwerfen, senden …) erscheinen überall als derselbe Dialog über der Seite (Rückmeldung 2026-10-30, Entwurf C): Rahmen grün = bestätigen, rot = löschen/verwerfen, lila = Info; auf dem Handy von unten mit großen Knöpfen. Ohne JavaScript bleibt die Nachfrage zum Aufklappen.
+
 Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12), Statistik, Einstellungen, Texte, Protokoll, Mein Konto; für Betreiber zusätzlich Team-Konten und Betrieb (E-49).
 
 - **Übersicht:** Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste – nach der Grenze manuell vergeben –, Mail-Fehler, Angebote, die in 24 h ablaufen, unveröffentlichtes Programm), Workshop-Termine, Essen.
 - **Personen:** Suche und Filter (Angemeldet, Warteliste, Mail nicht bestätigt, Mit Konto, Team). Eine Person auswählen: Daten, Essen und Workshops ändern – auch nach den Stichtagen und ohne Workshop-Limit. Volle Termine nur mit „Überbuchen bestätigen“. Plätze, Wartelisten und Angebote: „Platz geben“ (fragt bei Überbuchen oder Tausch nach), „Angebot schicken“, „Entfernen“. „Einmal-Link senden“, „+ Person anlegen“ (gilt sofort als bestätigt). Konto: Passwort-Link, sperren, löschen (mit Wahl), Rolle vergeben (nur Betreiber, mit Code). Jede Änderung schickt der Person eine Mail, außer „ohne Mail“ ist angekreuzt; alles steht im Protokoll.
 - **Workshops:** Symposium und alle Termine mit Belegung; ein Termin zeigt Teilnehmende und Warteliste in Reihenfolge, mit denselben Aktionen und der Liste als CSV.
-- **Statistik:** Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** als CSV (Semikolon, UTF-8 mit BOM, öffnet direkt in Excel): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der ÄrztInnen), Statistik. Exporte stehen im Protokoll.
+- **Statistik:** Kennzahlen (die EFN-Angabe steht in der Kachel „Angemeldet“), Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** als CSV (Semikolon, UTF-8 mit BOM, öffnet direkt in Excel): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der ÄrztInnen), Statistik. Exporte stehen im Protokoll.
 - **Texte:** Startseite (alle im Team); Impressum und Datenschutz nur Betreiber.
-- **Protokoll:** alle Einträge, Filter nach Art, Suche (z. B. „Anmeldung 12“).
+- **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und ihre eigenen Einträge; Betreiber sehen alles und können Einträge **ausblenden** (dann nur noch für Betreiber sichtbar, markiert, wieder einblendbar). Löschen geht nicht.
 - **Betrieb** (Betreiber): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
 
 ## 14. Konten für Teilnehmende (AP-4b)
 
 - **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
-- **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Deine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
-- **Einloggen:** ein Login für alle unter `/einloggen` oder im Kasten „Einloggen“ auf „Deine Anmeldung“. Teilnehmende brauchen keinen zweiten Faktor; Team-Konten werden danach nach dem Code gefragt. Passwort mindestens 10 Zeichen (Team 12).
+- **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Meine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
+- **Einloggen:** ein Login für alle unter `/einloggen` oder im Kasten „Einloggen“ auf der Seite „Anmelden“. Teilnehmende brauchen keinen zweiten Faktor; Team-Konten werden danach nach dem Code gefragt. Passwort mindestens 10 Zeichen (Team 12).
 - **Mein Konto** (`/konto`): Profil (Name, Berufsgruppe, Institution, EFN), neue Adresse (gilt nach Bestätigung, die Anmeldung zieht mit), Passwort ändern, Konto löschen – wahlweise mit oder ohne Anmeldung, mit Passwort bestätigt.
 - **Passwort vergessen** (`/konto/passwort-vergessen`): Link per Mail, 48 h, einmal. Nur für Teilnehmende; Team-Passwörter setzt weiter ein Betreiber zurück.
 - Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.

@@ -2,53 +2,82 @@
 declare(strict_types=1);
 
 /*
- * Protokoll (AP-5, E-49): Audit-Einträge lesen, filtern und suchen
- * (Admin und Betreiber). Personenbezogene Inhalte stehen nicht im Protokoll,
- * nur Nummern von Anmeldungen und Konten.
+ * Protokoll (AP-5, E-49; Rückmeldung 2026-10-30): Audit-Einträge lesen,
+ * filtern und suchen. Admins sehen die Arten, die sie selbst ausführen
+ * dürfen, und ihre eigenen Einträge; Betreiber sehen alles und können
+ * Einträge ausblenden (dann nur für Betreiber, markiert) – löschen geht nicht.
+ * Personenbezogene Inhalte stehen nicht im Protokoll, nur Nummern.
  */
 
 $konto = team_tor();
+$betreiber = $konto['rolle'] === 'betreiber';
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    csrf_pruefen();
+    if (!$betreiber) {
+        seite_meldung(403, 'Nicht erlaubt', 'Einträge blendet nur ein Betreiber aus.');
+    }
+    $aus = ($_POST['aktion'] ?? '') === 'ausblenden';
+    flash_setzen('ok', audit_ausblenden((int)($_POST['id'] ?? 0), $aus, (int)$konto['id']) ? ($aus ? 'Eintrag ausgeblendet – nur Betreiber sehen ihn noch.' : 'Eintrag wieder eingeblendet.') : 'Nichts geändert.');
+    umleiten('/team/protokoll?' . http_build_query(array_filter(['art' => $_POST['art'] ?? null, 'q' => $_POST['q'] ?? null, 's' => $_POST['s'] ?? null])));
+}
 $art = (string)($_GET['art'] ?? '');
 $q = trim((string)($_GET['q'] ?? ''));
 $seite = max(1, (int)($_GET['s'] ?? 1));
 $proSeite = 50;
-$wo = [];
-$par = [];
-if ($art !== '') {
-    $wo[] = 'a.art = ?';
-    $par[] = $art;
-}
+[$sicht, $sichtPar] = audit_sichtbar($konto);
+$wo = [$sicht];
+$par = $sichtPar;
 if ($q !== '') {
     $wo[] = 'a.text LIKE ?';
     $par[] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
 }
-$sqlWo = $wo === [] ? '' : ' WHERE ' . implode(' AND ', $wo);
+// Zahlen je Art für die Filter (mit Suche, ohne Art-Filter)
+$zahlen = [];
+foreach (db_zeilen('SELECT a.art, COUNT(*) AS n FROM audit a WHERE ' . implode(' AND ', $wo) . ' GROUP BY a.art', $par) as $z) {
+    $zahlen[$z['art']] = (int)$z['n'];
+}
+if ($art !== '') {
+    $wo[] = 'a.art = ?';
+    $par[] = $art;
+}
+$sqlWo = ' WHERE ' . implode(' AND ', $wo);
 $gesamt = (int)db_wert('SELECT COUNT(*) FROM audit a' . $sqlWo, $par);
 $zeilen = db_zeilen('SELECT a.*, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id' . $sqlWo . ' ORDER BY a.id DESC LIMIT ' . $proSeite . ' OFFSET ' . (($seite - 1) * $proSeite), $par);
-$arten = array_column(db_zeilen('SELECT DISTINCT art FROM audit ORDER BY art'), 'art');
-$link = fn(int $s) => '/team/protokoll?' . http_build_query(array_filter(['art' => $art ?: null, 'q' => $q ?: null, 's' => $s > 1 ? $s : null]));
+$link = fn(array $neu) => '/team/protokoll?' . http_build_query(array_filter(array_merge(['art' => $art ?: null, 'q' => $q ?: null], $neu)));
+$titel = fn(string $a) => AUDIT_ARTEN[$a] ?? $a;
 team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
 ?>
+<p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur Betreiber.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten und Mailings sowie deine eigenen.' ?></p>
 <form class="filterzeile" method="get" action="/team/protokoll" role="search">
-    <label class="sr" for="art">Art</label>
-    <select id="art" name="art"><option value="">Alle Arten</option><?php foreach ($arten as $a): ?><option value="<?= e($a) ?>"<?= $art === $a ? ' selected' : '' ?>><?= e($a) ?></option><?php endforeach; ?></select>
+    <?php if ($art !== ''): ?><input type="hidden" name="art" value="<?= e($art) ?>"><?php endif; ?>
     <label class="sr" for="q">Suchen</label>
     <input id="q" name="q" type="search" value="<?= e($q) ?>" placeholder="z. B. Anmeldung 12">
-    <button class="knopf zweit klein-knopf" type="submit">Filtern</button>
+    <button class="knopf zweit klein-knopf" type="submit">Suchen</button>
 </form>
+<div class="filter" role="group" aria-label="Art">
+    <a class="knopf klein-knopf<?= $art === '' ? '' : ' zweit' ?>" href="<?= e($link(['art' => null])) ?>"<?= $art === '' ? ' aria-current="true"' : '' ?>>Alle <span class="mono"><?= array_sum($zahlen) ?></span></a>
+    <?php foreach (array_keys($zahlen + ($art !== '' ? [$art => 0] : [])) as $a): ?>
+    <a class="knopf klein-knopf<?= $art === $a ? '' : ' zweit' ?>" href="<?= e($link(['art' => $a])) ?>"<?= $art === $a ? ' aria-current="true"' : '' ?>><?= e($titel($a)) ?> <span class="mono"><?= $zahlen[$a] ?? 0 ?></span></a>
+    <?php endforeach; ?>
+</div>
 <p class="meta klein"><?= $gesamt ?> Einträge<?= $gesamt > $proSeite ? ' · Seite ' . $seite . ' von ' . (int)ceil($gesamt / $proSeite) : '' ?></p>
 <?php if ($zeilen === []): ?><p class="hinweis-leer">Keine Einträge.</p><?php else: ?>
 <div class="tabelle-wrap"><table class="t karten">
-    <thead><tr><th>Zeit</th><th>Art</th><th>Was</th><th>Wer</th></tr></thead>
+    <thead><tr><th>Zeit</th><th>Art</th><th>Was</th><th>Wer</th><?= $betreiber ? '<th>Sichtbar</th>' : '' ?></tr></thead>
     <tbody>
-    <?php foreach ($zeilen as $z): ?>
-        <tr><td data-label="Zeit" class="mono klein"><?= e(datum_zeit_text($z['zeit'])) ?></td><td data-label="Art"><span class="chip offen"><?= e($z['art']) ?></span></td><td data-label="Was"><?= e($z['text']) ?></td><td data-label="Wer"><?= e($z['name'] ?? ($z['konto_id'] !== null ? 'Konto ' . $z['konto_id'] : 'System / Teilnehmende')) ?></td></tr>
+    <?php foreach ($zeilen as $z): $weg = $z['ausgeblendet_am'] !== null; ?>
+        <tr<?= $weg ? ' class="ausgeblendet"' : '' ?>><td data-label="Zeit" class="mono klein"><?= e(datum_zeit_text($z['zeit'])) ?></td><td data-label="Art"><span class="chip offen"><?= e($titel($z['art'])) ?></span></td><td data-label="Was"><?= e($z['text']) ?></td><td data-label="Wer"><?= e($z['name'] ?? ($z['konto_id'] !== null ? 'Konto ' . $z['konto_id'] : 'System / Teilnehmende')) ?></td>
+        <?php if ($betreiber): ?><td data-label="Sichtbar"><?php if ($z['art'] !== 'protokoll'): ?>
+            <form method="post" action="/team/protokoll" class="inline-form"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$z['id'] ?>"><input type="hidden" name="art" value="<?= e($art) ?>"><input type="hidden" name="q" value="<?= e($q) ?>"><input type="hidden" name="s" value="<?= $seite > 1 ? $seite : '' ?>">
+                <?php if ($weg): ?><span class="chip gesperrt">nur Betreiber</span> <button class="knopf zweit klein-knopf" type="submit" name="aktion" value="einblenden">Einblenden</button>
+                <?php else: ?><button class="knopf zweit klein-knopf" type="submit" name="aktion" value="ausblenden">Ausblenden</button><?php endif; ?>
+            </form><?php else: ?><span class="meta klein">nur Betreiber</span><?php endif; ?></td><?php endif; ?></tr>
     <?php endforeach; ?>
     </tbody>
 </table></div>
 <div class="aktionen abstand-oben-klein">
-    <?php if ($seite > 1): ?><a class="knopf zweit klein-knopf" href="<?= e($link($seite - 1)) ?>">Neuere</a><?php endif; ?>
-    <?php if ($seite * $proSeite < $gesamt): ?><a class="knopf zweit klein-knopf" href="<?= e($link($seite + 1)) ?>">Ältere</a><?php endif; ?>
+    <?php if ($seite > 1): ?><a class="knopf zweit klein-knopf" href="<?= e($link(['s' => $seite - 1 > 1 ? $seite - 1 : null])) ?>">Neuere</a><?php endif; ?>
+    <?php if ($seite * $proSeite < $gesamt): ?><a class="knopf zweit klein-knopf" href="<?= e($link(['s' => $seite + 1])) ?>">Ältere</a><?php endif; ?>
 </div>
 <?php endif; ?>
 <?php

@@ -125,7 +125,7 @@ function konto_aktive_betreiber(): int
 function konto_team_liste(): array
 {
     return db_zeilen(
-        "SELECT k.id, k.name, k.email, k.rolle, k.aktiv, k.totp_seit, k.letzte_anmeldung, k.passwort_hash IS NOT NULL AS hat_passwort
+        "SELECT k.id, k.name, k.email, k.rolle, k.aktiv, k.totp_seit, k.zweitfaktor_mail, k.letzte_anmeldung, k.passwort_hash IS NOT NULL AS hat_passwort
            FROM konto k WHERE k.rolle IN ('admin','betreiber') ORDER BY k.rolle DESC, k.name"
     );
 }
