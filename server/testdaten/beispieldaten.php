@@ -21,6 +21,7 @@ function beispieldaten_laden(): array
     $r = ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
     $r['mailings'] = beispieldaten_mailings();
     $r['newsletter'] = beispieldaten_newsletter();
+    $r['teilnahme'] = beispieldaten_teilnahme($r['anmeldungen']);
     return $r;
 }
 
@@ -33,7 +34,10 @@ function beispieldaten_einstellungen(): void
     $w = va_pruefen([
         'veranstaltung_datum' => gmdate('Y-m-d', time() + 60 * 86400),
         'veranstaltung_beginn' => '18:00', 'veranstaltung_ende' => '22:00', 'veranstaltung_ort' => 'Hörsaal Testklinik',
+        'veranstaltung_name' => 'Allgäuer Winter-Notfallsymposium', 'veranstaltung_auflage' => '3. Auflage',
         'veranstaltung_kapazitaet' => '240', 'cme_anzeige' => 'Punkte beantragt',
+        'cme_punkte' => '4', 'cme_kategorie' => 'A', 'cme_kammer' => 'Beispiel-Landesärztekammer', 'cme_veranstaltungsnummer' => '2760000000000000',
+        'zertifikat_leitung' => 'Dr. Erika Erfunden', 'zertifikat_leitung_rolle' => 'Wissenschaftliche Leitung',
         'anmeldung_start' => zeit_lokal(gmdate('Y-m-d H:i:s', time() - 86400), 'Y-m-d H:i'),
         'anmeldung_bestaetigung_h' => '48', 'workshop_limit' => '0', 'workshop_pflicht' => 'freiwillig',
         'nachrueck_frist_h' => '48', 'nachrueck_grenze_tage' => '14',
@@ -198,4 +202,41 @@ function beispieldaten_newsletter(): array
     nl_anfragen('pia@example.org', 'Pia', [$listen['Wintersymposium'] ?? 0], 'formular');
     db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'pia@example.org'");
     return ['nina' => $nina, 'otto' => $otto];
+}
+
+/**
+ * Teilnahme (AP-10): Paula ist in ihrem Workshop WS 01 nicht erschienen;
+ * Leas Zertifikat ist freigeschaltet (direkt gesetzt, weil die Veranstaltung
+ * im Datensatz in der Zukunft liegt); dazu eine erfundene Unterschrift (mit GD
+ * gezeichneter Schwung, keine echte Unterschrift). Es geht keine Mail raus.
+ */
+function beispieldaten_teilnahme(array $anm): array
+{
+    $ws = db_wert("SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id > 0 AND status = 'fest' ORDER BY id LIMIT 1", [$anm['paula']]);
+    if ($ws !== null) {
+        tn_setzen((int)$ws, false, null);
+    }
+    db_ausfuehren('UPDATE anmeldung SET zertifikat_am = ? WHERE id = ?', [db_jetzt(), $anm['lea']]);
+    if (foto_moeglich()) {
+        $b = imagecreatetruecolor(600, 160);
+        imagesavealpha($b, true);
+        imagealphablending($b, false);
+        imagefill($b, 0, 0, imagecolorallocatealpha($b, 255, 255, 255, 127));
+        imagealphablending($b, true);
+        imagesetthickness($b, 5);
+        $tinte = imagecolorallocate($b, 20, 40, 110);
+        $vorher = null;
+        for ($x = 20; $x <= 560; $x += 4) {
+            $y = (int)(90 + 40 * sin($x / 38) * cos($x / 90) - ($x > 420 ? ($x - 420) / 4 : 0));
+            if ($vorher !== null) {
+                imageline($b, $vorher[0], $vorher[1], $x, $y, $tinte);
+            }
+            $vorher = [$x, $y];
+        }
+        ob_start();
+        imagepng($b);
+        unterschrift_schreiben((string)ob_get_clean());
+        imagedestroy($b);
+    }
+    return ['paula_ws' => $ws !== null ? (int)$ws : null];
 }

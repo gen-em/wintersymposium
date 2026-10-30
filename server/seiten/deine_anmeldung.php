@@ -407,7 +407,12 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <div class="kasten"><strong>Konto anlegen?</strong><p>Mit Konto brauchst du keinen Link per Mail mehr. Deine Anmeldung wird übernommen; du legst nur ein Passwort fest.</p>
             <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="konto_anlegen"><button class="knopf zweit" type="submit">Konto anlegen</button></form></div>
         <?php endif; endif; ?>
-        <div class="kasten"><strong>Teilnahmebescheinigung</strong><p class="meta klein">Gibt es nach dem Symposium, sobald deine Anwesenheit erfasst ist.</p></div>
+        <?php if ($a['status'] === 'bestaetigt' && zertifikat_verfuegbar($a)): ?>
+        <div class="kasten akzent-kasten"><strong>Deine Teilnahmebescheinigung</strong><p>Danke, dass du dabei warst! Hier ist dein Zertifikat als PDF – mit deinen Workshops<?= va('cme_punkte') !== '' ? ' und den Fortbildungspunkten' : '' ?>.</p>
+            <p><a class="knopf" href="/deine-anmeldung/zertifikat">Zertifikat herunterladen (PDF)</a></p></div>
+        <?php else: ?>
+        <div class="kasten"><strong>Teilnahmebescheinigung</strong><p class="meta klein">Gibt es nach dem Symposium. Sobald sie freigeschaltet ist, bekommst du eine Mail und lädst sie hier herunter.</p></div>
+        <?php endif; ?>
         <div class="kasten"><strong>Doch nicht dabei?</strong><p>Sag bitte ab – dein Platz geht an jemanden von der Warteliste.</p>
             <?php if (anm_frist_offen('stichtag_storno')): ?>
             <details class="bestaetigen"><summary class="knopf gefahr">Anmeldung stornieren</summary>

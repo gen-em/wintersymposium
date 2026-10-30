@@ -45,7 +45,7 @@ if ($fehler !== []) {
 <form method="post" action="/team/einstellungen" class="einstellungen" novalidate>
     <?= csrf_feld() ?>
     <?php foreach (VA_GRUPPEN as $g => [$gTitel, $gHilfe]): ?>
-    <fieldset class="kasten gruppe"<?= $offen ? '' : ' disabled' ?>>
+    <fieldset class="kasten gruppe" id="<?= e($g) ?>"<?= $offen ? '' : ' disabled' ?>>
         <legend class="zwischen"><?= e($gTitel) ?></legend>
         <p class="meta klein"><?= e($gHilfe) ?></p>
         <div class="felder">

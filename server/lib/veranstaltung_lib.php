@@ -17,7 +17,8 @@ declare(strict_types=1);
 
 const VA_GRUPPEN = [
     'veranstaltung' => ['Veranstaltung', 'Erscheint in den Eckdaten auf der Startseite.'],
-    'cme' => ['Fortbildungspunkte (CME)', 'Die Anzeige erscheint auf der Startseite; Punkte, Kammer und Nummer brauchen Bescheinigung und Meldung (AP-10).'],
+    'cme' => ['Fortbildungspunkte (CME)', 'Die Anzeige erscheint auf der Startseite; Punkte, Kategorie, Kammer und Nummer stehen auf der Teilnahmebescheinigung (AP-10).'],
+    'zertifikat' => ['Teilnahmebescheinigung', 'Steht auf dem Zertifikat (AP-10, E-57). Die Unterschrift als Bild lädst du unter „Teilnahme“ hoch.'],
     'anmeldung' => ['Anmeldung', 'Zeitraum und Regeln des Anmeldeformulars.'],
     'nachruecken' => ['Warteliste und Nachrücken', 'Ein frei gewordener Platz wird der ersten Person der Warteliste angeboten (E-19).'],
     'stichtage' => ['Stichtage für Teilnehmende', 'Bis einschließlich dieses Tages können Teilnehmende selbst ändern; danach nur noch das Team (E-31). Leer: bis zur Veranstaltung.'],
@@ -29,6 +30,8 @@ const VA_GRUPPEN = [
  *      zahl (min/max), text (max), auswahl (optionen), liste (Zeilen)
  */
 const VA_KATALOG = [
+    'veranstaltung_name' => ['gruppe' => 'veranstaltung', 'typ' => 'text', 'titel' => 'Name', 'start' => 'Allgäuer Winter-Notfallsymposium', 'max' => 80, 'hilfe' => 'Steht auf der Teilnahmebescheinigung. Leer: „Wintersymposium“.'],
+    'veranstaltung_auflage' => ['gruppe' => 'veranstaltung', 'typ' => 'text', 'titel' => 'Auflage', 'start' => '3. Auflage', 'max' => 30, 'hilfe' => 'z. B. „3. Auflage“; steht mit dem Jahr auf der Teilnahmebescheinigung. Leer: nur das Jahr.'],
     'veranstaltung_datum' => ['gruppe' => 'veranstaltung', 'typ' => 'datum', 'titel' => 'Datum', 'start' => '2027-01-20', 'pflicht' => true],
     'veranstaltung_beginn' => ['gruppe' => 'veranstaltung', 'typ' => 'zeit', 'titel' => 'Beginn', 'start' => '18:00'],
     'veranstaltung_ende' => ['gruppe' => 'veranstaltung', 'typ' => 'zeit', 'titel' => 'Ende', 'start' => '22:00'],
@@ -36,8 +39,11 @@ const VA_KATALOG = [
     'veranstaltung_kapazitaet' => ['gruppe' => 'veranstaltung', 'typ' => 'zahl', 'titel' => 'Gesamtkapazität (Personen)', 'start' => '240', 'min' => 0, 'max' => 10000, 'hilfe' => '0 = unbegrenzt. Bestimmt „Freie Plätze“ auf der Startseite.'],
     'cme_anzeige' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Anzeige in den Eckdaten', 'start' => 'Punkte beantragt', 'max' => 60, 'hilfe' => 'z. B. „Punkte beantragt“ oder „4 CME-Punkte“. Leer: CME erscheint nicht in den Eckdaten.'],
     'cme_punkte' => ['gruppe' => 'cme', 'typ' => 'zahl', 'titel' => 'Punkte', 'start' => '', 'min' => 0, 'max' => 50, 'leer_erlaubt' => true],
+    'cme_kategorie' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Kategorie', 'start' => '', 'max' => 10, 'hilfe' => 'z. B. „A“ – wie von der Kammer anerkannt.'],
     'cme_kammer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Ärztekammer', 'start' => '', 'max' => 120],
     'cme_veranstaltungsnummer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Veranstaltungsnummer (VNR)', 'start' => '', 'max' => 40],
+    'zertifikat_leitung' => ['gruppe' => 'zertifikat', 'typ' => 'text', 'titel' => 'Name unter der Unterschrift', 'start' => '', 'max' => 120, 'hilfe' => 'z. B. „Dr. Vorname Nachname“. Leer: nur die Rolle.'],
+    'zertifikat_leitung_rolle' => ['gruppe' => 'zertifikat', 'typ' => 'text', 'titel' => 'Rolle unter der Unterschrift', 'start' => 'Wissenschaftliche Leitung', 'max' => 80],
     'anmeldung_start' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldung ab', 'start' => '2026-11-24 23:00:00', 'pflicht' => true],
     'anmeldung_ende' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldeschluss', 'start' => '', 'hilfe' => 'Leer: bis zum Beginn der Veranstaltung.'],
     'anmeldung_bestaetigung_h' => ['gruppe' => 'anmeldung', 'typ' => 'zahl', 'titel' => 'Bestätigungsfrist (Stunden)', 'start' => '48', 'min' => 1, 'max' => 168, 'hilfe' => 'So lange hält eine neue Anmeldung ihre Plätze, bis die Person den Link in der Mail anklickt. Danach verfällt sie und die Plätze gehen an die Warteliste.'],

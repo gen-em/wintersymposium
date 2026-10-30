@@ -722,3 +722,11 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .pk-knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .trenner-text { display: flex; align-items: center; gap: 12px; margin: 4px 0; color: var(--meta); font-size: .85rem; }
 .trenner-text::before, .trenner-text::after { content: ""; flex: 1; border-top: 1px solid var(--linie); }
+
+/* Teilnahme und Zertifikate (AP-10, E-57) */
+.akzent-kasten { border-top: 4px solid var(--akz); }
+.unterschrift-bild { display: block; max-width: 260px; max-height: 90px; background: #fff; padding: 6px; border: 1px solid var(--linie); }
+table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
+.ws-anwesend { margin: 0 0 6px; display: block; }
+.ws-anwesend .durch { text-decoration: line-through; color: var(--meta); }
+.ws-anwesend button[disabled] { opacity: .5; cursor: not-allowed; }

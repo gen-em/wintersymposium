@@ -66,6 +66,11 @@ const ROUTEN = [
     '/newsletter/verwalten' => 'newsletter_verwalten',
     '/newsletter/abmelden' => 'newsletter_abmelden',
     '/team/newsletter' => 'team_newsletter',
+    '/team/teilnahme' => 'team_teilnahme',
+    '/team/teilnahme/liste' => 'team_teilnahme_datei',
+    '/team/teilnahme/zertifikat' => 'team_teilnahme_datei',
+    '/team/teilnahme/unterschrift' => 'team_teilnahme_datei',
+    '/deine-anmeldung/zertifikat' => 'zertifikat',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

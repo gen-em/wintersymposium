@@ -478,6 +478,14 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        14 => [
+            'beschreibung' => 'Teilnahme und Zertifikate (AP-10, E-57): „nicht erschienen“ je Platz, Freischaltung der Bescheinigung',
+            'sql' => [
+                // Standard anwesend (E-42): nur Ausnahmen werden markiert, je Platz (Symposium und Workshop-Termine)
+                "ALTER TABLE platz ADD COLUMN nicht_erschienen TINYINT(1) NOT NULL DEFAULT 0",
+                "ALTER TABLE anmeldung ADD COLUMN zertifikat_am DATETIME NULL",
+            ],
+        ],
     ];
 }
 

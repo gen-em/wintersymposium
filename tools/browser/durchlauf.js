@@ -347,7 +347,16 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'konto-profil', basis + '/konto?aendern=profil');
         await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-konto', basis + '/deine-anmeldung');
       }
+      // AP-10: Leas Zertifikat ist im Beispieldatensatz freigeschaltet – Knopf und Download
       await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/deine-anmeldung');
+      notiere(engine, 'desktop-breit', 'deine-anmeldung-konto', 'Zertifikat: Knopf zum Herunterladen', await p.isVisible('a[href="/deine-anmeldung/zertifikat"]'));
+      {
+        const [dl] = await Promise.all([p.waitForEvent('download'), p.click('a[href="/deine-anmeldung/zertifikat"]')]);
+        const ziel = path.join(AUS, `${engine}-zertifikat-lea.pdf`);
+        await dl.saveAs(ziel);
+        notiere(engine, 'desktop-breit', 'deine-anmeldung-konto', 'Zertifikat als PDF heruntergeladen', fs.readFileSync(ziel).subarray(0, 5).toString('latin1') === '%PDF-' && dl.suggestedFilename().startsWith('Teilnahmebescheinigung-Beispiel'), dl.suggestedFilename());
+      }
       await p.goto(basis + '/konto');
       await p.click('.nav-gross .person-menue summary');
       notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ im Personen-Menü', await p.isVisible('.nav-gross .person-liste a[href="/konto"]'));
@@ -408,7 +417,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
         // Team-Navigation (Variante A): Bereiche und angehängte Unterseiten
-        for (const [wahl, ziel, name] of [['.team-nav a:has-text("Anmeldungen")', '/team/personen', 'team-personen'], ['.team-unter a:has-text("Workshops")', '/team/workshops', 'team-workshops'],
+        for (const [wahl, ziel, name] of [['.team-nav a:has-text("Anmeldungen")', '/team/personen', 'team-personen'], ['.team-unter a:has-text("Workshops")', '/team/workshops', 'team-workshops'], ['.team-unter a:has-text("Teilnahme")', '/team/teilnahme', 'team-teilnahme'],
           ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
           ['.team-nav a:has-text("Kommunikation")', '/team/mailings', 'team-mailings'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'],
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
@@ -455,6 +464,30 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const ziel = path.join(AUS, `${engine}-export-termin.pdf`);
         await dl.saveAs(ziel);
         notiere(engine, 'desktop-breit', 'team-termin', 'Liste des Termins als PDF', fs.readFileSync(ziel).subarray(0, 5).toString('latin1') === '%PDF-');
+      }
+      // AP-10: Teilnahme – nicht erschienen eintragen, Listen und Vorschau als PDF
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/team/teilnahme');
+      notiere(engine, 'handy', 'team-teilnahme', 'Paula: Workshop „nicht erschienen“ aus dem Datensatz', (await p.textContent('#a' + vor.paula_id)).includes('nicht erschienen'));
+      await Promise.all([p.waitForNavigation(), p.click('#a' + vor.lea_id + ' td[data-label="Symposium"] button')]);
+      notiere(engine, 'handy', 'team-teilnahme', 'Lea als nicht erschienen eintragen (Handy)', (await p.textContent('#a' + vor.lea_id)).includes('keins (nicht erschienen)'));
+      await pruefeSeite(p, fehler, engine, 'handy', 'team-teilnahme-fehlt', null);
+      await Promise.all([p.waitForNavigation(), p.click('#a' + vor.lea_id + ' td[data-label="Symposium"] button')]);
+      notiere(engine, 'handy', 'team-teilnahme', 'Doch da', (await p.textContent('#a' + vor.lea_id)).includes('freigeschaltet'));
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/teilnahme');
+      for (const [liste, sort] of [['alle', 'vorname'], ['aerzte', 'nachname']]) {
+        await p.selectOption('#liste', liste);
+        await p.selectOption('#sort', sort);
+        const [dl] = await Promise.all([p.waitForEvent('download'), p.click('form[action="/team/teilnahme/liste"] button')]);
+        const ziel = path.join(AUS, `${engine}-unterschriften-${liste}.pdf`);
+        await dl.saveAs(ziel);
+        notiere(engine, 'desktop-breit', 'team-teilnahme', `Unterschriftenliste ${liste} als PDF`, fs.readFileSync(ziel).subarray(0, 5).toString('latin1') === '%PDF-');
+      }
+      notiere(engine, 'desktop-breit', 'team-teilnahme', 'Unterschrift sichtbar, Freischalten erst ab dem Veranstaltungstag', await p.isVisible('img.unterschrift-bild') && (await p.textContent('#zertifikat')).includes('ab dem Veranstaltungstag'));
+      {
+        const r = await p.request.get(basis + '/team/teilnahme/zertifikat?beispiel=1');
+        notiere(engine, 'desktop-breit', 'team-teilnahme', 'Vorschau mit Beispiel (PDF)', r.ok() && (await r.body()).subarray(0, 5).toString('latin1') === '%PDF-');
       }
       // Mailings: Empfängerart Newsletter blendet die Listen ein
       await p.goto(basis + '/team/mailings?neu=1');

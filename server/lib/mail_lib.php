@@ -198,9 +198,10 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $z = db_zeile(
             "SELECT id, an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
              WHERE status = 'offen' AND naechster_versuch <= ?
-               AND (prio = ? OR (postfach = 'system' AND ? < ?) OR (postfach = 'newsletter' AND ? < ?))
+               AND (prio = ? OR (postfach = 'system' AND ? = 1) OR (postfach = 'newsletter' AND ? = 1))
              ORDER BY prio, id LIMIT 1",
-            [$jetztDb, MAIL_PRIO_SYSTEM, mail_heute_gesendet($jetzt, 'system'), $grenze['system'], mail_heute_gesendet($jetzt, 'newsletter'), $grenze['newsletter']]
+            // Limit in PHP vergleichen: als Parameter kämen die Zahlen als Text an, und MySQL verglich „4“ < „360“ als Text (falsch)
+            [$jetztDb, MAIL_PRIO_SYSTEM, mail_heute_gesendet($jetzt, 'system') < $grenze['system'] ? 1 : 0, mail_heute_gesendet($jetzt, 'newsletter') < $grenze['newsletter'] ? 1 : 0]
         );
         if ($z === null) {
             break;
@@ -615,6 +616,12 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']
                 . "\n\nEr gilt 72 Stunden und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App."
                 . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
+        case 'zertifikat':
+            // AP-10, E-57: Freischaltung durch das Team; der Link führt zu „Meine Anmeldung“
+            return ['Deine Teilnahmebescheinigung ist da',
+                $hallo . 'danke, dass du beim ' . $d['name'] . " dabei warst! Deine Teilnahmebescheinigung liegt für dich bereit. Mit diesem Link kommst du zu deiner Anmeldung und lädst sie als PDF herunter:\n\n"
+                . $d['link'] . "\n\nDer Link gilt bis " . $d['gueltig'] . ' und einmal. Danach kannst du dir unter ' . url('/deine-anmeldung')
+                . ' jederzeit einen neuen schicken lassen – oder du loggst dich mit deinem Konto ein.' . mail_gruss()];
         case 'test':
             return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }

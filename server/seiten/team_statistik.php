@@ -78,7 +78,9 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
     </div>
     <div class="kasten">
         <h2 class="zwischen klein-zwischen">Anwesenheit</h2>
-        <p class="meta">Wird am Veranstaltungstag erfasst (AP-10). Danach hier: anwesend / angemeldet und der CME-Export.</p>
+        <?php $tz = tn_zahlen(); ?>
+        <div class="zahl"><?= $tz['anwesend'] ?> / <?= $tz['angemeldet'] ?></div>
+        <p class="meta klein">anwesend / mit Platz · <?= $tz['nicht_erschienen'] ?> nicht erschienen · <?= $tz['freigeschaltet'] ?> Zertifikate freigeschaltet. Erfassen unter <a href="/team/teilnahme">Teilnahme</a>; Standard ist „anwesend“.</p>
     </div>
 </div>
 
