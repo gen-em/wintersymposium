@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * Statistik (AP-5, Mockup „Statistik“, E-49): Kennzahlen, Verlauf,
  * Workshop-Termine, Berufsgruppen, Institutionen, Essen; Filter nach
- * Berufsgruppe; Export als CSV (berücksichtigt den Filter).
+ * Berufsgruppe; Export als CSV, Excel oder PDF (berücksichtigt den Filter).
  */
 
 $konto = team_tor();
@@ -83,12 +83,12 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
 </div>
 
 <h2 class="zwischen" id="export">Export</h2>
-<p class="meta klein">CSV, öffnet in Excel (UTF-8 mit Umlauten) · berücksichtigt den Filter oben<?= $bg !== '' ? ' (' . e($bg) . ')' : '' ?>.</p>
+<p class="meta klein">CSV für andere Programme, Excel mit fertiger Kopfzeile und Filter, PDF zum Ausdrucken (A4) · berücksichtigt den Filter oben<?= $bg !== '' ? ' (' . e($bg) . ')' : '' ?>.</p>
 <div class="tabelle-wrap"><table class="t karten">
     <tbody>
     <?php foreach (EXPORT_ARTEN as $art => [$t, $b]): ?>
         <tr><td data-label="Liste"><strong><?= e($t) ?></strong><br><span class="meta klein"><?= e($b) ?></span></td>
-            <td data-label="Datei"><a class="knopf zweit klein-knopf" href="/team/export?<?= e(http_build_query(array_filter(['art' => $art, 'bg' => $bg ?: null]))) ?>">CSV</a></td></tr>
+            <td data-label="Datei"><?= export_knoepfe(['art' => $art, 'bg' => $bg]) ?></td></tr>
     <?php endforeach; ?>
     </tbody>
 </table></div>

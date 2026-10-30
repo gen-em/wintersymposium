@@ -131,9 +131,19 @@ const EXPORT_ARTEN = [
     'newsletter' => ['Newsletter-Listen', 'nur bestätigte Einträge, je Liste mit Zeitpunkt und Fassung der Einwilligung (ohne Berufsgruppen-Filter)'],
 ];
 
-/** Export erzeugen: ['datei' => Name, 'text' => CSV] oder null. */
+/**
+ * Export erzeugen oder null. Rückgabe: 'datei' und 'text' (CSV wie bisher),
+ * dazu für xlsx und PDF (O-35, E-56): 'basis' (Dateiname ohne Endung),
+ * 'titel', 'kopf', 'zeilen', 'bg' und 'pdf' (Gruppen-Spalte, ausgelassene
+ * Spalten, Querformat, Zusatzzeile je Gruppe) – oder 'pdf' => null, wenn es
+ * kein PDF gibt (Newsletter: Adresslisten gehören nicht auf Papier).
+ */
 function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?array
 {
+    $paket = function (string $datei, string $titel, array $kopf, array $zeilen, ?array $pdf = []) use ($bg): array {
+        return ['datei' => $datei, 'text' => csv_text($kopf, $zeilen), 'basis' => preg_replace('/\.csv$/', '', $datei), 'titel' => $titel,
+            'kopf' => $kopf, 'zeilen' => $zeilen, 'bg' => $bg, 'pdf' => $pdf === null ? null : $pdf + ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]];
+    };
     [$w, $p] = stat_filter($bg);
     $anm = db_zeilen("SELECT a.* FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w . ' ORDER BY a.nachname, a.vorname', $p);
     $kurz = fn(string $s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(strtr($s, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', 'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue']))) ?? '', '-');
@@ -154,15 +164,18 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 }
                 $z[] = [$a['nachname'], $a['vorname'], $a['email'], $a['berufsgruppe'] . ($a['beruf_sonstige'] !== '' ? ' (' . $a['beruf_sonstige'] . ')' : ''), $a['institution'], $sym, implode(' | ', $ws), ANM_ESSEN[$a['essen']] ?? '', datum_zeit_text($a['bestaetigt_am'])];
             }
-            return ['datei' => $datei('teilnehmende'), 'text' => csv_text(['Nachname', 'Vorname', 'E-Mail', 'Berufsgruppe', 'Institution', 'Symposium', 'Workshops', 'Essen', 'Bestätigt am'], $z)];
+            return $paket($datei('teilnehmende'), 'Teilnehmende', ['Nachname', 'Vorname', 'E-Mail', 'Berufsgruppe', 'Institution', 'Symposium', 'Workshops', 'Essen', 'Bestätigt am'], $z, ['quer' => true, 'ohne' => [2, 8]]);
         case 'termin':
         case 'termine':
         case 'wartelisten':
             $z = [];
+            $info = [];
             foreach (team_termine() as $t) {
                 if ($t['id'] === 0 || ($art === 'termin' && $t['id'] !== $terminId)) {
                     continue;
                 }
+                // PDF: Kontrollliste für Dozierende (Admin 2026-10-30) – je Termin Ort, Leitung, Plätze
+                $info[$t['text']] = export_termin_info($t['id']);
                 $pers = team_termin_personen($t['id']);
                 $liste = $art === 'wartelisten' ? $pers['warte'] : $pers['fest'];
                 foreach ($liste as $i => $pl) {
@@ -176,7 +189,9 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 return null;
             }
             $name = $art === 'termin' ? 'termin-' . $kurz(anm_termin_text($terminId)) : $art;
-            return ['datei' => $datei($name), 'text' => csv_text(['Termin', $art === 'wartelisten' ? 'Platz auf der Liste' : 'Status', 'Nachname', 'Vorname', 'Berufsgruppe', 'E-Mail'], $z)];
+            $titel = $art === 'wartelisten' ? 'Wartelisten' : ($art === 'termin' ? 'Liste ' . anm_termin_text($terminId) : 'Listen je Workshop-Termin');
+            // PDF ohne E-Mail (Liste für Dozierende); je Termin eine Seite
+            return $paket($datei($name), $titel, ['Termin', $art === 'wartelisten' ? 'Platz auf der Liste' : 'Status', 'Nachname', 'Vorname', 'Berufsgruppe', 'E-Mail'], $z, ['gruppe' => 0, 'ohne' => [5], 'info' => $info, 'alle_gruppen' => array_keys($info)]);
         case 'essen':
             $z = [];
             foreach ($anm as $a) {
@@ -185,7 +200,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 }
             }
             usort($z, fn($x, $y) => $x <=> $y);
-            return ['datei' => $datei('essen'), 'text' => csv_text(['Essen', 'Nachname', 'Vorname'], $z)];
+            return $paket($datei('essen'), 'Essensliste', ['Essen', 'Nachname', 'Vorname'], $z, ['gruppe' => 0]);
         case 'cme':
             $erste = va_liste('berufsgruppen')[0] ?? '';
             $z = [];
@@ -194,7 +209,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                     $z[] = [$a['nachname'], $a['vorname'], $a['berufsgruppe'], $a['efn'] ?? ''];
                 }
             }
-            return ['datei' => $datei('cme'), 'text' => csv_text(['Nachname', 'Vorname', 'Berufsgruppe', 'EFN'], $z)];
+            return $paket($datei('cme'), 'CME-Liste', ['Nachname', 'Vorname', 'Berufsgruppe', 'EFN'], $z);
         case 'newsletter':
             // AP-7: bestätigte Abonnierende (eine Liste über t=…, sonst alle)
             $par = [];
@@ -206,7 +221,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             $zeilen = array_map(fn($r) => [$r['liste'], $r['email'], $r['vorname'], datum_zeit_text($r['bestaetigt_am']), $r['fassung'], $r['quelle']], db_zeilen(
                 "SELECT l.name AS liste, p.email, p.vorname, a.bestaetigt_am, a.fassung, a.quelle FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id JOIN newsletter_liste l ON l.id = a.liste_id
                  WHERE a.status = 'bestaetigt'" . $nur . ' ORDER BY l.pos, p.email', $par));
-            return ['datei' => 'wintersymposium-newsletter-' . gmdate('Ymd') . '.csv', 'text' => csv_text(['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen)];
+            return $paket('wintersymposium-newsletter-' . gmdate('Ymd') . '.csv', 'Newsletter-Listen', ['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen, null);
         case 'statistik':
             $d = stat_daten($bg);
             $z = [['Angemeldet', $d['angemeldet']], ['Kapazität', $d['kapazitaet'] ?? 'unbegrenzt'], ['Mail nicht bestätigt', $d['unbestaetigt']], ['Warteliste Symposium', $d['warteliste']],
@@ -225,7 +240,21 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             foreach ($d['verlauf'] as $v) {
                 $z[] = ['Bestätigt bis ' . $v['tag'], $v['summe']];
             }
-            return ['datei' => $datei('statistik'), 'text' => csv_text(['Kennzahl', 'Wert'], $z)];
+            return $paket($datei('statistik'), 'Statistik', ['Kennzahl', 'Wert'], $z);
     }
     return null;
+}
+
+/** Zusatzzeile eines Termins für das PDF: Ort, Leitung (abweichend je Termin, E-53), Plätze. */
+function export_termin_info(int $terminId): string
+{
+    foreach (programm_veroeffentlicht()['punkte'] ?? [] as $p) { // Plätze gelten im veröffentlichten Programm
+        foreach ($p['termine'] as $t) {
+            if ((int)$t['id'] === $terminId) {
+                $leitung = implode(', ', array_column($t['dozenten'] ?? $p['dozenten'], 'name'));
+                return implode(' · ', array_filter([$p['ort'], $leitung !== '' ? 'Leitung: ' . $leitung : '', termin_belegt($terminId) . ' von ' . $t['plaetze'] . ' Plätzen belegt']));
+            }
+        }
+    }
+    return '';
 }

@@ -19,6 +19,7 @@ server/                 → wird in den Zielordner der Umgebung übertragen
                           anmelden.js, pow.js und pow-worker.js (Anmeldung, Spamschutz)
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
+  pdf/                  → Schriften (TTF) und Logo für die PDF-Exporte (E-56)
   daten/                → wegwerfdomains.txt (Spamschutz, Quelle: disposable-email-domains)
   testdaten/            → Test-Beispieldatensatz (erfundene Daten, wächst je AP; auf Staging
                           über Team-Bereich → Daten ladbar)
@@ -146,6 +147,7 @@ Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenübersc
 - **Achtung beim Tausch von `geheimnis` in config.php:** Das Geheimnis des zweiten Faktors ist damit versiegelt. Nach einem Tausch lassen sich die Codes aus der App nicht mehr prüfen; Wiederherstellungscodes gelten weiter, danach den zweiten Faktor neu einrichten.
 - Sitzungen enden nach 30 Minuten ohne Aktivität sowie bei Passwortwechsel, Sperre, Rollenwechsel und Zurücksetzen des zweiten Faktors.
 - Fremdbestandteil: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, Kazuhiko Arase, MIT; Lizenz in `assets/vendor/LIZENZ-qrcode-generator.txt`), übernommen aus NAdoku.
+- Fremdbestandteil: `lib/vendor/tfpdf/` (tFPDF 1.34, LGPL-2.1, unverändert; Herkunft, Prüfsummen und Aktualisierung in `HERKUNFT.md`) für die PDF-Exporte (E-56). Schriften und Logo der PDFs liegen in `server/pdf/` (SIL OFL 1.1, Lizenzen daneben); tFPDF speichert Schriftmaße im Laufzeitordner unter `pdf/unifont/` (wird neu erzeugt, wenn er fehlt).
 
 ## 9. Veranstaltungs-Einstellungen
 
@@ -205,8 +207,8 @@ Sechs Bereiche (Admin 2026-10-30, Variante A), darunter angehängt die Unterseit
 
 - **Übersicht:** Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste – nach der Grenze manuell vergeben –, Mail-Fehler, Angebote, die in 24 h ablaufen, unveröffentlichtes Programm), Workshop-Termine, Essen.
 - **Personen:** Suche und Filter (Angemeldet, Warteliste, Mail nicht bestätigt, Mit Konto, Team). Eine Person auswählen: Daten, Essen und Workshops ändern – auch nach den Stichtagen und ohne Workshop-Limit. Volle Termine nur mit „Überbuchen bestätigen“. Plätze, Wartelisten und Angebote: „Platz geben“ (fragt bei Überbuchen oder Tausch nach), „Angebot schicken“, „Entfernen“. „Einmal-Link senden“, „+ Person anlegen“ (gilt sofort als bestätigt). Konto: Passwort-Link, sperren, löschen (mit Wahl), Rolle vergeben (nur Betreiber, mit Code). Jede Änderung schickt der Person eine Mail, außer „ohne Mail“ ist angekreuzt; alles steht im Protokoll.
-- **Workshops:** Symposium und alle Termine mit Belegung; ein Termin zeigt Teilnehmende und Warteliste in Reihenfolge, mit denselben Aktionen und der Liste als CSV.
-- **Statistik:** Kennzahlen (die EFN-Angabe steht in der Kachel „Angemeldet“), Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** als CSV (Semikolon, UTF-8 mit BOM, öffnet direkt in Excel): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der ÄrztInnen), Statistik. Exporte stehen im Protokoll.
+- **Workshops:** Symposium und alle Termine mit Belegung; ein Termin zeigt Teilnehmende und Warteliste in Reihenfolge, mit denselben Aktionen und der Liste als CSV, Excel oder PDF (eine Seite mit Ort, Leitung und Belegung, ohne E-Mail – zum Weitergeben an die Dozierenden).
+- **Statistik:** Kennzahlen (die EFN-Angabe steht in der Kachel „Angemeldet“), Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** je Liste in drei Formaten (E-56): **CSV** (Semikolon, UTF-8 mit BOM, für andere Programme), **Excel** (xlsx: Kopfzeile fixiert und mit Filter, Datum als Datum; braucht die PHP-Erweiterung zip, sonst fehlt der Knopf) und **PDF** (A4 im Branding zum Ausdrucken; Teilnehmende quer und ohne E-Mail, je Termin bzw. Essen eine Seite; nicht für Newsletter): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der ÄrztInnen), Statistik, Newsletter. Exporte stehen mit Format im Protokoll.
 - **Texte:** Startseite (alle im Team); Impressum und Datenschutz nur Betreiber.
 - **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und ihre eigenen Einträge; Betreiber sehen alles und können Einträge **ausblenden** (dann nur noch für Betreiber sichtbar, markiert, wieder einblendbar). Löschen geht nicht.
 - **Betrieb** (Betreiber): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
@@ -218,7 +220,7 @@ Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
 - **Bestellen:** `/newsletter` (Link in der Fußzeile, Hinweis auf der Startseite): Listen, E-Mail, Vorname (freiwillig), Einwilligung; Spamschutz wie bei der Anmeldung, gleiche Antwort für jede Adresse. Eingetragen ist man erst nach „Bestätigen“ über den Link in der Mail (7 Tage gültig); unbestätigte Anfragen löscht der Job nach 7 Tagen.
 - **Häkchen bei der Anmeldung:** bietet die Liste an, die unter Team → Newsletter „Bei der Symposium-Anmeldung anbieten“ hat; nach der Bestätigung der Anmeldung kommt eine eigene Newsletter-Bestätigung.
 - **Abmelden und ändern:** in jeder Newsletter-Mail „Abmelden oder Listen ändern“; Mailprogramme zeigen dank List-Unsubscribe einen Knopf „Abbestellen“ (One-Click). Abmelden wirkt sofort und löscht die Adresse; je Liste bleibt nur die Zahl der Abmeldungen. Mit Konto auch unter „Mein Konto“.
-- **Team → Newsletter:** Zahlen je Liste, Listen anlegen und ändern (Name, Beschreibung, Absendername, öffentlich wählbar, bei der Anmeldung anbieten), Abonnierende suchen und löschen, einladen (nur per Bestätigungsmail), CSV je Liste (mit Zeitpunkt und Fassung der Einwilligung).
+- **Team → Newsletter:** Zahlen je Liste, Listen anlegen und ändern (Name, Beschreibung, Absendername, öffentlich wählbar, bei der Anmeldung anbieten), Abonnierende suchen und löschen, einladen (nur per Bestätigungsmail), CSV oder Excel je Liste (mit Zeitpunkt und Fassung der Einwilligung).
 - **Versand:** Mailings → Empfänger „Newsletter-Listen“ (eine oder mehrere; jede Person einmal), am besten über newsletter@. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“. Archiv der Empfängerliste 14 Monate ab Versand.
 - **Datenschutz:** gespeichert werden Adresse, Vorname (falls angegeben), Listen, Zeitpunkt und Fassung der Einwilligung (Wortlaut in der Datenbank), keine IP-Adresse. Die Datenschutzerklärung muss das beschreiben.
 

@@ -33,7 +33,7 @@ jobs:
       - name: PHP-Version und Erweiterungen
         run: |
           php -v
-          php -m | grep -E -i '^(pdo_mysql|mbstring|curl|openssl|sodium|gd)$'
+          php -m | grep -E -i '^(pdo_mysql|mbstring|curl|openssl|sodium|gd|zip)$'
 
       - name: Syntax aller PHP-Dateien
         run: |

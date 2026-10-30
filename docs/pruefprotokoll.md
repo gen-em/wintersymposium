@@ -24,6 +24,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | Rückmeldungen 30.10. (2) | Programm: Löschen, Ziehen mit dem Finger, Termine, Dozierende je Termin, Blöcke (E-53) | umgesetzt, Staging offen | lokal T-233 bis T-237 | Staging (siehe unten) |
 | Editor, Konto, Navigation, Löschfrist | ein Editor, ein Konto, Personen-Menü, Team-Navigation A, Löschfrist (E-54) | umgesetzt, Staging offen | lokal T-238 bis T-242 | Staging (siehe unten) |
 | Passkeys | Einloggen ohne Passwort, Passkey als zweiter Faktor (E-55) | umgesetzt, Staging offen | lokal T-243 bis T-246 | Staging mit echten Geräten (siehe unten) |
+| Export xlsx und PDF | Excel und PDF im Branding neben CSV (E-56, O-35) | umgesetzt, Staging offen | lokal T-247 bis T-250 | Staging: Dateien in Excel, LibreOffice, am Handy öffnen und drucken (siehe unten) |
 | AP-7 | Newsletter | umgesetzt, Staging offen | lokal T-170 bis T-174 | Staging (siehe unten); Datenschutzerklärung ergänzen |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
@@ -156,6 +157,12 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-245, ap: E-55, was: "Passkey als einziger zweiter Faktor (Team)", wie: "erster Team-Login: Passkey als erste Wahl → Wiederherstellungscodes; letzter zweiter Faktor nicht entfernbar; Zurücksetzen durch Betreiber entfernt die Passkeys", status: "lokal bestanden"}
 - {id: T-246, ap: E-55, was: "Passkeys verwalten", wie: "umbenennen, entfernen (Dialog), Anzeige „zuletzt benutzt“; Konto gelöscht → Passkeys weg", status: "lokal bestanden"}
 
+# Export xlsx und PDF (E-56, O-35)
+- {id: T-247, ap: E-56, was: "Excel-Datei", wie: "jeder der sieben Exporte als xlsx: Kopfzeile Lila, fixiert, mit Filter; Datum als Datumszelle, Zahlen als Zahl; Text mit = bleibt Text (keine Formel); öffnet in Excel und LibreOffice", status: "lokal bestanden (LibreOffice und openpyxl); Excel auf Staging"}
+- {id: T-248, ap: E-56, was: "PDF im Branding", wie: "Teilnehmende (quer, ohne E-Mail), je Termin, Wartelisten, Essen, CME, Statistik: Logo, Anton/Antonio/Tajawal/Plex Mono, Umlaute, Stand und Filter, Seitenzahlen, Vertraulich-Hinweis; lange Listen über mehrere Seiten mit Kopfzeile", status: "lokal bestanden (Seiten angesehen)"}
+- {id: T-249, ap: E-56, was: "Liste je Termin für Dozierende", wie: "je Termin eine Seite mit Ort, Leitung, Belegung; ohne E-Mail, ohne Unterschriftenspalte; auch leere Termine; einzeln unter Workshops", status: "lokal bestanden"}
+- {id: T-250, ap: E-56, was: "Knöpfe und Protokoll", wie: "Statistik: je Liste CSV, Excel, PDF (Newsletter ohne PDF); Workshops-Termin und Newsletter-Liste; Download mit richtigem Dateinamen und Typ; Export mit Format im Protokoll; ohne zip-Erweiterung kein Excel-Knopf", status: "lokal bestanden"}
+
 # AP-7 Newsletter
 - {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: "lokal bestanden (unbestätigt kein Versand; Bestätigung mit Zeitpunkt und Fassung, Wortlaut gespeichert; Link gilt einmal)"}
 - {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: "lokal bestanden (Abmeldelink und List-Unsubscribe mit One-Click per POST ohne Login, Person sofort gelöscht); in Gmail/Outlook auf Staging prüfen"}
@@ -217,6 +224,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-247 bis T-250 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 686 ok, 0 Fehler (xlsx: Zip mit Mappe, Blatt, Stilen; Kopf fixiert mit Filter; Text nie Formel, Steuerzeichen entfernt, Zahl und Datum als Zahl; Blattname ohne verbotene Zeichen; PDF: Teilnehmende ohne E-Mail mit Seitenzahl, je Termin eine Seite mit Belegung ohne E-Mail, leere Liste mit Hinweis, 120 Zeilen über mehrere Seiten ohne Verlust, Filter im Kopf; Newsletter ohne PDF; HTTP: Formate, Typen, Dateinamen, Protokoll); Browser-Durchlauf BROWSEROK ok, 0 Fehler (Knöpfe in Statistik, Download von PDF und xlsx in Chromium, Firefox und WebKit; Seiten in allen Breiten); PDFs als Bild angesehen, xlsx in LibreOffice und openpyxl geöffnet | Staging |
 | T-243 bis T-246 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 668 ok, 0 Fehler (Bibliothek mit Software-Authenticator: ES256 und RS256 anlegen und einloggen, Herausforderung einmalig und je Konto, ohne UV, fremder Ursprung, fremde rpId, veränderte Signatur, Zähler zurück, COSE mit privatem Teil, Punkt außerhalb der Kurve abgelehnt, keine IP-Adresse; Team: Passkey als zweiter Faktor, letzter nicht entfernbar, Zurücksetzen entfernt Passkeys; HTTP: Login-Seite, Mein Konto, Anlegen nur mit Passwort, ohne CSRF abgelehnt, Anlegen und Einloggen über den Endpunkt, erster Team-Login mit Passkey und Codes, Team-Login nur mit Passkey); Browser-Durchlauf 5289 ok, 0 Fehler (Chromium: simuliertes Gerät mit Fingerabdruck – anlegen, ausloggen, mit Passkey einloggen; Firefox und WebKit: Knopf sichtbar; Seiten in allen Breiten) | Staging |
 | T-238 bis T-242 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 629 ok, 0 Fehler (Bereiniger: fett/kursiv, Skripte, Attribute, Links, Listen, Klartext, Inline, Bilder, Abschnitte; Löschfrist mit vorgestellter Uhr; HTTP: Team-Navigation, Personen-Menü, Mein Konto für Team, eingeloggt ohne Login-Feld, Team-Mitglied meldet sich an, Ausloggen beendet alles, Rolle angehoben → zweiter Faktor, Programm-Beschreibung bereinigt); Browser-Durchlauf 5268 ok, 0 Fehler (Editor: Fett an und aus, nummerierte Liste, Titel mit Editor; Mailing-Editor; alle Bereiche und Unterseiten in allen Breiten; Personen-Menü; Mein Konto und Zwei-Faktor für Team) | Staging |
 | T-233 bis T-237 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 609 ok, 0 Fehler (Fallbesprechung im Block, Vortrag ohne Zuordnung bleibt draußen, Punkt im Block schiebt die Hauptspur nicht, Block nimmt Zugeordnete mit, Verwerfen; Dozierende je Termin: laden, prüfen über Zeilen-Schlüssel, speichern, veröffentlichen, verwerfen); Browser-Durchlauf 4542 ok, 0 Fehler (Löschen-Dialog mittig und wirksam, Einfügelinie, Ziehen mit der Maus in allen Engines, Finger-Ziehen auf dem Handy, Termin-Zeile entfernen, abweichende Dozierende im Editor und im Popup, Fallbesprechung im Zeitraster und in der Handy-Liste) | Staging |
@@ -264,6 +272,14 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für Export xlsx und PDF (nach Merge auf Staging)
+
+1. Team → Statistik → Export: je Liste **Excel** herunterladen und in Excel öffnen. Erwartet: Kopfzeile lila, beim Scrollen fest, Filterpfeile; Datumsspalte als Datum sortierbar; Umlaute richtig.
+2. Je Liste **PDF** öffnen (am Rechner und am Handy) und eine Seite drucken. Erwartet: Logo, Schriften wie auf der Website, Stand und Seitenzahlen, keine abgeschnittenen Spalten; Teilnehmende quer.
+3. Team → Workshops → einen Termin wählen → **PDF**. Erwartet: eine Seite mit Ort, Leitung, Belegung und den Namen, ohne E-Mail – so, wie die Dozierenden sie bekommen sollen.
+4. Team → Protokoll: die Exporte stehen mit Format („als PDF“, „als Excel“) drin.
+5. Rückmeldung, falls Breiten, Reihenfolge oder Inhalt der Listen anders gewünscht sind.
 
 ### Noch zu prüfen für Passkeys (nach Merge auf Staging, mit echten Geräten)
 

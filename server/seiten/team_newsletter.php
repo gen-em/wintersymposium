@@ -54,7 +54,7 @@ team_seite_kopf($konto, 'Newsletter', '/team/newsletter');
     <?php foreach ($zahlen as $lid => $z): ?>
     <div class="kachel"><div class="lbl"><?= e($z['liste']['name']) ?><?= (int)$z['liste']['sichtbar'] === 0 ? ' · ausgeblendet' : '' ?></div><div class="zahl"><?= $z['bestaetigt'] ?></div>
         <p class="meta klein"><?= $z['offen'] ?> warten auf Bestätigung · <?= $z['abgemeldet'] ?> abgemeldet<?= (int)$z['liste']['bei_anmeldung'] === 1 ? '<br>bei der Symposium-Anmeldung angeboten' : '' ?></p>
-        <p class="aktionen"><a class="knopf zweit klein-knopf" href="/team/newsletter?bearbeiten=<?= $lid ?>#liste">Bearbeiten</a> <a class="knopf zweit klein-knopf" href="/team/export?art=newsletter&amp;t=<?= $lid ?>">CSV</a></p></div>
+        <p class="aktionen"><a class="knopf zweit klein-knopf" href="/team/newsletter?bearbeiten=<?= $lid ?>#liste">Bearbeiten</a> <?= export_knoepfe(['art' => 'newsletter', 't' => $lid]) ?></p></div>
     <?php endforeach; ?>
 </div>
 

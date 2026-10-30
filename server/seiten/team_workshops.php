@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Workshops (AP-5, Mockup „Workshops“, E-49): Termine mit Belegung; ein
  * Termin zeigt Teilnehmende und Warteliste in Reihenfolge. Hier landet das
  * Nachrücken nach der automatischen Grenze: Platz geben (Überbuchen mit
- * Bestätigung), Angebot schicken, entfernen. Dazu die Liste je Termin als CSV.
+ * Bestätigung), Angebot schicken, entfernen. Dazu die Liste je Termin als CSV, Excel oder PDF.
  */
 
 $konto = team_tor();
@@ -122,7 +122,7 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
             </ol>
             <?php endif; ?>
             <p class="meta klein abstand-oben-klein">„Platz geben“ vergibt sofort, auch nach der Grenze; ist der Termin voll, fragt die Seite nach (Überbuchen). Die Person bekommt eine Mail.</p>
-            <p><a class="knopf zweit klein-knopf" href="/team/export?art=termin&amp;t=<?= $auswahl['id'] ?>">Liste als CSV</a></p>
+            <p class="aktionen"><span class="meta klein">Liste:</span> <?= export_knoepfe(['art' => 'termin', 't' => (int)$auswahl['id']]) ?></p>
         </div>
 <?php endif; ?>
     </div>

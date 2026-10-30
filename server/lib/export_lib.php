@@ -1,0 +1,379 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Exporte als xlsx und PDF (O-35, E-56). Die Daten liefert export_erzeugen()
+ * (statistik_lib.php): Kopf, Zeilen, Titel. CSV bleibt wie bisher.
+ *
+ * xlsx: selbst geschrieben (Office Open XML, ZipArchive): Kopfzeile in Lila,
+ * fixiert, mit Filter; Spaltenbreiten nach Inhalt; Zahlen als Zahl, Datum
+ * „TT.MM.JJJJ[, HH:MM]“ als echte Datumszelle. Texte als Inline-Text – nie als
+ * Formel (keine Formel-Einschleusung).
+ *
+ * PDF: tFPDF (LGPL-2.1, server/lib/vendor/tfpdf/HERKUNFT.md), A4 im Branding
+ * Allgäu Akut für Papier (heller Modus): Logo, Kicker in Antonio, Titel in
+ * Anton, Text in Tajawal, Zahlen in IBM Plex Mono; Nachtblau für Text, Lila
+ * 600 als Akzent (Lila 400 nie als Text auf Weiß). Gruppen (Termin, Essen)
+ * beginnen je auf einer neuen Seite. Seitenzahlen unten.
+ */
+
+const EXPORT_FORMATE = ['csv' => 'CSV', 'xlsx' => 'Excel', 'pdf' => 'PDF'];
+
+/** Geht das Format auf diesem Server? (xlsx braucht die Erweiterung zip) */
+function export_format_moeglich(string $format): bool
+{
+    return match ($format) {
+        'csv' => true,
+        'xlsx' => class_exists('ZipArchive'),
+        'pdf' => extension_loaded('mbstring') && is_dir(export_pdf_ordner()),
+        default => false,
+    };
+}
+
+/** Datei für das Format: ['datei' => Name, 'typ' => MIME, 'inhalt' => Bytes] oder null. */
+function export_datei(array $x, string $format): ?array
+{
+    return match ($format) {
+        'csv' => ['datei' => $x['datei'], 'typ' => 'text/csv; charset=utf-8', 'inhalt' => $x['text']],
+        'xlsx' => export_format_moeglich('xlsx') ? ['datei' => $x['basis'] . '.xlsx', 'typ' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'inhalt' => export_xlsx($x)] : null,
+        'pdf' => $x['pdf'] !== null && export_format_moeglich('pdf') ? ['datei' => $x['basis'] . '.pdf', 'typ' => 'application/pdf', 'inhalt' => export_pdf($x)] : null,
+        default => null,
+    };
+}
+
+/** Arten ohne PDF (nur Tabellen zum Weiterverarbeiten). */
+const EXPORT_OHNE_PDF = ['newsletter'];
+
+/**
+ * Knöpfe CSV · Excel · PDF für einen Export (Parameter wie /team/export).
+ * Excel nur mit der Erweiterung zip, PDF nicht für EXPORT_OHNE_PDF.
+ */
+function export_knoepfe(array $param, string $vor = ''): string
+{
+    $h = [];
+    foreach (EXPORT_FORMATE as $f => $name) {
+        if (!export_format_moeglich($f) || ($f === 'pdf' && in_array($param['art'] ?? '', EXPORT_OHNE_PDF, true))) {
+            continue;
+        }
+        $q = http_build_query(array_filter($param + ['format' => $f === 'csv' ? null : $f], fn($v) => $v !== null && $v !== ''));
+        $h[] = '<a class="knopf zweit klein-knopf" href="/team/export?' . e($q) . '" download>' . e($vor . $name) . '</a>';
+    }
+    return '<span class="export-knoepfe">' . implode(' ', $h) . '</span>';
+}
+
+/* ---- xlsx ---------------------------------------------------------------- */
+
+/** Spaltenbuchstabe (0 → A, 26 → AA). */
+function xlsx_spalte(int $i): string
+{
+    $s = '';
+    for ($i++; $i > 0; $i = intdiv($i - 1, 26)) {
+        $s = chr(65 + ($i - 1) % 26) . $s;
+    }
+    return $s;
+}
+
+/** Excel-Seriennummer für „TT.MM.JJJJ“ bzw. „TT.MM.JJJJ, HH:MM“ oder null. */
+function xlsx_datum(string $w): ?array
+{
+    if (preg_match('/^(\d{2})\.(\d{2})\.(\d{4})(?:, (\d{2}):(\d{2}))?$/', $w, $m) !== 1 || !checkdate((int)$m[2], (int)$m[1], (int)$m[3])) {
+        return null;
+    }
+    $tage = (int)((gmmktime(0, 0, 0, (int)$m[2], (int)$m[1], (int)$m[3]) - gmmktime(0, 0, 0, 12, 30, 1899)) / 86400);
+    $zeit = isset($m[4]) ? ((int)$m[4] * 60 + (int)$m[5]) / 1440 : 0.0;
+    return ['wert' => isset($m[4]) ? $tage + $zeit : $tage, 'stil' => isset($m[4]) ? 3 : 2];
+}
+
+function xlsx_xml(string $s): string
+{
+    // Steuerzeichen sind in XML nicht erlaubt
+    $s = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $s) ?? '';
+    return htmlspecialchars($s, ENT_QUOTES | ENT_XML1, 'UTF-8');
+}
+
+/** xlsx-Datei (Bytes) aus Kopf und Zeilen. */
+function export_xlsx(array $x): string
+{
+    $kopf = $x['kopf'];
+    $zeilen = $x['zeilen'];
+    $breiten = array_map(fn($k) => mb_strlen((string)$k) + 4, $kopf);
+    $zellen = function (array $werte, int $r, bool $istKopf) use (&$breiten): string {
+        $h = '<row r="' . $r . '">';
+        foreach (array_values($werte) as $i => $w) {
+            $ref = xlsx_spalte($i) . $r;
+            $breiten[$i] = min(60, max($breiten[$i] ?? 8, mb_strlen((string)$w) + 2));
+            if ($istKopf) {
+                $h .= '<c r="' . $ref . '" s="1" t="inlineStr"><is><t>' . xlsx_xml((string)$w) . '</t></is></c>';
+            } elseif (is_int($w) || is_float($w)) {
+                $h .= '<c r="' . $ref . '"><v>' . $w . '</v></c>';
+            } elseif (($d = xlsx_datum((string)$w)) !== null) {
+                $h .= '<c r="' . $ref . '" s="' . $d['stil'] . '"><v>' . $d['wert'] . '</v></c>';
+            } elseif ((string)$w !== '') {
+                $h .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">' . xlsx_xml((string)$w) . '</t></is></c>';
+            }
+        }
+        return $h . '</row>';
+    };
+    $daten = $zellen($kopf, 1, true);
+    foreach ($zeilen as $n => $z) {
+        $daten .= $zellen($z, $n + 2, false);
+    }
+    $letzte = xlsx_spalte(max(0, count($kopf) - 1)) . (count($zeilen) + 1);
+    $spalten = '';
+    foreach ($breiten as $i => $b) {
+        $spalten .= '<col min="' . ($i + 1) . '" max="' . ($i + 1) . '" width="' . max(8, $b) . '" customWidth="1"/>';
+    }
+    $blatt = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        . '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+        . '<cols>' . $spalten . '</cols><sheetData>' . $daten . '</sheetData>'
+        . '<autoFilter ref="A1:' . $letzte . '"/></worksheet>';
+    $name = mb_substr(trim(preg_replace('/[\[\]:*?\/\\\\]/u', ' ', (string)$x['titel']) ?? ''), 0, 31) ?: 'Export';
+    $stile = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        . '<numFmts count="2"><numFmt numFmtId="164" formatCode="dd.mm.yyyy"/><numFmt numFmtId="165" formatCode="dd.mm.yyyy hh:mm"/></numFmts>'
+        . '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>'
+        . '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+        . '<fill><patternFill patternType="solid"><fgColor rgb="FF6F52A8"/><bgColor indexed="64"/></patternFill></fill></fills>'
+        . '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+        . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        . '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+        . '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+        . '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+        . '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+        . '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+        . '</styleSheet>';
+    $dateien = [
+        '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>',
+        '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>',
+        'docProps/core.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            . '<dc:title>' . xlsx_xml('Wintersymposium – ' . $x['titel']) . '</dc:title><dc:creator>Wintersymposium</dc:creator>'
+            . '<dcterms:created xsi:type="dcterms:W3CDTF">' . gmdate('Y-m-d\TH:i:s\Z') . '</dcterms:created></cp:coreProperties>',
+        'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheets><sheet name="' . xlsx_xml($name) . '" sheetId="1" r:id="rId1"/></sheets>'
+            . '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'' . str_replace("'", "''", xlsx_xml($name)) . '\'!$A$1:$' . preg_replace('/\d+$/', '', $letzte) . '$' . (count($zeilen) + 1) . '</definedName></definedNames></workbook>',
+        'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+        'xl/styles.xml' => $stile,
+        'xl/worksheets/sheet1.xml' => $blatt,
+    ];
+    $tmp = tempnam(sys_get_temp_dir(), 'wsx');
+    $zip = new ZipArchive();
+    if ($tmp === false || $zip->open($tmp, ZipArchive::OVERWRITE) !== true) {
+        throw new RuntimeException('xlsx: Zip-Datei ließ sich nicht anlegen.');
+    }
+    foreach ($dateien as $pfad => $inhalt) {
+        $zip->addFromString($pfad, $inhalt);
+    }
+    $zip->close();
+    $bytes = (string)file_get_contents($tmp);
+    @unlink($tmp);
+    return $bytes;
+}
+
+/* ---- PDF ----------------------------------------------------------------- */
+
+/** Schriften und Logo für die PDFs (Branding, nicht öffentlich). */
+function export_pdf_ordner(): string
+{
+    return dirname(__DIR__) . '/pdf';
+}
+
+function export_pdf_laden(): void
+{
+    if (class_exists('tFPDF', false)) {
+        return;
+    }
+    // Zwischenspeicher der Schriftmaße im Laufzeitordner (tFPDF schreibt nach FPDF_FONTPATH/unifont/)
+    $cache = laufzeit_pfad('pdf');
+    if (!is_dir($cache . '/unifont')) {
+        @mkdir($cache . '/unifont', 0770, true);
+    }
+    if (!defined('FPDF_FONTPATH')) {
+        define('FPDF_FONTPATH', $cache . '/');
+    }
+    if (!defined('_SYSTEM_TTFONTS')) {
+        define('_SYSTEM_TTFONTS', export_pdf_ordner() . '/');
+    }
+    require_once __DIR__ . '/vendor/tfpdf/ttfonts.php';
+    require_once __DIR__ . '/vendor/tfpdf/tfpdf.php';
+}
+
+/** Farben (Branding, heller Modus für Papier). */
+const PDF_FARBEN = [
+    'text' => [0, 30, 58],       // blue-900 Nachtblau
+    'meta' => [51, 99, 141],     // blue-500
+    'akzent' => [111, 82, 168],  // lila-600
+    'linie' => [204, 216, 227],  // blue-200
+    'zebra' => [246, 248, 250],  // blue-50
+];
+
+/** PDF (Bytes) aus Kopf und Zeilen. */
+function export_pdf(array $x): string
+{
+    export_pdf_laden();
+    $opt = $x['pdf'];
+    $spalten = array_values(array_diff(array_keys($x['kopf']), $opt['ohne'], $opt['gruppe'] !== null ? [$opt['gruppe']] : []));
+    // Gruppen (z. B. je Termin eine Seite); ohne Gruppe eine Liste
+    $gruppen = [];
+    foreach ($opt['alle_gruppen'] ?? [] as $g) {
+        $gruppen[$g] = [];
+    }
+    foreach ($x['zeilen'] as $z) {
+        $gruppen[$opt['gruppe'] !== null ? (string)$z[$opt['gruppe']] : ''][] = $z;
+    }
+    if ($gruppen === []) {
+        $gruppen[''] = [];
+    }
+    $kopfText = 'Wintersymposium · ' . tag_text(va('veranstaltung_datum'));
+    $stand = 'Stand ' . datum_zeit_text(gmdate('Y-m-d H:i:s')) . ($x['bg'] !== '' ? ' · Berufsgruppe: ' . $x['bg'] : '');
+
+    $pdf = new class ($opt['quer'] ? 'L' : 'P', 'mm', 'A4') extends tFPDF {
+        public string $fuss = '';
+        public function Footer(): void
+        {
+            $this->SetY(-12);
+            $this->SetFont('mono', '', 7.5);
+            $this->SetTextColor(...PDF_FARBEN['meta']);
+            $this->Cell(0, 5, $this->fuss, 0, 0, 'L');
+            $this->SetX($this->lMargin);
+            $this->Cell(0, 5, 'Seite ' . $this->PageNo() . ' von {nb}', 0, 0, 'R');
+        }
+    };
+    $pdf->AliasNbPages();
+    $pdf->SetAutoPageBreak(true, 18);
+    $pdf->SetMargins(16, 14, 16);
+    $pdf->AddFont('anton', '', 'Anton-Regular.ttf', true);
+    $pdf->AddFont('antonio', 'B', 'Antonio-Bold.ttf', true);
+    $pdf->AddFont('tajawal', '', 'Tajawal-Regular.ttf', true);
+    $pdf->AddFont('tajawal', 'B', 'Tajawal-Bold.ttf', true);
+    $pdf->AddFont('mono', '', 'IBMPlexMono-Regular.ttf', true);
+    $pdf->SetTitle('Wintersymposium – ' . $x['titel'], true);
+    $pdf->SetAuthor('Wintersymposium', true);
+    $pdf->SetCreator('Wintersymposium', true);
+    $pdf->fuss = 'Vertraulich – nur für die Organisation · ' . $stand;
+    $breite = ($opt['quer'] ? 297 : 210) - 32;
+
+    // Spaltenbreiten nach Inhalt (Kopf und Zeilen), auf die Seitenbreite verteilt
+    $pdf->SetFont('tajawal', '', 9);
+    $mass = [];
+    foreach ($spalten as $s) {
+        $m = $pdf->GetStringWidth(mb_strtoupper((string)$x['kopf'][$s])) + 4;
+        foreach ($x['zeilen'] as $z) {
+            $m = max($m, min(90, $pdf->GetStringWidth((string)($z[$s] ?? '')) + 4));
+        }
+        $mass[$s] = $m;
+    }
+    $summe = array_sum($mass) ?: 1;
+    $w = array_map(fn($m) => $m / $summe * $breite, $mass);
+
+    $kopfzeile = function () use ($pdf, $spalten, $x, $w): void {
+        $pdf->SetFont('antonio', 'B', 8);
+        $pdf->SetFillColor(...PDF_FARBEN['text']);
+        $pdf->SetTextColor(255, 255, 255);
+        foreach ($spalten as $s) {
+            $pdf->Cell($w[$s], 7, mb_strtoupper((string)$x['kopf'][$s]), 0, 0, 'L', true);
+        }
+        $pdf->Ln();
+    };
+    foreach ($gruppen as $gruppe => $zeilen) {
+        $pdf->AddPage();
+        $logo = export_pdf_ordner() . '/ALLGAEU-AKUT_Logo_quer_farbig-lila.png';
+        $pdf->Image($logo, 16, 12, 46);
+        $pdf->SetFont('mono', '', 8);
+        $pdf->SetTextColor(...PDF_FARBEN['meta']);
+        $pdf->SetXY(16, 14);
+        $pdf->Cell(0, 5, $stand, 0, 0, 'R');
+        $pdf->SetY(30);
+        $pdf->SetFont('antonio', 'B', 10);
+        $pdf->SetTextColor(...PDF_FARBEN['akzent']);
+        $pdf->Cell(0, 5, mb_strtoupper($kopfText), 0, 1);
+        $pdf->SetFont('anton', '', 22);
+        $pdf->SetTextColor(...PDF_FARBEN['text']);
+        $pdf->MultiCell(0, 10, mb_strtoupper($gruppe !== '' ? $gruppe : $x['titel']), 0, 'L');
+        $sub = $gruppe !== '' ? $x['titel'] . (($opt['info'][$gruppe] ?? '') !== '' ? ' · ' . $opt['info'][$gruppe] : '') : count($zeilen) . ' Einträge';
+        if ($gruppe !== '') {
+            $sub .= ' · ' . count($zeilen) . ' ' . (count($zeilen) === 1 ? 'Person' : 'Personen');
+        }
+        $pdf->SetFont('tajawal', '', 9.5);
+        $pdf->SetTextColor(...PDF_FARBEN['meta']);
+        $pdf->MultiCell(0, 5, $sub, 0, 'L');
+        $pdf->Ln(3);
+        $kopfzeile();
+        if ($zeilen === []) {
+            $pdf->SetFont('tajawal', '', 9.5);
+            $pdf->SetTextColor(...PDF_FARBEN['meta']);
+            $pdf->Cell(0, 8, 'Niemand eingetragen.', 0, 1);
+            continue;
+        }
+        $pdf->SetFont('tajawal', '', 9);
+        foreach ($zeilen as $n => $z) {
+            // Zeilenhöhe nach dem längsten umbrochenen Feld
+            $linien = 1;
+            foreach ($spalten as $s) {
+                $linien = max($linien, export_pdf_linien($pdf, $w[$s] - 2, (string)($z[$s] ?? '')));
+            }
+            $h = 5.2 * $linien + 1.6;
+            if ($pdf->GetY() + $h > $pdf->GetPageHeight() - 18) {
+                $pdf->AddPage();
+                $pdf->SetY(16);
+                $kopfzeile();
+                $pdf->SetFont('tajawal', '', 9);
+            }
+            $y = $pdf->GetY();
+            $x0 = $pdf->GetX();
+            if ($n % 2 === 1) {
+                $pdf->SetFillColor(...PDF_FARBEN['zebra']);
+                $pdf->Rect($x0, $y, array_sum(array_intersect_key($w, array_flip($spalten))), $h, 'F');
+            }
+            $pdf->SetTextColor(...PDF_FARBEN['text']);
+            $xx = $x0;
+            foreach ($spalten as $s) {
+                $wert = (string)($z[$s] ?? '');
+                $pdf->SetFont(preg_match('/^[\d.:,\s–-]+$/', $wert) === 1 && $wert !== '' ? 'mono' : 'tajawal', '', 9);
+                $pdf->SetXY($xx + 1, $y + 0.8);
+                $pdf->MultiCell($w[$s] - 2, 5.2, $wert, 0, 'L');
+                $xx += $w[$s];
+            }
+            $pdf->SetDrawColor(...PDF_FARBEN['linie']);
+            $pdf->Line($x0, $y + $h, $xx, $y + $h);
+            $pdf->SetXY($x0, $y + $h);
+        }
+    }
+    return $pdf->Output('S');
+}
+
+/** Zeilen, die ein Text in einer Spalte braucht (für die Zeilenhöhe). */
+function export_pdf_linien(tFPDF $pdf, float $breite, string $text): int
+{
+    if ($text === '') {
+        return 1;
+    }
+    $n = 0;
+    foreach (explode("\n", $text) as $absatz) {
+        $zeile = '';
+        $n++;
+        foreach (preg_split('/(\s+)/u', $absatz, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [] as $teil) {
+            if ($pdf->GetStringWidth($zeile . $teil) > $breite && trim($zeile) !== '') {
+                $n++;
+                $zeile = ltrim($teil);
+            } else {
+                $zeile .= $teil;
+            }
+            // Ein einzelnes Wort länger als die Spalte bricht mitten im Wort
+            while ($pdf->GetStringWidth($zeile) > $breite && mb_strlen($zeile) > 1) {
+                $n++;
+                $zeile = mb_substr($zeile, (int)max(1, floor(mb_strlen($zeile) * $breite / max(1, $pdf->GetStringWidth($zeile)))));
+            }
+        }
+    }
+    return $n;
+}

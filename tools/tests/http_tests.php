@@ -762,6 +762,15 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     $r = http_anfrage($basis, 'GET', '/team/export?art=teilnehmende', $h, [], null, $b);
     pruefe($r['status'] === 200 && str_starts_with($r['kopf']['content-type'] ?? '', 'text/csv') && str_starts_with($r['text'], "\u{FEFF}") && str_contains($r['text'], 'Petra') && str_contains($r['kopf']['content-disposition'] ?? '', '.csv'), 'Export als CSV (Excel)');
     pruefe(http_anfrage($basis, 'GET', '/team/export?art=gibtsnicht', $h, [], null, $b)['status'] === 404, 'unbekannter Export: 404');
+    // xlsx und PDF (E-56)
+    $r = http_anfrage($basis, 'GET', '/team/export?art=teilnehmende&format=xlsx', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['kopf']['content-type'] ?? '', 'spreadsheetml') && str_starts_with($r['text'], 'PK') && str_contains($r['kopf']['content-disposition'] ?? '', '.xlsx"'), 'Export als Excel (xlsx)');
+    $r = http_anfrage($basis, 'GET', '/team/export?art=termine&format=pdf', $h, [], null, $b);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/pdf' && str_starts_with($r['text'], '%PDF-') && str_contains($r['kopf']['content-disposition'] ?? '', '.pdf"'), 'Export Listen je Termin als PDF');
+    pruefe(http_anfrage($basis, 'GET', '/team/export?art=newsletter&format=pdf', $h, [], null, $b)['status'] === 404 && http_anfrage($basis, 'GET', '/team/export?art=cme&format=exe', $h, [], null, $b)['status'] === 404, 'Newsletter ohne PDF, unbekanntes Format: 404');
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export' AND text LIKE '%als PDF%'") >= 1, 'Export mit Format im Protokoll');
+    $r = http_anfrage($basis, 'GET', '/team/statistik', $h, [], null, $b);
+    pruefe(substr_count($r['text'], 'format=xlsx') === 7 && substr_count($r['text'], 'format=pdf') === 6, 'Statistik: Knöpfe Excel und PDF');
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export'") >= 1, 'Export im Protokoll');
     $r = http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => "## Verantwortlich\nTest Impressum"], $b);
     pruefe($r['status'] === 303 && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Gratis!') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert');

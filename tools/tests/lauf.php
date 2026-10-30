@@ -576,6 +576,47 @@ if (!$mitDb) {
     $ex = export_erzeugen('cme');
     pruefe($ex !== null && !str_contains($ex['text'], 'Theo'), 'CME-Liste nur ÄrztInnen');
     pruefe(export_erzeugen('unbekannt') === null && export_erzeugen('termin', '', 999999) === null, 'unbekannter Export: nichts');
+    // xlsx und PDF (O-35, E-56)
+    pruefe(xlsx_spalte(0) === 'A' && xlsx_spalte(25) === 'Z' && xlsx_spalte(26) === 'AA' && xlsx_spalte(701) === 'ZZ', 'xlsx: Spaltenbuchstaben');
+    pruefe(xlsx_datum('20.01.2027') === ['wert' => 46407, 'stil' => 2] && abs(xlsx_datum('20.01.2027, 12:00')['wert'] - 46407.5) < 1e-9 && xlsx_datum('31.02.2027') === null && xlsx_datum('Müller') === null, 'xlsx: Datum als Excel-Zahl');
+    $xl = export_datei(['datei' => 'a.csv', 'basis' => 'a', 'titel' => 'Liste: [x]', 'kopf' => ['Name', 'Datum', 'Zahl'], 'zeilen' => [['=HYPERLINK("x")', '20.01.2027, 14:30', 3], ["Ä\x01<b>", '', 2.5]], 'text' => '', 'bg' => '', 'pdf' => null], 'xlsx');
+    $xlTmp = tempnam(sys_get_temp_dir(), 'wst');
+    file_put_contents($xlTmp, $xl['inhalt']);
+    $zip = new ZipArchive();
+    $zipOk = $zip->open($xlTmp) === true;
+    $blatt = $zipOk ? (string)$zip->getFromName('xl/worksheets/sheet1.xml') : '';
+    $mappe = $zipOk ? (string)$zip->getFromName('xl/workbook.xml') : '';
+    pruefe($zipOk && $xl['datei'] === 'a.xlsx' && str_contains($xl['typ'], 'spreadsheetml') && $zip->getFromName('xl/styles.xml') !== false && $zip->getFromName('[Content_Types].xml') !== false, 'xlsx: Zip mit Mappe, Blatt und Stilen');
+    pruefe(str_contains($blatt, 'state="frozen"') && str_contains($blatt, '<autoFilter ref="A1:C3"/>') && str_contains($blatt, 's="1" t="inlineStr"'), 'xlsx: Kopfzeile fixiert, mit Filter und Stil');
+    pruefe(!str_contains($blatt, '<f>') && str_contains($blatt, '=HYPERLINK(&quot;x&quot;)') && str_contains($blatt, 'Ä&lt;b&gt;') && !str_contains($blatt, "\x01") && str_contains($blatt, '<v>3</v>') && str_contains($blatt, 's="3"><v>46407.6041'), 'xlsx: Text nie Formel, Zeichen maskiert, Zahl und Datum als Zahl');
+    pruefe(str_contains($mappe, 'name="Liste   x "') || str_contains($mappe, 'name="Liste  x"') || preg_match('/sheet name="Liste[^"]*x[^"]*"/', $mappe) === 1, 'xlsx: Blattname ohne verbotene Zeichen');
+    $zip->close();
+    @unlink($xlTmp);
+    $pdfText = function (array $d) : string {
+        $f = tempnam(sys_get_temp_dir(), 'wsp');
+        file_put_contents($f, $d['inhalt']);
+        $t = (string)shell_exec('pdftotext -layout ' . escapeshellarg($f) . ' - 2>/dev/null');
+        @unlink($f);
+        return $t;
+    };
+    $ex = export_erzeugen('teilnehmende');
+    $pd = export_datei($ex, 'pdf');
+    pruefe($pd !== null && str_starts_with($pd['inhalt'], '%PDF-') && $pd['datei'] === preg_replace('/\.csv$/', '.pdf', $ex['datei']), 'PDF Teilnehmende: Datei');
+    if (trim((string)shell_exec('command -v pdftotext')) !== '') {
+        $pt = $pdfText($pd);
+        pruefe(str_contains($pt, 'Theo') && str_contains($pt, 'Seite 1 von') && str_contains($pt, 'TEILNEHMENDE') && !str_contains($pt, 'theo.neu@example.org'), 'PDF Teilnehmende: Namen, Seitenzahl, ohne E-Mail');
+        $exT = export_erzeugen('termine');
+        $ptT = $pdfText(export_datei($exT, 'pdf'));
+        $seiten = substr_count($ptT, "\f");
+        pruefe($seiten >= count(array_unique(array_column($exT['zeilen'], 0))) && str_contains($ptT, 'Plätzen belegt') && !str_contains($ptT, '@example.org'), 'PDF je Termin: eine Seite je Termin, Belegung, ohne E-Mail');
+        $leer = export_datei(['datei' => 'l.csv', 'basis' => 'l', 'titel' => 'Leer', 'kopf' => ['A'], 'zeilen' => [], 'text' => '', 'bg' => '', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
+        pruefe(str_contains($pdfText($leer), 'Niemand eingetragen'), 'PDF ohne Zeilen: Hinweis statt leerer Tabelle');
+        $lang = export_datei(['datei' => 'g.csv', 'basis' => 'g', 'titel' => 'Lang', 'kopf' => ['Name', 'Text'], 'zeilen' => array_fill(0, 120, ['Zora Zett', str_repeat('Workshop Atemweg ', 6)]), 'text' => '', 'bg' => 'ÄrztIn', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
+        $ptL = $pdfText($lang);
+        pruefe(substr_count($ptL, 'Zora Zett') === 120 && substr_count($ptL, "\f") >= 3 && str_contains($ptL, 'Berufsgruppe: ÄrztIn'), 'PDF: lange Liste über mehrere Seiten, nichts verloren');
+    }
+    pruefe(export_datei(export_erzeugen('newsletter'), 'pdf') === null && export_datei($ex, 'doc') === null, 'Newsletter ohne PDF, unbekanntes Format nichts');
+    pruefe(str_contains(export_knoepfe(['art' => 'cme']), 'format=pdf') && str_contains(export_knoepfe(['art' => 'cme']), 'format=xlsx') && !str_contains(export_knoepfe(['art' => 'newsletter']), 'format=pdf'), 'Knöpfe CSV, Excel, PDF (Newsletter ohne PDF)');
     $sd = stat_daten();
     pruefe($sd['angemeldet'] === (int)db_wert("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status = 'fest' WHERE a.status = 'bestaetigt'") && array_sum($sd['berufsgruppen']) === $sd['bestaetigt'] && stat_daten('StudentIn')['bestaetigt'] <= $sd['bestaetigt'], 'Statistik stimmt mit der Datenbank (mit Filter)');
     pruefe(str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="50"') && str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="100"'), 'Balken als SVG-Attribut (keine Inline-Stile)');

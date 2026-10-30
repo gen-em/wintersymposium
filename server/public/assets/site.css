@@ -507,6 +507,7 @@ form.inline { display: inline; }
 .link-knopf { all: unset; cursor: pointer; text-decoration: underline; font-weight: 700; color: var(--fg); }
 .link-knopf:focus-visible { outline: 2px solid var(--akz); outline-offset: 2px; }
 .klein-knopf { min-height: 36px; padding: 6px 14px; font-size: .88rem; }
+.export-knoepfe { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; }
 
 /* ---- Daten: Sicherungen und Testdaten (E-47) ---- */
 .zellen-aktionen { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
