@@ -31,11 +31,11 @@ function audit_liste(int $anzahl = 100): array
  */
 const AUDIT_ARTEN = [
     'anmeldung' => 'Anmeldungen', 'nachruecken' => 'Nachrücken', 'programm' => 'Programm', 'einstellungen' => 'Einstellungen',
-    'texte' => 'Texte', 'export' => 'Export', 'mailing' => 'Mailings', 'login' => 'Login', 'konto' => 'Konten',
+    'texte' => 'Texte', 'export' => 'Export', 'mailing' => 'Mailings', 'newsletter' => 'Newsletter', 'login' => 'Login', 'konto' => 'Konten',
     'zweitfaktor' => 'Zweiter Faktor', 'mail' => 'Mailversand', 'host' => 'Hostnamen', 'sicherung' => 'Sicherung',
     'installation' => 'Installation', 'migration' => 'Migration', 'notzugang' => 'Notzugang', 'protokoll' => 'Protokoll',
 ];
-const AUDIT_ARTEN_ADMIN = ['anmeldung', 'nachruecken', 'programm', 'einstellungen', 'texte', 'export', 'mailing'];
+const AUDIT_ARTEN_ADMIN = ['anmeldung', 'nachruecken', 'programm', 'einstellungen', 'texte', 'export', 'mailing', 'newsletter'];
 
 /** WHERE-Teil (und Parameter) für das, was dieses Konto im Protokoll sieht. */
 function audit_sichtbar(array $konto): array

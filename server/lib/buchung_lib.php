@@ -502,6 +502,8 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
                 anm_nachruecken((int)$p['termin_id'], $jetzt);
             }
             mail_vorlage_einreihen($a['email'], 'bestaetigt', ['vorname' => $a['vorname'], 'uebersicht' => anm_uebersicht_text($anmId)]);
+            // Häkchen „Newsletter“: eigene Bestätigungsmail (AP-7, E-52)
+            nl_aus_anmeldung($anmId);
             $meldung = 'Danke, deine Anmeldung ist bestätigt.';
             // Konto: gewünscht beim Anmelden → anlegen; vorhandenes bestätigtes Konto → verknüpfen (E-48)
             $k = konto_per_email($a['email']);
@@ -577,6 +579,7 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
         }
         if ($vomKonto) {
             mail_vorlage_einreihen($w['email'], 'bestaetigt', ['vorname' => $w['vorname'], 'uebersicht' => anm_uebersicht_text($id)]);
+            nl_aus_anmeldung($id);
         } else {
             $token = anm_link_erzeugen($id, 'bestaetigen', $bis);
             mail_vorlage_einreihen($w['email'], 'bestaetigen', [

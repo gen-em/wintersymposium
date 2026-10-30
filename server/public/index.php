@@ -59,6 +59,11 @@ const ROUTEN = [
     '/konto/neu' => 'konto_neu',
     '/konto/link' => 'konto_link',
     '/konto/passwort-vergessen' => 'konto_passwort_vergessen',
+    '/newsletter' => 'newsletter',
+    '/newsletter/bestaetigen' => 'newsletter_bestaetigen',
+    '/newsletter/verwalten' => 'newsletter_verwalten',
+    '/newsletter/abmelden' => 'newsletter_abmelden',
+    '/team/newsletter' => 'team_newsletter',
 ];
 
 $pfad = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

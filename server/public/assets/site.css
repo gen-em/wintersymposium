@@ -650,3 +650,15 @@ table.t tr.ausgeblendet td { opacity: .62; }
 .sperre.offen .sperre-symbol { color: var(--gruen); }
 fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea { opacity: .7; cursor: not-allowed; }
 .liste-def dt { overflow-wrap: anywhere; hyphens: auto; }
+.rm-art, .rm-listen { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.rm-art legend, .rm-listen legend { font-weight: 700; font-size: .95rem; margin-bottom: 4px; padding: 0; }
+.rm-art { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.rm-art legend { grid-column: 1 / -1; }
+[data-empfaenger][hidden] { display: none; }
+/* Newsletter (AP-7) */
+.nl-listen { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.nl-listen legend { font-weight: 700; margin-bottom: 4px; padding: 0; }
+.nl-personen li { padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.nl-personen .chip { margin: 4px 4px 0 0; }
+.nl-hinweis { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin: 0; padding: 12px 16px; border: 1px dashed var(--linie); }
+.nl-hinweis a { color: var(--akz); }

@@ -64,9 +64,30 @@ function rm_auswahl_gruppen(): array
     return array_filter($g);
 }
 
+/** Newsletter-Listen einer Auswahl „nl:1,2“ oder null (AP-7). */
+function rm_nl_listen(string $auswahl): ?array
+{
+    return preg_match('/^nl:(\d+(?:,\d+)*)$/', $auswahl, $m) === 1 ? array_map('intval', explode(',', $m[1])) : null;
+}
+
+/** Ist die Auswahl gültig (Teilnehmende oder vorhandene Newsletter-Listen)? */
+function rm_auswahl_gueltig(string $auswahl): bool
+{
+    $nl = rm_nl_listen($auswahl);
+    if ($nl !== null) {
+        return array_diff($nl, array_map('intval', array_column(nl_listen(), 'id'))) === [];
+    }
+    return array_key_exists($auswahl, rm_auswahl_optionen());
+}
+
 /** Klartext einer Auswahl (mit Berufsgruppe). */
 function rm_auswahl_text(string $auswahl, string $bg): string
 {
+    $nl = rm_nl_listen($auswahl);
+    if ($nl !== null) {
+        $namen = array_column(array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $nl, true)), 'name');
+        return 'Newsletter: ' . implode(', ', $namen);
+    }
     $o = rm_auswahl_optionen();
     $t = $o[$auswahl] ?? $auswahl;
     return $t . ($bg !== '' ? ' · nur ' . $bg : '');
@@ -75,6 +96,10 @@ function rm_auswahl_text(string $auswahl, string $bg): string
 /** Bestätigte Anmeldungen der Auswahl: Liste mit id, vorname, nachname, email. */
 function rm_empfaenger(string $auswahl, string $bg = ''): array
 {
+    $nl = rm_nl_listen($auswahl);
+    if ($nl !== null) {
+        return nl_empfaenger($nl);
+    }
     $wo = ["a.status = 'bestaetigt'"];
     $par = [];
     if ($auswahl === 'angemeldet') {
@@ -261,6 +286,7 @@ function rm_knoten(DOMNode $n, string $modus, array $k): string
 /** Platzhalter im Text (HTML-sicher). */
 function rm_platzhalter_html(string $t, array $k): string
 {
+    $t = rm_ohne_leeren_vornamen($t, $k);
     $h = e($t);
     foreach ($k['werte'] ?? [] as $p => $w) {
         if ($p === '{workshops}') {
@@ -274,7 +300,13 @@ function rm_platzhalter_html(string $t, array $k): string
 
 function rm_platzhalter_text(string $t, array $k): string
 {
-    return strtr($t, $k['werte'] ?? []);
+    return strtr(rm_ohne_leeren_vornamen($t, $k), $k['werte'] ?? []);
+}
+
+/** Ohne Vorname (Newsletter): „Hallo {vorname},“ wird „Hallo,“ (Admin 2026-10-30). */
+function rm_ohne_leeren_vornamen(string $t, array $k): string
+{
+    return ($k['werte']['{vorname}'] ?? null) === '' ? (preg_replace('/[ \t]*\{vorname\}/u', '', $t) ?? $t) : $t;
 }
 
 /** Workshops einer Anmeldung als Zeilen (feste Plätze). */
@@ -293,7 +325,7 @@ function rm_workshops_text(int $anmId): string
  * $bildQuelle: fn(int $id, array $bild): ?string (cid:… im Versand, URL in der Vorschau).
  * Gibt ['betreff', 'html', 'text', 'bilder' => [cid => [typ, pfad]]] zurück.
  */
-function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $domain = 'localhost'): array
+function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $domain = 'localhost', ?array $nl = null): array
 {
     $bilder = [];
     $k = ['werte' => $werte, 'bild' => function (int $id, array $b) use ($bildArt, &$bilder, $domain): ?string {
@@ -313,8 +345,9 @@ function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $dom
     $text = $wurzel === null ? '' : rm_knoten_kinder($wurzel, 'text', $k);
     $text = trim(preg_replace("/\n{3,}/", "\n\n", preg_replace(['/[ \t]+\n/', '/\n[ \t]+/'], "\n", $text) ?? '') ?? '');
     $betreff = rm_platzhalter_text((string)$rm['betreff'], $k);
-    $fuss = 'Du bekommst diese Mail, weil du zum Wintersymposium angemeldet bist.';
-    $text .= "\n\n-- \n" . $fuss . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
+    // Newsletter (AP-7): Grund, Abmelden und Listen ändern; Mailings an Angemeldete ohne Abmeldelink (E-50)
+    $fuss = $nl === null ? 'Du bekommst diese Mail, weil du zum Wintersymposium angemeldet bist.' : 'Du bekommst diese Mail, weil du den Newsletter „' . $nl['listen'] . '“ abonniert hast.';
+    $text .= "\n\n-- \n" . $fuss . ($nl !== null ? "\nAbmelden oder Listen ändern: " . $nl['url'] : '') . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
     $html = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . e($betreff) . '</title></head>'
         . '<body style="margin:0;padding:0;background:#EEF1F5;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF1F5;"><tr><td align="center" style="padding:24px 12px;">'
@@ -323,7 +356,7 @@ function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $dom
         . 'Wintersymposium Notfallmedizin<br><span style="color:#B48CFF;font-weight:normal;letter-spacing:1px;">Allgäu Akut</span></td></tr>'
         . '<tr><td style="padding:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#001E3A;">' . $inhalt . '</td></tr>'
         . '<tr><td style="padding:16px 28px 24px;border-top:1px solid #E1E6EC;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#5A6B7D;">'
-        . e($fuss) . '<br><a href="' . e(url('/impressum')) . '" style="color:#5A6B7D;">Impressum</a> · <a href="' . e(url('/datenschutz')) . '" style="color:#5A6B7D;">Datenschutz</a></td></tr>'
+        . e($fuss) . ($nl !== null ? '<br><a href="' . e($nl['url']) . '" style="color:#5A6B7D;">Abmelden oder Listen ändern</a>' : '') . '<br><a href="' . e(url('/impressum')) . '" style="color:#5A6B7D;">Impressum</a> · <a href="' . e(url('/datenschutz')) . '" style="color:#5A6B7D;">Datenschutz</a></td></tr>'
         . '</table></td></tr></table></body></html>';
     return ['betreff' => $betreff, 'html' => $html, 'text' => $text, 'bilder' => $bilder];
 }
@@ -344,6 +377,37 @@ function rm_werte(array $a, bool $mitLink): array
     ];
 }
 
+/**
+ * Für die Warteschlange: Newsletter-Mail an eine Person (AP-7). null, wenn sie
+ * inzwischen von allen Listen des Mailings abgemeldet ist. Mit Abmeldelink und
+ * List-Unsubscribe (One-Click, RFC 8058).
+ */
+function rm_mail_fuer_nl(int $rmId, int $personId): ?array
+{
+    $rm = rm_laden($rmId);
+    $p = nl_person($personId);
+    $listen = $rm !== null ? (rm_nl_listen($rm['auswahl']) ?? []) : [];
+    if ($rm === null || $p === null) {
+        return null;
+    }
+    $aktiv = array_keys(array_filter(nl_abos($personId), fn($s) => $s === 'bestaetigt'));
+    $treffer = array_values(array_intersect($listen, $aktiv));
+    if ($treffer === []) {
+        return null;
+    }
+    $alle = nl_listen();
+    $namen = array_column(array_filter($alle, fn($l) => in_array((int)$l['id'], $treffer, true)), 'name');
+    $erste = array_values(array_filter($alle, fn($l) => (int)$l['id'] === $treffer[0]))[0] ?? null;
+    $token = nl_link_erzeugen($personId, 'verwalten');
+    $verwalten = url('/newsletter/verwalten?t=' . $token);
+    $absender = mail_absender(mail_konfig($rm['postfach']));
+    $m = rm_zusammensetzen($rm, ['{vorname}' => (string)$p['vorname'], '{nachname}' => '', '{workshops}' => '', '{link}' => $verwalten], 'cid',
+        substr(strrchr($absender, '@') ?: '@localhost', 1), ['listen' => implode('“, „', $namen), 'url' => $verwalten]);
+    $abmelden = url('/newsletter/abmelden?t=' . $token);
+    return $m + ['kopf' => ['List-Unsubscribe: <' . $abmelden . '>', 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'],
+        'absender_name' => $erste !== null && $erste['absender_name'] !== '' ? $erste['absender_name'] : null];
+}
+
 /** Für die Warteschlange: Mail eines Mailings an eine Anmeldung (oder null, wenn es sie nicht mehr gibt). */
 function rm_mail_fuer(int $rmId, int $anmId): ?array
 {
@@ -361,6 +425,13 @@ function rm_vorschau(array $rm, array $konto): array
 {
     $e = rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']);
     $p = $e[0] ?? null;
+    $nl = rm_nl_listen($rm['auswahl']);
+    if ($nl !== null) {
+        $namen = rm_auswahl_text($rm['auswahl'], '');
+        $werte = ['{vorname}' => (string)($p['vorname'] ?? ''), '{nachname}' => '', '{workshops}' => '', '{link}' => url('/newsletter')];
+        return rm_zusammensetzen($rm, $werte, 'url', 'localhost', ['listen' => substr($namen, strlen('Newsletter: ')), 'url' => url('/newsletter')])
+            + ['an' => $p !== null ? ($p['vorname'] !== '' ? $p['vorname'] . ' · ' : '') . $p['email'] : 'Beispiel'];
+    }
     $werte = $p !== null ? rm_werte($p, false) : rm_werte(['vorname' => tk_namen($konto)['vorname'], 'nachname' => tk_namen($konto)['nachname']], false);
     return rm_zusammensetzen($rm, $werte, 'url') + ['an' => $p !== null ? $p['vorname'] . ' ' . $p['nachname'] : 'Beispiel'];
 }
@@ -375,6 +446,13 @@ function rm_laden(int $id): ?array
 /** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */
 function rm_pruefen(array $e): array
 {
+    // Empfängerart Newsletter (AP-7): gewählte Listen als „nl:1,2“
+    if (($e['art'] ?? '') === 'newsletter') {
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)($e['listen'] ?? [])))));
+        sort($ids);
+        $e['auswahl'] = $ids === [] ? 'nl:' : 'nl:' . implode(',', $ids);
+        $e['berufsgruppe'] = '';
+    }
     $w = [
         'betreff' => trim(mb_substr(preg_replace('/[\r\n]+/', ' ', (string)($e['betreff'] ?? '')) ?? '', 0, 200)),
         'html' => rm_html_bereinigen((string)($e['html'] ?? '')),
@@ -383,8 +461,8 @@ function rm_pruefen(array $e): array
         'postfach' => (string)($e['postfach'] ?? 'system'),
     ];
     $f = [];
-    if (!array_key_exists($w['auswahl'], rm_auswahl_optionen())) {
-        $f['auswahl'] = 'Bitte eine Auswahl treffen.';
+    if (!rm_auswahl_gueltig($w['auswahl'])) {
+        $f['auswahl'] = str_starts_with($w['auswahl'], 'nl:') ? 'Bitte mindestens eine Newsletter-Liste wählen.' : 'Bitte eine Auswahl treffen.';
         $w['auswahl'] = 'angemeldet';
     }
     if ($w['berufsgruppe'] !== '' && !in_array($w['berufsgruppe'], va_liste('berufsgruppen'), true)) {
@@ -451,13 +529,17 @@ function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
         $liste = rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']);
         $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
         // Archiv bis 14 Monate nach dem Symposium (E-24); gilt das Datum schon als vorbei, ab heute
-        $basis = max(va('veranstaltung_datum'), gmdate('Y-m-d', $jetzt));
+        // Newsletter (AP-7): Liste 14 Monate ab Versand; sonst bis 14 Monate nach dem Symposium
+        $nl = rm_nl_listen($rm['auswahl']) !== null;
+        $basis = $nl ? gmdate('Y-m-d', $jetzt) : max(va('veranstaltung_datum'), gmdate('Y-m-d', $jetzt));
         $loeschen = (new DateTimeImmutable($basis))->modify('+' . RM_ARCHIV_MONATE . ' months')->format('Y-m-d');
         foreach ($liste as $a) {
-            db_ausfuehren('INSERT IGNORE INTO rundmail_empfaenger (rundmail_id, anmeldung_id, name, email) VALUES (?, ?, ?, ?)', [$id, $a['id'], $a['vorname'] . ' ' . $a['nachname'], $a['email']]);
+            $name = trim($a['vorname'] . ' ' . $a['nachname']);
+            db_ausfuehren('INSERT IGNORE INTO rundmail_empfaenger (rundmail_id, anmeldung_id, nl_person_id, name, email) VALUES (?, ?, ?, ?, ?)',
+                [$id, $nl ? null : $a['id'], $nl ? $a['id'] : null, $name !== '' ? $name : $a['email'], $a['email']]);
             db_ausfuehren(
-                "INSERT INTO mail_ausgang (an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, status, versuche, naechster_versuch, erstellt_am) VALUES (?, '', '', ?, ?, ?, ?, 'offen', 0, ?, ?)",
-                [$a['email'], MAIL_PRIO_RUNDMAIL, $rm['postfach'], $id, $a['id'], $jetztDb, $jetztDb]
+                "INSERT INTO mail_ausgang (an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, status, versuche, naechster_versuch, erstellt_am) VALUES (?, '', '', ?, ?, ?, ?, ?, 'offen', 0, ?, ?)",
+                [$a['email'], MAIL_PRIO_RUNDMAIL, $rm['postfach'], $id, $nl ? null : $a['id'], $nl ? $a['id'] : null, $jetztDb, $jetztDb]
             );
         }
         db_ausfuehren(
@@ -526,7 +608,7 @@ function rm_kopieren(int $id, int $kontoId): ?int
     if ($rm === null) {
         return null;
     }
-    $w = ['betreff' => $rm['betreff'], 'html' => $rm['html'], 'auswahl' => array_key_exists($rm['auswahl'], rm_auswahl_optionen()) ? $rm['auswahl'] : 'angemeldet', 'berufsgruppe' => $rm['berufsgruppe'], 'postfach' => $rm['postfach']];
+    $w = ['betreff' => $rm['betreff'], 'html' => $rm['html'], 'auswahl' => rm_auswahl_gueltig($rm['auswahl']) ? $rm['auswahl'] : 'angemeldet', 'berufsgruppe' => $rm['berufsgruppe'], 'postfach' => $rm['postfach']];
     return rm_speichern(null, $w, $kontoId);
 }
 

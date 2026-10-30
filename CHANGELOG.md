@@ -2,6 +2,19 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.12.0] – 2026-10-30
+
+AP-7: Newsletter (E-52).
+
+### Neu
+
+- **Newsletter-Listen** „Wintersymposium“ und „Allgäu Akut“ mit Double-Opt-In; Seite `/newsletter` (Link in der Fußzeile, Hinweis auf der Startseite).
+- Bestätigen, Listen ändern und **Abmelden mit einem Klick** (Link in jeder Mail und List-Unsubscribe); Abgemeldete werden gelöscht.
+- Häkchen bei der Symposium-Anmeldung: nach der Bestätigung eine eigene Newsletter-Bestätigung.
+- **Team → Newsletter:** Listen, Abonnierende, Einladen, CSV; Statistik je Liste.
+- Mailings an eine oder mehrere **Newsletter-Listen** (jede Person einmal, Absendername der Liste).
+- „Mein Konto“ (Teilnehmende): Newsletter an- und abwählen.
+
 ## [0.11.0] – 2026-10-30
 
 Rückmeldungen des Admins zu Staging (E-51).

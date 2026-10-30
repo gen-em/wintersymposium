@@ -71,6 +71,12 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
         <p class="meta klein"><?= $d['essen']['egal'] + $d['essen']['vegetarisch'] ?> Essen zu bestellen · Essens-Stichtag <?= e(tag_text(anm_stichtag('stichtag_essen'))) ?></p>
     </div>
     <div class="kasten">
+        <h2 class="zwischen klein-zwischen">Newsletter</h2>
+        <?php $nlz = nl_zahlen(); ?>
+        <?= stat_balken(array_combine(array_map(fn($z) => $z['liste']['name'], $nlz), array_map(fn($z) => $z['bestaetigt'], $nlz)) ?: [], 'Bestätigte Abonnierende je Liste') ?>
+        <p class="meta klein">nur bestätigte Einträge (Double-Opt-In) · <?= array_sum(array_column($nlz, 'offen')) ?> warten auf Bestätigung · <?= array_sum(array_column($nlz, 'abgemeldet')) ?> abgemeldet · <a href="/team/newsletter">Newsletter</a></p>
+    </div>
+    <div class="kasten">
         <h2 class="zwischen klein-zwischen">Anwesenheit</h2>
         <p class="meta">Wird am Veranstaltungstag erfasst (AP-10). Danach hier: anwesend / angemeldet und der CME-Export.</p>
     </div>

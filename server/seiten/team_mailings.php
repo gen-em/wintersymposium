@@ -210,7 +210,16 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
     <form class="kasten form ml-editor rm-form" method="post" action="/team/mailings<?= $id !== null ? '?id=' . $id : '' ?>" enctype="multipart/form-data" novalidate>
         <?= csrf_feld() ?>
         <?php if ($id !== null): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
-        <div class="paar">
+        <?php $nlAuswahl = rm_nl_listen($w['auswahl']); ?>
+        <fieldset class="feld rm-art"><legend>Empfänger</legend>
+            <label class="haken"><input type="radio" name="art" value="teilnehmende"<?= $nlAuswahl === null ? ' checked' : '' ?>><span>Teilnehmende des Symposiums</span></label>
+            <label class="haken"><input type="radio" name="art" value="newsletter"<?= $nlAuswahl !== null ? ' checked' : '' ?>><span>Newsletter-Listen</span></label>
+        </fieldset>
+        <fieldset class="feld rm-listen" data-empfaenger="newsletter"><legend>Newsletter-Listen</legend>
+            <?php foreach (nl_zahlen() as $lid => $z): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= $lid ?>"<?= in_array($lid, $nlAuswahl ?? [], true) ? ' checked' : '' ?>><span><?= e($z['liste']['name']) ?> <span class="meta klein">(<?= $z['bestaetigt'] ?> bestätigt)</span></span></label><?php endforeach; ?>
+            <p class="hilfe">Wer auf mehreren Listen steht, bekommt die Mail nur einmal. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“.</p>
+        </fieldset>
+        <div class="paar" data-empfaenger="teilnehmende">
             <div class="feld"><label for="auswahl">An</label>
                 <select id="auswahl" name="auswahl"<?= $ungueltig('auswahl') ?>><?php foreach (rm_auswahl_gruppen() as $gruppe => $opt): ?><?= $gruppe !== '' ? '<optgroup label="' . e($gruppe) . '">' : '' ?><?php foreach ($opt as $k => $t): ?><option value="<?= e($k) ?>"<?= $w['auswahl'] === $k ? ' selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?><?= $gruppe !== '' ? '</optgroup>' : '' ?><?php endforeach; ?></select><?= $fehlerFeld('auswahl') ?></div>
             <div class="feld"><label for="berufsgruppe">Berufsgruppe</label>
@@ -219,8 +228,8 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
         <div class="feld"><label for="postfach">Absender</label>
             <select id="postfach" name="postfach"<?= $ungueltig('postfach') ?>><?php foreach ($stand['postfaecher'] as $p => $pf): ?><option value="<?= e($p) ?>"<?= $w['postfach'] === $p ? ' selected' : '' ?><?= $pf['da'] ? '' : ' disabled' ?>><?= e($pf['titel']) ?><?= $pf['da'] ? '' : ' – nicht eingerichtet' ?></option><?php endforeach; ?></select><?= $fehlerFeld('postfach') ?>
             <p class="hilfe"><?php foreach ($stand['postfaecher'] as $p => $pf): if ($pf['da']): ?><span class="umbruch"><?= e($pf['titel']) ?>: <?= e(mail_absender_name(mail_konfig($p)) . ' <' . $pf['absender'] . '>') ?></span><br><?php endif; endforeach; ?></p></div>
-        <div class="empf"><p><strong class="mono" id="rm-zahl"><?= count($empfaenger) ?></strong> Empfänger (bestätigte Anmeldungen)</p>
-            <details class="tabelle-details"><summary>Liste ansehen</summary><ul class="schlicht empfaenger-liste" id="rm-liste"><?php foreach ($empfaenger as $x): ?><li><?= e($x['vorname'] . ' ' . $x['nachname']) ?></li><?php endforeach; ?></ul></details></div>
+        <div class="empf"><p><strong class="mono" id="rm-zahl"><?= count($empfaenger) ?></strong> Empfänger <span class="meta klein">(nur bestätigte Anmeldungen bzw. Abonnierende)</span></p>
+            <details class="tabelle-details"><summary>Liste ansehen</summary><ul class="schlicht empfaenger-liste" id="rm-liste"><?php foreach ($empfaenger as $x): ?><li><?= e(trim($x['vorname'] . ' ' . $x['nachname']) ?: $x['email']) ?></li><?php endforeach; ?></ul></details></div>
         <div class="feld"><label for="betreff">Betreff</label><input id="betreff" name="betreff" type="text" maxlength="200" value="<?= e($w['betreff']) ?>"></div>
         <div class="feld">
             <label for="rm-html" id="rm-html-label">Text der Mail</label>

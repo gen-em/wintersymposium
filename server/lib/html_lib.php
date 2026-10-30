@@ -91,6 +91,7 @@ function seite_fuss(): void
         // Version außerhalb der Produktion sichtbar (Admin 2026-10-29), damit klar ist, welcher Stand läuft
         . (umgebung() !== 'produktion' ? '<span class="version mono">Version ' . e(app_version()) . ' · ' . e(ucfirst(umgebung())) . '</span>' : '')
         . '<nav aria-label="Rechtliches"><ul>'
+        . '<li><a href="/newsletter">Newsletter</a></li>'
         . '<li><a href="/impressum">Impressum</a></li>'
         . '<li><a href="/datenschutz">Datenschutz</a></li>'
         . '<li><a href="' . e(QUELLTEXT_URL) . '" rel="noopener">Quelltext (AGPL)</a></li>'
@@ -107,6 +108,7 @@ function team_reiter(array $konto, string $aktiv): string
         ['/team/workshops', 'Workshops'],
         ['/team/programm', 'Programm'],
         ['/team/mailings', 'Mailings'],
+        ['/team/newsletter', 'Newsletter'],
         ['/team/statistik', 'Statistik'],
         ['/team/einstellungen', 'Einstellungen'],
         ['/team/texte', 'Texte'],

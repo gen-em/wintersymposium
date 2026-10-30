@@ -167,8 +167,23 @@
     var zahl = document.getElementById("rm-zahl");
     var zahl2 = document.getElementById("rm-zahl2");
     var senden = document.getElementById("rm-senden");
+    // Empfängerart (AP-7): Teilnehmende oder Newsletter-Listen; nur die passenden Felder zeigen
+    function art() { var r = form.querySelector("input[name=art]:checked"); return r ? r.value : "teilnehmende"; }
+    function artZeigen() {
+        Array.prototype.forEach.call(form.querySelectorAll("[data-empfaenger]"), function (el) { el.hidden = el.getAttribute("data-empfaenger") !== art(); });
+    }
+    function auswahlWert() {
+        if (art() !== "newsletter") { return form.auswahl.value; }
+        var ids = Array.prototype.map.call(form.querySelectorAll("input[name='listen[]']:checked"), function (c) { return c.value; });
+        return "nl:" + ids.join(",");
+    }
+    Array.prototype.forEach.call(form.querySelectorAll("input[name=art], input[name='listen[]']"), function (el) {
+        el.addEventListener("change", function () { artZeigen(); zaehlen(); });
+    });
+    artZeigen();
     function zaehlen() {
-        var q = "auswahl=" + encodeURIComponent(form.auswahl.value) + "&bg=" + encodeURIComponent(form.berufsgruppe.value);
+        if (auswahlWert() === "nl:") { zahl.textContent = "0"; zahl2.textContent = "0"; senden.textContent = "An 0 senden"; return; }
+        var q = "auswahl=" + encodeURIComponent(auswahlWert()) + "&bg=" + encodeURIComponent(art() === "newsletter" ? "" : form.berufsgruppe.value);
         fetch("/team/mailings/empfaenger?" + q, { credentials: "same-origin" })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (d) {

@@ -193,7 +193,7 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Mailings über dieses Postfach nur bis 80 %, der Rest am nächsten Tag |
 | `newsletter` | optional, zweites Postfach für Mailings (AP-6): `benutzer`, `passwort`, `absender`, `absender_name`, `tageslimit`; Server wie oben. Fehlt der Eintrag, gehen Mailings über anmeldung@ |
-| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 15) |
+| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 16) |
 
 **Prüfen:** Team-Bereich → „Betrieb“ → Kasten „Mailversand“ zeigt, ob der Versand eingerichtet ist, Absender, Warteschlange und den letzten Fehler; „Testmail an mich“ versendet sofort und zeigt die Antwort des Mailservers (ohne Passwort).
 
@@ -207,7 +207,7 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 **Nachfragen** (löschen, verwerfen, senden …) erscheinen überall als derselbe Dialog über der Seite (Rückmeldung 2026-10-30, Entwurf C): Rahmen grün = bestätigen, rot = löschen/verwerfen, lila = Info; auf dem Handy von unten mit großen Knöpfen. Ohne JavaScript bleibt die Nachfrage zum Aufklappen.
 
-Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12), Statistik, Einstellungen, Texte, Protokoll, Mein Konto; für Betreiber zusätzlich Team-Konten und Betrieb (E-49).
+Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12), Newsletter (AP-7, Abschnitt 14), Statistik, Einstellungen, Texte, Protokoll, Mein Konto; für Betreiber zusätzlich Team-Konten und Betrieb (E-49).
 
 - **Übersicht:** Kennzahlen, „Zu erledigen“ (freie Plätze mit Warteliste – nach der Grenze manuell vergeben –, Mail-Fehler, Angebote, die in 24 h ablaufen, unveröffentlichtes Programm), Workshop-Termine, Essen.
 - **Personen:** Suche und Filter (Angemeldet, Warteliste, Mail nicht bestätigt, Mit Konto, Team). Eine Person auswählen: Daten, Essen und Workshops ändern – auch nach den Stichtagen und ohne Workshop-Limit. Volle Termine nur mit „Überbuchen bestätigen“. Plätze, Wartelisten und Angebote: „Platz geben“ (fragt bei Überbuchen oder Tausch nach), „Angebot schicken“, „Entfernen“. „Einmal-Link senden“, „+ Person anlegen“ (gilt sofort als bestätigt). Konto: Passwort-Link, sperren, löschen (mit Wahl), Rolle vergeben (nur Betreiber, mit Code). Jede Änderung schickt der Person eine Mail, außer „ohne Mail“ ist angekreuzt; alles steht im Protokoll.
@@ -217,7 +217,18 @@ Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12)
 - **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und ihre eigenen Einträge; Betreiber sehen alles und können Einträge **ausblenden** (dann nur noch für Betreiber sichtbar, markiert, wieder einblendbar). Löschen geht nicht.
 - **Betrieb** (Betreiber): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
 
-## 14. Konten für Teilnehmende (AP-4b)
+## 14. Newsletter (AP-7)
+
+Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
+
+- **Bestellen:** `/newsletter` (Link in der Fußzeile, Hinweis auf der Startseite): Listen, E-Mail, Vorname (freiwillig), Einwilligung; Spamschutz wie bei der Anmeldung, gleiche Antwort für jede Adresse. Eingetragen ist man erst nach „Bestätigen“ über den Link in der Mail (7 Tage gültig); unbestätigte Anfragen löscht der Job nach 7 Tagen.
+- **Häkchen bei der Anmeldung:** bietet die Liste an, die unter Team → Newsletter „Bei der Symposium-Anmeldung anbieten“ hat; nach der Bestätigung der Anmeldung kommt eine eigene Newsletter-Bestätigung.
+- **Abmelden und ändern:** in jeder Newsletter-Mail „Abmelden oder Listen ändern“; Mailprogramme zeigen dank List-Unsubscribe einen Knopf „Abbestellen“ (One-Click). Abmelden wirkt sofort und löscht die Adresse; je Liste bleibt nur die Zahl der Abmeldungen. Mit Konto auch unter „Mein Konto“.
+- **Team → Newsletter:** Zahlen je Liste, Listen anlegen und ändern (Name, Beschreibung, Absendername, öffentlich wählbar, bei der Anmeldung anbieten), Abonnierende suchen und löschen, einladen (nur per Bestätigungsmail), CSV je Liste (mit Zeitpunkt und Fassung der Einwilligung).
+- **Versand:** Mailings → Empfänger „Newsletter-Listen“ (eine oder mehrere; jede Person einmal), am besten über newsletter@. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“. Archiv der Empfängerliste 14 Monate ab Versand.
+- **Datenschutz:** gespeichert werden Adresse, Vorname (falls angegeben), Listen, Zeitpunkt und Fassung der Einwilligung (Wortlaut in der Datenbank), keine IP-Adresse. Die Datenschutzerklärung muss das beschreiben.
+
+## 15. Konten für Teilnehmende (AP-4b)
 
 - **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
 - **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Meine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
@@ -227,7 +238,7 @@ Reiter: Übersicht, Personen, Workshops, Programm, Mailings (AP-6, Abschnitt 12)
 - Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.
 - **Testdaten:** Lea (`lea@example.org`) hat ein Konto; das erfundene Test-Passwort steht in `server/testdaten/beispieldaten.php` (`BEISPIEL_PASSWORT`). Nur auf Staging.
 
-## 15. Betrieb: Sicherung, Wiederherstellung, Testdaten
+## 16. Betrieb: Sicherung, Wiederherstellung, Testdaten
 
 Team-Bereich → „Betrieb“ (nur Betreiber, E-47; bis 0.8 „Daten“).
 
@@ -238,6 +249,6 @@ Team-Bereich → „Betrieb“ (nur Betreiber, E-47; bis 0.8 „Daten“).
 - **Mail-Umleitung (Staging):** `mail.umleiten_an` in der `config.php` schickt jede Mail an diese Adresse; der eigentliche Empfänger steht im Betreff. Auf Produktion leer lassen.
 - Sicherungen werden nicht automatisch gelöscht; alte über „Löschen“ entfernen.
 
-## 16. Fehlerprotokoll
+## 17. Fehlerprotokoll
 
 PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).
