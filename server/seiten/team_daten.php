@@ -44,14 +44,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             flash_setzen(host_aendern((string)($_POST['host'] ?? ''), $_POST['aktion'] === 'host_haupt' ? 'haupt' : 'aus', $ich) ? 'ok' : 'fehler', 'Gespeichert.');
             umleiten('/team/daten');
         case 'absender':
+            // Je Postfach (E-27, E-50): System (anmeldung@) oder Newsletter (newsletter@)
+            $nl = ($_POST['postfach'] ?? '') === 'newsletter' ? '_newsletter' : '';
             $adr = trim((string)($_POST['mail_absender'] ?? ''));
             $nam = trim(preg_replace('/\s+/u', ' ', (string)($_POST['mail_absender_name'] ?? '')) ?? '');
             if ($adr !== '' && mail_adresse($adr) === null) {
                 flash_setzen('fehler', 'Die Absenderadresse ist keine gültige Adresse.');
             } else {
-                einstellung_setzen('mail_absender', $adr === '' ? null : mail_adresse($adr));
-                einstellung_setzen('mail_absender_name', $nam === '' ? null : mb_substr($nam, 0, 80));
-                audit_schreiben('mail', 'Absender geändert: ' . ($adr ?: 'aus config.php'), $ich);
+                einstellung_setzen('mail_absender' . $nl, $adr === '' ? null : mail_adresse($adr));
+                einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
+                audit_schreiben('mail', 'Absender ' . ($nl !== '' ? 'Newsletter' : 'System') . ' geändert: ' . ($adr ?: 'aus config.php'), $ich);
                 flash_setzen('ok', 'Absender gespeichert. Prüf ihn mit „Testmail an mich“.');
             }
             umleiten('/team/daten');
@@ -139,7 +141,9 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
     <h2 class="zwischen">Mailversand</h2>
     <dl class="liste-def">
         <div><dt>Eingerichtet</dt><dd><?= $ms['eingerichtet'] ? '<span class="chip ok">ja</span> Modus ' . e($ms['modus']) : '<span class="chip wl">nein</span> In der config.php fehlt im Abschnitt mail der Eintrag host.' ?></dd></div>
-        <div><dt>Absender</dt><dd class="mono"><?= e($ms['absender']) ?></dd></div>
+        <?php foreach ($ms['postfaecher'] as $pf): ?>
+        <div><dt><?= e($pf['titel']) ?></dt><dd><?php if ($pf['da']): ?><span class="mono"><?= e($pf['absender']) ?></span><br><span class="meta klein">heute <?= $pf['heute'] ?> / <?= $pf['limit'] ?> gesendet (Mailings bis <?= $pf['rundmail'] ?>)<?= $pf['offen'] > 0 ? ' · ' . $pf['offen'] . ' warten' : '' ?></span><?php else: ?><span class="chip offen">nicht eingerichtet</span> <span class="meta klein">In der config.php fehlt im Abschnitt mail der Eintrag newsletter (Benutzer und Passwort des Postfachs). Mailings gehen bis dahin über anmeldung@.</span><?php endif; ?></dd></div>
+        <?php endforeach; ?>
         <?php if ($ms['umleiten'] !== ''): ?><div><dt>Umleitung</dt><dd>Alle Mails gehen an <span class="mono"><?= e($ms['umleiten']) ?></span></dd></div><?php endif; ?>
         <div><dt>Warteschlange</dt><dd><?= $ms['offen'] ?> offen<?= $ms['aelteste_offen'] !== null ? ' (älteste seit ' . e(datum_zeit_text($ms['aelteste_offen'])) . ')' : '' ?> · <?= $ms['fehler'] ?> endgültig fehlgeschlagen · heute gesendet <?= $ms['heute'] ?></dd></div>
         <?php if ($ms['letzter_fehler'] !== null): ?><div><dt>Letzter Fehler</dt><dd><span class="mono"><?= e($ms['letzter_fehler']['fehler']) ?></span><br><span class="meta klein">Mail vom <?= e(datum_zeit_text($ms['letzter_fehler']['erstellt_am'])) ?>, <?= (int)$ms['letzter_fehler']['versuche'] ?> Versuche</span></dd></div><?php endif; ?>
@@ -167,11 +171,14 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
     </div>
     <div class="kasten">
         <h2 class="zwischen">Absender</h2>
-        <p class="meta klein">Absender der System-Mails (Anmeldung, Links, Angebote). Leer: aus der config.php. Die Adresse muss zum Postfach passen, über das versendet wird – sonst lehnt der Mailserver ab.</p>
-        <form method="post" action="/team/daten" class="form"><?= csrf_feld() ?><input type="hidden" name="aktion" value="absender">
-            <div class="feld"><label for="mail_absender">Absenderadresse</label><input id="mail_absender" name="mail_absender" type="email" value="<?= e((string)(einstellung('mail_absender') ?? '')) ?>" placeholder="<?= e(mail_absender(mail_konfig())) ?>"></div>
-            <div class="feld"><label for="mail_absender_name">Absendername</label><input id="mail_absender_name" name="mail_absender_name" type="text" maxlength="80" value="<?= e((string)(einstellung('mail_absender_name') ?? '')) ?>" placeholder="<?= e((string)mail_konfig()['absender_name']) ?>"></div>
+        <p class="meta klein">Leer: aus der config.php. Die Adresse muss zum Postfach passen, über das versendet wird – sonst lehnt der Mailserver ab.</p>
+        <?php foreach (['system' => ['', 'System-Mails (Anmeldung, Links, Angebote)'], 'newsletter' => ['_newsletter', 'Mailings über newsletter@']] as $pf => [$suf, $titel]): ?>
+        <form method="post" action="/team/daten" class="form abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="absender"><input type="hidden" name="postfach" value="<?= e($pf) ?>">
+            <p class="unterkopf"><?= e($titel) ?></p>
+            <div class="feld"><label for="mail_absender<?= $suf ?>">Absenderadresse</label><input id="mail_absender<?= $suf ?>" name="mail_absender" type="email" value="<?= e((string)(einstellung('mail_absender' . $suf) ?? '')) ?>" placeholder="<?= e(mail_absender(mail_konfig($pf))) ?>"></div>
+            <div class="feld"><label for="mail_absender_name<?= $suf ?>">Absendername</label><input id="mail_absender_name<?= $suf ?>" name="mail_absender_name" type="text" maxlength="80" value="<?= e((string)(einstellung('mail_absender_name' . $suf) ?? '')) ?>" placeholder="<?= e((string)mail_konfig($pf)['absender_name']) ?>"></div>
             <div><button class="knopf zweit" type="submit">Speichern</button></div></form>
+        <?php endforeach; ?>
     </div>
 </div>
 

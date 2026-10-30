@@ -11,6 +11,11 @@ declare(strict_types=1);
  * Seite auf. Nach dem Versand werden Empfänger, Betreff und Text geleert
  * (R-02); stehen bleibt nur, dass und wann versendet wurde (Tageszähler).
  *
+ * Zwei Postfächer (E-13, E-50): 'system' (anmeldung@, Bestätigungen, Links)
+ * und 'newsletter' (newsletter@, Rundmails), jedes mit eigenem Tageslimit.
+ * Rundmails (AP-6) stehen nur als Verweis in der Warteschlange und werden
+ * erst beim Versand aus Mailing und Anmeldung zusammengesetzt (rundmail_lib).
+ *
  * Konfiguration in config.php unter 'mail' (siehe config.example.php):
  *   modus 'smtp'  – Versand über SMTP (implizites TLS oder STARTTLS)
  *   modus 'datei' – nur für Tests: jede Mail als Datei in var/mails/
@@ -26,16 +31,21 @@ const MAIL_PRIO_SYSTEM = 1;
 const MAIL_PRIO_RUNDMAIL = 5;
 /** Zeitbudget je SMTP-Versand in Sekunden (Lima-City: 5 s, R-08). */
 const MAIL_SMTP_FRIST_S = 5;
+/** Anteil des Tageslimits, den Rundmails über das System-Postfach frei lassen (für Bestätigungen und Links). */
+const MAIL_SYSTEM_RESERVE = 0.2;
+const MAIL_POSTFAECHER = ['system' => 'System (anmeldung@)', 'newsletter' => 'Newsletter (newsletter@)'];
 /** Wiederholungen nach einem Fehlschlag (Minuten bis zum nächsten Versuch). */
 const MAIL_WIEDERHOLUNG_MIN = [5, 30, 120, 360];
 /** Versendete und fehlgeschlagene Einträge werden nach so vielen Tagen gelöscht. */
 const MAIL_AUFBEWAHREN_TAGE = 30;
 
-function mail_konfig(): array
+function mail_konfig(string $postfach = 'system'): array
 {
     $c = konfig('mail', []);
     $c = is_array($c) ? $c : [];
-    return $c + [
+    $nl = is_array($c['newsletter'] ?? null) ? $c['newsletter'] : null;
+    unset($c['newsletter']);
+    $c += [
         'modus' => entwicklung() ? 'datei' : 'smtp',
         'host' => '',
         'port' => 465,
@@ -48,18 +58,55 @@ function mail_konfig(): array
         'tageslimit' => 450,
         'umleiten_an' => '',
     ];
+    $c['postfach'] = 'system';
+    if ($postfach === 'newsletter') {
+        // Zweites Postfach: eigene Anmeldung, Absender und Tageslimit; Server wie beim System-Postfach
+        $c['postfach'] = 'newsletter';
+        $c['eingetragen'] = $nl !== null;
+        $c = array_merge($c, array_intersect_key($nl ?? [], array_flip(['host', 'port', 'verschluesselung', 'benutzer', 'passwort', 'absender', 'absender_name', 'tageslimit'])));
+        if ($nl === null || !isset($nl['absender'])) {
+            $c['absender'] = '';
+        }
+    }
+    return $c;
+}
+
+/** Ist das Postfach nutzbar? newsletter@ braucht einen eigenen Eintrag in config.php (außer im Datei-Modus). */
+function mail_postfach_da(string $postfach): bool
+{
+    if ($postfach === 'system') {
+        return mail_eingerichtet();
+    }
+    $c = mail_konfig('newsletter');
+    return $c['modus'] === 'datei' || (!empty($c['eingetragen']) && trim((string)$c['host']) !== '');
+}
+
+/** Tageslimit eines Postfachs und die Grenze, bis zu der Rundmails darüber gehen. */
+function mail_limit(string $postfach): array
+{
+    $limit = max(0, (int)mail_konfig($postfach)['tageslimit']);
+    return ['limit' => $limit, 'rundmail' => $postfach === 'system' ? (int)floor($limit * (1 - MAIL_SYSTEM_RESERVE)) : $limit];
 }
 
 /** Absender: aus der Konfiguration, sonst anmeldung@ der Haupt-Domain (E-13). */
 function mail_absender(array $c): string
 {
+    $nl = ($c['postfach'] ?? 'system') === 'newsletter';
     // Einstellung im Team-Bereich (Betrieb, E-27/AP-5) vor config.php
-    $a = trim((string)(einstellung('mail_absender') ?? ''));
+    $a = trim((string)(einstellung($nl ? 'mail_absender_newsletter' : 'mail_absender') ?? ''));
     if ($a !== '') {
         return $a;
     }
     $a = trim((string)$c['absender']);
-    return $a !== '' ? $a : 'anmeldung@' . (host_haupt() ?? 'localhost');
+    return $a !== '' ? $a : ($nl ? 'newsletter@' : 'anmeldung@') . (host_haupt() ?? 'localhost');
+}
+
+/** Anzeigename des Absenders: Einstellung vor config.php. */
+function mail_absender_name(array $c): string
+{
+    $nl = ($c['postfach'] ?? 'system') === 'newsletter';
+    $n = trim((string)(einstellung($nl ? 'mail_absender_name_newsletter' : 'mail_absender_name') ?? ''));
+    return $n !== '' ? $n : (string)$c['absender_name'];
 }
 
 /** Ist der Versand eingerichtet? (Datei-Modus zählt als eingerichtet.) */
@@ -95,13 +142,18 @@ function mail_einreihen(string $an, string $betreff, string $text, int $prio = M
         [$adresse, $betreff, $text, $prio, $jetzt, $jetzt]
     );
     $id = (int)db()->lastInsertId();
+    mail_nach_antwort_vormerken();
+    return $id;
+}
+
+/** Im Web nach der Antwort senden (auch nach einer Umleitung mit exit); Jobs und Tests senden selbst. */
+function mail_nach_antwort_vormerken(): void
+{
     $GLOBALS['ws_mail_neu'] = true;
-    // Im Web nach der Antwort senden (auch nach einer Umleitung mit exit); Jobs und Tests senden selbst.
     if (PHP_SAPI !== 'cli' && empty($GLOBALS['ws_mail_shutdown'])) {
         $GLOBALS['ws_mail_shutdown'] = true;
         register_shutdown_function('mail_nach_antwort');
     }
-    return $id;
 }
 
 /** Mail aus einer Vorlage einreihen. */
@@ -111,18 +163,22 @@ function mail_vorlage_einreihen(string $an, string $vorlage, array $daten, int $
     return mail_einreihen($an, $betreff, $text, $prio);
 }
 
-/** Heute (Ortszeit) versendete Mails – für das Tageslimit. */
-function mail_heute_gesendet(?int $jetzt = null): int
+/** Heute (Ortszeit) versendete Mails – für das Tageslimit (je Postfach oder alle). */
+function mail_heute_gesendet(?int $jetzt = null, ?string $postfach = null): int
 {
     $jetzt ??= time();
     $tag = (new DateTimeImmutable('@' . $jetzt))->setTimezone(new DateTimeZone(ANZEIGE_ZEITZONE))->format('Y-m-d');
     $ab = lokal_nach_utc($tag . ' 00:00:00');
-    return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ?", [$ab]);
+    if ($postfach === null) {
+        return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ?", [$ab]);
+    }
+    return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ? AND postfach = ?", [$ab, $postfach]);
 }
 
 /**
  * Fällige Mails senden: System-Mails immer, Rundmails nur bis zum Tageslimit
- * (der Rest wartet auf den nächsten Tag, AP-6). Höchstens $max Mails und
+ * ihres Postfachs – über anmeldung@ nur bis 80 %, damit Bestätigungen Platz
+ * haben (der Rest wartet auf den nächsten Tag, E-50). Höchstens $max Mails und
  * etwa $budget Sekunden. Gibt Zahlen zurück: gesendet, fehler, wartet.
  */
 function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt = null): array
@@ -134,17 +190,17 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $erg['wartet'] = (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
         return $erg;
     }
-    $limit = max(0, (int)mail_konfig()['tageslimit']);
+    $grenze = ['system' => mail_limit('system')['rundmail'], 'newsletter' => mail_limit('newsletter')['rundmail']];
     $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
     // Hängengebliebene Versuche (Abbruch mitten im Versand) nach 10 min freigeben
     db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
     for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
-        $heute = mail_heute_gesendet($jetzt);
         $z = db_zeile(
-            "SELECT id, an, betreff, text, prio, versuche FROM mail_ausgang
-             WHERE status = 'offen' AND naechster_versuch <= ? AND (prio = ? OR ? < ?)
+            "SELECT id, an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, versuche FROM mail_ausgang
+             WHERE status = 'offen' AND naechster_versuch <= ?
+               AND (prio = ? OR (postfach = 'system' AND ? < ?) OR (postfach = 'newsletter' AND ? < ?))
              ORDER BY prio, id LIMIT 1",
-            [$jetztDb, MAIL_PRIO_SYSTEM, $heute, $limit]
+            [$jetztDb, MAIL_PRIO_SYSTEM, mail_heute_gesendet($jetzt, 'system'), $grenze['system'], mail_heute_gesendet($jetzt, 'newsletter'), $grenze['newsletter']]
         );
         if ($z === null) {
             break;
@@ -154,10 +210,23 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         if ($n !== 1) {
             continue;
         }
-        $fehler = mail_zustellen($z['an'], $z['betreff'], $z['text']);
+        $opt = ['postfach' => $z['postfach']];
+        $betreff = $z['betreff'];
+        $text = $z['text'];
+        if ($z['rundmail_id'] !== null) {
+            // Rundmail erst jetzt zusammensetzen; Anmeldung inzwischen storniert → entfällt
+            $m = rm_mail_fuer((int)$z['rundmail_id'], (int)$z['anmeldung_id']);
+            if ($m === null) {
+                db_ausfuehren('DELETE FROM mail_ausgang WHERE id = ?', [$z['id']]);
+                continue;
+            }
+            [$betreff, $text] = [$m['betreff'], $m['text']];
+            $opt += ['html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true];
+        }
+        $fehler = mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
             // R-02: Inhalt und Empfänger nach dem Versand leeren
-            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', time()), $z['id']]);
+            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
             $erg['gesendet']++;
         } else {
             $versuche = (int)$z['versuche'] + 1;
@@ -230,17 +299,24 @@ function antwort_abschliessen(): void
     @flush();
 }
 
-/** Eine Mail zustellen. Gibt null bei Erfolg zurück, sonst einen Grund (ohne Empfänger). */
-function mail_zustellen(string $an, string $betreff, string $text): ?string
+/**
+ * Eine Mail zustellen. Gibt null bei Erfolg zurück, sonst einen Grund (ohne Empfänger).
+ * $opt: postfach ('system'|'newsletter'), html (Text), bilder ([cid => [typ, pfad]]), rundmail (bool).
+ */
+function mail_zustellen(string $an, string $betreff, string $text, array $opt = []): ?string
 {
-    $c = mail_konfig();
+    $postfach = (string)($opt['postfach'] ?? 'system');
+    if (!mail_postfach_da($postfach)) {
+        return 'Postfach ' . $postfach . ' ist nicht eingerichtet';
+    }
+    $c = mail_konfig($postfach);
     // Staging: alles an eine Adresse umleiten, der eigentliche Empfänger steht im Betreff (E-47)
     $um = mail_adresse((string)($c['umleiten_an'] ?? ''));
     if ($um !== null) {
         $betreff = '[an ' . $an . '] ' . $betreff;
         $an = $um;
     }
-    $nachricht = mail_nachricht($c, $an, $betreff, $text);
+    $nachricht = mail_nachricht($c, $an, $betreff, $text, $opt);
     if ($c['modus'] === 'datei') {
         // Name sortierbar nach Zeit (Mikrosekunden), damit Tests die neueste Mail finden
         $datei = laufzeit_pfad('mails') . '/' . sprintf('%.6f', microtime(true)) . '-' . bin2hex(random_bytes(3)) . '.eml';
@@ -249,27 +325,60 @@ function mail_zustellen(string $an, string $betreff, string $text): ?string
     return smtp_senden($c, $an, $nachricht);
 }
 
-/** Vollständige Nachricht (Kopf und Text, quoted-printable). */
-function mail_nachricht(array $c, string $an, string $betreff, string $text): string
+/** Text mit CRLF, quoted-printable. */
+function mail_qp(string $text): string
+{
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    return quoted_printable_encode(str_replace("\n", "\r\n", $text));
+}
+
+/**
+ * Vollständige Nachricht. Ohne HTML: text/plain. Mit HTML (Rundmails):
+ * multipart/alternative (Text und HTML), mit Bildern zusätzlich
+ * multipart/related, die Bilder eingebettet über Content-ID (E-41).
+ */
+function mail_nachricht(array $c, string $an, string $betreff, string $text, array $opt = []): string
 {
     $absender = mail_absender($c);
     $domain = substr(strrchr($absender, '@') ?: '@localhost', 1);
     $kopf = [
-        'From: ' . mb_encode_mimeheader(trim((string)(einstellung('mail_absender_name') ?? '')) ?: (string)$c['absender_name'], 'UTF-8', 'Q') . ' <' . $absender . '>',
+        'From: ' . mb_encode_mimeheader(mail_absender_name($c), 'UTF-8', 'Q') . ' <' . $absender . '>',
         'To: <' . $an . '>',
         'Subject: ' . mb_encode_mimeheader(trim(preg_replace('/[\r\n]+/', ' ', $betreff) ?? ''), 'UTF-8', 'Q'),
         'Date: ' . date(DATE_RFC2822),
         'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $domain . '>',
         'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: quoted-printable',
-        'Auto-Submitted: auto-generated',
     ];
+    if (empty($opt['rundmail'])) {
+        $kopf[] = 'Auto-Submitted: auto-generated';
+    }
     if (trim((string)$c['antwort_an']) !== '') {
         $kopf[] = 'Reply-To: <' . trim((string)$c['antwort_an']) . '>';
     }
-    $text = str_replace(["\r\n", "\r"], "\n", $text);
-    return implode("\r\n", $kopf) . "\r\n\r\n" . quoted_printable_encode(str_replace("\n", "\r\n", $text)) . "\r\n";
+    $html = $opt['html'] ?? null;
+    if ($html === null) {
+        $kopf[] = 'Content-Type: text/plain; charset=UTF-8';
+        $kopf[] = 'Content-Transfer-Encoding: quoted-printable';
+        return implode("\r\n", $kopf) . "\r\n\r\n" . mail_qp($text) . "\r\n";
+    }
+    $ga = 'alt-' . bin2hex(random_bytes(8));
+    $alt = '--' . $ga . "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n" . mail_qp($text) . "\r\n"
+        . '--' . $ga . "\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n" . mail_qp((string)$html) . "\r\n"
+        . '--' . $ga . "--\r\n";
+    $bilder = $opt['bilder'] ?? [];
+    if ($bilder === []) {
+        $kopf[] = 'Content-Type: multipart/alternative; boundary="' . $ga . '"';
+        return implode("\r\n", $kopf) . "\r\n\r\n" . $alt;
+    }
+    $gr = 'rel-' . bin2hex(random_bytes(8));
+    $kopf[] = 'Content-Type: multipart/related; type="multipart/alternative"; boundary="' . $gr . '"';
+    $teile = '--' . $gr . "\r\nContent-Type: multipart/alternative; boundary=\"" . $ga . "\"\r\n\r\n" . $alt;
+    foreach ($bilder as $cid => [$typ, $pfad]) {
+        $name = $cid . ($typ === 'png' ? '.png' : '.jpg');
+        $teile .= '--' . $gr . "\r\nContent-Type: image/" . $typ . '; name="' . $name . "\"\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <" . $cid . '@' . $domain . ">\r\n"
+            . 'Content-Disposition: inline; filename="' . $name . "\"\r\n\r\n" . chunk_split(base64_encode((string)@file_get_contents($pfad)), 76, "\r\n");
+    }
+    return implode("\r\n", $kopf) . "\r\n\r\n" . $teile . '--' . $gr . "--\r\n";
 }
 
 /** SMTP-Gespräch. Gibt null bei Erfolg zurück, sonst den Grund. */
@@ -366,7 +475,13 @@ function mail_aufraeumen(?int $jetzt = null): int
 /** Stand für den Team-Bereich. */
 function mail_stand(): array
 {
+    $pf = [];
+    foreach (MAIL_POSTFAECHER as $p => $titel) {
+        $pf[$p] = ['titel' => $titel, 'da' => mail_postfach_da($p), 'heute' => mail_heute_gesendet(null, $p), 'absender' => mail_absender(mail_konfig($p))] + mail_limit($p)
+            + ['offen' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet') AND postfach = ?", [$p])];
+    }
     return [
+        'postfaecher' => $pf,
         'eingerichtet' => mail_eingerichtet(),
         'modus' => mail_konfig()['modus'],
         'offen' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
@@ -464,6 +579,16 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'du hast jetzt die Rolle „' . $d['rolle'] . '“ im Team-Bereich. Einloggen kannst du dich unter ' . url('/einloggen')
                 . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : ". Lege vorher über diesen Link dein Passwort fest (gilt 72 Stunden):\n\n" . $d['link'] . "\n\n")
                 . " Beim ersten Login richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy).\n\nDas warst nicht du? Dann melde dich bitte beim Team." . mail_gruss()];
+        case 'team_einladung':
+            return ['Einladung in den Team-Bereich des Wintersymposiums',
+                $hallo . 'du bist jetzt im Team des Wintersymposiums (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
+                . "\n\nDer Link gilt 72 Stunden und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter " . url('/einloggen') . '.'
+                . "\n\nDu erwartest diese Mail nicht? Dann ignoriere sie und sag dem Team Bescheid." . mail_gruss()];
+        case 'team_passwort':
+            return ['Neues Passwort für den Team-Bereich des Wintersymposiums',
+                $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']
+                . "\n\nEr gilt 72 Stunden und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App."
+                . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
         case 'test':
             return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }

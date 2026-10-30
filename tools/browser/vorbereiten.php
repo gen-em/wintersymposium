@@ -74,5 +74,7 @@ echo json_encode([
     'lea' => ['email' => 'lea@example.org', 'passwort' => BEISPIEL_PASSWORT],
     'lea_id' => $bd['anmeldungen']['lea'],
     'voll_termin' => (int)db_wert("SELECT termin_id FROM platz WHERE status = 'angebot' LIMIT 1"),
+    'mailing_entwurf' => $bd['mailings']['entwurf'],
+    'mailing_gesendet' => $bd['mailings']['gesendet'],
     'mails' => $ordner . '/var/mails',
 ], JSON_UNESCAPED_SLASHES), "\n";

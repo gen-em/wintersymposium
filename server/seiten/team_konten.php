@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /*
- * Team-Konten (nur Betreiber, E-11): anlegen, Einrichtungs-/Passwortlink,
+ * Team-Konten (nur Betreiber, E-11): anlegen, Einrichtungs-/Passwortlink
+ * (per Mail oder angezeigt, AP-6),
  * zweiten Faktor zurücksetzen, sperren, Rolle ändern. Ein Rollenwechsel
  * verlangt den eigenen zweiten Faktor (E-41). Das eigene Konto lässt sich
  * hier nicht sperren oder herabstufen, und es bleibt immer mindestens ein
@@ -29,13 +30,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $fehler = in_array($werte['rolle'], TEAM_ROLLEN, true) ? konto_eingabe_fehler($werte['name'], $werte['email'], $werte['rolle']) : ['Bitte Admin oder Betreiber wählen.'];
                 if ($fehler === []) {
                     $id = konto_anlegen($werte['name'], $werte['email'], $werte['rolle'], null, $ich);
-                    $_SESSION['neuer_link'] = ['name' => trim($werte['name']), 'url' => konto_link_url(konto_link_erzeugen($id, 'einrichten', $ich))];
+                    team_link_weitergeben(konto_laden($id), 'einrichten', empty($_POST['nur_anzeigen']), $ich);
                     umleiten('/team/konten');
                 }
                 break;
             case 'link':
-                $zweck = $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort';
-                $_SESSION['neuer_link'] = ['name' => $ziel['name'], 'url' => konto_link_url(konto_link_erzeugen((int)$ziel['id'], $zweck, $ich))];
+                team_link_weitergeben($ziel, $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort', empty($_POST['nur_anzeigen']), $ich);
                 umleiten('/team/konten');
             case 'zweitfaktor':
                 totp_zuruecksetzen((int)$ziel['id'], 'durch Betreiber', $ich);
@@ -74,6 +74,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
+/** Link erzeugen und per Mail schicken oder (nur_anzeigen) einmal anzeigen. */
+function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich): void
+{
+    $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
+    if ($perMail && mail_eingerichtet()) {
+        mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
+        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt 72 Stunden).');
+        return;
+    }
+    $_SESSION['neuer_link'] = ['name' => $k['name'], 'url' => $url];
+}
+
 $link = $_SESSION['neuer_link'] ?? null;
 unset($_SESSION['neuer_link']);
 
@@ -98,7 +110,7 @@ if (is_array($link)): ?>
             <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
             <?php if (!$eigen): ?>
-                <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="link"><button class="knopf zweit klein" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link' : 'Neuer Einrichtungslink' ?></button></form>
+                <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="link"><button class="knopf zweit klein" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link mailen' : 'Einladung neu mailen' ?></button></form>
                 <?php if ($k['totp_seit'] !== null): ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="zweitfaktor"><button class="knopf zweit klein" type="submit">2. Faktor zurücksetzen</button></form>
                 <?php endif; ?>
@@ -134,9 +146,10 @@ if (is_array($link)): ?>
             <option value="admin"<?= $werte['rolle'] === 'admin' ? ' selected' : '' ?>>Admin – Programm, Einstellungen, Anmeldungen</option>
             <option value="betreiber"<?= $werte['rolle'] === 'betreiber' ? ' selected' : '' ?>>Betreiber – zusätzlich Team-Konten und Technik</option>
         </select>
-        <button type="submit" class="knopf">Konto anlegen und Link erzeugen</button>
+        <label class="haken"><input type="checkbox" name="nur_anzeigen" value="1"><span>Keine Mail – Link nur hier anzeigen (ich gebe ihn selbst weiter)</span></label>
+        <button type="submit" class="knopf">Konto anlegen und einladen</button>
     </form>
-    <p class="meta klein">Mails verschickt die Webseite noch nicht. Du bekommst einen Einrichtungslink angezeigt und gibst ihn weiter.</p>
+    <p class="meta klein">Die Einladung kommt per Mail mit einem Link zum Festlegen des Passworts (72 Stunden, einmal). Beim ersten Einloggen richtet die Person den zweiten Faktor ein.</p>
 </section>
 <?php
 team_seite_fuss();

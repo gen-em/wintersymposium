@@ -22,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             tk_passwort_vergessen($email);
         }
         rate_gleiche_dauer($beginn, 0.6);
-        flash_setzen('ok', 'Wenn es zu der Adresse ein Konto gibt, ist ein Link unterwegs. Er gilt 48 Stunden und einmal. Schau auch im Spam-Ordner.');
+        flash_setzen('ok', 'Wenn es zu der Adresse ein Konto gibt, ist ein Link unterwegs. Er gilt einmal und 48 Stunden (Team-Konten: 72 Stunden). Schau auch im Spam-Ordner.');
         umleiten('/konto/passwort-vergessen');
     }
 }
@@ -31,7 +31,7 @@ seite_kopf('Passwort vergessen', ['aktiv' => '/deine-anmeldung']);
 <div class="innen form-kopf">
     <p class="kicker">Konto</p>
     <h1 class="titel">Passwort vergessen</h1>
-    <p class="text">Gib die Adresse deines Kontos ein. Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst. Für Team-Konten schickt ein Betreiber einen Link.</p>
+    <p class="text">Gib die Adresse deines Kontos ein. Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst. Das gilt auch für Team-Konten; der zweite Faktor bleibt dabei bestehen.</p>
 </div>
 <div class="innen">
     <?= meldung_html(flash_holen()) ?>

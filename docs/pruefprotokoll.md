@@ -19,7 +19,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-144; Mailversand auf Staging (Admin 2026-10-29) | Staging (siehe unten) |
 | AP-4b | Konten für Teilnehmende | umgesetzt, Staging offen | lokal T-145 bis T-149 | Staging (siehe unten); Newsletter-Teil mit AP-7 |
 | AP-5 | Team-Bereich | umgesetzt, Staging offen | lokal T-150, T-151, T-153, T-155 bis T-159; T-154 im Code | Staging (siehe unten); T-152 Passkey mit O-14 |
-| AP-6 | Mailversand und Rundmails | offen | – | T-160 bis T-166 |
+| AP-6 | Mailversand und Rundmails | umgesetzt, Staging offen | lokal T-161 bis T-164, T-166 bis T-169 | Staging (siehe unten); T-160 und T-165 (Zustellbarkeit) durch den Admin |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
@@ -111,13 +111,16 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-159, ap: AP-5, was: "Konten der Teilnehmenden im Team-Bereich", wie: "Konto suchen, mit Anmeldung verknüpfen, Reset auslösen, sperren → Login verweigert", status: "lokal bestanden (Personen: Filter „Mit Konto“, Passwort-Link, sperren, löschen mit Wahl, Rolle vergeben mit Code und Einrichtungslink)"}
 
 # AP-6 Mailversand und Rundmails
-- {id: T-160, ap: AP-6, was: "SMTP-Versand über Lima-City", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: offen}
-- {id: T-161, ap: AP-6, was: "Prioritäten", wie: "Rundmail an 100 Adressen einreihen, danach Anmeldung → Bestätigung geht vor der Rundmail raus", status: offen}
-- {id: T-162, ap: AP-6, was: "Tageslimit", wie: "Limit testweise auf 5 setzen, 8 Mails einreihen → 5 heute, 3 morgen", status: offen}
-- {id: T-163, ap: AP-6, was: "Wiederholung bei Fehler", wie: "SMTP-Passwort kurz falsch → Mail bleibt in der Warteschlange, Versand nach Korrektur", status: offen}
-- {id: T-164, ap: AP-6, was: "Inhalt nach Versand geleert", wie: "DB-Zeile nach Versand ohne Empfänger und Text", status: offen}
-- {id: T-165, ap: AP-6, was: "Zustellbarkeit", wie: "Testmails an Gmail, GMX, Web.de, Outlook; SPF/DKIM/DMARC pass in den Kopfzeilen; Spamscore (mail-tester.com)", status: offen}
-- {id: T-166, ap: AP-6, was: "Rundmail-Filter und Testversand", wie: "Filter je Workshop-Termin und Berufsgruppe zählt richtig; Testversand nur an sich selbst", status: offen}
+- {id: T-160, ap: AP-6, was: "SMTP-Versand über Lima-City", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: "offen: Testmail und Mailing auf Staging (Mailversand an sich geht, Admin 2026-10-29)"}
+- {id: T-161, ap: AP-6, was: "Prioritäten", wie: "Rundmail an 100 Adressen einreihen, danach Anmeldung → Bestätigung geht vor der Rundmail raus", status: "lokal bestanden (Rundmail über dem Limit wartet, zwei Bestätigungen gehen sofort raus)"}
+- {id: T-162, ap: AP-6, was: "Tageslimit", wie: "Limit testweise auf 5 setzen, 8 Mails einreihen → 5 heute, 3 morgen", status: "lokal bestanden (Limit 5: Mailing über anmeldung@ 4 heute, Rest morgen; newsletter@ Limit 3 eigenes Kontingent)"}
+- {id: T-163, ap: AP-6, was: "Wiederholung bei Fehler", wie: "SMTP-Passwort kurz falsch → Mail bleibt in der Warteschlange, Versand nach Korrektur", status: "lokal bestanden seit AP-4 (Wiederholungen 5/30/120/360 min); auf Staging nicht nötig"}
+- {id: T-164, ap: AP-6, was: "Inhalt nach Versand geleert", wie: "DB-Zeile nach Versand ohne Empfänger und Text", status: "lokal bestanden (Zeilen ohne Empfänger und Text; Mailings stehen nur als Verweis in der Warteschlange)"}
+- {id: T-165, ap: AP-6, was: "Zustellbarkeit", wie: "Testmails an Gmail, GMX, Web.de, Outlook; SPF/DKIM/DMARC pass in den Kopfzeilen; Spamscore (mail-tester.com)", status: "offen: der Admin auf Staging (Gmail, GMX/Web.de, Outlook; mail-tester.com); SPF/DKIM beim Hoster"}
+- {id: T-166, ap: AP-6, was: "Rundmail-Filter und Testversand", wie: "Filter je Workshop-Termin und Berufsgruppe zählt richtig; Testversand nur an sich selbst", status: "lokal bestanden (Auswahl Termin, Berufsgruppe, ohne Essen zählt richtig; Testmail nur an die eigene Adresse)"}
+- {id: T-167, ap: AP-6, was: "Editor, Bilder, Vorschau", wie: "Bild hochladen (verkleinert, eingebettet per Content-ID), Knopf und Platzhalter einfügen, HTML bereinigt (keine Skripte, fremden Bilder, javascript:), Vorschau ohne Skripte", status: "lokal bestanden (Bibliothek, HTTP, Browser in drei Engines)"}
+- {id: T-168, ap: AP-6, was: "Planen, Abbrechen, Archiv", wie: "geplant → Job startet zum Zeitpunkt; Planung aufheben; Rest abbrechen; Empfängerliste im Archiv, nach 14 Monaten gelöscht; kopieren", status: "lokal bestanden"}
+- {id: T-169, ap: AP-6, was: "Team-Mails", wie: "Einladung beim Anlegen per Mail (oder Link anzeigen); Passwort vergessen für Team-Konten mit Link über /einrichten", status: "lokal bestanden"}
 
 # AP-7 Newsletter
 - {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: offen}
@@ -180,6 +183,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-161 bis T-164, T-166 bis T-169 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 515 ok, 0 Fehler (Mailings: bereinigen, Auswahl, Limits je Postfach, Vorrang der Bestätigungen, Inhalt beim Versand, Storno dazwischen, Planen, Job, Abbrechen, Archiv-Löschfrist, Bilder; HTTP: Seiten, Hochladen, Vorschau-Richtlinie, Empfängerzahl, Testmail, Senden, Archiv; Team-Einladung und Passwort vergessen); Browser-Durchlauf 4227 ok, 0 Fehler (Mailings-Reiter, Entwurf, Archiv in allen Breiten; Editor: Platzhalter, Knopf, Bild hochladen, HTML-Ansicht, Empfängerzahl, Speichern, Vorschau) | Staging |
 | T-144, T-155 bis T-159 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 455 ok, 0 Fehler (Team-Bibliothek: anlegen, überbuchen, Tausch, Angebot, Entfernen mit Nachrücken, Daten, Liste, Aufgaben, CSV, Statistik, Rolle, Hosts, Absender; HTTP: alle Seiten, Person anlegen/ändern ohne und mit Mail, nach dem Stichtag, Einmal-Link, Export, Texte, Protokoll, Storno); Browser-Durchlauf 3765 ok, 0 Fehler mit allen neuen Reitern, ausgewählter Person, Termin, Person anlegen | Staging |
 | – | 2026-10-29 | admin | bestanden | Mailversand auf Staging: Mails kommen an | – |
 | T-212, T-201 | 2026-10-29 | claude-dev | lokal bestanden | Nachbesserung: Ziehen fügt zwischen zwei Punkte ein, nachfolgende rücken nach (Block mit Inhalt, Lücke stoppt; Bibliothekstest und Browser-Durchlauf „2 Punkte rücken“); Testmail unter Daten; Versionsanzeige; `lauf.php` 406 ok, 0 Fehler; Browser-Durchlauf 3009 ok, 0 Fehler | Staging: Ziehen mit der Maus, Testmail |
@@ -221,6 +225,16 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-6 (nach Merge auf Staging)
+
+1. Optional: in der `config.php` auf dem Server im Abschnitt `mail` den Eintrag `newsletter` mit Benutzer und Passwort von newsletter@ ergänzen (Vorlage `config.example.php`). Ohne ihn gehen Mailings über anmeldung@.
+2. Betrieb: Kasten „Mailversand“ zeigt beide Postfächer; Absender ansehen.
+3. Testdaten laden. Mailings: „Anfahrt und Parken“ (gesendet) öffnen → Empfängerliste, Vorschau. Den Entwurf „WS 01 Atemweg: Raumänderung“ öffnen, Text ändern, Bild hochladen, „Testmail an mich“ → Mail in Gmail/GMX/Outlook ansehen (Bild, Knopf, Umlaute), Spam-Ordner prüfen.
+4. Den Entwurf an „Alle Angemeldeten“ senden (Staging leitet alle Mails an die Umleitungsadresse um) → Mails kommen an, mit persönlichem Link.
+5. Ein Mailing für in 5 Minuten planen → nach dem Cron-Lauf „Wird gesendet“ / „Gesendet“.
+6. Team-Konten: ein Konto mit deiner zweiten Adresse anlegen → Einladung kommt. Beim Einloggen „Passwort vergessen?“ mit einer Team-Adresse → Link kommt (T-169).
+7. T-165: Testmail an eine Adresse bei mail-tester.com → Ergebnis notieren.
 
 ### Noch zu prüfen für AP-5 (nach Merge auf Staging)
 

@@ -312,6 +312,57 @@ function migration_katalog(): array
                     ADD CONSTRAINT fk_anmeldung_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE SET NULL",
             ],
         ],
+        8 => [
+            'beschreibung' => 'Mailings: Postfächer, HTML-Mails, Rundmails mit Bildern, Archiv (AP-6, E-50)',
+            'sql' => [
+                // Postfach je Mail (eigenes Tageslimit); Rundmails werden erst beim Versand aus
+                // rundmail + anmeldung zusammengesetzt (aktueller Name, frischer Einmal-Link).
+                "ALTER TABLE mail_ausgang
+                    ADD COLUMN postfach     ENUM('system','newsletter') NOT NULL DEFAULT 'system' AFTER prio,
+                    ADD COLUMN rundmail_id  INT UNSIGNED NULL AFTER postfach,
+                    ADD COLUMN anmeldung_id INT UNSIGNED NULL AFTER rundmail_id,
+                    ADD KEY ix_mail_ausgang_rundmail (rundmail_id, status)",
+                // Mailings: Entwurf → geplant → versand → gesendet (oder abgebrochen)
+                "CREATE TABLE rundmail (
+                    id              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    betreff         VARCHAR(200) NOT NULL DEFAULT '',
+                    html            MEDIUMTEXT   NOT NULL,
+                    auswahl         VARCHAR(40)  NOT NULL DEFAULT 'angemeldet',
+                    berufsgruppe    VARCHAR(60)  NOT NULL DEFAULT '',
+                    postfach        ENUM('system','newsletter') NOT NULL DEFAULT 'system',
+                    status          ENUM('entwurf','geplant','versand','gesendet','abgebrochen') NOT NULL DEFAULT 'entwurf',
+                    geplant_fuer    DATETIME     NULL,
+                    auswahl_text    VARCHAR(200) NOT NULL DEFAULT '',
+                    empfaenger_zahl INT UNSIGNED NOT NULL DEFAULT 0,
+                    loeschen_ab     DATE         NULL,
+                    erstellt_von    INT UNSIGNED NULL,
+                    gesendet_von    INT UNSIGNED NULL,
+                    erstellt_am     DATETIME     NOT NULL,
+                    geaendert_am    DATETIME     NOT NULL,
+                    gesendet_am     DATETIME     NULL,
+                    KEY ix_rundmail_status (status, geplant_fuer)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Archiv: Empfängerliste je Rundmail (R-02-Ausnahme, E-42); gelöscht ab loeschen_ab (E-24)
+                "CREATE TABLE rundmail_empfaenger (
+                    rundmail_id  INT UNSIGNED NOT NULL,
+                    anmeldung_id INT UNSIGNED NULL,
+                    name         VARCHAR(170) NOT NULL,
+                    email        VARCHAR(190) NOT NULL,
+                    PRIMARY KEY (rundmail_id, email),
+                    CONSTRAINT fk_rundmail_empfaenger FOREIGN KEY (rundmail_id) REFERENCES rundmail (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Bilder für Mailings: selbst gehostet, verkleinert, als Datei in var/bilder/ (mit gesichert)
+                "CREATE TABLE rundmail_bild (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    datei       VARCHAR(80)  NOT NULL,
+                    typ         ENUM('jpeg','png') NOT NULL,
+                    breite      SMALLINT UNSIGNED NOT NULL,
+                    hoehe       SMALLINT UNSIGNED NOT NULL,
+                    erstellt_von INT UNSIGNED NULL,
+                    erstellt_am DATETIME     NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

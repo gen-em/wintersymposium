@@ -53,5 +53,14 @@ return [
         'antwort_an' => '',             // optional, z. B. admin@…
         'tageslimit' => 450,            // Mails je Tag; System-Mails gehen immer raus
         'umleiten_an' => '',            // nur Staging: alle Mails an diese Adresse (Empfänger im Betreff)
+        // Zweites Postfach für Mailings (AP-6, E-50); Server wie oben, eigenes Tageslimit.
+        // Ohne diesen Eintrag gehen Mailings nur über das System-Postfach.
+        'newsletter' => [
+            'benutzer' => '',           // meist die volle Adresse, z. B. newsletter@…
+            'passwort' => '',
+            'absender' => 'newsletter@winter-notfallsymposium.de',
+            'absender_name' => 'Allgäu Akut – Wintersymposium',
+            'tageslimit' => 450,
+        ],
     ],
 ];

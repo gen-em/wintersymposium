@@ -1,0 +1,656 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Mailings (AP-6, E-41, E-42, E-50): Rundmails an Teilnehmende.
+ *
+ * Ablauf: Entwurf → (geplant) → versand → gesendet. Beim Versand wird die
+ * Empfängerliste festgehalten (Archiv, Ausnahme von R-02) und je Person ein
+ * Verweis in die Warteschlange gestellt. Den Inhalt setzt mail_lib erst beim
+ * Versand zusammen (rm_mail_fuer): aktueller Vorname, aktuelle Workshops und
+ * ein frischer Einmal-Link für {link}. Das Tageslimit verteilt große
+ * Rundmails auf mehrere Tage; Bestätigungen gehen immer vor.
+ *
+ * HTML: nur einfache Elemente (Absatz, Überschrift, fett, kursiv, Liste,
+ * Link, Knopf, Bild). Was der Editor schickt, geht durch rm_html_bereinigen;
+ * gespeichert wird nur das Ergebnis. Bilder werden hochgeladen, verkleinert,
+ * neu geschrieben (ohne Metadaten) und in die Mail eingebettet – keine
+ * fremden Server (E-41).
+ */
+
+const RM_PLATZHALTER = ['{vorname}' => 'Vorname', '{nachname}' => 'Nachname', '{workshops}' => 'Workshops der Person', '{link}' => 'Link zu „Deine Anmeldung“ (Einmal-Link)'];
+const RM_STATUS = ['entwurf' => 'Entwurf', 'geplant' => 'Geplant', 'versand' => 'Wird gesendet', 'gesendet' => 'Gesendet', 'abgebrochen' => 'Abgebrochen'];
+const RM_HTML_MAX = 200_000;
+const RM_BILD_MAX_KANTE = 1200;
+const RM_BILD_MAX_BYTES = 10 * 1024 * 1024;
+/** Empfängerliste im Archiv: so lange wie Anmeldungen ohne Konto (E-24: 14 Monate nach dem Symposium). */
+const RM_ARCHIV_MONATE = 14;
+/** Mailbreite in Pixeln (Inhalt ohne Rand). */
+const RM_INHALT_BREITE = 544;
+
+/* ---- Empfänger ----------------------------------------------------------- */
+
+/** Auswahl-Möglichkeiten: [wert => text]. Termine aus dem veröffentlichten Programm. */
+function rm_auswahl_optionen(): array
+{
+    $o = [
+        'angemeldet' => 'Alle Angemeldeten',
+        'symposium_warte' => 'Warteliste Symposium',
+        'warte' => 'Warteliste (alle)',
+        'essen_kein' => 'Ohne Essen',
+    ];
+    foreach (team_termine() as $t) {
+        if ($t['id'] !== 0) {
+            $o['termin:' . $t['id']] = 'Workshop-Termin: ' . $t['text'];
+            $o['warte:' . $t['id']] = 'Warteliste: ' . $t['text'];
+        }
+    }
+    return $o;
+}
+
+/** Für das Auswahlfeld: Gruppen mit kurzen Einträgen (lange Texte machen Auswahlfelder auf dem Handy zu breit). */
+function rm_auswahl_gruppen(): array
+{
+    $g = ['' => [], 'Teilnehmende eines Workshop-Termins' => [], 'Warteliste eines Termins' => []];
+    foreach (rm_auswahl_optionen() as $k => $t) {
+        if (str_starts_with($k, 'termin:')) {
+            $g['Teilnehmende eines Workshop-Termins'][$k] = mb_substr($t, mb_strlen('Workshop-Termin: '));
+        } elseif (str_starts_with($k, 'warte:')) {
+            $g['Warteliste eines Termins'][$k] = mb_substr($t, mb_strlen('Warteliste: '));
+        } else {
+            $g[''][$k] = $t;
+        }
+    }
+    return array_filter($g);
+}
+
+/** Klartext einer Auswahl (mit Berufsgruppe). */
+function rm_auswahl_text(string $auswahl, string $bg): string
+{
+    $o = rm_auswahl_optionen();
+    $t = $o[$auswahl] ?? $auswahl;
+    return $t . ($bg !== '' ? ' · nur ' . $bg : '');
+}
+
+/** Bestätigte Anmeldungen der Auswahl: Liste mit id, vorname, nachname, email. */
+function rm_empfaenger(string $auswahl, string $bg = ''): array
+{
+    $wo = ["a.status = 'bestaetigt'"];
+    $par = [];
+    if ($auswahl === 'angemeldet') {
+        $wo[] = "EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')";
+    } elseif ($auswahl === 'symposium_warte') {
+        $wo[] = "EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status IN ('warte','angebot'))";
+    } elseif ($auswahl === 'warte') {
+        $wo[] = "EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.status IN ('warte','angebot'))";
+    } elseif ($auswahl === 'essen_kein') {
+        $wo[] = "a.essen = 'kein'";
+        $wo[] = "EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')";
+    } elseif (preg_match('/^(termin|warte):(\d+)$/', $auswahl, $m) === 1) {
+        $wo[] = 'EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = ? AND p.status ' . ($m[1] === 'termin' ? "= 'fest'" : "IN ('warte','angebot')") . ')';
+        $par[] = (int)$m[2];
+    } else {
+        return [];
+    }
+    if ($bg !== '') {
+        $wo[] = 'a.berufsgruppe = ?';
+        $par[] = $bg;
+    }
+    return db_zeilen('SELECT a.id, a.vorname, a.nachname, a.email FROM anmeldung a WHERE ' . implode(' AND ', $wo) . ' ORDER BY a.nachname, a.vorname, a.id', $par);
+}
+
+/* ---- Bereinigen und Darstellen ------------------------------------------ */
+
+/** HTML aus dem Editor auf die erlaubten Elemente bringen. */
+function rm_html_bereinigen(string $html): string
+{
+    $html = mb_substr($html, 0, RM_HTML_MAX);
+    $wurzel = rm_dom($html);
+    return $wurzel === null ? '' : trim(rm_knoten_kinder($wurzel, 'speichern', []));
+}
+
+/** HTML als DOM laden (UTF-8, ohne Zusatz-Elemente). Gibt den Wurzelknoten zurück. */
+function rm_dom(string $html): ?DOMElement
+{
+    $d = new DOMDocument();
+    $alt = libxml_use_internal_errors(true);
+    $ok = $d->loadHTML('<?xml encoding="utf-8"?><div id="rm-wurzel">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
+    libxml_clear_errors();
+    libxml_use_internal_errors($alt);
+    if (!$ok) {
+        return null;
+    }
+    foreach ($d->getElementsByTagName('div') as $div) {
+        if ($div->getAttribute('id') === 'rm-wurzel') {
+            return $div;
+        }
+    }
+    return null;
+}
+
+/** Erlaubtes Linkziel: https/http/mailto oder der Platzhalter {link}. */
+function rm_href_ok(string $href): ?string
+{
+    $href = trim($href);
+    if ($href === '{link}') {
+        return $href;
+    }
+    if (preg_match('#^(https?://[^\s<>"]+|mailto:[^\s<>"@]+@[^\s<>"]+)$#i', $href) === 1) {
+        return $href;
+    }
+    return null;
+}
+
+/** Bild-ID aus dem src im Editor (/team/mailings/bild?id=N) oder null. */
+function rm_bild_id(string $src): ?int
+{
+    return preg_match('#^/team/mailings/bild\?id=(\d+)$#', trim($src), $m) === 1 ? (int)$m[1] : null;
+}
+
+/**
+ * Knoten ausgeben. $modus: 'speichern' (bereinigtes HTML), 'mail' (HTML mit
+ * Stilen für Mailprogramme), 'text' (Textfassung). $k (Kontext für mail/text):
+ * werte (Platzhalter → Text), bild (fn(int $id, array $b): ?string src).
+ */
+function rm_knoten_kinder(DOMNode $n, string $modus, array $k): string
+{
+    $h = '';
+    foreach ($n->childNodes as $c) {
+        $h .= rm_knoten($c, $modus, $k);
+    }
+    return $h;
+}
+
+function rm_knoten(DOMNode $n, string $modus, array $k): string
+{
+    if ($n instanceof DOMText) {
+        $t = $n->data;
+        if ($modus === 'speichern') {
+            return e($t);
+        }
+        if ($modus === 'text') {
+            return rm_platzhalter_text(preg_replace('/\s+/u', ' ', $t) ?? '', $k);
+        }
+        return rm_platzhalter_html($t, $k);
+    }
+    if (!$n instanceof DOMElement) {
+        return '';
+    }
+    $tag = strtolower($n->tagName);
+    if (in_array($tag, ['script', 'style', 'iframe', 'object', 'embed', 'head', 'title', 'template', 'svg', 'math', 'form', 'input', 'button', 'select', 'textarea'], true)) {
+        return '';
+    }
+    $map = ['b' => 'strong', 'i' => 'em', 'h1' => 'h2', 'h4' => 'h3', 'h5' => 'h3', 'h6' => 'h3', 'div' => 'p'];
+    $tag = $map[$tag] ?? $tag;
+    $innen = rm_knoten_kinder($n, $modus, $k);
+    switch ($tag) {
+        case 'p':
+        case 'h2':
+        case 'h3':
+            // Absatz in Absatz (Chrome-Editor) auflösen
+            if ($modus === 'speichern' && preg_match('#<(p|h2|h3|ul|ol)[ >]#', $innen) === 1) {
+                return $innen;
+            }
+            if (trim(strip_tags($innen, '<img><br>')) === '' && !str_contains($innen, '<img')) {
+                return '';
+            }
+            if ($modus === 'text') {
+                return trim($innen) . "\n\n";
+            }
+            if ($modus === 'mail') {
+                $stil = ['p' => 'margin:0 0 16px;', 'h2' => 'margin:8px 0 12px;font-size:22px;line-height:1.25;color:#001E3A;', 'h3' => 'margin:8px 0 8px;font-size:18px;line-height:1.3;color:#001E3A;'][$tag];
+                return '<' . $tag . ' style="' . $stil . '">' . $innen . '</' . $tag . '>';
+            }
+            return '<' . $tag . '>' . $innen . '</' . $tag . '>';
+        case 'br':
+            return $modus === 'text' ? "\n" : '<br>';
+        case 'strong':
+        case 'em':
+            return $modus === 'text' ? $innen : ($innen === '' ? '' : '<' . $tag . '>' . $innen . '</' . $tag . '>');
+        case 'ul':
+        case 'ol':
+            if ($modus === 'text') {
+                return $innen . "\n";
+            }
+            return '<' . $tag . ($modus === 'mail' ? ' style="margin:0 0 16px;padding-left:22px;"' : '') . '>' . $innen . '</' . $tag . '>';
+        case 'li':
+            if ($modus === 'text') {
+                return ($n->parentNode instanceof DOMElement && strtolower($n->parentNode->tagName) === 'ol' ? '1. ' : '- ') . trim($innen) . "\n";
+            }
+            return '<li' . ($modus === 'mail' ? ' style="margin:0 0 6px;"' : '') . '>' . $innen . '</li>';
+        case 'a':
+            $href = rm_href_ok($n->getAttribute('href'));
+            $knopf = in_array('knopf', preg_split('/\s+/', $n->getAttribute('class')) ?: [], true);
+            if ($href === null || trim(strip_tags($innen)) === '') {
+                return $innen;
+            }
+            if ($modus === 'speichern') {
+                return '<a href="' . e($href) . '"' . ($knopf ? ' class="knopf"' : '') . '>' . $innen . '</a>';
+            }
+            $ziel = $href === '{link}' ? (string)($k['werte']['{link}'] ?? '') : $href;
+            if ($modus === 'text') {
+                return trim($innen) . ': ' . $ziel . ($knopf ? "\n" : '');
+            }
+            $stil = $knopf
+                ? 'display:inline-block;background:#6F52A8;color:#FFFFFF;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold;'
+                : 'color:#6F52A8;text-decoration:underline;';
+            return '<a href="' . e($ziel) . '" style="' . $stil . '">' . $innen . '</a>';
+        case 'img':
+            $id = rm_bild_id($n->getAttribute('src'));
+            $b = $id !== null ? rm_bild($id) : null;
+            if ($b === null) {
+                return '';
+            }
+            $breite = $n->getAttribute('data-breite') === '50' ? 50 : 100;
+            $alt = mb_substr(trim($n->getAttribute('alt')), 0, 200);
+            if ($modus === 'speichern') {
+                return '<img src="/team/mailings/bild?id=' . $id . '" alt="' . e($alt) . '" data-breite="' . $breite . '">';
+            }
+            if ($modus === 'text') {
+                return $alt !== '' ? '[Bild: ' . $alt . ']' : '';
+            }
+            $px = (int)min($b['breite'], round(RM_INHALT_BREITE * $breite / 100));
+            $src = ($k['bild'])($id, $b);
+            return $src === null ? '' : '<img src="' . e($src) . '" alt="' . e($alt) . '" width="' . $px . '" style="display:block;width:' . $px . 'px;max-width:100%;height:auto;border:0;margin:0 0 16px;">';
+        default:
+            // Unbekannte Elemente (span, font, table …): nur der Inhalt bleibt
+            return $innen;
+    }
+}
+
+/** Platzhalter im Text (HTML-sicher). */
+function rm_platzhalter_html(string $t, array $k): string
+{
+    $h = e($t);
+    foreach ($k['werte'] ?? [] as $p => $w) {
+        if ($p === '{workshops}') {
+            $h = str_replace($p, implode('<br>', array_map('e', explode("\n", $w))), $h);
+        } else {
+            $h = str_replace($p, e($w), $h);
+        }
+    }
+    return $h;
+}
+
+function rm_platzhalter_text(string $t, array $k): string
+{
+    return strtr($t, $k['werte'] ?? []);
+}
+
+/** Workshops einer Anmeldung als Zeilen (feste Plätze). */
+function rm_workshops_text(int $anmId): string
+{
+    $z = [];
+    foreach (db_zeilen("SELECT termin_id FROM platz WHERE anmeldung_id = ? AND termin_id > 0 AND status = 'fest'", [$anmId]) as $p) {
+        $z[] = anm_termin_text((int)$p['termin_id']);
+    }
+    sort($z);
+    return $z === [] ? 'keine Workshops' : implode("\n", $z);
+}
+
+/**
+ * Mail eines Mailings zusammensetzen. $werte: Platzhalter → Text.
+ * $bildQuelle: fn(int $id, array $bild): ?string (cid:… im Versand, URL in der Vorschau).
+ * Gibt ['betreff', 'html', 'text', 'bilder' => [cid => [typ, pfad]]] zurück.
+ */
+function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $domain = 'localhost'): array
+{
+    $bilder = [];
+    $k = ['werte' => $werte, 'bild' => function (int $id, array $b) use ($bildArt, &$bilder, $domain): ?string {
+        $pfad = foto_ordner() . '/' . $b['datei'];
+        if (!is_file($pfad)) {
+            return null;
+        }
+        if ($bildArt === 'url') {
+            return '/team/mailings/bild?id=' . $id;
+        }
+        $cid = 'bild' . $id;
+        $bilder[$cid] = [$b['typ'], $pfad];
+        return 'cid:' . $cid . '@' . $domain;
+    }];
+    $wurzel = rm_dom((string)$rm['html']);
+    $inhalt = $wurzel === null ? '' : rm_knoten_kinder($wurzel, 'mail', $k);
+    $text = $wurzel === null ? '' : rm_knoten_kinder($wurzel, 'text', $k);
+    $text = trim(preg_replace("/\n{3,}/", "\n\n", preg_replace(['/[ \t]+\n/', '/\n[ \t]+/'], "\n", $text) ?? '') ?? '');
+    $betreff = rm_platzhalter_text((string)$rm['betreff'], $k);
+    $fuss = 'Du bekommst diese Mail, weil du zum Wintersymposium angemeldet bist.';
+    $text .= "\n\n-- \n" . $fuss . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
+    $html = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . e($betreff) . '</title></head>'
+        . '<body style="margin:0;padding:0;background:#EEF1F5;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF1F5;"><tr><td align="center" style="padding:24px 12px;">'
+        . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:8px;">'
+        . '<tr><td style="background:#001E3A;padding:18px 28px;border-radius:8px 8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.4;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:#FFFFFF;">'
+        . 'Wintersymposium Notfallmedizin<br><span style="color:#B48CFF;font-weight:normal;letter-spacing:1px;">Allgäu Akut</span></td></tr>'
+        . '<tr><td style="padding:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#001E3A;">' . $inhalt . '</td></tr>'
+        . '<tr><td style="padding:16px 28px 24px;border-top:1px solid #E1E6EC;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#5A6B7D;">'
+        . e($fuss) . '<br><a href="' . e(url('/impressum')) . '" style="color:#5A6B7D;">Impressum</a> · <a href="' . e(url('/datenschutz')) . '" style="color:#5A6B7D;">Datenschutz</a></td></tr>'
+        . '</table></td></tr></table></body></html>';
+    return ['betreff' => $betreff, 'html' => $html, 'text' => $text, 'bilder' => $bilder];
+}
+
+/** Platzhalter-Werte für eine Person; ohne $mitLink steht {link} auf der allgemeinen Seite (Vorschau, Test). */
+function rm_werte(array $a, bool $mitLink): array
+{
+    $link = url('/deine-anmeldung');
+    if ($mitLink) {
+        $token = anm_link_erzeugen((int)$a['id'], 'zugang', time() + ANM_LINK_GUELTIG_H * 3600);
+        $link = anm_link_url($token);
+    }
+    return [
+        '{vorname}' => (string)$a['vorname'],
+        '{nachname}' => (string)$a['nachname'],
+        '{workshops}' => isset($a['id']) ? rm_workshops_text((int)$a['id']) : "WS 01 Beispiel · 19:30–20:15",
+        '{link}' => $link,
+    ];
+}
+
+/** Für die Warteschlange: Mail eines Mailings an eine Anmeldung (oder null, wenn es sie nicht mehr gibt). */
+function rm_mail_fuer(int $rmId, int $anmId): ?array
+{
+    $rm = rm_laden($rmId);
+    $a = db_zeile('SELECT id, vorname, nachname, email FROM anmeldung WHERE id = ?', [$anmId]);
+    if ($rm === null || $a === null) {
+        return null;
+    }
+    $absender = mail_absender(mail_konfig($rm['postfach']));
+    return rm_zusammensetzen($rm, rm_werte($a, true), 'cid', substr(strrchr($absender, '@') ?: '@localhost', 1));
+}
+
+/** Vorschau: mit der ersten Person der Auswahl, sonst mit Beispielwerten. */
+function rm_vorschau(array $rm, array $konto): array
+{
+    $e = rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']);
+    $p = $e[0] ?? null;
+    $werte = $p !== null ? rm_werte($p, false) : rm_werte(['vorname' => tk_namen($konto)['vorname'], 'nachname' => tk_namen($konto)['nachname']], false);
+    return rm_zusammensetzen($rm, $werte, 'url') + ['an' => $p !== null ? $p['vorname'] . ' ' . $p['nachname'] : 'Beispiel'];
+}
+
+/* ---- Speichern, Senden, Planen ------------------------------------------ */
+
+function rm_laden(int $id): ?array
+{
+    return db_zeile('SELECT * FROM rundmail WHERE id = ?', [$id]);
+}
+
+/** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */
+function rm_pruefen(array $e): array
+{
+    $w = [
+        'betreff' => trim(mb_substr(preg_replace('/[\r\n]+/', ' ', (string)($e['betreff'] ?? '')) ?? '', 0, 200)),
+        'html' => rm_html_bereinigen((string)($e['html'] ?? '')),
+        'auswahl' => (string)($e['auswahl'] ?? 'angemeldet'),
+        'berufsgruppe' => (string)($e['berufsgruppe'] ?? ''),
+        'postfach' => (string)($e['postfach'] ?? 'system'),
+    ];
+    $f = [];
+    if (!array_key_exists($w['auswahl'], rm_auswahl_optionen())) {
+        $f['auswahl'] = 'Bitte eine Auswahl treffen.';
+        $w['auswahl'] = 'angemeldet';
+    }
+    if ($w['berufsgruppe'] !== '' && !in_array($w['berufsgruppe'], va_liste('berufsgruppen'), true)) {
+        $f['berufsgruppe'] = 'Unbekannte Berufsgruppe.';
+        $w['berufsgruppe'] = '';
+    }
+    if (!isset(MAIL_POSTFAECHER[$w['postfach']]) || !mail_postfach_da($w['postfach'])) {
+        $f['postfach'] = 'Dieses Postfach ist nicht eingerichtet.';
+        $w['postfach'] = 'system';
+    }
+    return ['werte' => $w, 'fehler' => $f];
+}
+
+/** Entwurf speichern (neu oder vorhanden). Gibt die ID zurück; null, wenn er kein Entwurf mehr ist. */
+function rm_speichern(?int $id, array $w, ?int $kontoId): ?int
+{
+    $jetzt = db_jetzt();
+    if ($id === null) {
+        db_ausfuehren(
+            "INSERT INTO rundmail (betreff, html, auswahl, berufsgruppe, postfach, status, erstellt_von, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, 'entwurf', ?, ?, ?)",
+            [$w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $kontoId, $jetzt, $jetzt]
+        );
+        return (int)db()->lastInsertId();
+    }
+    $n = db_ausfuehren(
+        "UPDATE rundmail SET betreff = ?, html = ?, auswahl = ?, berufsgruppe = ?, postfach = ?, geaendert_am = ? WHERE id = ? AND status = 'entwurf'",
+        [$w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $jetzt, $id]
+    )->rowCount();
+    return $n === 1 || rm_laden($id)['status'] === 'entwurf' ? $id : null;
+}
+
+/** Fehler, die das Senden verhindern (leer = sendbar). */
+function rm_sendefehler(array $rm): array
+{
+    $f = [];
+    if (trim($rm['betreff']) === '') {
+        $f[] = 'Bitte einen Betreff eintragen.';
+    }
+    if (trim(strip_tags($rm['html'], '<img>')) === '') {
+        $f[] = 'Die Mail hat noch keinen Text.';
+    }
+    if (rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']) === []) {
+        $f[] = 'Die Auswahl hat keine Empfänger.';
+    }
+    if (!mail_postfach_da($rm['postfach'])) {
+        $f[] = 'Das Postfach ist nicht eingerichtet.';
+    }
+    return $f;
+}
+
+/**
+ * Jetzt senden: Empfängerliste festhalten und in die Warteschlange stellen.
+ * Gibt die Zahl der Empfänger zurück oder null, wenn das Mailing nicht
+ * (mehr) sendbar ist.
+ */
+function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
+{
+    $jetzt ??= time();
+    $zahl = db_transaktion(function () use ($id, $kontoId, $jetzt): ?int {
+        $rm = db_zeile('SELECT * FROM rundmail WHERE id = ? FOR UPDATE', [$id]);
+        if ($rm === null || !in_array($rm['status'], ['entwurf', 'geplant'], true) || rm_sendefehler($rm) !== []) {
+            return null;
+        }
+        $liste = rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']);
+        $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+        // Archiv bis 14 Monate nach dem Symposium (E-24); gilt das Datum schon als vorbei, ab heute
+        $basis = max(va('veranstaltung_datum'), gmdate('Y-m-d', $jetzt));
+        $loeschen = (new DateTimeImmutable($basis))->modify('+' . RM_ARCHIV_MONATE . ' months')->format('Y-m-d');
+        foreach ($liste as $a) {
+            db_ausfuehren('INSERT IGNORE INTO rundmail_empfaenger (rundmail_id, anmeldung_id, name, email) VALUES (?, ?, ?, ?)', [$id, $a['id'], $a['vorname'] . ' ' . $a['nachname'], $a['email']]);
+            db_ausfuehren(
+                "INSERT INTO mail_ausgang (an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, status, versuche, naechster_versuch, erstellt_am) VALUES (?, '', '', ?, ?, ?, ?, 'offen', 0, ?, ?)",
+                [$a['email'], MAIL_PRIO_RUNDMAIL, $rm['postfach'], $id, $a['id'], $jetztDb, $jetztDb]
+            );
+        }
+        db_ausfuehren(
+            "UPDATE rundmail SET status = 'versand', gesendet_am = ?, gesendet_von = ?, empfaenger_zahl = ?, auswahl_text = ?, loeschen_ab = ?, geplant_fuer = NULL WHERE id = ?",
+            [$jetztDb, $kontoId ?? $rm['gesendet_von'], count($liste), mb_substr(rm_auswahl_text($rm['auswahl'], $rm['berufsgruppe']), 0, 200), $loeschen, $id]
+        );
+        return count($liste);
+    });
+    if ($zahl !== null) {
+        audit_schreiben('mailing', 'Mailing ' . $id . ' an ' . $zahl . ' Empfänger in die Warteschlange gestellt', $kontoId);
+        mail_nach_antwort_vormerken();
+    }
+    return $zahl;
+}
+
+/** Planen: Zeitpunkt (UTC, in der Zukunft). */
+function rm_planen(int $id, string $utc, int $kontoId): bool
+{
+    $n = db_ausfuehren("UPDATE rundmail SET status = 'geplant', geplant_fuer = ?, gesendet_von = ?, geaendert_am = ? WHERE id = ? AND status IN ('entwurf','geplant')", [$utc, $kontoId, db_jetzt(), $id])->rowCount();
+    if ($n === 1) {
+        audit_schreiben('mailing', 'Mailing ' . $id . ' geplant für ' . datum_zeit_text($utc), $kontoId);
+    }
+    return $n === 1;
+}
+
+/**
+ * Abbrechen: geplant → wieder Entwurf; im Versand → noch nicht gesendete
+ * Mails entfernen. Gibt einen Text für die Oberfläche zurück oder null.
+ */
+function rm_abbrechen(int $id, int $kontoId): ?string
+{
+    $rm = rm_laden($id);
+    if ($rm === null) {
+        return null;
+    }
+    if ($rm['status'] === 'geplant') {
+        db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL, geaendert_am = ? WHERE id = ?", [db_jetzt(), $id]);
+        audit_schreiben('mailing', 'Planung von Mailing ' . $id . ' aufgehoben', $kontoId);
+        return 'Planung aufgehoben – das Mailing ist wieder ein Entwurf.';
+    }
+    if ($rm['status'] === 'versand') {
+        $weg = db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id = ? AND status = 'offen'", [$id])->rowCount();
+        $raus = (int)$rm['empfaenger_zahl'] - $weg;
+        db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
+        audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId);
+        return 'Versand abgebrochen: ' . $weg . ' Mails gehen nicht mehr raus.';
+    }
+    return null;
+}
+
+/** Stand des Versands: gesendet, wartet, fehler. */
+function rm_fortschritt(int $id): array
+{
+    $z = ['gesendet' => 0, 'wartet' => 0, 'fehler' => 0];
+    foreach (db_zeilen('SELECT status, COUNT(*) AS n FROM mail_ausgang WHERE rundmail_id = ? GROUP BY status', [$id]) as $r) {
+        $k = $r['status'] === 'gesendet' ? 'gesendet' : ($r['status'] === 'fehler' ? 'fehler' : 'wartet');
+        $z[$k] += (int)$r['n'];
+    }
+    return $z;
+}
+
+/** Als neuen Entwurf kopieren. */
+function rm_kopieren(int $id, int $kontoId): ?int
+{
+    $rm = rm_laden($id);
+    if ($rm === null) {
+        return null;
+    }
+    $w = ['betreff' => $rm['betreff'], 'html' => $rm['html'], 'auswahl' => array_key_exists($rm['auswahl'], rm_auswahl_optionen()) ? $rm['auswahl'] : 'angemeldet', 'berufsgruppe' => $rm['berufsgruppe'], 'postfach' => $rm['postfach']];
+    return rm_speichern(null, $w, $kontoId);
+}
+
+function rm_loeschen(int $id, int $kontoId): bool
+{
+    $n = db_ausfuehren("DELETE FROM rundmail WHERE id = ? AND status = 'entwurf'", [$id])->rowCount();
+    if ($n === 1) {
+        audit_schreiben('mailing', 'Entwurf ' . $id . ' gelöscht', $kontoId);
+    }
+    return $n === 1;
+}
+
+/** Liste für die Übersicht: Entwürfe und geplante zuerst, dann gesendete. */
+function rm_liste(): array
+{
+    return db_zeilen(
+        "SELECT r.id, r.betreff, r.status, r.geplant_fuer, r.gesendet_am, r.empfaenger_zahl, r.auswahl, r.berufsgruppe, r.auswahl_text, r.geaendert_am, k.name AS von
+         FROM rundmail r LEFT JOIN konto k ON k.id = COALESCE(r.gesendet_von, r.erstellt_von)
+         ORDER BY FIELD(r.status, 'versand', 'geplant', 'entwurf', 'gesendet', 'abgebrochen'), COALESCE(r.gesendet_am, r.geaendert_am) DESC, r.id DESC"
+    );
+}
+
+/* ---- Job ----------------------------------------------------------------- */
+
+/** Geplante senden, fertige abschließen, Archiv und Bilder aufräumen. */
+function rm_job(int $jetzt): array
+{
+    $erg = ['gestartet' => 0, 'fertig' => 0, 'archiv' => 0, 'bilder' => 0];
+    foreach (db_zeilen("SELECT id FROM rundmail WHERE status = 'geplant' AND geplant_fuer <= ?", [gmdate('Y-m-d H:i:s', $jetzt)]) as $r) {
+        if (rm_einreihen((int)$r['id'], null, $jetzt) !== null) {
+            $erg['gestartet']++;
+        } else {
+            // Nicht mehr sendbar (z. B. keine Empfänger): zurück zum Entwurf, im Protokoll vermerkt
+            db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL WHERE id = ? AND status = 'geplant'", [$r['id']]);
+            audit_schreiben('mailing', 'Geplantes Mailing ' . $r['id'] . ' nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf');
+        }
+    }
+    $erg['fertig'] = db_ausfuehren(
+        "UPDATE rundmail r SET r.status = 'gesendet' WHERE r.status = 'versand'
+         AND NOT EXISTS (SELECT 1 FROM mail_ausgang m WHERE m.rundmail_id = r.id AND m.status IN ('offen','sendet'))"
+    )->rowCount();
+    $erg['archiv'] = db_ausfuehren('DELETE e FROM rundmail_empfaenger e JOIN rundmail r ON r.id = e.rundmail_id WHERE r.loeschen_ab IS NOT NULL AND r.loeschen_ab <= ?', [gmdate('Y-m-d', $jetzt)])->rowCount();
+    $erg['bilder'] = rm_bilder_aufraeumen($jetzt);
+    return $erg;
+}
+
+/* ---- Bilder -------------------------------------------------------------- */
+
+function rm_bild(int $id): ?array
+{
+    return db_zeile('SELECT id, datei, typ, breite, hoehe FROM rundmail_bild WHERE id = ?', [$id]);
+}
+
+/**
+ * Hochgeladenes Bild prüfen, auf höchstens 1200 px verkleinern und neu
+ * schreiben (JPEG; PNG bleibt PNG wegen Transparenz). Gibt die Zeile zurück
+ * oder wirft eine RuntimeException mit einem Text für die Oberfläche.
+ */
+function rm_bild_speichern(array $upload, int $kontoId): array
+{
+    if (!foto_moeglich()) {
+        throw new RuntimeException('Bilder werden auf diesem Server nicht unterstützt (PHP-Erweiterung GD fehlt).');
+    }
+    $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > RM_BILD_MAX_BYTES) {
+        throw new RuntimeException('Das Bild ist zu groß (höchstens 10 MB).');
+    }
+    if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
+        throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
+    }
+    return rm_bild_aus_daten((string)file_get_contents((string)$upload['tmp_name']), $kontoId);
+}
+
+/** Bilddaten verarbeiten (auch für Tests und Testdaten). */
+function rm_bild_aus_daten(string $daten, ?int $kontoId): array
+{
+    $info = @getimagesizefromstring($daten);
+    if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG], true) || $info[0] * $info[1] > 40_000_000) {
+        throw new RuntimeException('Bitte ein Bild als JPG oder PNG hochladen.');
+    }
+    $bild = @imagecreatefromstring($daten);
+    if ($bild === false) {
+        throw new RuntimeException('Das Bild lässt sich nicht lesen.');
+    }
+    $w = imagesx($bild);
+    $h = imagesy($bild);
+    $f = min(1, RM_BILD_MAX_KANTE / max($w, $h));
+    $nw = max(1, (int)round($w * $f));
+    $nh = max(1, (int)round($h * $f));
+    $png = $info[2] === IMAGETYPE_PNG;
+    $ziel = imagecreatetruecolor($nw, $nh);
+    if ($png) {
+        imagealphablending($ziel, false);
+        imagesavealpha($ziel, true);
+    }
+    imagecopyresampled($ziel, $bild, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    $name = 'mail-' . bin2hex(random_bytes(8)) . ($png ? '.png' : '.jpg');
+    $ok = $png ? imagepng($ziel, foto_ordner() . '/' . $name, 6) : imagejpeg($ziel, foto_ordner() . '/' . $name, 85);
+    imagedestroy($bild);
+    imagedestroy($ziel);
+    if (!$ok) {
+        throw new RuntimeException('Das Bild konnte nicht gespeichert werden.');
+    }
+    db_ausfuehren('INSERT INTO rundmail_bild (datei, typ, breite, hoehe, erstellt_von, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)', [$name, $png ? 'png' : 'jpeg', $nw, $nh, $kontoId, db_jetzt()]);
+    return rm_bild((int)db()->lastInsertId());
+}
+
+/** Bilder, die nach einem Tag in keinem Mailing vorkommen, löschen. */
+function rm_bilder_aufraeumen(int $jetzt): int
+{
+    $genutzt = [];
+    foreach (db_zeilen('SELECT html FROM rundmail') as $r) {
+        preg_match_all('#/team/mailings/bild\?id=(\d+)#', (string)$r['html'], $m);
+        foreach ($m[1] as $id) {
+            $genutzt[(int)$id] = true;
+        }
+    }
+    $n = 0;
+    foreach (db_zeilen('SELECT id, datei FROM rundmail_bild WHERE erstellt_am < ?', [gmdate('Y-m-d H:i:s', $jetzt - 86400)]) as $b) {
+        if (!isset($genutzt[(int)$b['id']])) {
+            @unlink(foto_ordner() . '/' . basename($b['datei']));
+            db_ausfuehren('DELETE FROM rundmail_bild WHERE id = ?', [$b['id']]);
+            $n++;
+        }
+    }
+    return $n;
+}

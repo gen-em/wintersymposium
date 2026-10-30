@@ -10,7 +10,7 @@ declare(strict_types=1);
  *   {"art":"kopf", format, version, migration, erstellt, anlass}
  *   {"art":"tabelle", name, ddl, spalten}       – Aufbau (SHOW CREATE TABLE)
  *   {"art":"zeilen", name, daten: [[…], …]}      – bis zu 500 Zeilen je Block
- *   {"art":"datei", ordner, name, inhalt}        – Fotos der Dozierenden (base64)
+ *   {"art":"datei", ordner, name, inhalt}        – Fotos der Dozierenden und Bilder der Mailings (base64)
  *   {"art":"ende", tabellen, zeilen}             – fehlt sie, ist die Datei unvollständig
  * Ohne Inhalt gesichert: rate_limit und mail_ausgang (kein erneuter Versand).
  *
@@ -105,7 +105,7 @@ function sicherung_anlegen(string $anlass, ?int $kontoId = null): string
             $schreib(['art' => 'zeilen', 'name' => $tab, 'daten' => $block]);
         }
     }
-    foreach (glob(foto_ordner() . '/dozent-*.jpg') ?: [] as $f) {
+    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.png') ?: []) as $f) {
         $schreib(['art' => 'datei', 'ordner' => 'bilder', 'name' => basename($f), 'inhalt' => base64_encode((string)file_get_contents($f))]);
     }
     $schreib(['art' => 'ende', 'tabellen' => $tabellen, 'zeilen' => $zeilen]);
@@ -176,7 +176,7 @@ function sicherung_pruefen(string $name): ?string
             $tabellen[$d['name']] = true;
         } elseif ($art === 'zeilen' && !isset($tabellen[$d['name'] ?? ''])) {
             break;
-        } elseif ($art === 'datei' && (($d['ordner'] ?? '') !== 'bilder' || preg_match('/^dozent-\d+-[0-9a-f]{12}\.jpg$/', (string)($d['name'] ?? '')) !== 1)) {
+        } elseif ($art === 'datei' && (($d['ordner'] ?? '') !== 'bilder' || preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|mail-[0-9a-f]{16}\.(jpg|png))$/', (string)($d['name'] ?? '')) !== 1)) {
             break;
         } elseif ($art === 'ende') {
             $ende = true;
@@ -287,6 +287,7 @@ function testdaten_laden(?int $kontoId): string
         db_ausfuehren('DELETE FROM dozent');
         db_ausfuehren('DELETE FROM programm_stand');
         db_ausfuehren('DELETE FROM mail_ausgang');
+        db_ausfuehren('DELETE FROM rundmail');
         db_ausfuehren('DELETE FROM einstellung WHERE schluessel IN (' . implode(',', array_fill(0, count(VA_KATALOG), '?')) . ')', array_keys(VA_KATALOG));
     });
     anm_workshops(true);

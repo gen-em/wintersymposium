@@ -392,6 +392,86 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
 }
 
 /** Team-Bereich AP-5: Seiten, Person anlegen und ändern, Export, Texte, Protokoll, Betrieb. */
+/** Bild hochladen wie der Editor (multipart, CSRF im Kopf). */
+function http_bild_hochladen(string $basis, string $h, string $keks, string $csrf, string $datei): array
+{
+    $ch = curl_init($basis . '/team/mailings/bild');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => ['Host: ' . $h, 'X-CSRF: ' . $csrf],
+        CURLOPT_COOKIEFILE => $keks, CURLOPT_COOKIEJAR => $keks,
+        CURLOPT_POSTFIELDS => ['bild' => new CURLFile($datei, 'image/png', 'plan.png')],
+    ]);
+    $text = (string)curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    return ['status' => $status, 'json' => json_decode($text, true) ?? []];
+}
+
+function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Mailings und Team-Mails (AP-6)');
+    $GLOBALS['ws_team_konto'] = null;
+    team_anlegen(['vorname' => 'Rita', 'nachname' => 'Rundmail', 'email' => 'rita@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 5', 'efn' => '', 'beruf_sonstige' => '', 'essen' => 'egal'], true, false);
+    $r = http_anfrage($basis, 'GET', '/team/mailings', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'href="/team/mailings" aria-current="page"') && str_contains($r['text'], '+ Neues Mailing'), 'Reiter Mailings mit Übersicht');
+    pruefe(str_contains($r['kopf']['content-security-policy'] ?? '', "frame-src 'self'"), 'Seite erlaubt die Vorschau im eigenen iframe');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $b);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'id="rm-editor"') && str_contains($r['text'], 'name="html"') && str_contains($r['text'], '/assets/mailings.js') && str_contains($r['text'], 'Die Vorschau erscheint nach dem ersten Speichern'), 'Editor mit Schreibfeld und Textfeld ohne Skript');
+    $r = http_anfrage($basis, 'POST', '/team/mailings', $h, [], ['csrf' => $c, 'aktion' => 'speichern', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => '<p>Hallo {vorname},</p><script>x</script><p><a class="knopf" href="{link}">Ansehen</a></p>'], $b);
+    $id = (int)db_wert('SELECT MAX(id) FROM rundmail');
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/team/mailings?id=' . $id && !str_contains((string)db_wert('SELECT html FROM rundmail WHERE id = ?', [$id]), 'script'), 'Entwurf gespeichert und bereinigt');
+    $png = "$tmp/plan.png";
+    $g = imagecreatetruecolor(300, 150);
+    imagepng($g, $png);
+    imagedestroy($g);
+    $u = http_bild_hochladen($basis, $h, $b, $c, $png);
+    pruefe($u['status'] === 200 && ($u['json']['breite'] ?? 0) === 300 && str_starts_with($u['json']['url'] ?? '', '/team/mailings/bild?id='), 'Bild hochladen (Editor)');
+    pruefe(http_bild_hochladen($basis, $h, $b, 'falsch', $png)['status'] === 403, 'Hochladen ohne gültiges CSRF abgelehnt');
+    file_put_contents("$tmp/kein-bild.png", '<?php echo 1;');
+    pruefe(http_bild_hochladen($basis, $h, $b, $c, "$tmp/kein-bild.png")['status'] === 400, 'nur echte Bilder');
+    $r = http_anfrage($basis, 'GET', $u['json']['url'] ?? '/', $h, [], null, $b);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'image/png', 'Bild für das Team abrufbar');
+    pruefe(http_anfrage($basis, 'GET', $u['json']['url'] ?? '/', $h, [], null, "$tmp/kekse-niemand2.txt")['status'] === 303, 'Bild nicht öffentlich');
+    $html = '<p>Hallo {vorname},</p><p>{workshops}</p><p><img src="' . ($u['json']['url'] ?? '') . '" alt="Plan" data-breite="50"></p><p><a class="knopf" href="{link}">Ansehen</a></p>';
+    http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'speichern', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => $html], $b);
+    $r = http_anfrage($basis, 'GET', '/team/mailings?id=' . $id, $h, [], null, $b);
+    pruefe(str_contains($r['text'], '/team/mailings/vorschau?id=' . $id) && str_contains($r['text'], 'sandbox="allow-same-origin'), 'Vorschau im iframe (ohne Skripte)');
+    $r = http_anfrage($basis, 'GET', '/team/mailings/vorschau?id=' . $id, $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['kopf']['content-security-policy'] ?? '', "style-src 'unsafe-inline'") && !str_contains($r['kopf']['content-security-policy'] ?? '', 'script-src') && ($r['kopf']['x-frame-options'] ?? '') === 'SAMEORIGIN', 'Vorschau: eigene Richtlinie ohne Skripte, nur im eigenen Rahmen');
+    pruefe(str_contains($r['text'], 'Hallo ') && !str_contains($r['text'], '{vorname}') && str_contains($r['text'], 'width="272"') && str_contains($r['text'], '/impressum'), 'Vorschau mit Daten der ersten Person, Bild halbe Breite, Impressum');
+    $r = http_anfrage($basis, 'GET', '/team/mailings/empfaenger?auswahl=angemeldet&bg=', $h, [], null, $b);
+    $j = json_decode($r['text'], true);
+    $soll = count(rm_empfaenger('angemeldet'));
+    pruefe($r['status'] === 200 && ($j['zahl'] ?? -1) === $soll && $soll > 0, 'Empfängerzahl für den Editor');
+    pruefe(http_anfrage($basis, 'GET', '/team/mailings/empfaenger?auswahl=quatsch', $h, [], null, $b)['status'] === 400, 'unbekannte Auswahl: 400');
+    $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'test', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => $html], $b);
+    $tm = http_mail_an($tmp, 'betrieb@example.org', 20, '[Test] Hallo Erste');
+    pruefe($r['status'] === 303 && str_contains($tm, 'multipart/related') && str_contains($tm, 'Content-ID: <bild') && str_contains($tm, '/deine-anmeldung'), 'Testmail an mich: HTML mit Bild, {link} allgemein');
+    $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'planen', 'geplant' => '2020-01-01T10:00', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => $html], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Zeitpunkt in der Zukunft') && db_wert('SELECT status FROM rundmail WHERE id = ?', [$id]) === 'entwurf', 'Planen in der Vergangenheit abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'senden', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => $html], $b);
+    pruefe($r['status'] === 303 && db_wert('SELECT status FROM rundmail WHERE id = ?', [$id]) === 'versand' && (int)db_wert('SELECT empfaenger_zahl FROM rundmail WHERE id = ?', [$id]) === $soll, 'Senden: Mailing in der Warteschlange');
+    $erste = rm_empfaenger('angemeldet')[0]['email'] ?? '';
+    pruefe(preg_match('#/link\?t=[0-9a-f]{48}#', http_mail_an($tmp, $erste, 30, 'Ansehen')) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?id=' . $id, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Empfängerliste (' . $soll . ')') && str_contains($r['text'], 'Als neue Mail kopieren') && !str_contains($r['text'], 'id="rm-editor"'), 'Gesendetes Mailing: Archiv mit Empfängerliste, nicht mehr änderbar');
+    $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'speichern', 'betreff' => 'Geändert', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'postfach' => 'system'], $b);
+    pruefe(db_wert('SELECT betreff FROM rundmail WHERE id = ?', [$id]) === 'Hallo {vorname}', 'Gesendetes lässt sich nicht ändern');
+    $r = http_anfrage($basis, 'GET', '/team/mailings', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Hallo {vorname}') && (str_contains($r['text'], 'Wird gesendet') || str_contains($r['text'], 'Gesendet')), 'Übersicht zeigt das Mailing mit Status');
+    pruefe(str_contains((string)db_wert("SELECT text FROM audit WHERE art = 'mailing' ORDER BY id DESC LIMIT 1"), 'Mailing ' . $id), 'Senden steht im Protokoll');
+    // Team: Passwort vergessen per Mail (AP-6)
+    $k = "$tmp/kekse-vergessen.txt";
+    db_ausfuehren('DELETE FROM rate_limit');
+    $r = http_anfrage($basis, 'GET', '/konto/passwort-vergessen', $h, [], null, $k);
+    http_anfrage($basis, 'POST', '/konto/passwort-vergessen', $h, [], ['csrf' => http_csrf($r['text']), 'email' => 'betrieb@example.org'], $k);
+    $pm = http_mail_an($tmp, 'betrieb@example.org', 20, 'zweiter Faktor bleibt');
+    pruefe(preg_match('#/einrichten\?t=[A-Za-z0-9_-]{40,}#', $pm) === 1 && str_contains($pm, 'zweiter Faktor bleibt'), 'Team: Passwort vergessen schickt einen Link per Mail');
+    pruefe(!str_contains(http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k)['text'], 'ein Betreiber schickt dir'), 'Hinweis „Betreiber schickt Link“ entfernt');
+}
+
 function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Team-Bereich (AP-5)');
@@ -516,10 +596,10 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'anlegen', 'name' => 'Anna Admin', 'email' => 'anna@example.org', 'rolle' => 'admin'], $b);
     pruefe($r['status'] === 303, 'Konto angelegt');
     $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
-    $link = preg_match('#/einrichten\?t=([A-Za-z0-9_-]+)#', $r['text'], $m) === 1 ? $m[1] : '';
-    pruefe($link !== '' && str_contains($r['text'], 'Einrichtung offen'), 'Einrichtungslink einmal angezeigt');
-    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
-    pruefe(!str_contains($r['text'], '/einrichten?t='), 'Link beim Neuladen nicht mehr sichtbar');
+    pruefe(!str_contains($r['text'], '/einrichten?t=') && str_contains($r['text'], 'Einladung an anna@example.org geschickt') && str_contains($r['text'], 'Einrichtung offen'), 'Einladung per Mail, Link nicht angezeigt (AP-6)');
+    $mail = http_mail_an($tmp, 'anna@example.org', 20, 'Einladung in den Team-Bereich');
+    $link = preg_match('#/einrichten\?t=([A-Za-z0-9_-]+)#', $mail, $m) === 1 ? $m[1] : '';
+    pruefe($link !== '' && str_contains($mail, 'Rolle „Admin“'), 'Einladungsmail mit Einrichtungslink und Rolle');
     $a = "$tmp/kekse-admin.txt";
     $r = http_anfrage($basis, 'GET', '/einrichten?t=falsch' . str_repeat('x', 40), $h, [], null, $a);
     pruefe($r['status'] === 404, 'falscher Link abgelehnt');
@@ -615,6 +695,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     konto_http_tests($basis, $h, $tmp, $pw);
     daten_http_tests($basis, $h, $tmp, $b, [$codes[5], $codes[6]]);
     team_ap5_http_tests($basis, $h, $tmp, $b);
+    team_ap6_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
