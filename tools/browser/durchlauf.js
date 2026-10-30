@@ -356,6 +356,33 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await ausloggen(p);
       notiere(engine, 'desktop-breit', 'konto', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
 
+      // ---- Passkeys (E-55): Chromium mit simuliertem Gerät (WebAuthn über CDP); Firefox/WebKit: Knopf sichtbar ----
+      // Passkeys brauchen eine Domain: localhost statt 127.0.0.1
+      const lokal = basis.replace('127.0.0.1', 'localhost');
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(lokal + '/einloggen');
+      notiere(engine, 'desktop-breit', 'passkey', 'Knopf „Mit Passkey einloggen“ sichtbar', await p.isVisible('[data-passkey-los]'));
+      if (engine === 'chromium') {
+        const cdp = await ctx.newCDPSession(p);
+        await cdp.send('WebAuthn.enable');
+        const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+        await p.fill('#email', vor.lea.email); await p.fill('#passwort', vor.lea.passwort);
+        await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=passwort]) button')]);
+        await p.goto(lokal + '/konto');
+        await p.fill('#pk-bez', 'Browser-Test'); await p.fill('#pk-pw', vor.lea.passwort);
+        await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-anlegen] button[type=submit]')]);
+        await p.waitForLoadState('load');
+        notiere(engine, 'desktop-breit', 'passkey', 'Passkey anlegen (simuliertes Gerät mit Fingerabdruck)', ((await p.textContent('#passkeys')) || '').includes('Browser-Test'), ((await p.textContent('[data-passkey-meldung]').catch(() => '')) || '') + ' ' + p.url());
+        await p.locator('#passkeys').screenshot({ path: path.join(AUS, `${engine}-desktop-breit-passkeys.png`) });
+        await ausloggen(p);
+        await p.goto(lokal + '/einloggen');
+        await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-los]')]);
+        await p.waitForLoadState('load');
+        notiere(engine, 'desktop-breit', 'passkey', 'Einloggen mit Passkey ohne Passwort', new URL(p.url()).pathname === '/deine-anmeldung' && (await p.textContent('body')).includes('Hallo Lea.'), p.url());
+        await ausloggen(p);
+        await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+      }
+
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/einloggen');

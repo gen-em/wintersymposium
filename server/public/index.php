@@ -35,6 +35,7 @@ const ROUTEN = [
     '/team' => 'team',
     '/team/profil' => 'team_profil_alt',
     '/konto/zweitfaktor' => 'konto_zweitfaktor',
+    '/passkey' => 'passkey',
     '/team/konten' => 'team_konten',
     '/team/einstellungen' => 'team_einstellungen',
     '/team/programm' => 'team_programm',

@@ -12,6 +12,12 @@ declare(strict_types=1);
  */
 
 team_sitzung();
+// Passkey als zweiter Faktor beim ersten Login eingerichtet (E-55): Wiederherstellungscodes einmal zeigen
+if (isset($_GET['codes']) && is_array($_SESSION['pk_codes'] ?? null) && anmeldung_konto() !== null) {
+    $pkCodes = $_SESSION['pk_codes'];
+    unset($_SESSION['pk_codes']);
+    codes_seite($pkCodes);
+}
 if (anmeldung_konto() !== null) {
     umleiten('/team');
 }
@@ -143,6 +149,7 @@ if ($halb !== null && !$zs['eingerichtet'] && !$mailWahl) {
     $skripte = ['vendor/qrcode.js', 'qr.js'];
 }
 
+$skripte[] = 'passkey.js'; // Passkeys (E-55)
 seite_kopf('Einloggen', ['nav' => false, 'skripte' => $skripte]);
 echo '<div class="innen seitenkopf"><p class="kicker">Konto</p><h1 class="titel">Einloggen</h1></div><div class="innen schmal">';
 echo meldung_html(flash_holen()) . fehler_html($fehler);
@@ -157,6 +164,12 @@ if ($halb === null): ?>
     <input id="passwort" name="passwort" type="password" required autocomplete="current-password">
     <button type="submit" class="knopf">Weiter</button>
 </form>
+<div class="pk-login" data-passkey-login hidden>
+    <p class="trenner-text"><span>oder</span></p>
+    <button type="button" class="knopf zweit pk-knopf" data-passkey-los><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M11.5 11.5 21 21m-4-4 2.5-2.5M14.5 14.5 17 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>Mit Passkey einloggen</button>
+    <p class="meta klein">Ohne Passwort, mit Fingerabdruck, Gesicht oder Geräte-PIN – wenn du unter „Mein Konto“ einen Passkey angelegt hast.</p>
+    <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
+</div>
 <p class="meta klein"><a href="/konto/passwort-vergessen">Passwort vergessen?</a> · Noch kein Konto? <a href="/konto/neu">Konto anlegen</a></p>
 <?php elseif ($mailWahl): ?>
 <form method="post" action="/einloggen" class="formular">
@@ -177,9 +190,12 @@ if ($halb === null): ?>
     <input type="hidden" name="aktion" value="code">
     <?php if ($zs['mail']): ?>
     <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt (gilt 10 Minuten). <?= $zs['an'] ? 'Der Code aus deiner Authenticator-App geht auch, ebenso' : 'Es geht auch' ?> ein Wiederherstellungscode.</p>
+    <?php elseif (!$zs['an']): ?>
+    <p>Hallo <?= e($halb['name']) ?>. Bestätige mit deinem Passkey – oder gib einen deiner Wiederherstellungscodes ein.</p>
     <?php else: ?>
     <p>Hallo <?= e($halb['name']) ?>. Gib den sechsstelligen Code aus deiner Authenticator-App ein – oder einen deiner Wiederherstellungscodes.</p>
     <?php endif; ?>
+
     <label for="totp">Code</label>
     <input id="totp" name="totp" type="text" required inputmode="text" autocomplete="one-time-code" maxlength="12" autofocus>
     <button type="submit" class="knopf">Einloggen</button>
@@ -187,18 +203,35 @@ if ($halb === null): ?>
 <?php if ($zs['mail']): ?>
 <form method="post" action="/einloggen" class="abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="mailcode"><button type="submit" class="knopf zweit">Neuen Code schicken</button></form>
 <?php endif; ?>
+<?php if ($zs['passkeys'] > 0): ?>
+<div class="pk-login" data-passkey-login hidden>
+    <p class="trenner-text"><span>oder</span></p>
+    <button type="button" class="knopf pk-knopf" data-passkey-los>Mit Passkey bestätigen</button>
+    <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
+</div>
+<?php endif; ?>
 <?php else: ?>
 <div class="text">
     <p>Hallo <?= e($halb['name']) ?>. Für den Team-Bereich brauchst du einen zweiten Nachweis nach dem Passwort (Zwei-Faktor-Authentifizierung). Du hast die Wahl:</p>
 </div>
+<div class="kasten zf-wahl" data-passkey-anlage data-einrichtung hidden>
+    <p class="kicker">Möglichkeit 1 (am einfachsten und sichersten)</p>
+    <h2 class="zwischen">Passkey</h2>
+    <p>Dein Handy oder Computer wird zum Schlüssel: Fingerabdruck, Gesicht oder Geräte-PIN genügt. Danach loggst du dich damit ganz ohne Passwort ein.</p>
+    <form class="formular" data-passkey-anlegen>
+        <label for="pk-bez">Name für den Passkey (freiwillig)</label><input id="pk-bez" name="bezeichnung" type="text" maxlength="40" placeholder="z. B. Handy" autocomplete="off">
+        <button type="submit" class="knopf">Passkey anlegen</button>
+        <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
+    </form>
+</div>
 <div class="kasten zf-wahl">
-    <p class="kicker">Möglichkeit 1</p>
+    <p class="kicker">Möglichkeit 2</p>
     <h2 class="zwischen">Code per E-Mail</h2>
     <p>Bei jedem Einloggen schicken wir dir einen Code an <?= e($halb['email']) ?>. Einfach, aber nur so sicher wie dein Postfach.</p>
     <form method="post" action="/einloggen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="mail_waehlen"><button type="submit" class="knopf zweit">Code per E-Mail nutzen</button></form>
 </div>
 <div class="text abstand-oben-klein">
-    <p class="kicker">Möglichkeit 2 (sicherer)</p>
+    <p class="kicker">Möglichkeit 3</p>
     <p><strong>Authenticator-App</strong> – einmalig einrichten:</p>
     <ol>
         <li>Öffne eine Authenticator-App auf deinem Handy (z. B. Aegis, 2FAS, Google Authenticator, Microsoft Authenticator oder den Passwortmanager).</li>

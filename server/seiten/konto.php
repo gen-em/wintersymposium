@@ -87,6 +87,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             }
             $fehler['email'] = $f;
             break;
+        case 'pk_entfernen':
+            // Passkey entfernen (E-55); Team-Konten behalten immer einen zweiten Faktor
+            $f = pk_entfernen($id, (int)($_POST['pk'] ?? 0));
+            flash_setzen($f === null ? 'ok' : 'fehler', $f ?? 'Passkey entfernt.');
+            umleiten('/konto#passkeys');
+        case 'pk_umbenennen':
+            pk_umbenennen($id, (int)($_POST['pk'] ?? 0), (string)($_POST['bezeichnung'] ?? ''));
+            flash_setzen('ok', 'Passkey umbenannt.');
+            umleiten('/konto#passkeys');
         case 'loeschen':
             if ($team) {
                 umleiten('/konto'); // Team-Konten löscht ein Betreiber
@@ -114,7 +123,7 @@ $gruppen = va_liste('berufsgruppen');
 $namen = $a !== null ? ['vorname' => $a['vorname'], 'nachname' => $a['nachname']] : tk_namen($k);
 $profil = $a ?? $k;
 
-seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
+seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js', 'passkey.js']]);
 ?>
 <div class="innen form-kopf">
     <p class="kicker">Mein Konto</p>
@@ -189,6 +198,42 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
             </dl>
             <div class="aktionen abstand"><a class="knopf zweit" href="/konto?aendern=profil">Profil bearbeiten</a></div>
         </div>
+        <?php $pks = pk_liste($id); $pkHier = pk_ursprung(); ?>
+        <div class="kasten" id="passkeys">
+            <h2 class="zwischen klein-zwischen">Passkeys</h2>
+            <p class="meta klein">Mit einem Passkey loggst du dich ohne Passwort ein: Handy oder Computer sind der Schlüssel, entsperrt mit Fingerabdruck, Gesicht oder Geräte-PIN.<?= $team ? ' Für dein Team-Konto zählt ein Passkey als zweiter Faktor.' : ' Freiwillig.' ?></p>
+            <?php if ($pks === []): ?><p class="meta">Noch kein Passkey.</p><?php else: ?>
+            <ul class="pk-liste">
+            <?php foreach ($pks as $p): $name = $p['bezeichnung'] !== '' ? $p['bezeichnung'] : 'Passkey vom ' . datum_text(substr((string)$p['erstellt_am'], 0, 10)); ?>
+                <li><div><strong><?= e($name) ?></strong><span class="meta klein">angelegt <?= e(datum_zeit_text($p['erstellt_am'])) ?> · <?= $p['zuletzt_am'] !== null ? 'zuletzt benutzt ' . e(datum_zeit_text($p['zuletzt_am'])) : 'noch nicht benutzt' ?><?= $pkHier !== null && $p['rp_id'] !== $pkHier['rp_id'] ? ' · gilt nur unter ' . e($p['rp_id']) : '' ?></span></div>
+                    <div class="pk-aktionen">
+                        <details class="bestaetigen" data-art="lila" data-titel="Passkey umbenennen"><summary class="klein-link">Umbenennen</summary>
+                            <form method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="pk_umbenennen"><input type="hidden" name="pk" value="<?= (int)$p['id'] ?>">
+                                <label for="pk-name-<?= (int)$p['id'] ?>">Neuer Name</label><input id="pk-name-<?= (int)$p['id'] ?>" name="bezeichnung" type="text" maxlength="40" value="<?= e($p['bezeichnung']) ?>">
+                                <button type="submit" class="knopf">Speichern</button></form>
+                        </details>
+                        <details class="bestaetigen" data-titel="Passkey entfernen?"><summary class="klein-link">Entfernen</summary>
+                            <form method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="pk_entfernen"><input type="hidden" name="pk" value="<?= (int)$p['id'] ?>">
+                                <p>„<?= e($name) ?>“ gilt danach nicht mehr. Lösch ihn auch im Passwortmanager bzw. auf dem Gerät.</p>
+                                <button type="submit" class="knopf gefahr">Ja, entfernen</button></form>
+                        </details>
+                    </div></li>
+            <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+            <?php if ($pkHier !== null): ?>
+            <div data-passkey-anlage hidden>
+                <form class="form" data-passkey-anlegen>
+                    <input type="email" name="email" value="<?= e($k['email']) ?>" autocomplete="username webauthn" hidden>
+                    <div class="feld"><label for="pk-bez">Name (freiwillig, z. B. „Handy“)</label><input id="pk-bez" name="bezeichnung" type="text" maxlength="40" autocomplete="off"></div>
+                    <div class="feld"><label for="pk-pw">Bestätigen mit deinem Passwort</label><input id="pk-pw" name="pw" type="password" autocomplete="current-password" required></div>
+                    <div><button class="knopf zweit" type="submit">Passkey hinzufügen</button></div>
+                    <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
+                </form>
+            </div>
+            <noscript><p class="meta klein">Passkeys brauchen JavaScript.</p></noscript>
+            <?php else: ?><p class="meta klein">Unter dieser Adresse gehen keine Passkeys (nur mit HTTPS und Domain).</p><?php endif; ?>
+        </div>
         <?php $np = nl_person_per_email((string)$k['email']); $abos = $np !== null ? nl_abos((int)$np['id']) : []; ?>
         <div class="kasten">
             <h2 class="zwischen klein-zwischen">Newsletter</h2>
@@ -209,6 +254,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
             <dl class="liste-def">
                 <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? '<span class="chip ok">eingerichtet</span>' : '<span class="chip offen">nicht eingerichtet</span>' ?></dd></div>
                 <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? '<span class="chip ok">an</span>' : '<span class="chip offen">aus</span>' ?></dd></div>
+                <div><dt>Passkeys</dt><dd><?= $zf['passkeys'] > 0 ? '<span class="chip ok">' . $zf['passkeys'] . '</span>' : '<span class="chip offen">keiner</span>' ?></dd></div>
                 <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig</dd></div>
             </dl>
             <div class="aktionen abstand"><a class="knopf zweit" href="/konto/zweitfaktor">Zwei-Faktor einstellen</a><a class="knopf zweit" href="/team">Zum Team-Bereich</a></div>

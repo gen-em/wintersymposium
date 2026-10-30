@@ -457,6 +457,27 @@ function migration_katalog(): array
                 "ALTER TABLE konto ADD COLUMN loesch_erinnert_am DATETIME NULL",
             ],
         ],
+        13 => [
+            'beschreibung' => 'Passkeys (O-14, E-55): öffentlicher Schlüssel, Zähler, Bezeichnung je Konto',
+            'sql' => [
+                "CREATE TABLE passkey (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    konto_id     INT UNSIGNED NOT NULL,
+                    rp_id        VARCHAR(253) NOT NULL,
+                    kennung      VARCHAR(1400) NOT NULL,
+                    kennung_hash CHAR(64)     NOT NULL,
+                    oeffentlich  TEXT         NOT NULL,
+                    alg          SMALLINT     NOT NULL,
+                    zaehler      INT UNSIGNED NOT NULL DEFAULT 0,
+                    bezeichnung  VARCHAR(40)  NOT NULL DEFAULT '',
+                    erstellt_am  DATETIME     NOT NULL,
+                    zuletzt_am   DATETIME     NULL,
+                    UNIQUE KEY uq_passkey_kennung (kennung_hash),
+                    KEY ix_passkey_konto (konto_id),
+                    CONSTRAINT fk_passkey_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

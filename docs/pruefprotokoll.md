@@ -23,6 +23,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | Rückmeldungen 30.10. | Navigation, Programm, Texte, Zwei-Faktor, Protokoll, Einstellungen, Dialog (E-51) | umgesetzt, Staging offen | lokal T-225 bis T-232 | Staging (siehe unten) |
 | Rückmeldungen 30.10. (2) | Programm: Löschen, Ziehen mit dem Finger, Termine, Dozierende je Termin, Blöcke (E-53) | umgesetzt, Staging offen | lokal T-233 bis T-237 | Staging (siehe unten) |
 | Editor, Konto, Navigation, Löschfrist | ein Editor, ein Konto, Personen-Menü, Team-Navigation A, Löschfrist (E-54) | umgesetzt, Staging offen | lokal T-238 bis T-242 | Staging (siehe unten) |
+| Passkeys | Einloggen ohne Passwort, Passkey als zweiter Faktor (E-55) | umgesetzt, Staging offen | lokal T-243 bis T-246 | Staging mit echten Geräten (siehe unten) |
 | AP-7 | Newsletter | umgesetzt, Staging offen | lokal T-170 bis T-174 | Staging (siehe unten); Datenschutzerklärung ergänzen |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
@@ -149,6 +150,12 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-241, ap: E-54, was: "Team-Navigation Variante A", wie: "sechs Bereiche, Unterseiten angehängt; Team-Konten und Betrieb nur für Betreiber; alte Adresse /team/profil führt zu /konto", status: "lokal bestanden (Bildschirmfotos angesehen)"}
 - {id: T-242, ap: E-54, was: "Löschfrist für Konten", wie: "14 Monate ohne Login: Erinnerung 30 Tage vorher (einmal), Löschung frühestens 30 Tage nach der Erinnerung, Login setzt zurück, Team-Konten ausgenommen, Anmeldung bleibt", status: "lokal bestanden (mit vorgestellter Uhr)"}
 
+# Passkeys (E-55)
+- {id: T-243, ap: E-55, was: "Passkey anlegen", wie: "Mein Konto: Name, Passwort, „Passkey hinzufügen“ → Gerät fragt Fingerabdruck/PIN → Passkey in der Liste; ohne UV, mit fremdem Ursprung, fremder rpId, zusätzlichem COSE-Feld oder Punkt außerhalb der Kurve abgelehnt", status: "lokal bestanden (Software-Authenticator; Chromium mit simuliertem Gerät)"}
+- {id: T-244, ap: E-55, was: "Einloggen mit Passkey", wie: "Login-Seite „Mit Passkey einloggen“ → ohne Passwort eingeloggt; Team direkt im Team-Bereich (ersetzt Passwort und zweiten Faktor); zurückgelaufener Zähler, veränderte Signatur, fremder Ursprung abgelehnt", status: "lokal bestanden; mit echtem Handy/Laptop auf Staging prüfen"}
+- {id: T-245, ap: E-55, was: "Passkey als einziger zweiter Faktor (Team)", wie: "erster Team-Login: Passkey als erste Wahl → Wiederherstellungscodes; letzter zweiter Faktor nicht entfernbar; Zurücksetzen durch Betreiber entfernt die Passkeys", status: "lokal bestanden"}
+- {id: T-246, ap: E-55, was: "Passkeys verwalten", wie: "umbenennen, entfernen (Dialog), Anzeige „zuletzt benutzt“; Konto gelöscht → Passkeys weg", status: "lokal bestanden"}
+
 # AP-7 Newsletter
 - {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: "lokal bestanden (unbestätigt kein Versand; Bestätigung mit Zeitpunkt und Fassung, Wortlaut gespeichert; Link gilt einmal)"}
 - {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: "lokal bestanden (Abmeldelink und List-Unsubscribe mit One-Click per POST ohne Login, Person sofort gelöscht); in Gmail/Outlook auf Staging prüfen"}
@@ -210,6 +217,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-243 bis T-246 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 668 ok, 0 Fehler (Bibliothek mit Software-Authenticator: ES256 und RS256 anlegen und einloggen, Herausforderung einmalig und je Konto, ohne UV, fremder Ursprung, fremde rpId, veränderte Signatur, Zähler zurück, COSE mit privatem Teil, Punkt außerhalb der Kurve abgelehnt, keine IP-Adresse; Team: Passkey als zweiter Faktor, letzter nicht entfernbar, Zurücksetzen entfernt Passkeys; HTTP: Login-Seite, Mein Konto, Anlegen nur mit Passwort, ohne CSRF abgelehnt, Anlegen und Einloggen über den Endpunkt, erster Team-Login mit Passkey und Codes, Team-Login nur mit Passkey); Browser-Durchlauf 5289 ok, 0 Fehler (Chromium: simuliertes Gerät mit Fingerabdruck – anlegen, ausloggen, mit Passkey einloggen; Firefox und WebKit: Knopf sichtbar; Seiten in allen Breiten) | Staging |
 | T-238 bis T-242 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 629 ok, 0 Fehler (Bereiniger: fett/kursiv, Skripte, Attribute, Links, Listen, Klartext, Inline, Bilder, Abschnitte; Löschfrist mit vorgestellter Uhr; HTTP: Team-Navigation, Personen-Menü, Mein Konto für Team, eingeloggt ohne Login-Feld, Team-Mitglied meldet sich an, Ausloggen beendet alles, Rolle angehoben → zweiter Faktor, Programm-Beschreibung bereinigt); Browser-Durchlauf 5268 ok, 0 Fehler (Editor: Fett an und aus, nummerierte Liste, Titel mit Editor; Mailing-Editor; alle Bereiche und Unterseiten in allen Breiten; Personen-Menü; Mein Konto und Zwei-Faktor für Team) | Staging |
 | T-233 bis T-237 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 609 ok, 0 Fehler (Fallbesprechung im Block, Vortrag ohne Zuordnung bleibt draußen, Punkt im Block schiebt die Hauptspur nicht, Block nimmt Zugeordnete mit, Verwerfen; Dozierende je Termin: laden, prüfen über Zeilen-Schlüssel, speichern, veröffentlichen, verwerfen); Browser-Durchlauf 4542 ok, 0 Fehler (Löschen-Dialog mittig und wirksam, Einfügelinie, Ziehen mit der Maus in allen Engines, Finger-Ziehen auf dem Handy, Termin-Zeile entfernen, abweichende Dozierende im Editor und im Popup, Fallbesprechung im Zeitraster und in der Handy-Liste) | Staging |
 | T-170 bis T-174 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 599 ok, 0 Fehler (Bibliothek: Listen, Anfrage, Bestätigen, Versand an zwei Listen mit List-Unsubscribe, Abmelden, Verwalten, Aufräumen, Häkchen bei der Anmeldung, CSV; HTTP: /newsletter mit Spamschutz, Bestätigen nur per Knopf, Verwalten, One-Click-Abmelden, Team-Reiter, Einladen, Löschen, Export, Empfängerart im Editor); Browser-Durchlauf 4371 ok, 0 Fehler (Newsletter-Seiten in allen Breiten, Reiter Newsletter, Empfängerart im Editor) | Staging |
@@ -256,6 +264,16 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für Passkeys (nach Merge auf Staging, mit echten Geräten)
+
+Lokal geprüft mit einem Software-Authenticator und Chromium mit simuliertem Gerät. Nicht geprüft: echte Geräte (iPhone/Safari, Android, Windows Hello, Passwortmanager) – das geht nur auf Staging.
+
+1. Einloggen mit Passwort → Mein Konto → Passkeys: Name „Handy“, Passwort, „Passkey hinzufügen“ → das Handy fragt nach Fingerabdruck/Gesicht → Passkey steht in der Liste.
+2. Ausloggen → Einloggen → „Mit Passkey einloggen“ → Fingerabdruck → du bist ohne Passwort und ohne Code im Team-Bereich.
+3. Dasselbe am Laptop (Windows Hello, Touch ID oder Passwortmanager wie Bitwarden).
+4. Einen Passkey umbenennen und entfernen; den letzten zweiten Faktor zu entfernen muss abgelehnt werden, solange keine App und kein E-Mail-Code an sind.
+5. Ein neues Team-Konto anlegen und beim ersten Login „Passkey“ wählen → danach erscheinen die Wiederherstellungscodes.
 
 ### Noch zu prüfen für Editor, Konto, Navigation, Löschfrist (nach Merge auf Staging)
 

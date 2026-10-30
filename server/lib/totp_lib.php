@@ -148,19 +148,21 @@ function totp_zustand(int $kontoId): array
     $offen = (int)db_wert('SELECT COUNT(*) FROM konto_code WHERE konto_id = ? AND benutzt_am IS NULL', [$kontoId]);
     $an = $z !== null && $z['totp_seit'] !== null;
     $mail = $z !== null && (int)$z['zweitfaktor_mail'] === 1;
+    $pk = pk_zahl($kontoId);
     return [
         'an' => $an,
         'mail' => $mail,
-        'eingerichtet' => $an || $mail,
+        'passkeys' => $pk,
+        'eingerichtet' => $an || $mail || $pk > 0,
         'angefangen' => $z !== null && $z['totp_seit'] === null && (int)$z['g'] === 1,
         'codes_offen' => $offen,
     ];
 }
 
-/** Ist ein zweiter Faktor eingerichtet (App oder E-Mail-Code)? Für Konto-Zeilen aus der Datenbank. */
+/** Ist ein zweiter Faktor eingerichtet (App, E-Mail-Code oder Passkey, E-55)? Für Konto-Zeilen aus der Datenbank. */
 function zweitfaktor_da(array $k): bool
 {
-    return ($k['totp_seit'] ?? null) !== null || (int)($k['zweitfaktor_mail'] ?? 0) === 1;
+    return ($k['totp_seit'] ?? null) !== null || (int)($k['zweitfaktor_mail'] ?? 0) === 1 || pk_zahl((int)($k['id'] ?? 0)) > 0;
 }
 
 /* ---- E-Mail-Code (Admin 2026-10-30: für alle frei wählbar) --------------- */
@@ -328,6 +330,9 @@ function totp_zuruecksetzen(int $kontoId, string $wer, ?int $durch = null): void
     db_transaktion(function () use ($kontoId): void {
         db_ausfuehren('UPDATE konto SET totp_geheimnis = NULL, totp_seit = NULL, totp_schritt = NULL, zweitfaktor_mail = 0, mailcode_hash = NULL, mailcode_bis = NULL, sitzung_version = sitzung_version + 1 WHERE id = ?', [$kontoId]);
         db_ausfuehren('DELETE FROM konto_code WHERE konto_id = ?', [$kontoId]);
+        if (db_tabelle_da('passkey')) {
+            db_ausfuehren('DELETE FROM passkey WHERE konto_id = ?', [$kontoId]); // Passkeys gehören zum zweiten Faktor (E-55)
+        }
     });
     audit_schreiben('zweitfaktor', 'Zweiter Faktor zurückgesetzt (' . $wer . ') für Konto ' . $kontoId, $durch);
 }
