@@ -569,7 +569,7 @@ function rm_job(int $jetzt): array
          AND NOT EXISTS (SELECT 1 FROM mail_ausgang m WHERE m.rundmail_id = r.id AND m.status IN ('offen','sendet'))"
     )->rowCount();
     $erg['archiv'] = db_ausfuehren('DELETE e FROM rundmail_empfaenger e JOIN rundmail r ON r.id = e.rundmail_id WHERE r.loeschen_ab IS NOT NULL AND r.loeschen_ab <= ?', [gmdate('Y-m-d', $jetzt)])->rowCount();
-    $erg['bilder'] = rm_bilder_aufraeumen($jetzt);
+    $erg['bilder'] = rm_bilder_aufraeumen($jetzt) + text_bilder_aufraeumen($jetzt);
     return $erg;
 }
 
@@ -587,22 +587,27 @@ function rm_bild(int $id): ?array
  */
 function rm_bild_speichern(array $upload, int $kontoId): array
 {
-    if (!foto_moeglich()) {
-        throw new RuntimeException('Bilder werden auf diesem Server nicht unterstützt (PHP-Erweiterung GD fehlt).');
-    }
-    $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > RM_BILD_MAX_BYTES) {
-        throw new RuntimeException('Das Bild ist zu groß (höchstens 10 MB).');
-    }
-    if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
-        throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
-    }
-    return rm_bild_aus_daten((string)file_get_contents((string)$upload['tmp_name']), $kontoId);
+    return rm_bild_aus_daten(bild_upload_lesen($upload), $kontoId);
 }
 
 /** Bilddaten verarbeiten (auch für Tests und Testdaten). */
 function rm_bild_aus_daten(string $daten, ?int $kontoId): array
 {
+    $b = bild_verkleinert_speichern($daten, 'mail');
+    db_ausfuehren('INSERT INTO rundmail_bild (datei, typ, breite, hoehe, erstellt_von, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)', [$b['datei'], $b['typ'], $b['breite'], $b['hoehe'], $kontoId, db_jetzt()]);
+    return rm_bild((int)db()->lastInsertId());
+}
+
+/**
+ * Bild prüfen (JPG/PNG), auf höchstens 1200 px verkleinern, neu schreiben
+ * (ohne Metadaten) und als <praefix>-<16 hex>.jpg|png in var/bilder ablegen.
+ * Für Mailings (mail-) und Texte der Webseite (text-). Wirft RuntimeException.
+ */
+function bild_verkleinert_speichern(string $daten, string $praefix): array
+{
+    if (!foto_moeglich()) {
+        throw new RuntimeException('Bilder werden auf diesem Server nicht unterstützt (PHP-Erweiterung GD fehlt).');
+    }
     $info = @getimagesizefromstring($daten);
     if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG], true) || $info[0] * $info[1] > 40_000_000) {
         throw new RuntimeException('Bitte ein Bild als JPG oder PNG hochladen.');
@@ -623,15 +628,48 @@ function rm_bild_aus_daten(string $daten, ?int $kontoId): array
         imagesavealpha($ziel, true);
     }
     imagecopyresampled($ziel, $bild, 0, 0, 0, 0, $nw, $nh, $w, $h);
-    $name = 'mail-' . bin2hex(random_bytes(8)) . ($png ? '.png' : '.jpg');
+    $name = $praefix . '-' . bin2hex(random_bytes(8)) . ($png ? '.png' : '.jpg');
     $ok = $png ? imagepng($ziel, foto_ordner() . '/' . $name, 6) : imagejpeg($ziel, foto_ordner() . '/' . $name, 85);
     imagedestroy($bild);
     imagedestroy($ziel);
     if (!$ok) {
         throw new RuntimeException('Das Bild konnte nicht gespeichert werden.');
     }
-    db_ausfuehren('INSERT INTO rundmail_bild (datei, typ, breite, hoehe, erstellt_von, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)', [$name, $png ? 'png' : 'jpeg', $nw, $nh, $kontoId, db_jetzt()]);
-    return rm_bild((int)db()->lastInsertId());
+    return ['datei' => $name, 'typ' => $png ? 'png' : 'jpeg', 'breite' => $nw, 'hoehe' => $nh];
+}
+
+/** Hochgeladene Datei prüfen und lesen (gemeinsam für Mailings und Texte). */
+function bild_upload_lesen(array $upload): string
+{
+    $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > RM_BILD_MAX_BYTES) {
+        throw new RuntimeException('Das Bild ist zu groß (höchstens 10 MB).');
+    }
+    if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
+        throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
+    }
+    return (string)file_get_contents((string)$upload['tmp_name']);
+}
+
+/** Bild für einen Text der Webseite hochladen. Gibt den öffentlichen Pfad zurück. */
+function text_bild_speichern(array $upload, int $kontoId): string
+{
+    $b = bild_verkleinert_speichern(bild_upload_lesen($upload), 'text');
+    audit_schreiben('texte', 'Bild hochgeladen: ' . $b['datei'], $kontoId);
+    return '/bild/' . $b['datei'];
+}
+
+/** Text-Bilder, die nach einem Tag in keinem Text vorkommen, löschen. */
+function text_bilder_aufraeumen(int $jetzt): int
+{
+    $alle = db_tabelle_da('inhalt') ? implode("\n", array_column(db_zeilen('SELECT text FROM inhalt'), 'text')) : '';
+    $n = 0;
+    foreach (array_merge(glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: []) as $d) {
+        if (!str_contains($alle, '/bild/' . basename($d)) && filemtime($d) < $jetzt - 86400 && @unlink($d)) {
+            $n++;
+        }
+    }
+    return $n;
 }
 
 /** Bilder, die nach einem Tag in keinem Mailing vorkommen, löschen. */

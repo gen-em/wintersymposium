@@ -4,6 +4,8 @@ declare(strict_types=1);
 /*
  * Veranstaltungs-Einstellungen (AP-3 Schritt 2, R-11) für Admin und
  * Betreiber. Katalog und Prüfung: lib/veranstaltung_lib.php.
+ * Gesperrt, bis man „Entsperren“ wählt (Rückmeldung 2026-10-30: nichts aus
+ * Versehen ändern); nach dem Speichern wieder gesperrt.
  */
 
 $konto = team_tor();
@@ -27,7 +29,15 @@ $wert = function (string $k) use ($eingabe): string {
     return $eingabe !== null ? (string)($eingabe[$k] ?? '') : va_formularwert($k);
 };
 
+$offen = isset($_GET['bearbeiten']) || $eingabe !== null;
 team_seite_kopf($konto, 'Einstellungen', '/team/einstellungen');
+?>
+<div class="sperre <?= $offen ? 'offen' : 'zu' ?>" role="status">
+    <svg class="sperre-symbol" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="<?= $offen ? 'M8 11V7a4 4 0 0 1 7.5-2' : 'M8 11V7a4 4 0 0 1 8 0v4' ?>" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span class="sperre-text"><?= $offen ? '<strong>Entsperrt.</strong> Änderungen wirken nach dem Speichern sofort auf der Startseite und bei der Anmeldung.' : '<strong>Gesperrt.</strong> Damit nichts aus Versehen geändert wird – zum Bearbeiten entsperren.' ?></span>
+    <a class="knopf <?= $offen ? 'zweit' : '' ?> klein-knopf" href="/team/einstellungen<?= $offen ? '' : '?bearbeiten=1' ?>"><?= $offen ? 'Wieder sperren' : 'Entsperren' ?></a>
+</div>
+<?php
 if ($fehler !== []) {
     echo '<div class="meldung fehler" role="alert">Nicht gespeichert. Bitte die markierten Felder prüfen.</div>';
 }
@@ -35,7 +45,7 @@ if ($fehler !== []) {
 <form method="post" action="/team/einstellungen" class="einstellungen" novalidate>
     <?= csrf_feld() ?>
     <?php foreach (VA_GRUPPEN as $g => [$gTitel, $gHilfe]): ?>
-    <fieldset class="kasten gruppe">
+    <fieldset class="kasten gruppe"<?= $offen ? '' : ' disabled' ?>>
         <legend class="zwischen"><?= e($gTitel) ?></legend>
         <p class="meta klein"><?= e($gHilfe) ?></p>
         <div class="felder">
@@ -63,7 +73,7 @@ if ($fehler !== []) {
     </fieldset>
     <?php endforeach; ?>
     <p class="meta klein">Zeiten in Ortszeit (Deutschland). Stichtage gelten bis einschließlich des genannten Tages.</p>
-    <button type="submit" class="knopf">Einstellungen speichern</button>
+    <?php if ($offen): ?><button type="submit" class="knopf">Einstellungen speichern</button><?php endif; ?>
 </form>
 <?php
 team_seite_fuss();

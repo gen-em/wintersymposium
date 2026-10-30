@@ -43,6 +43,11 @@ function sitzung_starten(string $art): void
     ini_set('session.sid_length', '48');
     ini_set('session.sid_bits_per_character', '6');
     session_name($a['name']);
+    // Nach team_gesehen() steht noch die ID der Team-Sitzung: durch die eigene ersetzen
+    if (session_id() !== '') {
+        $c = $_COOKIE[$a['name']] ?? null;
+        session_id(is_string($c) && preg_match('/^[A-Za-z0-9,-]{22,256}$/', $c) === 1 ? $c : session_create_id());
+    }
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',

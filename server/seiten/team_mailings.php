@@ -248,13 +248,13 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
                 <div class="planen-feld feld"><label for="geplant">Senden am</label><input id="geplant" name="geplant" type="datetime-local" value="<?= e((string)($_POST['geplant'] ?? $jetztLokal)) ?>"<?= $ungueltig('geplant') ?>><?= $fehlerFeld('geplant') ?>
                     <button class="knopf klein-knopf" type="submit" name="aktion" value="planen">Planen</button></div>
             </details>
-            <details class="bestaetigen senden"><summary class="knopf" id="rm-senden">An <?= count($empfaenger) ?> senden</summary>
+            <details class="bestaetigen senden" data-art="gruen" data-titel="Mailing senden?"><summary class="knopf" id="rm-senden">An <?= count($empfaenger) ?> senden</summary>
                 <div class="bestaetigen-feld"><p>Jetzt an <strong id="rm-zahl2"><?= count($empfaenger) ?></strong> Empfänger senden? Das lässt sich nur für noch nicht versandte Mails abbrechen.</p>
                     <button class="knopf" type="submit" name="aktion" value="senden">Ja, jetzt senden</button></div>
             </details>
         </div>
         <?php if ($id !== null): ?>
-        <details class="bestaetigen"><summary class="klein-link">Entwurf löschen</summary>
+        <details class="bestaetigen" data-titel="Entwurf löschen?"><summary class="klein-link">Entwurf löschen</summary>
             <div class="bestaetigen-feld"><p>Diesen Entwurf löschen?</p><button class="knopf gefahr" type="submit" name="aktion" value="loeschen">Ja, löschen</button></div>
         </details>
         <?php endif; ?>

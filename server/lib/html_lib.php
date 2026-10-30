@@ -40,7 +40,8 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         . '<meta name="theme-color" content="#001E3A">'
-        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', $opt['skripte'] ?? []))
+        // dialog.js zuerst: macht aus jeder Nachfrage den einheitlichen Dialog (Rückmeldung 2026-10-30)
+        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_merge(['dialog.js'], $opt['skripte'] ?? [])))
         . '</head><body class="akzent-' . $akzent . '">'
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'
@@ -49,26 +50,27 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
         . '</a>';
     if ($nav) {
-        $punkte = [['/#programm', 'Programm', '/'], ['/deine-anmeldung', 'Deine Anmeldung', '/deine-anmeldung']];
+        // Team-Login auch auf öffentlichen Seiten zeigen (nur lesen, ohne Ausloggen-Formular)
         $konto = $opt['konto'] ?? null;
-        if (is_array($konto)) {
-            $punkte[] = ['/team', 'Team-Bereich', '/team'];
-        }
+        $gesehen = $konto === null && !isset($opt['teilnehmer']) ? team_gesehen() : null;
         // Teilnehmende nach dem Einmal-Link (E-40); nur wenn schon eine Sitzung besteht
         $tn = !is_array($konto) ? ($opt['teilnehmer'] ?? anm_aus_keks()) : null;
         $tk = !is_array($konto) && session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
-        if (is_array($tk)) {
-            $punkte[] = ['/konto', 'Mein Konto', '/konto'];
+        $erkannt = is_array($tn) || is_array($tk) || is_array($konto) || is_array($gesehen);
+        $liste = '<li><a href="/#programm"' . ($aktiv === '/' ? ' aria-current="page"' : '') . '>Programm</a></li>';
+        // Rückmeldung 2026-10-30: erkannt „Meine Anmeldung“, sonst der grüne Knopf „Anmelden“ zur Einstiegsseite (E-42)
+        if ($erkannt) {
+            $liste .= '<li><a href="/deine-anmeldung"' . ($aktiv === '/deine-anmeldung' ? ' aria-current="page"' : '') . '>Meine Anmeldung</a></li>';
         }
-        $liste = '';
-        foreach ($punkte as [$href, $text, $pfad]) {
+        foreach (array_filter([is_array($konto) || is_array($gesehen) ? ['/team', 'Team-Bereich', '/team'] : null, is_array($tk) ? ['/konto', 'Mein Konto', '/konto'] : null]) as [$href, $text, $pfad]) {
             $liste .= '<li><a href="' . e($href) . '"' . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
         }
-        // Grüner Knopf „Anmelden“, solange die Anmeldung offen ist (E-42); nicht für Angemeldete
-        if (!is_array($tn) && !is_array($konto) && !is_array($tk) && anm_zeitraum() === 'offen') {
-            $liste .= '<li><a class="nav-anmelden" href="/anmelden"' . ($aktiv === '/anmelden' ? ' aria-current="page"' : '') . '>Anmelden</a></li>';
+        if (!$erkannt) {
+            $liste .= '<li><a class="nav-anmelden" href="/deine-anmeldung"' . (in_array($aktiv, ['/anmelden', '/deine-anmeldung'], true) ? ' aria-current="page"' : '') . '>Anmelden</a></li>';
         }
-        if (is_array($konto)) {
+        if (is_array($gesehen) && !is_array($tn) && !is_array($tk)) {
+            $liste .= '<li class="nav-person"><a class="nav-name" href="/team">' . e($gesehen['name']) . ' <small>' . e(ROLLEN[$gesehen['rolle']] ?? '') . '</small></a></li>';
+        } elseif (is_array($konto)) {
             $liste .= '<li class="nav-person"><span class="nav-name">' . e($konto['name']) . ' <small>' . e(ROLLEN[$konto['rolle']] ?? '') . '</small></span>'
                 . '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="nav-ab">Ausloggen</button></form></li>';
         } elseif (is_array($tn) || is_array($tk)) {
@@ -92,7 +94,6 @@ function seite_fuss(): void
         . '<li><a href="/impressum">Impressum</a></li>'
         . '<li><a href="/datenschutz">Datenschutz</a></li>'
         . '<li><a href="' . e(QUELLTEXT_URL) . '" rel="noopener">Quelltext (AGPL)</a></li>'
-        . '<li><a href="/einloggen">Team</a></li>'
         . '</ul></nav></div></footer></body></html>';
 }
 

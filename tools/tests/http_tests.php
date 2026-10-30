@@ -92,7 +92,7 @@ function programm_http_tests(string $basis, string $h, string $tmp, string $b): 
     http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'speichern', 'typ' => 'station', 'titel' => 'Reanimation', 'ort' => 'Lab 1', 'beginn' => '19:00', 'ende' => '21:00'], $b);
     pruefe(db_wert('SELECT COUNT(*) FROM programmpunkt') == 4 && db_wert('SELECT COUNT(*) FROM workshop_termin') == 2, 'Block, Workshop mit zwei Terminen, Station gespeichert');
     $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht') && substr_count($r['text'], '+ neu') >= 4, 'Banner und Markierung „neu“');
+    pruefe(str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht') && substr_count($r['text'], '<span class="st ges">nicht veröffentlicht</span>') >= 4, 'Banner und Markierung „nicht veröffentlicht“');
     pruefe(str_contains($r['text'], 'Lab 1 ist 19:00–19:45 doppelt belegt'), 'Hinweis: Raum doppelt belegt');
     pruefe(preg_match('#<ol class="pg-kinder">.*WS 01.*Reanimation#s', $r['text']) === 1, 'Termine und Station hängen unter dem Block');
     $r = http_anfrage($basis, 'GET', '/', $h);
@@ -118,7 +118,7 @@ function programm_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe($r['status'] === 303 && db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$vtId]) === '18:30:00' && db_wert('SELECT ende FROM programmpunkt WHERE id = ?', [$vtId]) === '19:00:00', 'Verschieben: neuer Beginn, Dauer bleibt');
     $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'Neue Uhrzeit vorgeschlagen: 18:30–19:00'), 'Meldung nennt neue Uhrzeit von–bis');
-    pruefe(str_contains($r['text'], '✎ nicht veröffentlicht') && str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht'), 'geändert markiert');
+    pruefe(str_contains($r['text'], '<span class="st ges">nicht veröffentlicht</span>') && str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht'), 'geändert markiert');
     $blockId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'block'");
     http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => $csrf, 'aktion' => 'verschieben', 'art' => 'punkt', 'id' => $blockId, 'beginn' => '19:30'], $b);
     pruefe(db_wert("SELECT MIN(beginn) FROM workshop_termin") === '19:30:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station'") === '19:30:00', 'Block verschieben nimmt Termine und Station mit');
@@ -472,6 +472,95 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe(!str_contains(http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k)['text'], 'ein Betreiber schickt dir'), 'Hinweis „Betreiber schickt Link“ entfernt');
 }
 
+/** Rückmeldung 2026-10-30: Navigation, Einstieg, Sperre, Texte mit Bild, Mail-Code, Dialog. */
+function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Rückmeldung 2026-10-30');
+    // Team-Login wird auf öffentlichen Seiten erkannt (vorher sah „Deine Anmeldung“ wie ausgeloggt aus)
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'href="/team"') && str_contains($r['text'], 'Meine Anmeldung') && !str_contains($r['text'], 'class="nav-anmelden"'), 'Team eingeloggt: „Meine Anmeldung“ und Team-Bereich, nicht ausgeloggt');
+    pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $b)['status'] === 200, 'Team-Sitzung bleibt danach bestehen');
+    $r = http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt");
+    pruefe(str_contains($r['text'], 'class="nav-anmelden" href="/deine-anmeldung"') && !str_contains($r['text'], 'Meine Anmeldung') && !str_contains($r['text'], '>Team</a>'), 'Gäste: grüner Knopf „Anmelden“, kein Team-Link in der Fußzeile');
+    pruefe(str_contains($r['text'], '/assets/dialog.js'), 'Dialog-Skript auf jeder Seite');
+    // Vor dem Anmeldestart: Hinweis statt „Link per Mail“
+    $start = einstellung('anmeldung_start');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() + 86400 * 3));
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, "$tmp/kekse-gast.txt");
+    pruefe(str_contains($r['text'], 'Anmeldung noch nicht möglich') && !str_contains($r['text'], 'Link per Mail') && str_contains($r['text'], 'Einloggen'), 'Vor dem Start: Hinweis über zwei Kacheln, kein „Link per Mail“');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 86400));
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, "$tmp/kekse-gast.txt")['text'], 'Link per Mail'), 'Nach dem Start: „Link per Mail“ wieder da');
+    einstellung_setzen('anmeldung_start', $start);
+    // Einstellungen gesperrt
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Gesperrt.') && str_contains($r['text'], '<fieldset class="kasten gruppe" disabled>') && !str_contains($r['text'], 'Einstellungen speichern'), 'Einstellungen zuerst gesperrt');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Entsperrt.') && !str_contains($r['text'], ' disabled>') && str_contains($r['text'], 'Einstellungen speichern'), 'Entsperren zeigt die Felder zum Bearbeiten');
+    // Texte: Bild hochladen, öffentlich sichtbar
+    $png = "$tmp/text.png";
+    $g = imagecreatetruecolor(50, 30);
+    imagepng($g, $png);
+    imagedestroy($g);
+    $c = http_csrf(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text']);
+    $ch = curl_init($basis . '/team/texte/bild');
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Host: ' . $h, 'X-CSRF: ' . $c], CURLOPT_COOKIEFILE => $b, CURLOPT_COOKIEJAR => $b, CURLOPT_POSTFIELDS => ['bild' => new CURLFile($png, 'image/png', 'a.png')]]);
+    $j = json_decode((string)curl_exec($ch), true) ?? [];
+    curl_close($ch);
+    $url = (string)($j['url'] ?? '');
+    pruefe(preg_match('#^/bild/text-[0-9a-f]{16}\.png$#', $url) === 1, 'Bild für einen Text hochgeladen');
+    pruefe(http_anfrage($basis, 'GET', $url, $h, [], null, "$tmp/kekse-gast.txt")['status'] === 200, 'Text-Bild öffentlich abrufbar');
+    $alt = inhalt('start_cme');
+    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => "Mit Bild:\n\n![Lageplan]($url)"], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" src="' . $url . '" alt="Lageplan"'), 'Bild erscheint auf der Startseite');
+    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => $alt], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'CommonMark'), 'Hilfe nennt den Standard CommonMark');
+    // Login mit Code per E-Mail
+    db_ausfuehren('DELETE FROM rate_limit');
+    $mk = konto_anlegen('Mia Mailcode', 'mia@example.org', 'admin', 'mia-ihr-passwort-1', null);
+    $k = "$tmp/kekse-mia.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'mia@example.org', 'passwort' => 'mia-ihr-passwort-1'], $k);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Code per E-Mail nutzen') && str_contains($r['text'], 'data-qr="otpauth://'), 'Erstes Einloggen: Wahl zwischen E-Mail-Code und App');
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_waehlen'], $k);
+    $mail = http_mail_an($tmp, 'mia@example.org', 20, 'Er gilt 10 Minuten');
+    $code = preg_match('/^\s+(\d{6})\s*$/m', $mail, $m) === 1 ? $m[1] : '';
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    pruefe($code !== '' && str_contains($r['text'], 'Code aus der Mail'), 'Code kommt per Mail');
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_einrichten', 'totp' => $code], $k);
+    pruefe($r['status'] === 200 && substr_count($r['text'], '<li class="mono">') === TOTP_CODES && http_anfrage($basis, 'GET', '/team', $h, [], null, $k)['status'] === 200, 'Mit dem Code eingerichtet, Wiederherstellungscodes, eingeloggt');
+    // Nächstes Einloggen: Code kommt automatisch
+    $k2 = "$tmp/kekse-mia2.txt";
+    $vorher = http_mail_anzahl($tmp, 'mia@example.org');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k2);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'mia@example.org', 'passwort' => 'mia-ihr-passwort-1'], $k2);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k2);
+    usleep(600_000);
+    $mail = '';
+    for ($i = 0; $i < 20 && http_mail_anzahl($tmp, 'mia@example.org') <= $vorher; $i++) {
+        usleep(150_000);
+    }
+    $mail = http_mail_an($tmp, 'mia@example.org', 5, 'Er gilt 10 Minuten');
+    $code = preg_match('/^\s+(\d{6})\s*$/m', $mail, $m) === 1 ? $m[1] : '';
+    pruefe(str_contains($r['text'], 'Wir haben dir einen sechsstelligen Code') && http_mail_anzahl($tmp, 'mia@example.org') > $vorher, 'Später: Code kommt beim Einloggen automatisch');
+    $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'code', 'totp' => $code], $k2);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/team', 'Einloggen mit dem Code aus der Mail');
+    $r = http_anfrage($basis, 'GET', '/team/profil', $h, [], null, $k2);
+    pruefe(str_contains($r['text'], 'Zwei-Faktor-Authentifizierung') && str_contains($r['text'], 'Code per E-Mail') && str_contains($r['text'], 'Passkey'), 'Mein Konto: Abschnitt Zwei-Faktor-Authentifizierung');
+    $r = http_anfrage($basis, 'POST', '/team/profil', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_aus', 'pw' => 'mia-ihr-passwort-1'], $k2);
+    pruefe(str_contains($r['text'], 'Richte zuerst die Authenticator-App ein') && totp_zustand($mk)['mail'], 'Mail-Code ohne App nicht abschaltbar');
+    // Protokoll: Admin sieht keine Sicherung, kann nicht ausblenden
+    $r = http_anfrage($basis, 'GET', '/team/protokoll?art=sicherung', $h, [], null, $k2);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Keine Einträge') && !str_contains($r['text'], 'Ausblenden'), 'Admin: keine Sicherungs-Einträge, kein Ausblenden');
+    $r = http_anfrage($basis, 'GET', '/team/protokoll', $h, [], null, $b);
+    pruefe(str_contains($r['text'], '>Ausblenden<') && str_contains($r['text'], 'class="filter"'), 'Betreiber: Ausblenden und Filter-Knöpfe');
+    // Programm: Löschen-Knopf neben Speichern, Dialog-Markierungen
+    $pid = (int)db_wert("SELECT id FROM programmpunkt WHERE typ <> 'workshop' ORDER BY id LIMIT 1");
+    $r = http_anfrage($basis, 'GET', '/team/programm?id=' . $pid, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'id="pg-loeschen" hidden') && str_contains($r['text'], 'data-ausloeser="pg-loeschen"'), 'Programmpunkt löschen neben Speichern (mit Dialog)');
+    pruefe(!str_contains($r['text'], '+ neu') && !str_contains($r['text'], 'Markiert:'), 'Programm: ein Label, keine Legende');
+}
+
 function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Team-Bereich (AP-5)');
@@ -696,6 +785,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     daten_http_tests($basis, $h, $tmp, $b, [$codes[5], $codes[6]]);
     team_ap5_http_tests($basis, $h, $tmp, $b);
     team_ap6_http_tests($basis, $h, $tmp, $b);
+    r30_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";

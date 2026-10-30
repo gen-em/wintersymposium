@@ -36,11 +36,47 @@ function anmeldung_konto(): ?array
         return $cache = null;
     }
     $k = konto_laden((int)$s['id']);
-    if ($k === null || (int)$k['aktiv'] !== 1 || !konto_ist_team($k) || (int)$k['sitzung_version'] !== (int)$s['version'] || $k['totp_seit'] === null) {
+    if ($k === null || (int)$k['aktiv'] !== 1 || !konto_ist_team($k) || (int)$k['sitzung_version'] !== (int)$s['version'] || !zweitfaktor_da($k)) {
         unset($_SESSION['konto']);
         return $cache = null;
     }
     return $cache = $k;
+}
+
+/**
+ * Team-Login auf öffentlichen Seiten erkennen (Rückmeldung 2026-10-30): Diese
+ * Seiten nutzen die Sitzung für Teilnehmende; die Team-Sitzung wird vorher nur
+ * gelesen (read_and_close), nichts daran ändert sich. Geht nur, solange noch
+ * keine Sitzung läuft – sonst zählt der zuerst gelesene Wert.
+ */
+function team_gesehen(): ?array
+{
+    static $k = false;
+    if ($k !== false) {
+        return $k;
+    }
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return ($_SESSION['_art'] ?? '') === 'team' ? ($k = anmeldung_konto()) : null;
+    }
+    $name = SITZUNG_ARTEN['team']['name'];
+    $c = $_COOKIE[$name] ?? null;
+    if (!is_string($c) || preg_match('/^[A-Za-z0-9,-]{22,256}$/', $c) !== 1) {
+        return $k = null;
+    }
+    ini_set('session.save_path', sitzung_ablage_pfad());
+    ini_set('session.use_strict_mode', '1');
+    session_name($name);
+    session_id($c);
+    @session_start(['read_and_close' => true]);
+    $s = $_SESSION['konto'] ?? null;
+    $frisch = time() - (int)($_SESSION['_zuletzt'] ?? 0) <= SITZUNG_LEERLAUF_S;
+    $_SESSION = [];
+    if (!$frisch || !is_array($s) || !isset($s['id'], $s['version'])) {
+        return $k = null;
+    }
+    $konto = konto_laden((int)$s['id']);
+    $ok = $konto !== null && (int)$konto['aktiv'] === 1 && konto_ist_team($konto) && (int)$konto['sitzung_version'] === (int)$s['version'] && zweitfaktor_da($konto);
+    return $k = $ok ? $konto : null;
 }
 
 function anmeldung_halb_setzen(array $k): void
@@ -80,14 +116,14 @@ function anmeldung_voll(array $k): void
     unset($_SESSION['halb']);
     $_SESSION['konto'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
     db_ausfuehren('UPDATE konto SET letzte_anmeldung = ? WHERE id = ?', [db_jetzt(), (int)$k['id']]);
-    audit_schreiben('anmeldung', 'Team-Anmeldung', (int)$k['id']);
+    audit_schreiben('login', 'Team-Anmeldung', (int)$k['id']);
 }
 
 function anmeldung_beenden(): void
 {
     $k = anmeldung_konto();
     if ($k !== null) {
-        audit_schreiben('anmeldung', 'Ausgeloggt', (int)$k['id']);
+        audit_schreiben('login', 'Ausgeloggt', (int)$k['id']);
     }
     sitzung_beenden();
 }

@@ -1,12 +1,18 @@
 <?php
 declare(strict_types=1);
 
-/* Mein Konto: Passwort ändern, Wiederherstellungscodes erneuern. */
+/*
+ * Mein Konto: Passwort ändern; Zwei-Faktor-Authentifizierung (Rückmeldung
+ * 2026-10-30): Authenticator-App einrichten, Code per E-Mail ein/aus,
+ * Wiederherstellungscodes erneuern. Änderungen am zweiten Faktor bestätigt
+ * man mit dem Passwort. Passkeys folgen später (O-14).
+ */
 
 $konto = team_tor();
 $id = (int)$konto['id'];
 $fehler = [];
 $neueCodes = null;
+$appEinrichtung = null;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
@@ -28,21 +34,52 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             flash_setzen('ok', 'Passwort geändert. Andere Sitzungen mit diesem Konto sind beendet.');
             umleiten('/team/profil');
         }
-    } elseif ($aktion === 'codes') {
-        if (!rate_erlaubt('zweitfaktor', $kennung)) {
-            $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-        } elseif (!totp_anmeldung_pruefen($id, (string)($_POST['totp'] ?? ''))['ok']) {
-            rate_misserfolg('zweitfaktor', $kennung);
-            $fehler[] = 'Der Code stimmt nicht.';
-        } else {
-            rate_erfolg('zweitfaktor', $kennung);
+    } elseif (in_array($aktion, ['codes', 'mail_an', 'mail_aus', 'app_start'], true)) {
+        // Änderungen am zweiten Faktor: mit dem Passwort bestätigen
+        $zs = totp_zustand($id);
+        if (!rate_erlaubt('login', $kennung)) {
+            $fehler[] = 'Zu viele Versuche. Bitte warte 15 Minuten.';
+        } elseif (!anmeldung_passwort_ok($konto, (string)($_POST['pw'] ?? ''))) {
+            rate_misserfolg('login', $kennung);
+            $fehler[] = 'Das Passwort stimmt nicht. Nichts geändert.';
+        } elseif ($aktion === 'codes') {
             $neueCodes = totp_codes_erneuern($id);
+        } elseif ($aktion === 'mail_an') {
+            mailcode_einschalten($id, true);
+            flash_setzen('ok', 'Code per E-Mail ist eingeschaltet. Beim nächsten Einloggen schicken wir dir einen Code.');
+            umleiten('/team/profil');
+        } elseif ($aktion === 'mail_aus') {
+            if (!$zs['an']) {
+                $fehler[] = 'Richte zuerst die Authenticator-App ein – ohne zweiten Faktor geht es nicht.';
+            } else {
+                mailcode_einschalten($id, false);
+                flash_setzen('ok', 'Code per E-Mail ist ausgeschaltet. Du loggst dich mit der Authenticator-App ein.');
+                umleiten('/team/profil');
+            }
+        } elseif (!$zs['an']) {
+            $_SESSION['app_einrichten'] = true;
+            umleiten('/team/profil#app');
+        }
+    } elseif ($aktion === 'app_fertig' && !empty($_SESSION['app_einrichten'])) {
+        $codes = totp_einrichtung_abschliessen($id, (string)($_POST['totp'] ?? ''));
+        if ($codes === null) {
+            $fehler[] = 'Der Code aus der App stimmt nicht. Prüfe die Uhrzeit auf dem Handy und nimm den aktuellen Code.';
+        } else {
+            unset($_SESSION['app_einrichten']);
+            $neueCodes = $codes;
         }
     }
 }
 
 $zf = totp_zustand($id);
-team_seite_kopf($konto, 'Mein Konto', '/team/profil');
+if (!empty($_SESSION['app_einrichten']) && !$zf['an']) {
+    $roh = $zf['angefangen'] ? totp_geheimnis($id) : null;
+    $roh ??= totp_einrichtung_beginnen($id);
+    $aussteller = 'Wintersymposium' . (umgebung() === 'produktion' ? '' : ' (' . umgebung() . ')');
+    $appEinrichtung = ['otpauth' => totp_otpauth($roh, (string)$konto['email'], $aussteller), 'text' => totp_base32_gruppen($roh)];
+}
+$pwFeld = fn(string $id) => '<label for="pw-' . $id . '">Bestätigen mit deinem Passwort</label><input id="pw-' . $id . '" name="pw" type="password" required autocomplete="current-password">';
+team_seite_kopf($konto, 'Mein Konto', '/team/profil', $appEinrichtung !== null ? ['skripte' => ['vendor/qrcode.js', 'qr.js']] : []);
 echo fehler_html($fehler);
 if ($neueCodes !== null): ?>
 <div class="kasten">
@@ -66,21 +103,39 @@ if ($neueCodes !== null): ?>
             <button type="submit" class="knopf">Passwort ändern</button>
         </form>
     </section>
-    <section>
-        <h2 class="zwischen">Zweiter Faktor</h2>
-        <dl class="angaben">
-            <div><dt>Eingerichtet</dt><dd><?= e(datum_zeit_text($konto['totp_seit'])) ?></dd></div>
-            <div><dt>Wiederherstellungscodes übrig</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?></dd></div>
+    <section class="zf">
+        <h2 class="zwischen">Zwei-Faktor-Authentifizierung</h2>
+        <p class="meta">Nach dem Passwort fragt der Login einen zweiten Nachweis ab. So kommt niemand nur mit deinem Passwort in den Team-Bereich. Änderungen hier bestätigst du mit deinem Passwort.</p>
+        <dl class="liste-def">
+            <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? '<span class="chip ok">eingerichtet</span> seit ' . e(datum_zeit_text($konto['totp_seit'])) : '<span class="chip offen">nicht eingerichtet</span>' ?></dd></div>
+            <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? '<span class="chip ok">an</span> bei jedem Einloggen an ' . e($konto['email']) : '<span class="chip offen">aus</span>' ?></dd></div>
+            <div><dt>Passkey</dt><dd class="meta">folgt später</dd></div>
+            <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig – für den Notfall (Handy weg, Postfach nicht erreichbar)</dd></div>
             <div><dt>Letzte Anmeldung</dt><dd><?= e(datum_zeit_text($konto['letzte_anmeldung'])) ?></dd></div>
         </dl>
-        <form method="post" action="/team/profil" class="formular">
-            <?= csrf_feld() ?>
-            <input type="hidden" name="aktion" value="codes">
-            <label for="totp">Neue Wiederherstellungscodes: Code aus der App</label>
-            <input id="totp" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
-            <button type="submit" class="knopf zweit">Neue Codes erzeugen</button>
-        </form>
-        <p class="meta klein">Handy gewechselt? Ein Betreiber setzt deinen zweiten Faktor zurück, beim nächsten Einloggen richtest du ihn neu ein.</p>
+        <?php if ($appEinrichtung !== null): ?>
+        <div class="kasten" id="app">
+            <p><strong>Authenticator-App einrichten:</strong> QR-Code scannen oder Schlüssel abtippen, dann den Code aus der App eingeben.</p>
+            <div class="einrichtung">
+                <svg class="qr" xmlns="http://www.w3.org/2000/svg" data-qr="<?= e($appEinrichtung['otpauth']) ?>" role="img" aria-label="QR-Code für die Authenticator-App" hidden></svg>
+                <div><p class="meta klein">Schlüssel zum Abtippen</p><p class="mono schluessel"><?= e($appEinrichtung['text']) ?></p></div>
+            </div>
+            <form method="post" action="/team/profil" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="app_fertig">
+                <label for="app-code">Code aus der App</label><input id="app-code" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+                <button type="submit" class="knopf">App einrichten</button></form>
+        </div>
+        <?php endif; ?>
+        <details class="tabelle-details"><summary>Einstellungen ändern</summary>
+            <div class="zf-aktionen">
+            <?php if (!$zf['an'] && $appEinrichtung === null): ?>
+            <form method="post" action="/team/profil" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="app_start"><?= $pwFeld('app') ?><button type="submit" class="knopf zweit">Authenticator-App einrichten</button></form>
+            <?php endif; ?>
+            <form method="post" action="/team/profil" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="<?= $zf['mail'] ? 'mail_aus' : 'mail_an' ?>"><?= $pwFeld('mail') ?><button type="submit" class="knopf zweit"><?= $zf['mail'] ? 'Code per E-Mail ausschalten' : 'Jedes Mal einen Code per E-Mail schicken' ?></button>
+                <?php if ($zf['mail'] && !$zf['an']): ?><p class="hilfe">Ausschalten geht erst, wenn die Authenticator-App eingerichtet ist.</p><?php endif; ?></form>
+            <form method="post" action="/team/profil" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="codes"><?= $pwFeld('codes') ?><button type="submit" class="knopf zweit">Neue Wiederherstellungscodes erzeugen</button></form>
+            </div>
+        </details>
+        <p class="meta klein">Handy gewechselt und kein Code mehr? Logg dich mit einem Wiederherstellungscode ein und richte die App hier neu ein – oder bitte einen Betreiber, deinen zweiten Faktor zurückzusetzen.</p>
     </section>
 </div>
 <?php

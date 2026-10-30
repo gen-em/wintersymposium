@@ -88,6 +88,7 @@ async function pruefeAuswahl(bereich, engine, breite, name) {
   for (let i = 0; i < await selects.count(); i++) {
     const sel = selects.nth(i);
     if (!await sel.isVisible()) continue; // in zugeklappten Bereichen: geprüft beim Aufklappen
+    if (await sel.isDisabled()) continue; // gesperrt (Einstellungen): geprüft im entsperrten Zustand
     const id = (await sel.getAttribute('id')) || ('select-' + i);
     const werte = await sel.locator('option').evaluateAll(os => os.map(o => o.value));
     const vorher = await sel.inputValue();
@@ -129,6 +130,7 @@ async function pruefeBedienung(p, engine, breite, name) {
     await a.click();
     const auf = await p.locator('dialog[open]').count() === 1 && await p.isVisible('dialog[open]');
     const imFenster = auf ? await p.evaluate(() => { const r = document.querySelector('dialog[open]').getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth + 1; }) : false;
+    if (auf) await pruefeAuswahl(p.locator('dialog[open]'), engine, breite, name);
     await p.keyboard.press('Escape');
     await p.waitForTimeout(100);
     const zu = await p.locator('dialog[open]').count() === 0;
@@ -401,8 +403,10 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await Promise.all([p.waitForNavigation(), p.click('button[value=speichern]')]);
       notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Entwurf gespeichert, Vorschau zeigt Knopf', (await p.textContent('.meldung')).includes('gespeichert') && (await vorschau.locator('body').textContent({ timeout: 5000 }).catch(() => '')).includes('Programm ' + engine));
       await p.click('#rm-senden');
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Senden fragt nach', await p.isVisible('button[value=senden]'));
-      await p.click('#rm-senden');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Senden fragt im Dialog (grün)', await p.isVisible('dialog.dlg-gruen[open] button[value=senden]'));
+      await p.waitForTimeout(400);
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-dialog-senden.png`) });
+      await p.keyboard.press('Escape');
       await p.click('button[data-breite=desktop]');
       notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Vorschau Desktop-Breite', (await p.getAttribute('#rm-vorschau', 'class')).includes('desktop'));
       await p.setViewportSize({ width: 1440, height: 900 });
@@ -464,14 +468,59 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-programm-gezogen.png`), fullPage: true });
       notiere(engine, 'desktop-breit', 'team-programm', engine === 'webkit' ? 'Ziehen schlägt Uhrzeit vor (19:15–19:45, Ereignisse simuliert)' : 'Ziehen schlägt Uhrzeit vor (19:15–19:45)', (await p.textContent('body')).includes('Neue Uhrzeit vorgeschlagen: 19:15–19:45') && (await p.textContent('body')).includes('2 Punkte rücken dahinter nach hinten'),
         (await p.locator('.meldung').allTextContents()).join(' | ') + ' ' + p.url());
-      await p.click('.entwurf-banner summary:has-text("Verwerfen")');
-      await p.click('.entwurf-banner button:has-text("Ja, verwerfen")');
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.click('.entwurf-banner button:has-text("Verwerfen")');
+      notiere(engine, 'desktop-breit', 'team-programm', 'Verwerfen fragt im einheitlichen Dialog (rot)', await p.isVisible('dialog.dlg-rot[open]'));
+      await p.waitForTimeout(400);
+      const dlgBox = await p.locator('dialog[open]').boundingBox();
+      const fensterH = p.viewportSize().height;
+      notiere(engine, 'desktop-breit', 'team-programm', 'Dialog mittig im Fenster', dlgBox !== null && Math.abs((dlgBox.y + dlgBox.height / 2) - fensterH / 2) < 40, JSON.stringify(dlgBox) + ' / ' + fensterH);
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-dialog-verwerfen.png`) });
+      await p.click('dialog[open] button:has-text("Ja, verwerfen")');
       await p.waitForLoadState('load');
       notiere(engine, 'desktop-breit', 'team-programm', 'Verwerfen über den Banner', (await p.textContent('body')).includes('Verworfen'));
+
+      // Station auf die Mitte des Workshop-Blocks ziehen: zuordnen (Rückmeldung 2026-10-30; Ereignisse im Browser ausgelöst)
+      await p.goto(basis + '/team/programm');
+      const stationVorher = await p.locator('.pg-kinder .pg-zeile[data-typ="station"]').count();
+      await Promise.all([p.waitForNavigation(), p.evaluate(() => {
+        const quelle = document.querySelector('.pg-zeile[data-typ="station"] .griff');
+        const ziel = document.querySelector('.pg-zeile.block');
+        const r = ziel.getBoundingClientRect();
+        const mitte = { clientX: r.left + 20, clientY: r.top + r.height / 2 };
+        const dt = new DataTransfer();
+        quelle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        ziel.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, ...mitte }));
+        ziel.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, ...mitte }));
+      })]);
+      notiere(engine, 'desktop-breit', 'team-programm', 'Station auf den Block gezogen: zugeordnet', (await p.textContent('body')).includes('Zugeordnet') && await p.locator('.pg-kinder .pg-zeile[data-typ="station"]').count() >= stationVorher, `${stationVorher}`);
+      await p.click('.entwurf-banner button:has-text("Verwerfen")');
+      await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, verwerfen")')]);
+
+      // Dialog auf dem Handy: von unten, Knöpfe untereinander
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/team/daten');
+      await p.click('button:has-text("Testdaten laden")');
+      await p.waitForTimeout(400);
+      const unten = await p.locator('dialog[open]').boundingBox();
+      notiere(engine, 'handy', 'team-daten', 'Dialog kommt von unten (rot)', unten !== null && Math.abs(unten.y + unten.height - 844) < 4 && await p.isVisible('dialog.dlg-rot[open]'), JSON.stringify(unten));
+      await p.screenshot({ path: path.join(AUS, `${engine}-handy-dialog-testdaten.png`) });
+      await p.keyboard.press('Escape');
+      await p.setViewportSize({ width: 1440, height: 900 });
+
+      // Texte: Werkzeugleiste schreibt Markdown
+      await p.goto(basis + '/team/texte');
+      await p.fill('#t-start_cme', 'Wort');
+      await p.locator('#t-start_cme').evaluate(t => t.setSelectionRange(0, 4));
+      await p.click('.werkzeug[aria-controls="t-start_cme"] button[data-b=fett]');
+      notiere(engine, 'desktop-breit', 'team-texte', 'Werkzeugleiste: fett', (await p.inputValue('#t-start_cme')) === '**Wort**', await p.inputValue('#t-start_cme'));
 
       // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/team/einstellungen');
+      notiere(engine, 'handy', 'team-einstellungen', 'zuerst gesperrt', await p.isDisabled('#veranstaltung_ende') && !await p.isVisible('form.einstellungen button[type=submit]'));
+      await Promise.all([p.waitForNavigation(), p.click('.sperre a:has-text("Entsperren")')]);
+      await pruefeSeite(p, fehler, engine, 'handy', 'team-einstellungen-offen', null);
       await p.fill('#veranstaltung_ende', '17:00');
       await p.click('form.einstellungen button[type=submit]');
       await p.waitForLoadState('load');

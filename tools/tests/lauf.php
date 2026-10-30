@@ -693,6 +693,71 @@ if (!$mitDb) {
     file_put_contents($cfgDatei, $cfgAlt);
     konfig_verwerfen();
 
+    abschnitt('Rückmeldung 2026-10-30: Auszeichnung, Block-Zuordnung, Mail-Code, Protokoll');
+    // CommonMark-Teilmenge
+    pruefe(text_zu_html("# Eins\n### Drei") === "<h2>Eins</h2>\n<h3>Drei</h3>", 'Überschriften # bis ###');
+    pruefe(text_zu_html("* a\n+ b\n\n1. x\n2) y") === "<ul><li>a</li><li>b</li></ul>\n<ol><li>x</li><li>y</li></ol>", 'Listen mit * + und nummeriert');
+    pruefe(text_inline('__f__ und _k_ und snake_case') === '<strong>f</strong> und <em>k</em> und snake_case', 'Unterstriche wie CommonMark, nicht mitten im Wort');
+    pruefe(text_inline('\*kein\* <b>') === '*kein* &lt;b&gt;', 'Backslash maskiert, HTML wird Text');
+    pruefe(text_zu_html("a\n\n---\n\nb") === "<p>a</p>\n<hr>\n<p>b</p>", 'Trennlinie');
+    pruefe(str_contains(text_inline('![Plan](/bild/text-0123456789abcdef.png)'), '<img class="text-bild" src="/bild/text-0123456789abcdef.png" alt="Plan"') && !str_contains(text_inline('![x](https://fremd.example/a.png)'), '<img'), 'nur eigene Bilder');
+    pruefe(text_zu_html("Zeile 1\nZeile 2") === '<p>Zeile 1<br>Zeile 2</p>', 'Zeilenumbruch bleibt (wie GitHub-Kommentare)');
+    // Block-Zuordnung
+    $blockId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'block' LIMIT 1");
+    $wsId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'workshop' ORDER BY id LIMIT 1");
+    $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => 'Ohne Termin', 'kuerzel' => 'WS 99', 'block_id' => (string)$blockId]);
+    $neuWs = programm_punkt_speichern(null, $r, null);
+    $kind = function (int $punkt) use ($blockId): int {
+        foreach (programm_gliederung(programm_arbeitsstand()) as $g) {
+            if ($g['art'] === 'block' && $g['punkt']['id'] === $blockId) {
+                return count(array_filter($g['kinder'], fn($k) => $k['punkt']['id'] === $punkt));
+            }
+        }
+        return 0;
+    };
+    $termineWs = (int)db_wert('SELECT COUNT(*) FROM workshop_termin WHERE punkt_id = ?', [$wsId]);
+    pruefe($kind($neuWs) === 1, 'Workshop ohne Termin über das Formular einem Block zugeordnet');
+    pruefe(!programm_zuordnen($blockId, $blockId, null) && !programm_zuordnen($neuWs, $wsId, null), 'nur Workshops und Stationen, nur zu einem Block');
+    db_ausfuehren("UPDATE workshop_termin SET beginn = '23:00:00', ende = '23:30:00' WHERE punkt_id = ? ORDER BY id LIMIT 1", [$wsId]);
+    programm_zuordnen($wsId, $blockId, null);
+    pruefe($kind($wsId) === $termineWs && array_filter(programm_hinweise(programm_arbeitsstand()), fn($x) => str_contains($x, 'liegt aber 23:00')) !== [], 'zugeordnet trotz Uhrzeit außerhalb, mit Hinweis');
+    programm_zuordnen($wsId, null, null);
+    pruefe($kind($wsId) === $termineWs - 1, 'Zuordnung lösen: wieder nach Uhrzeit (Termin um 23:00 nicht mehr im Block)');
+    programm_verwerfen(null);
+    pruefe(db_wert('SELECT COUNT(*) FROM programmpunkt WHERE id = ?', [$neuWs]) == 0 && $kind($wsId) === $termineWs, 'Verwerfen stellt den veröffentlichten Stand her');
+    // Zweiter Faktor per E-Mail-Code
+    $zk = konto_anlegen('Zora Zwei', 'zora@example.org', 'admin', 'zora-ihr-passwort-1', null);
+    pruefe(!zweitfaktor_da(konto_laden($zk)), 'ohne zweiten Faktor nicht fertig');
+    $codes = mailcode_einschalten($zk, true);
+    pruefe(is_array($codes) && count($codes) === TOTP_CODES && zweitfaktor_da(konto_laden($zk)) && totp_zustand($zk)['mail'] && !totp_zustand($zk)['an'], 'Code per E-Mail eingeschaltet, Wiederherstellungscodes erzeugt');
+    mailcode_senden(konto_laden($zk));
+    $mcode = preg_match('/\b(\d{6})\b/', (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'zora@example.org' ORDER BY id DESC LIMIT 1"), $m) === 1 ? $m[1] : '';
+    pruefe($mcode !== '' && db_wert('SELECT mailcode_hash FROM konto WHERE id = ?', [$zk]) !== $mcode, 'Code per Mail, gespeichert nur als Hash');
+    pruefe(!totp_anmeldung_pruefen($zk, '000000')['ok'] || $mcode === '000000', 'falscher Code abgelehnt');
+    pruefe(totp_anmeldung_pruefen($zk, $mcode)['art'] === 'mail' && !totp_anmeldung_pruefen($zk, $mcode)['ok'], 'Code gilt einmal');
+    mailcode_senden(konto_laden($zk));
+    db_ausfuehren('UPDATE konto SET mailcode_bis = ? WHERE id = ?', [gmdate('Y-m-d H:i:s', time() - 1), $zk]);
+    $alt2 = preg_match('/\b(\d{6})\b/', (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'zora@example.org' ORDER BY id DESC LIMIT 1"), $m) === 1 ? $m[1] : '';
+    pruefe(!mailcode_pruefen($zk, $alt2), 'abgelaufener Code abgelehnt');
+    pruefe(totp_anmeldung_pruefen($zk, $codes[0])['art'] === 'code', 'Wiederherstellungscode geht auch ohne App');
+    totp_zuruecksetzen($zk, 'Test');
+    pruefe(!zweitfaktor_da(konto_laden($zk)), 'Zurücksetzen schaltet auch den Mail-Code ab');
+    // Protokoll: Sichtbarkeit und Ausblenden
+    audit_schreiben('sicherung', 'Test Sicherung', null);
+    $sid = (int)db()->lastInsertId();
+    audit_schreiben('programm', 'Test Programm', null);
+    $pidA = (int)db()->lastInsertId();
+    audit_schreiben('konto', 'Eigene Aktion', $zk);
+    $eigen = (int)db()->lastInsertId();
+    $sieht = function (array $k, int $id): bool { [$w, $p] = audit_sichtbar($k); return (int)db_wert("SELECT COUNT(*) FROM audit a WHERE $w AND a.id = ?", array_merge($p, [$id])) === 1; };
+    $admin = konto_laden($zk);
+    $betr = ['id' => 0, 'rolle' => 'betreiber'];
+    pruefe(!$sieht($admin, $sid) && $sieht($admin, $pidA) && $sieht($admin, $eigen) && $sieht($betr, $sid), 'Admin sieht Programm und Eigenes, nicht Sicherung; Betreiber alles');
+    pruefe(audit_ausblenden($pidA, true, 1) && !$sieht($admin, $pidA) && $sieht($betr, $pidA), 'ausgeblendet: nur noch Betreiber');
+    pruefe(db_wert("SELECT art FROM audit ORDER BY id DESC LIMIT 1") === 'protokoll' && audit_ausblenden($pidA, false, 1) && $sieht($admin, $pidA), 'Ausblenden steht im Protokoll, Einblenden geht');
+    pruefe(!audit_ausblenden((int)db_wert("SELECT id FROM audit WHERE art = 'protokoll' ORDER BY id DESC LIMIT 1"), true, 1), 'Protokoll-Einträge zum Ausblenden lassen sich nicht ausblenden');
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$zk]);
+
     abschnitt('Sicherung und Wiederherstellung (E-47)');
     $zahl = fn(string $t) => (int)db_wert("SELECT COUNT(*) FROM `$t`");
     $vorher = ['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')];

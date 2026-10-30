@@ -1,9 +1,11 @@
 /*
  * Programm-Pflege im Team-Bereich (AP-3 Schritt 3, E-39):
- * - Ziehen am Griff ⋮⋮ zwischen zwei Punkte (Admin 2026-10-29): eine grüne
+ * - Ziehen am Griff ⋮⋮ zwischen zwei Punkte (Admin 2026-10-29): eine weiße
  *   Linie zeigt, ob vor oder nach der Zeile unter dem Zeiger eingefügt wird.
- *   Neuer Beginn = Ende des Punkts darüber (direkt unter einem Workshop-Block:
- *   dessen Beginn; ganz oben: Beginn des ersten Punkts minus Dauer). Die Dauer
+ *   Neuer Beginn = Ende des Punkts darüber (als erster Punkt in einem
+ *   Workshop-Block: dessen Beginn; ganz oben: Beginn des ersten Punkts minus
+ *   Dauer; „ans Ende“: nach dem spätesten Punkt). Mitte eines Blocks:
+ *   Workshop oder Station zuordnen (Rückmeldung 2026-10-30). Die Dauer
  *   bleibt; nachfolgende Punkte rücken auf dem Server nach hinten, bis eine
  *   Lücke reicht. Gespeichert wird über das versteckte Formular „verschieben“.
  * - Felder je Typ ein- und ausblenden (data-fuer), Kürzel-Vorschlag beim Typwechsel.
@@ -18,16 +20,28 @@
   function hm(m) { m = Math.max(0, Math.min(23 * 60 + 59, m)); var h = Math.floor(m / 60), n = m % 60; return (h < 10 ? '0' : '') + h + ':' + (n < 10 ? '0' : '') + n; }
 
   // ---- Ziehen im Plan ----
+  // Rückmeldung 2026-10-30: weiße Einfügelinie; Mitte eines Blocks = Workshop/Station zuordnen;
+  // unteres Viertel eines Blocks = nach dem ganzen Block; Feld „ans Ende“ unter dem letzten Punkt.
   var liste = document.getElementById('pg-liste');
   var form = document.getElementById('verschieben-form');
+  var zform = document.getElementById('zuordnen-form');
+  var ende = document.getElementById('pg-ende');
   var gezogen = null;
-  var zielZeile = null, zielVor = false;
-  function aufraeumen() { liste.querySelectorAll('.ziel-vor, .ziel-nach').forEach(function (z) { z.classList.remove('ziel-vor', 'ziel-nach'); }); }
+  var ziel = null, wo = '';
+  function aufraeumen() { liste.querySelectorAll('.ziel-vor, .ziel-nach, .ziel-in').forEach(function (z) { z.classList.remove('ziel-vor', 'ziel-nach', 'ziel-in'); }); }
   function kopfVonLi(li) { return li ? li.querySelector(':scope > .pg-zeile') : null; }
+  function zuordenbar() { var t = gezogen && gezogen.getAttribute('data-typ'); return t === 'workshop' || t === 'station'; }
+  function imBlock(zeile) { var ol = zeile.closest('ol'); return ol && ol.classList.contains('pg-kinder') ? kopfVonLi(ol.closest('li')) : null; }
+  function dauer() { return gezogen.getAttribute('data-beginn') && gezogen.getAttribute('data-ende') ? min(gezogen.getAttribute('data-ende')) - min(gezogen.getAttribute('data-beginn')) : 30; }
+  function spaetestes() {
+    var m = 0;
+    liste.querySelectorAll('.pg-zeile[data-ende]').forEach(function (z) { if (z !== gezogen && z.getAttribute('data-ende')) { m = Math.max(m, min(z.getAttribute('data-ende'))); } });
+    return hm(m);
+  }
   /** Beginn für das Einfügen vor bzw. nach der Zeile. */
   function beginnFuer(zeile, vor) {
     if (!vor) {
-      return zeile.classList.contains('block') ? zeile.getAttribute('data-beginn') : zeile.getAttribute('data-ende');
+      return zeile.getAttribute('data-ende');
     }
     var li = zeile.closest('li');
     var davor = li ? li.previousElementSibling : null;
@@ -36,12 +50,19 @@
       var k = kopfVonLi(davor);
       if (k && k.getAttribute('data-ende')) { return k.getAttribute('data-ende'); }
     }
-    var block = li && li.parentElement && li.parentElement.classList.contains('pg-kinder') ? kopfVonLi(li.parentElement.closest('li')) : null;
+    var block = imBlock(zeile);
     if (block) { return block.getAttribute('data-beginn'); }
-    var g = gezogen.getAttribute('data-beginn') && gezogen.getAttribute('data-ende') ? min(gezogen.getAttribute('data-ende')) - min(gezogen.getAttribute('data-beginn')) : 30;
-    return hm(min(zeile.getAttribute('data-beginn')) - g);
+    return hm(min(zeile.getAttribute('data-beginn')) - dauer());
+  }
+  /** Zone unter dem Zeiger: vor, nach oder in (nur Workshop/Station auf einen Block). */
+  function zone(zeile, y) {
+    var r = zeile.getBoundingClientRect();
+    var anteil = (y - r.top) / r.height;
+    if (zeile.classList.contains('block') && zuordenbar() && anteil > 0.25 && anteil < 0.75) { return 'in'; }
+    return anteil < 0.5 ? 'vor' : 'nach';
   }
   if (liste && form) {
+    if (ende) { ende.hidden = false; }
     liste.addEventListener('dragstart', function (ev) {
       var griff = ev.target.closest('.griff');
       if (!griff) { return; }
@@ -55,25 +76,44 @@
       aufraeumen();
     });
     liste.addEventListener('dragover', function (ev) {
-      var ziel = ev.target.closest('.pg-zeile');
-      if (!gezogen || !ziel || ziel === gezogen || !ziel.getAttribute('data-beginn')) { return; }
+      if (!gezogen) { return; }
+      if (ev.target.closest('.pg-ende')) {
+        ev.preventDefault();
+        aufraeumen();
+        ende.classList.add('ziel-vor');
+        ziel = ende; wo = 'ende';
+        return;
+      }
+      var z = ev.target.closest('.pg-zeile');
+      if (!z || z === gezogen || !z.getAttribute('data-beginn')) { return; }
       ev.preventDefault();
-      var r = ziel.getBoundingClientRect();
-      zielZeile = ziel;
-      zielVor = ev.clientY < r.top + r.height / 2;
+      ziel = z;
+      wo = zone(z, ev.clientY);
       aufraeumen();
-      ziel.classList.add(zielVor ? 'ziel-vor' : 'ziel-nach');
+      z.classList.add(wo === 'in' ? 'ziel-in' : (wo === 'vor' ? 'ziel-vor' : 'ziel-nach'));
     });
     liste.addEventListener('drop', function (ev) {
-      var ziel = ev.target.closest('.pg-zeile');
-      if (!gezogen || !ziel || ziel === gezogen || !ziel.getAttribute('data-beginn')) { return; }
+      if (!gezogen) { return; }
+      var z = ev.target.closest('.pg-ende') ? ende : ev.target.closest('.pg-zeile');
+      if (!z || z === gezogen || (z !== ende && !z.getAttribute('data-beginn'))) { return; }
       ev.preventDefault();
-      var r = ziel.getBoundingClientRect();
-      var vor = ev.clientY ? ev.clientY < r.top + r.height / 2 : (ziel === zielZeile && zielVor);
-      var beginn = beginnFuer(ziel, vor);
+      var w = z === ende ? 'ende' : (ev.clientY ? zone(z, ev.clientY) : wo);
+      if (w === 'in') {
+        zform.elements.id.value = gezogen.getAttribute('data-punkt');
+        zform.elements.block.value = z.getAttribute('data-punkt');
+        zform.submit();
+        return;
+      }
+      var block = '';
+      if (zuordenbar()) {
+        var b = z === ende ? null : imBlock(z);
+        block = b ? b.getAttribute('data-punkt') : '0';
+      }
       form.elements.art.value = gezogen.getAttribute('data-art');
       form.elements.id.value = gezogen.getAttribute('data-id');
-      form.elements.beginn.value = beginn;
+      form.elements.beginn.value = w === 'ende' ? spaetestes() : beginnFuer(z, w === 'vor');
+      form.elements.block.value = block;
+      if (!form.elements.beginn.value) { return; }
       form.submit();
     });
   }

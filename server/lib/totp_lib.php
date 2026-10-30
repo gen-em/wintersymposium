@@ -144,13 +144,68 @@ function totp_codes_schreiben(int $kontoId, array $codes): void
 /** ['an' => bool, 'angefangen' => bool, 'codes_offen' => int] */
 function totp_zustand(int $kontoId): array
 {
-    $z = db_zeile('SELECT totp_seit, totp_geheimnis IS NOT NULL AS g FROM konto WHERE id = ?', [$kontoId]);
+    $z = db_zeile('SELECT totp_seit, zweitfaktor_mail, totp_geheimnis IS NOT NULL AS g FROM konto WHERE id = ?', [$kontoId]);
     $offen = (int)db_wert('SELECT COUNT(*) FROM konto_code WHERE konto_id = ? AND benutzt_am IS NULL', [$kontoId]);
+    $an = $z !== null && $z['totp_seit'] !== null;
+    $mail = $z !== null && (int)$z['zweitfaktor_mail'] === 1;
     return [
-        'an' => $z !== null && $z['totp_seit'] !== null,
+        'an' => $an,
+        'mail' => $mail,
+        'eingerichtet' => $an || $mail,
         'angefangen' => $z !== null && $z['totp_seit'] === null && (int)$z['g'] === 1,
         'codes_offen' => $offen,
     ];
+}
+
+/** Ist ein zweiter Faktor eingerichtet (App oder E-Mail-Code)? Für Konto-Zeilen aus der Datenbank. */
+function zweitfaktor_da(array $k): bool
+{
+    return ($k['totp_seit'] ?? null) !== null || (int)($k['zweitfaktor_mail'] ?? 0) === 1;
+}
+
+/* ---- E-Mail-Code (Admin 2026-10-30: für alle frei wählbar) --------------- */
+
+const MAILCODE_GUELTIG_S = 600;
+
+/** Neuen Code per Mail schicken (der vorige gilt nicht mehr). */
+function mailcode_senden(array $k): void
+{
+    $code = str_pad((string)random_int(0, 999999), TOTP_STELLEN, '0', STR_PAD_LEFT);
+    db_ausfuehren('UPDATE konto SET mailcode_hash = ?, mailcode_bis = ? WHERE id = ?', [password_hash($code, PASSWORD_DEFAULT), gmdate('Y-m-d H:i:s', time() + MAILCODE_GUELTIG_S), (int)$k['id']]);
+    mail_vorlage_einreihen((string)$k['email'], 'zweitfaktor_code', ['vorname' => tk_namen($k)['vorname'], 'code' => $code]);
+}
+
+/** Code aus der Mail prüfen (einmal gültig). */
+function mailcode_pruefen(int $kontoId, string $eingabe): bool
+{
+    $ziffern = preg_replace('/\s+/', '', $eingabe) ?? '';
+    if (preg_match('/^\d{' . TOTP_STELLEN . '}$/', $ziffern) !== 1) {
+        return false;
+    }
+    $z = db_zeile('SELECT mailcode_hash, mailcode_bis FROM konto WHERE id = ?', [$kontoId]);
+    if ($z === null || $z['mailcode_hash'] === null || strtotime($z['mailcode_bis'] . ' UTC') < time() || !password_verify($ziffern, (string)$z['mailcode_hash'])) {
+        return false;
+    }
+    return db_ausfuehren('UPDATE konto SET mailcode_hash = NULL, mailcode_bis = NULL WHERE id = ? AND mailcode_hash = ?', [$kontoId, $z['mailcode_hash']])->rowCount() === 1;
+}
+
+/**
+ * E-Mail-Code ein- oder ausschalten. Beim ersten Einrichten (noch keine App)
+ * gibt es Wiederherstellungscodes zurück, sonst null.
+ */
+function mailcode_einschalten(int $kontoId, bool $an, ?int $durch = null): ?array
+{
+    $z = totp_zustand($kontoId);
+    $codes = null;
+    db_transaktion(function () use ($kontoId, $an, $z, &$codes): void {
+        db_ausfuehren('UPDATE konto SET zweitfaktor_mail = ? WHERE id = ?', [$an ? 1 : 0, $kontoId]);
+        if ($an && !$z['eingerichtet']) {
+            $codes = totp_codes_erzeugen();
+            totp_codes_schreiben($kontoId, $codes);
+        }
+    });
+    audit_schreiben('zweitfaktor', 'Code per E-Mail ' . ($an ? 'eingeschaltet' : 'ausgeschaltet'), $durch ?? $kontoId);
+    return $codes;
 }
 
 function totp_an(int $kontoId): bool
@@ -208,7 +263,7 @@ function totp_einrichtung_abschliessen(int $kontoId, string $eingabe, ?int $zeit
 /** Neue Wiederherstellungscodes; die alten gelten nicht mehr. */
 function totp_codes_erneuern(int $kontoId): ?array
 {
-    if (!totp_an($kontoId)) {
+    if (!totp_zustand($kontoId)['eingerichtet']) {
         return null;
     }
     $codes = totp_codes_erzeugen();
@@ -224,11 +279,16 @@ function totp_codes_erneuern(int $kontoId): ?array
 function totp_anmeldung_pruefen(int $kontoId, string $eingabe, ?int $zeit = null): array
 {
     $nein = ['ok' => false, 'art' => null, 'codes_offen' => 0];
-    if (!totp_an($kontoId)) {
+    $zs = totp_zustand($kontoId);
+    if (!$zs['eingerichtet']) {
         return $nein;
     }
     $ziffern = preg_replace('/\s+/', '', $eingabe) ?? '';
-    if (preg_match('/^\d{' . TOTP_STELLEN . '}$/', $ziffern) === 1) {
+    // Code aus der Mail (wenn eingeschaltet), sonst aus der App
+    if ($zs['mail'] && mailcode_pruefen($kontoId, $ziffern)) {
+        return ['ok' => true, 'art' => 'mail', 'codes_offen' => $zs['codes_offen']];
+    }
+    if ($zs['an'] && preg_match('/^\d{' . TOTP_STELLEN . '}$/', $ziffern) === 1) {
         $roh = totp_geheimnis($kontoId);
         if ($roh === null) {
             return $nein;
@@ -266,7 +326,7 @@ function totp_anmeldung_pruefen(int $kontoId, string $eingabe, ?int $zeit = null
 function totp_zuruecksetzen(int $kontoId, string $wer, ?int $durch = null): void
 {
     db_transaktion(function () use ($kontoId): void {
-        db_ausfuehren('UPDATE konto SET totp_geheimnis = NULL, totp_seit = NULL, totp_schritt = NULL, sitzung_version = sitzung_version + 1 WHERE id = ?', [$kontoId]);
+        db_ausfuehren('UPDATE konto SET totp_geheimnis = NULL, totp_seit = NULL, totp_schritt = NULL, zweitfaktor_mail = 0, mailcode_hash = NULL, mailcode_bis = NULL, sitzung_version = sitzung_version + 1 WHERE id = ?', [$kontoId]);
         db_ausfuehren('DELETE FROM konto_code WHERE konto_id = ?', [$kontoId]);
     });
     audit_schreiben('zweitfaktor', 'Zweiter Faktor zurückgesetzt (' . $wer . ') für Konto ' . $kontoId, $durch);

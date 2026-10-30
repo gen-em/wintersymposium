@@ -20,6 +20,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-4b | Konten für Teilnehmende | umgesetzt, Staging offen | lokal T-145 bis T-149 | Staging (siehe unten); Newsletter-Teil mit AP-7 |
 | AP-5 | Team-Bereich | umgesetzt, Staging offen | lokal T-150, T-151, T-153, T-155 bis T-159; T-154 im Code | Staging (siehe unten); T-152 Passkey mit O-14 |
 | AP-6 | Mailversand und Rundmails | umgesetzt, Staging offen | lokal T-161 bis T-164, T-166 bis T-169 | Staging (siehe unten); T-160 und T-165 (Zustellbarkeit) durch den Admin |
+| Rückmeldungen 30.10. | Navigation, Programm, Texte, Zwei-Faktor, Protokoll, Einstellungen, Dialog (E-51) | umgesetzt, Staging offen | lokal T-225 bis T-232 | Staging (siehe unten) |
 | AP-7 | Newsletter | offen | – | T-170 bis T-174 |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
@@ -122,6 +123,16 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-168, ap: AP-6, was: "Planen, Abbrechen, Archiv", wie: "geplant → Job startet zum Zeitpunkt; Planung aufheben; Rest abbrechen; Empfängerliste im Archiv, nach 14 Monaten gelöscht; kopieren", status: "lokal bestanden"}
 - {id: T-169, ap: AP-6, was: "Team-Mails", wie: "Einladung beim Anlegen per Mail (oder Link anzeigen); Passwort vergessen für Team-Konten mit Link über /einrichten", status: "lokal bestanden"}
 
+# Rückmeldungen 2026-10-30 (E-51)
+- {id: T-225, ap: R-30.10., was: "Navigation und Einstieg", wie: "Gast: grüner Knopf „Anmelden“; erkannt (Link, Konto, Team): „Meine Anmeldung“; vor dem Anmeldestart Hinweis statt „Link per Mail“; Team eingeloggt auf öffentlichen Seiten nicht ausgeloggt; kein Team-Link in der Fußzeile", status: "lokal bestanden"}
+- {id: T-226, ap: R-30.10., was: "Programm: Block-Zuordnung und Ziehen", wie: "Workshop/Station per Feld oder Ziehen auf die Blockmitte zuordnen, Hinweis bei Uhrzeit außerhalb, lösen, verwerfen; weiße Einfügemarke, „ans Ende“; ein Label „nicht veröffentlicht“", status: "lokal bestanden (Bibliothek, HTTP, Browser mit simuliertem Ziehen); Ziehen mit der Maus auf Staging prüfen"}
+- {id: T-227, ap: R-30.10., was: "Texte: CommonMark-Teilmenge, Werkzeugleiste, Bilder", wie: "Überschriften, Listen, fett/kursiv mit * und _, Backslash, Trennlinie, nur eigene Bilder; Werkzeugleiste schreibt Markdown; Bild hochladen erscheint auf der Startseite", status: "lokal bestanden"}
+- {id: T-228, ap: R-30.10., was: "Zweiter Faktor per E-Mail-Code", wie: "erstes Einloggen: Wahl App/E-Mail; Code per Mail einrichten; später kommt der Code automatisch; einmal gültig, 10 min, nur Hash; Wiederherstellungscode geht; Abschalten nur mit App; Mein Konto zeigt den Abschnitt", status: "lokal bestanden; Zustellung auf Staging prüfen"}
+- {id: T-229, ap: R-30.10., was: "Protokoll: Rechte, Ausblenden, Filter", wie: "Admin sieht keine Sicherungs-/Konto-Einträge anderer und keine ausgeblendeten; Betreiber blendet aus und ein (selbst protokolliert); Filter-Knöpfe mit Anzahl", status: "lokal bestanden"}
+- {id: T-230, ap: R-30.10., was: "Einstellungen gesperrt", wie: "Felder zuerst gesperrt, „Entsperren“ zeigt sie, nach dem Speichern wieder gesperrt", status: "lokal bestanden"}
+- {id: T-231, ap: R-30.10., was: "Einheitlicher Bestätigungsdialog (Entwurf C)", wie: "jede Nachfrage als Dialog: grün/rot/lila, mittig auf dem Desktop, auf dem Handy von unten, Escape und Abbrechen schließen, Absenden wie vorher; ohne JavaScript Aufklappen", status: "lokal bestanden (Browser: Verwerfen, Senden, Testdaten laden; alle Auslöser öffnen und schließen)"}
+- {id: T-232, ap: R-30.10., was: "Kleinigkeiten", wie: "Kicker über Titel mit Umlaut ohne Überlappung; Rolle neben Name mittig; Statistik ohne Kachel „EFN angegeben“; Programmpunkt löschen neben Speichern", status: "lokal bestanden (Bildschirmfotos angesehen)"}
+
 # AP-7 Newsletter
 - {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: offen}
 - {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: offen}
@@ -183,6 +194,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-225 bis T-232 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 562 ok, 0 Fehler (CommonMark-Teilmenge, Block-Zuordnung, E-Mail-Code, Protokoll-Sichtbarkeit; HTTP: Navigation mit Team-Login, Einstieg vor dem Start, Sperre, Text-Bild, Login mit Mail-Code, Mein Konto, Protokoll als Admin/Betreiber, Programm-Löschknopf); Browser-Durchlauf 4089 ok, 0 Fehler (Dialog mittig und von unten, Station auf Block ziehen, Werkzeugleiste Texte, Einstellungen entsperren) | Staging |
 | T-161 bis T-164, T-166 bis T-169 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 515 ok, 0 Fehler (Mailings: bereinigen, Auswahl, Limits je Postfach, Vorrang der Bestätigungen, Inhalt beim Versand, Storno dazwischen, Planen, Job, Abbrechen, Archiv-Löschfrist, Bilder; HTTP: Seiten, Hochladen, Vorschau-Richtlinie, Empfängerzahl, Testmail, Senden, Archiv; Team-Einladung und Passwort vergessen); Browser-Durchlauf 4227 ok, 0 Fehler (Mailings-Reiter, Entwurf, Archiv in allen Breiten; Editor: Platzhalter, Knopf, Bild hochladen, HTML-Ansicht, Empfängerzahl, Speichern, Vorschau) | Staging |
 | T-144, T-155 bis T-159 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 455 ok, 0 Fehler (Team-Bibliothek: anlegen, überbuchen, Tausch, Angebot, Entfernen mit Nachrücken, Daten, Liste, Aufgaben, CSV, Statistik, Rolle, Hosts, Absender; HTTP: alle Seiten, Person anlegen/ändern ohne und mit Mail, nach dem Stichtag, Einmal-Link, Export, Texte, Protokoll, Storno); Browser-Durchlauf 3765 ok, 0 Fehler mit allen neuen Reitern, ausgewählter Person, Termin, Person anlegen | Staging |
 | – | 2026-10-29 | admin | bestanden | Mailversand auf Staging: Mails kommen an | – |
@@ -225,6 +237,16 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für die Rückmeldungen vom 30.10. (nach Merge auf Staging)
+
+1. Als Gast die Startseite öffnen: grüner Knopf „Anmelden“, kein „Team“ unten. Als Team eingeloggt auf „Meine Anmeldung“ klicken: Name und „Team-Bereich“ bleiben oben.
+2. Einstellungen: Seite ist gesperrt; „Entsperren“, etwas ändern, speichern → wieder gesperrt. Anmeldestart testweise in die Zukunft setzen → „Anmelden“ zeigt „Anmeldung noch nicht möglich“; danach zurückstellen.
+3. Programm: einen Workshop auf die Mitte eines Workshop-Blocks ziehen (grün umrandet) → zugeordnet; einen Punkt ganz ans Ende ziehen; „Verwerfen“ zeigt den roten Dialog.
+4. Texte: mit der Werkzeugleiste fett setzen, ein Bild in „Merke“ einfügen, speichern, Startseite ansehen; danach wieder entfernen.
+5. Mein Konto: „Einstellungen ändern“ → „Jedes Mal einen Code per E-Mail schicken“ (Passwort). Ausloggen, einloggen → Code kommt per Mail, damit einloggen.
+6. Protokoll: Filter-Knöpfe; einen Eintrag ausblenden; mit einem Admin-Konto prüfen, dass er fehlt.
+7. Die Dialoge auf dem Handy ansehen (z. B. Mailing „An … senden“): von unten, Knöpfe untereinander.
 
 ### Noch zu prüfen für AP-6 (nach Merge auf Staging)
 
