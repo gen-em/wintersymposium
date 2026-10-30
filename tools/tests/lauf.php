@@ -587,6 +587,112 @@ if (!$mitDb) {
     pruefe(mail_absender(mail_konfig()) === 'team@example.org', 'Absender aus der Einstellung vor config.php');
     einstellung_setzen('mail_absender', null);
 
+    abschnitt('Mailings (AP-6)');
+    // HTML bereinigen
+    $bildTest = rm_bild_aus_daten((function (): string { $g = imagecreatetruecolor(1600, 400); ob_start(); imagejpeg($g); imagedestroy($g); return (string)ob_get_clean(); })(), null);
+    pruefe($bildTest['breite'] === 1200 && $bildTest['hoehe'] === 300 && is_file(foto_ordner() . '/' . $bildTest['datei']), 'Bild auf 1200 px verkleinert und gespeichert');
+    $sauber = rm_html_bereinigen('<h1 onclick="x()">Titel</h1><div>Zeile <b>fett</b> <i>k</i> <span style="color:red">rot</span></div><script>alert(1)</script>'
+        . '<p><a href="javascript:alert(1)">böse</a> <a href="https://example.org/x?a=1&b=2">gut</a> <a class="knopf extra" href="{link}">Knopf</a></p>'
+        . '<p><img src="https://fremd.example/x.png"><img src="/team/mailings/bild?id=' . $bildTest['id'] . '" alt="Plan" data-breite="50" onerror="x()"></p><iframe src="x"></iframe>');
+    pruefe($sauber === '<h2>Titel</h2><p>Zeile <strong>fett</strong> <em>k</em> rot</p><p>böse <a href="https://example.org/x?a=1&amp;b=2">gut</a> <a href="{link}" class="knopf">Knopf</a></p><p><img src="/team/mailings/bild?id=' . $bildTest['id'] . '" alt="Plan" data-breite="50"></p>', 'HTML bereinigt: nur erlaubte Elemente, keine Skripte, fremden Bilder oder javascript:');
+    pruefe(rm_html_bereinigen('<p>a &lt;b&gt; &amp; "c"</p>') === '<p>a &lt;b&gt; &amp; &quot;c&quot;</p>', 'Text bleibt maskiert');
+    // Empfänger
+    $angem = (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')");
+    pruefe(count(rm_empfaenger('angemeldet')) === $angem && $angem > 3, 'Auswahl „Alle Angemeldeten“');
+    pruefe(count(rm_empfaenger('angemeldet', 'StudentIn')) === (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND berufsgruppe = 'StudentIn' AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')"), 'zusätzlich nach Berufsgruppe');
+    $wsT = $tt('WS 01', '19:30');
+    pruefe(array_column(rm_empfaenger('termin:' . $wsT), 'id') == array_map('intval', array_column(db_zeilen("SELECT a.id FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.termin_id = ? AND p.status = 'fest' AND a.status = 'bestaetigt' ORDER BY a.nachname, a.vorname, a.id", [$wsT]), 'id')), 'Auswahl Workshop-Termin');
+    pruefe(in_array('paula@example.org', array_column(rm_empfaenger('essen_kein'), 'email'), true) && !in_array('lea@example.org', array_column(rm_empfaenger('essen_kein'), 'email'), true), 'Auswahl „Ohne Essen“');
+    pruefe(rm_empfaenger('unbekannt') === [] && !array_key_exists('termin:999999', rm_auswahl_optionen()), 'unbekannte Auswahl: niemand');
+    // Tageslimit je Postfach: config kurz auf ein Limit von 5 setzen (Rundmails über anmeldung@ bis 4)
+    $cfgDatei = konfig_datei();
+    $cfgAlt = (string)file_get_contents($cfgDatei);
+    $cfg = require $cfgDatei;
+    $cfg['mail'] = ['modus' => 'datei', 'tageslimit' => 5, 'newsletter' => ['tageslimit' => 3]];
+    file_put_contents($cfgDatei, '<?php return ' . var_export($cfg, true) . ";\n");
+    konfig_verwerfen();
+    db_ausfuehren("DELETE FROM mail_ausgang");
+    pruefe(mail_limit('system') === ['limit' => 5, 'rundmail' => 4] && mail_limit('newsletter') === ['limit' => 3, 'rundmail' => 3] && mail_postfach_da('newsletter'), 'Limits je Postfach, Reserve für System-Mails');
+    pruefe(mail_absender(mail_konfig('newsletter')) === 'newsletter@' . (host_haupt() ?? 'localhost'), 'Absender newsletter@ der Haupt-Domain');
+    $w = rm_pruefen(['betreff' => "Info\nfür {vorname}", 'html' => '<p>Hallo {vorname} {nachname},</p><p>{workshops}</p><p><a class="knopf" href="{link}">Ansehen</a></p><p><img src="/team/mailings/bild?id=' . $bildTest['id'] . '" alt="Plan"></p>', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system']);
+    pruefe($w['fehler'] === [] && $w['werte']['betreff'] === 'Info für {vorname}', 'Eingaben geprüft, Betreff einzeilig');
+    $rmId = rm_speichern(null, $w['werte'], null);
+    $n = rm_einreihen($rmId, null);
+    pruefe($n === $angem && (int)db_wert('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$rmId]) === $angem && rm_laden($rmId)['status'] === 'versand', 'Senden: Empfängerliste im Archiv, alle in der Warteschlange');
+    pruefe(db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE rundmail_id = ? AND (betreff <> '' OR text <> '')", [$rmId]) == 0, 'Warteschlange enthält nur Verweise, keinen Inhalt');
+    pruefe(rm_einreihen($rmId, null) === null, 'zweites Senden nicht möglich');
+    pruefe(rm_laden($rmId)['loeschen_ab'] === (new DateTimeImmutable(va('veranstaltung_datum')))->modify('+14 months')->format('Y-m-d'), 'Archiv bis 14 Monate nach dem Symposium (E-24)');
+    // eine Person storniert inzwischen: ihre Mail entfällt
+    $weg = (int)db_wert('SELECT anmeldung_id FROM mail_ausgang WHERE rundmail_id = ? ORDER BY id DESC LIMIT 1', [$rmId]);
+    anm_stornieren($weg);
+    db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id IS NULL");
+    $vorMails = count(glob(laufzeit_pfad('mails') . '/*.eml') ?: []);
+    $e1 = mail_senden_faellige(50, 20.0);
+    pruefe($e1['gesendet'] === 4 && rm_fortschritt($rmId)['gesendet'] === 4, 'Rundmail über anmeldung@: 4 von 5 (Reserve bleibt frei)');
+    mail_einreihen('system@example.org', 'System', 'Text');
+    $e2 = mail_senden_faellige(50, 20.0);
+    pruefe($e2['gesendet'] === 1 && db_wert("SELECT status FROM mail_ausgang WHERE rundmail_id IS NULL ORDER BY id DESC LIMIT 1") === 'gesendet', 'Bestätigungen gehen trotzdem sofort raus (Abnahme AP-6)');
+    mail_einreihen('system2@example.org', 'System', 'Text');
+    pruefe(mail_senden_faellige(50, 20.0)['gesendet'] === 1, 'auch über dem Tageslimit');
+        pruefe(rm_fortschritt($rmId)['wartet'] === $angem - 4, 'Rest der Rundmail wartet auf den nächsten Tag');
+    $morgen = time() + 86400;
+    $e3 = mail_senden_faellige(50, 20.0, $morgen);
+    pruefe($e3['gesendet'] === min(4, $angem - 5), 'am nächsten Tag geht es weiter');
+    // Inhalt der gesendeten Mail
+    $dateien = glob(laufzeit_pfad('mails') . '/*.eml') ?: [];
+    sort($dateien);
+    $roh = '';
+    foreach ($dateien as $d) {
+        if (str_contains((string)file_get_contents($d), 'multipart/related')) {
+            $roh = (string)file_get_contents($d);
+            break;
+        }
+    }
+    $dek = quoted_printable_decode($roh);
+    pruefe(str_contains($roh, 'Content-Type: multipart/related') && str_contains($roh, 'multipart/alternative') && preg_match('/Content-ID: <bild' . $bildTest['id'] . '@[^>]+>/', $roh) === 1 && str_contains($dek, 'src="cid:bild' . $bildTest['id'] . '@'), 'HTML-Mail mit Textfassung und eingebettetem Bild (Content-ID)');
+    pruefe(preg_match('#Ansehen: http\S+/link\?t=[0-9a-f]{48}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
+    pruefe(!str_contains($roh, 'Auto-Submitted') && preg_match('/^Subject: .*f=C3=BCr.*Kim|^Subject: .*f=C3=BCr/m', $roh) === 1 && !str_contains($roh, '{vorname}'), 'Rundmail ohne Auto-Submitted, Betreff mit Vorname');
+    $rest = rm_fortschritt($rmId)['wartet'];
+    if ($rest > 0) {
+        pruefe(str_contains((string)rm_abbrechen($rmId, 0), 'abgebrochen') && rm_fortschritt($rmId)['wartet'] === 0 && rm_laden($rmId)['status'] === 'abgebrochen', 'Restlichen Versand abbrechen');
+    } else {
+        rm_job(time());
+        pruefe(rm_laden($rmId)['status'] === 'gesendet', 'fertig gesendet');
+    }
+    // Newsletter-Postfach eigenes Limit
+    $w2 = rm_pruefen(['betreff' => 'NL', 'html' => '<p>Hallo</p>', 'auswahl' => 'angemeldet', 'postfach' => 'newsletter']);
+    $nl = rm_speichern(null, $w2['werte'], null);
+    rm_einreihen($nl, null);
+    pruefe(mail_senden_faellige(50, 20.0, $morgen + 86400)['gesendet'] === 3 && db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE postfach = 'newsletter' AND status = 'gesendet'") == 3, 'newsletter@ mit eigenem Tageslimit');
+    rm_abbrechen($nl, 0);
+    // Planen und Job
+    $pl = rm_speichern(null, $w['werte'], null);
+    pruefe(rm_planen($pl, gmdate('Y-m-d H:i:s', time() + 3600), 0) && rm_laden($pl)['status'] === 'geplant', 'Mailing geplant');
+    rm_job(time());
+    pruefe(rm_laden($pl)['status'] === 'geplant', 'vor dem Zeitpunkt passiert nichts');
+    pruefe(str_contains((string)rm_abbrechen($pl, 0), 'Entwurf') && rm_laden($pl)['status'] === 'entwurf', 'Planung aufheben → wieder Entwurf');
+    rm_planen($pl, gmdate('Y-m-d H:i:s', time() + 3600), 0);
+    $j = rm_job(time() + 3700);
+    pruefe($j['gestartet'] === 1 && rm_laden($pl)['status'] === 'versand', 'Job startet das geplante Mailing');
+    db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ? WHERE rundmail_id = ?", [db_jetzt(), $pl]);
+    pruefe(rm_job(time() + 3800)['fertig'] >= 1 && rm_laden($pl)['status'] === 'gesendet', 'Job schließt fertige Mailings ab');
+    pruefe(rm_job(strtotime(rm_laden($pl)['loeschen_ab'] . ' 12:00:00 UTC'))['archiv'] > 0 && (int)db_wert('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$pl]) === 0, 'Empfängerliste nach der Löschfrist entfernt');
+    $leer = rm_speichern(null, ['betreff' => 'Leer', 'html' => '<p>x</p>', 'auswahl' => 'termin:' . $wsT, 'berufsgruppe' => 'Sonstige', 'postfach' => 'system'], null);
+    pruefe(rm_sendefehler(rm_laden($leer)) !== [] && rm_einreihen($leer, null) === null, 'ohne Empfänger nicht sendbar');
+    $kopie = rm_kopieren($rmId, 0);
+    pruefe(rm_laden($kopie)['status'] === 'entwurf' && rm_laden($kopie)['html'] === rm_laden($rmId)['html'], 'Als neue Mail kopieren');
+    pruefe(rm_loeschen($kopie, 0) && !rm_loeschen($rmId, 0), 'nur Entwürfe lassen sich löschen');
+    // Bilder aufräumen: unbenutzt und älter als ein Tag
+    $alt = rm_bild_aus_daten((function (): string { $g = imagecreatetruecolor(10, 10); ob_start(); imagepng($g); imagedestroy($g); return (string)ob_get_clean(); })(), null);
+    pruefe($alt['typ'] === 'png' && rm_bilder_aufraeumen(time() + 2 * 86400) >= 1 && rm_bild($alt['id']) === null && !is_file(foto_ordner() . '/' . $alt['datei']) && rm_bild($bildTest['id']) !== null, 'unbenutzte Bilder entfernt, benutzte bleiben');
+    // Team: Passwort vergessen per Mail (AP-6)
+    $tkId = konto_anlegen('Tina Team', 'tina@example.org', 'admin', 'tina-ihr-passwort-1', null);
+    tk_passwort_vergessen('tina@example.org');
+    pruefe(str_contains((string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'tina@example.org' ORDER BY id DESC LIMIT 1"), '/einrichten?t='), 'Team: Passwort vergessen schickt einen Link');
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$tkId]);
+    file_put_contents($cfgDatei, $cfgAlt);
+    konfig_verwerfen();
+
     abschnitt('Sicherung und Wiederherstellung (E-47)');
     $zahl = fn(string $t) => (int)db_wert("SELECT COUNT(*) FROM `$t`");
     $vorher = ['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')];

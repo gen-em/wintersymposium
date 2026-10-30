@@ -157,11 +157,25 @@ function tk_registrieren(string $name, string $email): void
     }
 }
 
-/** Passwort vergessen: Link nur an bestätigte Teilnehmenden-Konten (gleiche Antwort für alle). */
+/**
+ * Passwort vergessen (gleiche Antwort für alle): bestätigte Teilnehmenden-Konten
+ * bekommen einen Konto-Link; aktive Team-Konten mit Passwort einen Link über
+ * /einrichten (AP-6, E-50) – der zweite Faktor bleibt dabei bestehen.
+ */
 function tk_passwort_vergessen(string $email): void
 {
     $k = konto_per_email($email);
-    if ($k === null || $k['rolle'] !== 'teilnehmend' || (int)$k['aktiv'] !== 1 || $k['email_bestaetigt_am'] === null) {
+    if ($k === null || (int)$k['aktiv'] !== 1) {
+        return;
+    }
+    if (konto_ist_team($k)) {
+        if ($k['passwort_hash'] !== null) {
+            $token = konto_link_erzeugen((int)$k['id'], 'passwort');
+            mail_vorlage_einreihen($k['email'], 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => konto_link_url($token)]);
+        }
+        return;
+    }
+    if ($k['rolle'] !== 'teilnehmend' || $k['email_bestaetigt_am'] === null) {
         return;
     }
     $l = tk_link((int)$k['id'], 'passwort');

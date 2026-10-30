@@ -16,7 +16,7 @@ if (!rate_erlaubt('einrichten', $ip)) {
 $fund = konto_link_finden($token);
 if ($fund === null || !konto_ist_team($fund['konto'])) {
     rate_misserfolg('einrichten', $ip);
-    seite_meldung(404, 'Link ungültig', 'Dieser Link ist abgelaufen, schon benutzt oder falsch. Bitte einen Betreiber um einen neuen Link.');
+    seite_meldung(404, 'Link ungültig', 'Dieser Link ist abgelaufen, schon benutzt oder falsch. Einen neuen bekommst du unter „Passwort vergessen?“ beim Einloggen oder von einem Betreiber.');
 }
 $k = $fund['konto'];
 $neu = $fund['link']['zweck'] === 'einrichten';

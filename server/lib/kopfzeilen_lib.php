@@ -50,6 +50,8 @@ function kopf_csp(): string
         "font-src 'self'",
         "connect-src 'self'",
         "worker-src 'self'",
+        // Vorschau der Mailings im iframe (eigene, engere Richtlinie in team_mailings_vorschau)
+        "frame-src 'self'",
         "manifest-src 'self'",
         "form-action 'self'",
         "frame-ancestors 'none'",

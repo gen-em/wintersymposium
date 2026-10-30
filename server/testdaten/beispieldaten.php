@@ -18,7 +18,9 @@ const BEISPIEL_PASSWORT = 'beispiel-lea-2026';
 function beispieldaten_laden(): array
 {
     beispieldaten_einstellungen();
-    return ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
+    $r = ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
+    $r['mailings'] = beispieldaten_mailings();
+    return $r;
 }
 
 /**
@@ -125,4 +127,53 @@ function beispieldaten_anmeldungen(): array
     // Mails des Datensatzes nicht versenden (Warteschlange leeren)
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['lea' => $lea, 'paula' => $paula, 'tom' => $tom, 'lea_konto' => (int)$leaKonto];
+}
+
+/**
+ * Mailings (AP-6): ein gesendetes an alle Angemeldeten (mit Empfängerliste im
+ * Archiv) und ein Entwurf an WS 01 19:30 mit Lageplan-Bild und Knopf.
+ * Es geht keine Mail raus (Warteschlange danach leer).
+ */
+function beispieldaten_mailings(): array
+{
+    $termin = 0;
+    foreach (anm_workshops(true) as $w) {
+        foreach ($w['termine'] as $t) {
+            if ($w['kuerzel'] === 'WS 01' && $t['beginn'] === '19:30') {
+                $termin = (int)$t['id'];
+            }
+        }
+    }
+    // Lageplan als einfaches Bild (erfunden), wie ein Upload verarbeitet
+    $bild = null;
+    if (foto_moeglich()) {
+        $g = imagecreatetruecolor(640, 320);
+        imagefill($g, 0, 0, imagecolorallocate($g, 238, 241, 245));
+        imagefilledrectangle($g, 40, 40, 300, 280, imagecolorallocate($g, 0, 60, 113));
+        imagefilledrectangle($g, 340, 40, 600, 160, imagecolorallocate($g, 180, 140, 255));
+        imagefilledrectangle($g, 340, 190, 600, 280, imagecolorallocate($g, 181, 189, 0));
+        imagestring($g, 5, 60, 60, 'Hoersaal', imagecolorallocate($g, 255, 255, 255));
+        imagestring($g, 5, 360, 60, 'Nebenraum (EG)', imagecolorallocate($g, 0, 30, 58));
+        ob_start();
+        imagepng($g);
+        $daten = (string)ob_get_clean();
+        imagedestroy($g);
+        $bild = rm_bild_aus_daten($daten, null);
+    }
+    $gesendet = rm_speichern(null, [
+        'betreff' => 'Anfahrt und Parken',
+        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Parken kannst du im Parkhaus P2 (kostenlos mit Einfahrtsticket).</p><p>Deine Workshops:<br>{workshops}</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+        'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
+    ], null);
+    rm_einreihen($gesendet, null);
+    db_ausfuehren('DELETE FROM mail_ausgang WHERE rundmail_id = ?', [$gesendet]);
+    db_ausfuehren("UPDATE rundmail SET status = 'gesendet' WHERE id = ?", [$gesendet]);
+    $entwurf = rm_speichern(null, [
+        'betreff' => 'WS 01 Atemweg: Raumänderung',
+        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>'
+            . ($bild !== null ? '<p><img src="/team/mailings/bild?id=' . $bild['id'] . '" alt="Lageplan" data-breite="100"></p>' : '')
+            . '<p>Alles andere bleibt. Wir freuen uns auf dich!</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+        'auswahl' => $termin > 0 ? 'termin:' . $termin : 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
+    ], null);
+    return ['gesendet' => $gesendet, 'entwurf' => $entwurf, 'bild' => $bild['id'] ?? null];
 }

@@ -27,6 +27,11 @@ function jobs_katalog(): array
             'abstand_s' => 60,
             'fn' => 'job_anmeldung',
         ],
+        // Mailings: geplante starten, fertige abschließen, Archiv und Bilder aufräumen (AP-6)
+        'rundmail' => [
+            'abstand_s' => 60,
+            'fn' => 'job_rundmail',
+        ],
         // Warteschlange senden (nach anmeldung, damit dessen Mails gleich mitgehen)
         'mail' => [
             'abstand_s' => 60,
@@ -113,6 +118,11 @@ function job_aufraeumen(int $jetzt): array
 function job_anmeldung(int $jetzt): array
 {
     return anm_job($jetzt) + ['konten' => tk_aufraeumen($jetzt)];
+}
+
+function job_rundmail(int $jetzt): array
+{
+    return rm_job($jetzt);
 }
 
 /** Fällige Mails senden. */

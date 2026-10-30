@@ -353,7 +353,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
+        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Mailings', '/team/mailings', 'team-mailings'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
@@ -367,7 +367,44 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'team-person', basis + '/team/personen?a=' + vor.lea_id);
         await pruefeSeite(p, fehler, engine, breite, 'team-person-neu', basis + '/team/personen?neu=1');
         await pruefeSeite(p, fehler, engine, breite, 'team-termin', basis + '/team/workshops?t=' + vor.voll_termin);
+        // AP-6: Mailing-Entwurf (Editor, Vorschau) und gesendetes Mailing (Archiv)
+        await pruefeSeite(p, fehler, engine, breite, 'team-mailing-entwurf', basis + '/team/mailings?id=' + vor.mailing_entwurf);
+        await pruefeSeite(p, fehler, engine, breite, 'team-mailing-gesendet', basis + '/team/mailings?id=' + vor.mailing_gesendet);
       }
+      // Mailings: Editor bedienen (Desktop)
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/mailings?id=' + vor.mailing_entwurf);
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Schreibfeld statt HTML-Feld', await p.isVisible('#rm-editor') && !await p.isVisible('#rm-html') && await p.isVisible('#rm-leiste'));
+      const vorschau = p.frameLocator('iframe.ml-vorschau-frame');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Vorschau mit Name und Bild', (await vorschau.locator('body').textContent({ timeout: 5000 }).catch(() => '')).includes('Hallo Lea') && await vorschau.locator('img[alt=Lageplan]').evaluate(i => i.complete && i.naturalWidth > 0).catch(() => false));
+      await p.click('#rm-editor p:last-child');
+      await p.keyboard.press('End');
+      await p.click('#rm-leiste [data-platzhalter="{nachname}"]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Platzhalter eingefügt', (await p.textContent('#rm-editor')).includes('{nachname}'));
+      await p.click('#rm-leiste [data-befehl=knopf]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf-Dialog öffnet', await p.isVisible('#rm-dialog'));
+      await p.fill('#rm-dialog-text', 'Programm ' + engine);
+      await p.fill('#rm-dialog-ziel', 'https://example.org/programm');
+      await p.click('#rm-dialog-ok');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf eingefügt', await p.locator('#rm-editor a.knopf', { hasText: 'Programm ' + engine }).count() === 1);
+      await p.setInputFiles('#rm-bild', { name: 'test.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJ0lEQVRIiWPc0vOfYSAA04DYOmrxqMWjFo9aPGrxqMWjFo9aPCAAAP6CAmf8hOaeAAAAAElFTkSuQmCC', 'base64') });
+      await p.waitForFunction(() => document.querySelectorAll('#rm-editor img').length >= 2, null, { timeout: 8000 }).catch(() => {});
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Bild hochgeladen und eingefügt', await p.locator('#rm-editor img').count() >= 2, await p.textContent('#rm-status'));
+      await p.click('#rm-leiste [data-befehl=html]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'HTML-Ansicht', await p.isVisible('#rm-html') && (await p.inputValue('#rm-html')).includes('class="knopf"'));
+      await p.click('#rm-leiste [data-befehl=html]');
+      await p.selectOption('#berufsgruppe', 'ÄrztIn');
+      await p.waitForFunction(() => document.getElementById('rm-senden').textContent.trim() !== '', null, { timeout: 3000 }).catch(() => {});
+      await p.waitForTimeout(400);
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Empfängerzahl folgt der Auswahl', (await p.textContent('#rm-zahl')).trim() === '1' && (await p.textContent('#rm-senden')).includes('An 1 senden'), await p.textContent('#rm-zahl'));
+      await p.selectOption('#berufsgruppe', '');
+      await Promise.all([p.waitForNavigation(), p.click('button[value=speichern]')]);
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Entwurf gespeichert, Vorschau zeigt Knopf', (await p.textContent('.meldung')).includes('gespeichert') && (await vorschau.locator('body').textContent({ timeout: 5000 }).catch(() => '')).includes('Programm ' + engine));
+      await p.click('#rm-senden');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Senden fragt nach', await p.isVisible('button[value=senden]'));
+      await p.click('#rm-senden');
+      await p.click('button[data-breite=desktop]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Vorschau Desktop-Breite', (await p.getAttribute('#rm-vorschau', 'class')).includes('desktop'));
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team/personen');
       await p.fill('#suche', 'paula'); await Promise.all([p.waitForNavigation(), p.click('.filterzeile button[type=submit]')]);
@@ -454,9 +491,14 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.goto(basis + '/team/konten');
       await p.fill('#name', 'Neu ' + engine); await p.fill('#email', `neu-${engine}@example.org`);
       await p.selectOption('#rolle', 'betreiber');
+      await p.check('input[name=nur_anzeigen]');
       await p.click('form:has(input[value=anlegen]) button');
       await p.waitForLoadState('load');
-      notiere(engine, 'handy', 'team-konten', 'Konto über Formular angelegt, Link angezeigt', (await p.textContent('body')).includes('/einrichten?t='));
+      notiere(engine, 'handy', 'team-konten', 'Konto über Formular angelegt, Link angezeigt („keine Mail“)', (await p.textContent('body')).includes('/einrichten?t='));
+      await p.fill('#name', 'Mail ' + engine); await p.fill('#email', `mail-${engine}@example.org`);
+      await p.click('form:has(input[value=anlegen]) button');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team-konten', 'Einladung per Mail (AP-6)', (await p.textContent('.meldung')).includes(`Einladung an mail-${engine}@example.org geschickt`) && !(await p.textContent('body')).includes('/einrichten?t='));
       notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'Betreiber');
 
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen

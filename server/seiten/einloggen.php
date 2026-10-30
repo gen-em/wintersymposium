@@ -107,7 +107,7 @@ if ($halb === null): ?>
     <input id="passwort" name="passwort" type="password" required autocomplete="current-password">
     <button type="submit" class="knopf">Weiter</button>
 </form>
-<p class="meta klein">Mit Konto für Teilnehmende oder als Team. <a href="/konto/passwort-vergessen">Passwort vergessen?</a> (Team: ein Betreiber schickt dir einen neuen Link.) Noch kein Konto? Du kannst dich auch ohne <a href="/anmelden">anmelden</a> oder <a href="/konto/neu">ein Konto anlegen</a>.</p>
+<p class="meta klein">Mit Konto für Teilnehmende oder als Team. <a href="/konto/passwort-vergessen">Passwort vergessen?</a> Noch kein Konto? Du kannst dich auch ohne <a href="/anmelden">anmelden</a> oder <a href="/konto/neu">ein Konto anlegen</a>.</p>
 <?php elseif ($einrichtung === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>

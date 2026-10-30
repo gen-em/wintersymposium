@@ -2,6 +2,23 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.10.0] – 2026-10-30
+
+AP-6: Mailings und Team-Mails (E-50).
+
+### Neu
+
+- **Mailings** (neuer Reiter): Rundmails an Teilnehmende mit Empfängerauswahl (alle Angemeldeten, Wartelisten, ohne Essen, je Workshop-Termin, optional Berufsgruppe), Editor mit Fett, Kursiv, Überschrift, Liste, Link, Knopf, Bild und Platzhaltern ({vorname}, {nachname}, {workshops}, {link}), HTML-Ansicht, Vorschau für Handy und Desktop, Testmail an mich, Planen, Senden mit Nachfrage, Abbrechen, Archiv mit Empfängerliste, „Als neue Mail kopieren“.
+- Bilder werden hochgeladen, verkleinert und in die Mail eingebettet (keine fremden Server).
+- Zweites Postfach **newsletter@** mit eigenem Tageslimit (config.php); Mailings verteilen sich auf mehrere Tage, Bestätigungen gehen vor.
+- **Team-Mails:** Einladung neuer Team-Mitglieder per Mail; „Passwort vergessen?“ auch für Team-Konten.
+- Betrieb: Stand und Absender je Postfach.
+
+### Geändert
+
+- Formularfelder bleiben auf dem Handy in der Breite des Bildschirms (WebKit).
+- Testdaten enthalten zwei Mailings (gesendet und Entwurf mit Bild).
+
 ## [0.9.0] – 2026-10-29
 
 AP-5: Team-Bereich (E-49).

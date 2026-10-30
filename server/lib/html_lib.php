@@ -105,6 +105,7 @@ function team_reiter(array $konto, string $aktiv): string
         ['/team/personen', 'Personen'],
         ['/team/workshops', 'Workshops'],
         ['/team/programm', 'Programm'],
+        ['/team/mailings', 'Mailings'],
         ['/team/statistik', 'Statistik'],
         ['/team/einstellungen', 'Einstellungen'],
         ['/team/texte', 'Texte'],

@@ -34,6 +34,7 @@ require __DIR__ . '/lib/tnkonto_lib.php';
 require __DIR__ . '/lib/sicherung_lib.php';
 require __DIR__ . '/lib/team_lib.php';
 require __DIR__ . '/lib/statistik_lib.php';
+require __DIR__ . '/lib/rundmail_lib.php';
 
 date_default_timezone_set('UTC');
 mb_internal_encoding('UTF-8');
