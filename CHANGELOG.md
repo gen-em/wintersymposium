@@ -2,6 +2,22 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.16.0] – 2026-10-30
+
+Export als Excel und PDF (E-56, O-35).
+
+### Neu
+
+- **Excel (xlsx)** für alle Exporte: Kopfzeile in Lila, beim Scrollen fest, mit Filter; Datum als echtes Datum; Texte werden nie als Formel ausgeführt.
+- **PDF (A4) im Branding** zum Ausdrucken: Teilnehmende (quer, ohne E-Mail), Listen je Termin, Wartelisten, Essen, CME, Statistik – mit Logo, Stand, Filter und Seitenzahlen.
+- **Liste je Termin für Dozierende:** je Termin eine Seite mit Ort, Leitung und Belegung, ohne E-Mail; auch einzeln unter „Workshops“.
+- Knöpfe **CSV · Excel · PDF** unter Statistik, beim Termin und je Newsletter-Liste (dort ohne PDF).
+- Fremdbestandteil tFPDF 1.34 (LGPL-2.1) in `server/lib/vendor/tfpdf/`, Schriften und Logo für die PDFs in `server/pdf/`.
+
+### Geändert
+
+- Das Protokoll nennt beim Export das Format.
+
 ## [0.15.0] – 2026-10-30
 
 Passkeys (E-55, O-14).

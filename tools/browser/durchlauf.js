@@ -437,8 +437,26 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'newsletter', basis + '/newsletter');
         await pruefeSeite(p, fehler, engine, breite, 'newsletter-verwalten', basis + vor.nl_verwalten);
       }
-      // Mailings: Empfängerart Newsletter blendet die Listen ein
+      // Export (O-35): Knöpfe CSV, Excel, PDF; Dateien herunterladen und prüfen
       await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/statistik');
+      notiere(engine, 'desktop-breit', 'team-statistik', 'Export: je Liste CSV, Excel, PDF (Newsletter ohne PDF)',
+        await p.locator('.export-knoepfe a[href*="format=xlsx"]').count() === 7 && await p.locator('.export-knoepfe a[href*="format=pdf"]').count() === 6);
+      for (const [art, endung, anfang] of [['teilnehmende', 'pdf', '%PDF-'], ['termine', 'pdf', '%PDF-'], ['wartelisten', 'pdf', '%PDF-'], ['essen', 'pdf', '%PDF-'], ['statistik', 'pdf', '%PDF-'], ['cme', 'xlsx', 'PK'], ['teilnehmende', 'xlsx', 'PK']]) {
+        const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`.export-knoepfe a[href*="art=${art}"][href*="format=${endung}"]`)]);
+        const ziel = path.join(AUS, `${engine}-export-${art}.${endung}`);
+        await dl.saveAs(ziel);
+        const kopf = fs.readFileSync(ziel).subarray(0, 5).toString('latin1');
+        notiere(engine, 'desktop-breit', 'team-statistik', `Export ${art} als ${endung}`, kopf.startsWith(anfang) && dl.suggestedFilename().endsWith('.' + endung), dl.suggestedFilename());
+      }
+      await p.goto(basis + '/team/workshops?t=' + vor.voll_termin);
+      {
+        const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.export-knoepfe a[href*="format=pdf"]')]);
+        const ziel = path.join(AUS, `${engine}-export-termin.pdf`);
+        await dl.saveAs(ziel);
+        notiere(engine, 'desktop-breit', 'team-termin', 'Liste des Termins als PDF', fs.readFileSync(ziel).subarray(0, 5).toString('latin1') === '%PDF-');
+      }
+      // Mailings: Empfängerart Newsletter blendet die Listen ein
       await p.goto(basis + '/team/mailings?neu=1');
       notiere(engine, 'desktop-breit', 'team-mailing-neu', 'Listen erst bei „Newsletter-Listen“', !await p.isVisible('.rm-listen'));
       await p.check('input[name=art][value=newsletter]');
