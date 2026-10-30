@@ -129,6 +129,8 @@ function team_reiter(array $konto, string $aktiv): string
 /** Kopf einer Team-Seite: Rahmen, Titel, Reiter, Meldung aus der Umleitung. */
 function team_seite_kopf(array $konto, string $titel, string $aktiv, array $opt = []): void
 {
+    // Ein Editor für alle Textfelder (E-54): auf jeder Team-Seite geladen, wirkt nur auf textarea[data-editor]
+    $opt['skripte'] = array_values(array_unique(array_merge(['editor.js'], $opt['skripte'] ?? [])));
     seite_kopf($titel, $opt + ['konto' => $konto, 'aktiv' => '/team']);
     echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div></div>'
         . '<div class="innen">' . team_reiter($konto, $aktiv) . meldung_html(flash_holen());

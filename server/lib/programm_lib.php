@@ -269,7 +269,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'kuerzel' => $text('kuerzel', 12),
         'titel' => $text('titel', 160),
         'untertitel' => $text('untertitel', 200),
-        'beschreibung' => $text('beschreibung', 4000),
+        'beschreibung' => editor_bereinigen((string)($e['beschreibung'] ?? '')),
         'ort' => $text('ort', 120),
         'bring' => $text('bring', 160),
         'notiz' => $text('notiz', 300),
@@ -282,7 +282,8 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         $w['block_id'] = null;
     }
     foreach (['kuerzel' => 12, 'titel' => 160, 'untertitel' => 200, 'beschreibung' => 4000, 'ort' => 120, 'bring' => 160, 'notiz' => 300] as $k => $max) {
-        if (mb_strlen($w[$k]) > $max) {
+        // Beschreibung: Länge des sichtbaren Texts (gespeichert als HTML aus dem Editor, E-54)
+        if (mb_strlen($k === 'beschreibung' ? editor_text($w[$k]) : $w[$k]) > $max) {
             $f[$k] = "Höchstens $max Zeichen.";
         }
     }
@@ -701,7 +702,7 @@ function dozent_pruefen(array $e): array
     $w = [
         'name' => trim(preg_replace('/\s+/u', ' ', (string)($e['name'] ?? '')) ?? ''),
         'funktion' => trim(preg_replace('/\s+/u', ' ', (string)($e['funktion'] ?? '')) ?? ''),
-        'kurzbio' => trim(str_replace("\r", '', (string)($e['kurzbio'] ?? ''))),
+        'kurzbio' => editor_bereinigen((string)($e['kurzbio'] ?? '')),
     ];
     $f = [];
     if ($w['name'] === '' || mb_strlen($w['name']) > 120) {
@@ -710,7 +711,7 @@ function dozent_pruefen(array $e): array
     if (mb_strlen($w['funktion']) > 160) {
         $f['funktion'] = 'Höchstens 160 Zeichen.';
     }
-    if (mb_strlen($w['kurzbio']) > 1000) {
+    if (mb_strlen(editor_text($w['kurzbio'])) > 1000) {
         $f['kurzbio'] = 'Höchstens 1000 Zeichen.';
     }
     return ['werte' => $w, 'fehler' => $f];

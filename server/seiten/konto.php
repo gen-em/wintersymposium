@@ -180,7 +180,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
             <h2 class="zwischen klein-zwischen">Newsletter</h2>
             <form class="form" method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="newsletter">
                 <fieldset class="feld nl-listen"><legend class="sr">Newsletter</legend>
-                <?php foreach (nl_listen(true) as $l): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= ($abos[(int)$l['id']] ?? '') === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . e($l['beschreibung']) . '</span>' : '' ?></span></label><?php endforeach; ?>
+                <?php foreach (nl_listen(true) as $l): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= ($abos[(int)$l['id']] ?? '') === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '' ?></span></label><?php endforeach; ?>
                 </fieldset>
                 <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>
                 <div><button class="knopf zweit" type="submit">Newsletter speichern</button></div>

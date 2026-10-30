@@ -16,7 +16,7 @@ seite_kopf($rechtstext['titel']);
 <div class="innen seitenkopf"><h1 class="titel"><?= e($rechtstext['titel']) ?></h1></div>
 <div class="innen">
     <div class="text">
-        <?= $text !== '' ? text_zu_html($text) : '<p class="hinweis-leer">Dieser Text wird gerade erstellt.</p>' ?>
+        <?= $text !== '' ? editor_html($text) : '<p class="hinweis-leer">Dieser Text wird gerade erstellt.</p>' ?>
     </div>
 </div>
 <?php

@@ -418,7 +418,7 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe(str_contains($r['kopf']['content-security-policy'] ?? '', "frame-src 'self'"), 'Seite erlaubt die Vorschau im eigenen iframe');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $b);
     $c = http_csrf($r['text']);
-    pruefe(str_contains($r['text'], 'id="rm-editor"') && str_contains($r['text'], 'name="html"') && str_contains($r['text'], '/assets/mailings.js') && str_contains($r['text'], 'Die Vorschau erscheint nach dem ersten Speichern'), 'Editor mit Schreibfeld und Textfeld ohne Skript');
+    pruefe(str_contains($r['text'], 'data-editor="block"') && str_contains($r['text'], '/assets/editor.js') && str_contains($r['text'], 'name="html"') && str_contains($r['text'], '/assets/mailings.js') && str_contains($r['text'], 'Die Vorschau erscheint nach dem ersten Speichern'), 'Editor mit Schreibfeld und Textfeld ohne Skript');
     $r = http_anfrage($basis, 'POST', '/team/mailings', $h, [], ['csrf' => $c, 'aktion' => 'speichern', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system', 'betreff' => 'Hallo {vorname}', 'html' => '<p>Hallo {vorname},</p><script>x</script><p><a class="knopf" href="{link}">Ansehen</a></p>'], $b);
     $id = (int)db_wert('SELECT MAX(id) FROM rundmail');
     pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/team/mailings?id=' . $id && !str_contains((string)db_wert('SELECT html FROM rundmail WHERE id = ?', [$id]), 'script'), 'Entwurf gespeichert und bereinigt');
@@ -456,7 +456,7 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     $erste = rm_empfaenger('angemeldet')[0]['email'] ?? '';
     pruefe(preg_match('#/link\?t=[0-9a-f]{48}#', http_mail_an($tmp, $erste, 30, 'Ansehen')) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
     $r = http_anfrage($basis, 'GET', '/team/mailings?id=' . $id, $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'Empfängerliste (' . $soll . ')') && str_contains($r['text'], 'Als neue Mail kopieren') && !str_contains($r['text'], 'id="rm-editor"'), 'Gesendetes Mailing: Archiv mit Empfängerliste, nicht mehr änderbar');
+    pruefe(str_contains($r['text'], 'Empfängerliste (' . $soll . ')') && str_contains($r['text'], 'Als neue Mail kopieren') && !str_contains($r['text'], 'data-editor='), 'Gesendetes Mailing: Archiv mit Empfängerliste, nicht mehr änderbar');
     $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'speichern', 'betreff' => 'Geändert', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'postfach' => 'system'], $b);
     pruefe(db_wert('SELECT betreff FROM rundmail WHERE id = ?', [$id]) === 'Hallo {vorname}', 'Gesendetes lässt sich nicht ändern');
     $r = http_anfrage($basis, 'GET', '/team/mailings', $h, [], null, $b);
@@ -565,10 +565,10 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(preg_match('#^/bild/text-[0-9a-f]{16}\.png$#', $url) === 1, 'Bild für einen Text hochgeladen');
     pruefe(http_anfrage($basis, 'GET', $url, $h, [], null, "$tmp/kekse-gast.txt")['status'] === 200, 'Text-Bild öffentlich abrufbar');
     $alt = inhalt('start_cme');
-    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => "Mit Bild:\n\n![Lageplan]($url)"], $b);
-    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" src="' . $url . '" alt="Lageplan"'), 'Bild erscheint auf der Startseite');
+    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" loading="lazy" src="' . $url . '" alt="Lageplan" data-breite="50">') && !str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<script>x()'), 'Bild erscheint auf der Startseite (halbe Breite), Skript entfernt');
     http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => $alt], $b);
-    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'CommonMark'), 'Hilfe nennt den Standard CommonMark');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-editor="block"'), 'Texte mit dem Editor (wie Mailings)');
     // Login mit Code per E-Mail
     db_ausfuehren('DELETE FROM rate_limit');
     $mk = konto_anlegen('Mia Mailcode', 'mia@example.org', 'admin', 'mia-ihr-passwort-1', null);
@@ -1024,7 +1024,7 @@ function http_tests(string $wurzel, string $tmp): void
             $r = http_anfrage($basis, 'GET', $pf, $h);
             pruefe($r['status'] === 200 && str_contains($r['text'], $titel) && str_contains($r['text'], 'wird gerade erstellt'), "$titel erreichbar (noch leer)");
         }
-        inhalt_setzen('impressum', "## Angaben\nPhilipp Chadid\n\nKontakt: [admin@winter-notfallsymposium.de](mailto:admin@winter-notfallsymposium.de)");
+        inhalt_setzen('impressum', '<h2>Angaben</h2><p>Philipp Chadid</p><p>Kontakt: <a href="mailto:admin@winter-notfallsymposium.de">admin@winter-notfallsymposium.de</a></p>');
         $r = http_anfrage($basis, 'GET', '/impressum', $h);
         pruefe(str_contains($r['text'], '<h2>Angaben</h2>') && str_contains($r['text'], 'href="mailto:admin@winter-notfallsymposium.de"'), 'Impressum zeigt gepflegten Text');
 
