@@ -344,7 +344,7 @@ function zertifikat_pdf(array $d): string
     $pdf->Image(export_pdf_ordner() . '/ALLGAEU-AKUT_Bildzeichen_lila.png', $links - 1.35, 12.5, 19.0);
     $pdf->SetDrawColor(...$f['linie']);
     $pdf->SetLineWidth(0.26);
-    $pdf->Line(38.1, 15.0, 38.1, 26.6);
+    $pdf->Line(38.1, 14.2, 38.1, 24.8);
     // Name der Veranstaltung groß über die ganze Breite neben der Bildmarke (Admin 2026-10-30)
     $name = mb_strtoupper(tn_name());
     $nb = $links + $breite - 42.6;
@@ -355,7 +355,8 @@ function zertifikat_pdf(array $d): string
         $pdf->SetFont('antonio', 'B', $groesse);
     }
     $pdf->SetTextColor(...$f['text']);
-    $pdf->SetXY(42.6, 19.4 - $groesse * 0.3528 * 0.62);
+    // Versalien optisch mittig zur Bildmarke (sichtbar 13,8–25,1 mm, Mitte 19,5 mm)
+    $pdf->SetXY(42.6, 19.47 - $groesse * 0.3528 * 0.476);
     $pdf->Cell($nb, $groesse * 0.3528 * 1.24, $name, 0, 0, 'L');
     // Badge „3. Auflage · 2027“ darunter rechts, leicht gedreht
     $jahr = substr(va('veranstaltung_datum'), 0, 4);
