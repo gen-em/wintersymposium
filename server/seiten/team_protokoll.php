@@ -47,7 +47,7 @@ $link = fn(array $neu) => '/team/protokoll?' . http_build_query(array_filter(arr
 $titel = fn(string $a) => AUDIT_ARTEN[$a] ?? $a;
 team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
 ?>
-<p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur Betreiber.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten und Mailings sowie deine eigenen.' ?></p>
+<p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur Betreiber.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten, Mailings und Newsletter sowie deine eigenen.' ?></p>
 <form class="filterzeile" method="get" action="/team/protokoll" role="search">
     <?php if ($art !== ''): ?><input type="hidden" name="art" value="<?= e($art) ?>"><?php endif; ?>
     <label class="sr" for="q">Suchen</label>

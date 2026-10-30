@@ -196,7 +196,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
     db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
     for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
         $z = db_zeile(
-            "SELECT id, an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, versuche FROM mail_ausgang
+            "SELECT id, an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
              WHERE status = 'offen' AND naechster_versuch <= ?
                AND (prio = ? OR (postfach = 'system' AND ? < ?) OR (postfach = 'newsletter' AND ? < ?))
              ORDER BY prio, id LIMIT 1",
@@ -215,13 +215,13 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $text = $z['text'];
         if ($z['rundmail_id'] !== null) {
             // Rundmail erst jetzt zusammensetzen; Anmeldung inzwischen storniert → entfällt
-            $m = rm_mail_fuer((int)$z['rundmail_id'], (int)$z['anmeldung_id']);
+            $m = $z['nl_person_id'] !== null ? rm_mail_fuer_nl((int)$z['rundmail_id'], (int)$z['nl_person_id']) : rm_mail_fuer((int)$z['rundmail_id'], (int)$z['anmeldung_id']);
             if ($m === null) {
                 db_ausfuehren('DELETE FROM mail_ausgang WHERE id = ?', [$z['id']]);
                 continue;
             }
             [$betreff, $text] = [$m['betreff'], $m['text']];
-            $opt += ['html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true];
+            $opt += ['html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true, 'kopf' => $m['kopf'] ?? [], 'absender_name' => $m['absender_name'] ?? null];
         }
         $fehler = mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
@@ -342,7 +342,7 @@ function mail_nachricht(array $c, string $an, string $betreff, string $text, arr
     $absender = mail_absender($c);
     $domain = substr(strrchr($absender, '@') ?: '@localhost', 1);
     $kopf = [
-        'From: ' . mb_encode_mimeheader(mail_absender_name($c), 'UTF-8', 'Q') . ' <' . $absender . '>',
+        'From: ' . mb_encode_mimeheader((string)($opt['absender_name'] ?? null ?: mail_absender_name($c)), 'UTF-8', 'Q') . ' <' . $absender . '>',
         'To: <' . $an . '>',
         'Subject: ' . mb_encode_mimeheader(trim(preg_replace('/[\r\n]+/', ' ', $betreff) ?? ''), 'UTF-8', 'Q'),
         'Date: ' . date(DATE_RFC2822),
@@ -354,6 +354,10 @@ function mail_nachricht(array $c, string $an, string $betreff, string $text, arr
     }
     if (trim((string)$c['antwort_an']) !== '') {
         $kopf[] = 'Reply-To: <' . trim((string)$c['antwort_an']) . '>';
+    }
+    // Zusätzliche Kopfzeilen (Newsletter: List-Unsubscribe), ohne Zeilenumbrüche
+    foreach ($opt['kopf'] ?? [] as $k) {
+        $kopf[] = str_replace(["\r", "\n"], '', (string)$k);
     }
     $html = $opt['html'] ?? null;
     if ($html === null) {
@@ -584,6 +588,18 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'du bist jetzt im Team des Wintersymposiums (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
                 . "\n\nDer Link gilt 72 Stunden und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter " . url('/einloggen') . '.'
                 . "\n\nDu erwartest diese Mail nicht? Dann ignoriere sie und sag dem Team Bescheid." . mail_gruss()];
+        case 'newsletter_bestaetigen':
+            return ['Bitte bestätige deinen Newsletter',
+                'Hallo' . (($d['vorname'] ?? '') !== '' ? ' ' . $d['vorname'] : '') . ",\n\n"
+                . 'du möchtest diese Newsletter bekommen: ' . $d['listen'] . ". Bestätige das über diesen Link:\n\n" . $d['link']
+                . "\n\nDer Link gilt " . NL_BESTAETIGEN_TAGE . ' Tage. Ohne Bestätigung tragen wir dich nicht ein und löschen die Anfrage.'
+                . "\n\nMit der Bestätigung willigst du ein: „" . $d['einwilligung'] . '“'
+                . "\n\nDu hast dich nicht eingetragen? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'newsletter_schon':
+            return ['Dein Newsletter beim Wintersymposium',
+                'Hallo' . (($d['vorname'] ?? '') !== '' ? ' ' . $d['vorname'] : '') . ",\n\n"
+                . "für diese Adresse sind die gewählten Newsletter schon eingetragen. Hier kannst du deine Listen ansehen und ändern oder dich abmelden:\n\n" . $d['link']
+                . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'zweitfaktor_code':
             return ['Dein Code zum Einloggen: ' . $d['code'],
                 $hallo . 'dein Code zum Einloggen in den Team-Bereich:' . "\n\n    " . $d['code'] . "\n\nEr gilt 10 Minuten und nur einmal."

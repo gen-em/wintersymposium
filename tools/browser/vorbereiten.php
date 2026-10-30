@@ -75,6 +75,7 @@ echo json_encode([
     'lea_id' => $bd['anmeldungen']['lea'],
     'voll_termin' => (int)db_wert("SELECT termin_id FROM platz WHERE status = 'angebot' LIMIT 1"),
     'mailing_entwurf' => $bd['mailings']['entwurf'],
+    'nl_verwalten' => '/newsletter/verwalten?t=' . nl_link_erzeugen($bd['newsletter']['nina'], 'verwalten'),
     'mailing_gesendet' => $bd['mailings']['gesendet'],
     'mails' => $ordner . '/var/mails',
 ], JSON_UNESCAPED_SLASHES), "\n";

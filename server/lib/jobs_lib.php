@@ -111,6 +111,7 @@ function job_aufraeumen(int $jetzt): array
         'konto_links' => konto_link_aufraeumen($jetzt),
         'fotos' => foto_aufraeumen(),
         'mails' => mail_aufraeumen($jetzt),
+        'newsletter' => nl_aufraeumen($jetzt),
     ];
 }
 

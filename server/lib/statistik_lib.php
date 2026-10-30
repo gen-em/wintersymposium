@@ -128,6 +128,7 @@ const EXPORT_ARTEN = [
     'essen' => ['Essensliste', 'Namen je Essen'],
     'cme' => ['CME-Liste', 'Name, Berufsgruppe und EFN der ÄrztInnen (Format für die Kammer folgt mit AP-10)'],
     'statistik' => ['Statistik', 'alle Zahlen dieser Seite'],
+    'newsletter' => ['Newsletter-Listen', 'nur bestätigte Einträge, je Liste mit Zeitpunkt und Fassung der Einwilligung (ohne Berufsgruppen-Filter)'],
 ];
 
 /** Export erzeugen: ['datei' => Name, 'text' => CSV] oder null. */
@@ -194,6 +195,18 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 }
             }
             return ['datei' => $datei('cme'), 'text' => csv_text(['Nachname', 'Vorname', 'Berufsgruppe', 'EFN'], $z)];
+        case 'newsletter':
+            // AP-7: bestätigte Abonnierende (eine Liste über t=…, sonst alle)
+            $par = [];
+            $nur = '';
+            if ($terminId > 0) {
+                $nur = ' AND a.liste_id = ?';
+                $par[] = $terminId;
+            }
+            $zeilen = array_map(fn($r) => [$r['liste'], $r['email'], $r['vorname'], datum_zeit_text($r['bestaetigt_am']), $r['fassung'], $r['quelle']], db_zeilen(
+                "SELECT l.name AS liste, p.email, p.vorname, a.bestaetigt_am, a.fassung, a.quelle FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id JOIN newsletter_liste l ON l.id = a.liste_id
+                 WHERE a.status = 'bestaetigt'" . $nur . ' ORDER BY l.pos, p.email', $par));
+            return ['datei' => 'wintersymposium-newsletter-' . gmdate('Ymd') . '.csv', 'text' => csv_text(['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen)];
         case 'statistik':
             $d = stat_daten($bg);
             $z = [['Angemeldet', $d['angemeldet']], ['Kapazität', $d['kapazitaet'] ?? 'unbegrenzt'], ['Mail nicht bestätigt', $d['unbestaetigt']], ['Warteliste Symposium', $d['warteliste']],

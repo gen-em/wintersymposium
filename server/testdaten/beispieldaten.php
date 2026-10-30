@@ -20,6 +20,7 @@ function beispieldaten_laden(): array
     beispieldaten_einstellungen();
     $r = ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
     $r['mailings'] = beispieldaten_mailings();
+    $r['newsletter'] = beispieldaten_newsletter();
     return $r;
 }
 
@@ -176,4 +177,21 @@ function beispieldaten_mailings(): array
         'auswahl' => $termin > 0 ? 'termin:' . $termin : 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
     ], null);
     return ['gesendet' => $gesendet, 'entwurf' => $entwurf, 'bild' => $bild['id'] ?? null];
+}
+
+/**
+ * Newsletter (AP-7): drei erfundene Abonnierende – Nina auf beiden Listen,
+ * Otto auf „Allgäu Akut“ (beide bestätigt), Pia wartet noch auf die Bestätigung.
+ * Es geht keine Mail raus.
+ */
+function beispieldaten_newsletter(): array
+{
+    $listen = array_column(nl_listen(), 'id', 'name');
+    $nina = nl_person_anlegen('nina@example.org', 'Nina');
+    nl_listen_setzen($nina, [$listen['Wintersymposium'] ?? 0, $listen['Allgäu Akut'] ?? 0], 'formular');
+    $otto = nl_person_anlegen('otto@example.org', '');
+    nl_listen_setzen($otto, [$listen['Allgäu Akut'] ?? 0], 'formular');
+    nl_anfragen('pia@example.org', 'Pia', [$listen['Wintersymposium'] ?? 0], 'formular');
+    db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'pia@example.org'");
+    return ['nina' => $nina, 'otto' => $otto];
 }

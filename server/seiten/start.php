@@ -56,5 +56,8 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
     <div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p><?= text_zu_html(inhalt('start_cme')) ?></div>
 </div></section>
 <?php endif; ?>
+<section class="abschnitt"><div class="innen">
+    <p class="nl-hinweis"><span class="kicker">Newsletter</span> Termine und Neuigkeiten per Mail – kostenlos, jederzeit abbestellbar. <a href="/newsletter">Newsletter bestellen</a></p>
+</div></section>
 <?php
 seite_fuss();

@@ -372,6 +372,67 @@ function migration_katalog(): array
                 "ALTER TABLE konto ADD COLUMN zweitfaktor_mail TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN mailcode_hash VARCHAR(255) NULL, ADD COLUMN mailcode_bis DATETIME NULL",
             ],
         ],
+        10 => [
+            'beschreibung' => 'Newsletter: Listen, Abonnierende mit Double-Opt-In, Links, Versand an Listen (AP-7, E-52)',
+            'sql' => [
+                "CREATE TABLE newsletter_liste (
+                    id              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    name            VARCHAR(80)  NOT NULL,
+                    beschreibung    VARCHAR(300) NOT NULL DEFAULT '',
+                    absender_name   VARCHAR(80)  NOT NULL DEFAULT '',
+                    sichtbar        TINYINT(1)   NOT NULL DEFAULT 1,
+                    bei_anmeldung   TINYINT(1)   NOT NULL DEFAULT 0,
+                    pos             INT          NOT NULL DEFAULT 0,
+                    abmeldungen     INT UNSIGNED NOT NULL DEFAULT 0,
+                    erstellt_am     DATETIME     NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "INSERT INTO newsletter_liste (name, beschreibung, absender_name, sichtbar, bei_anmeldung, pos, erstellt_am) VALUES
+                    ('Wintersymposium', 'Neuigkeiten zum Wintersymposium: Termin, Programm, Anmeldestart.', 'Wintersymposium Notfallmedizin', 1, 0, 1, UTC_TIMESTAMP()),
+                    ('Allgäu Akut', 'Termine der nächsten Fortbildungen von Allgäu Akut.', 'Allgäu Akut', 1, 1, 2, UTC_TIMESTAMP())",
+                // Eine Person je Adresse; Vorname freiwillig (Anrede)
+                "CREATE TABLE newsletter_person (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    email       VARCHAR(190) NOT NULL,
+                    vorname     VARCHAR(80)  NOT NULL DEFAULT '',
+                    erstellt_am DATETIME     NOT NULL,
+                    UNIQUE KEY uq_newsletter_person_email (email)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Abo je Liste: offen (wartet auf Bestätigung) oder bestätigt; Nachweis: Zeitpunkt und Fassung des Einwilligungstexts
+                "CREATE TABLE newsletter_abo (
+                    person_id     INT UNSIGNED NOT NULL,
+                    liste_id      INT UNSIGNED NOT NULL,
+                    status        ENUM('offen','bestaetigt') NOT NULL,
+                    quelle        ENUM('formular','anmeldung','konto','team','verwalten') NOT NULL,
+                    angefragt_am  DATETIME     NOT NULL,
+                    bestaetigt_am DATETIME     NULL,
+                    fassung       CHAR(12)     NULL,
+                    PRIMARY KEY (person_id, liste_id),
+                    KEY ix_newsletter_abo_liste (liste_id, status),
+                    CONSTRAINT fk_newsletter_abo_person FOREIGN KEY (person_id) REFERENCES newsletter_person (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_newsletter_abo_liste FOREIGN KEY (liste_id) REFERENCES newsletter_liste (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Wortlaut der Einwilligung je Fassung (Nachweis, was zugestimmt wurde)
+                "CREATE TABLE newsletter_fassung (
+                    fassung     CHAR(12)     NOT NULL PRIMARY KEY,
+                    text        TEXT         NOT NULL,
+                    erstellt_am DATETIME     NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Links: bestaetigen (7 Tage) und verwalten/abmelden (aus jeder Newsletter-Mail, 400 Tage); nur Hash
+                "CREATE TABLE newsletter_link (
+                    id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    person_id   INT UNSIGNED NOT NULL,
+                    token_hash  CHAR(64)     NOT NULL,
+                    zweck       ENUM('bestaetigen','verwalten') NOT NULL,
+                    gueltig_bis DATETIME     NOT NULL,
+                    UNIQUE KEY uq_newsletter_link_token (token_hash),
+                    KEY ix_newsletter_link_gueltig (gueltig_bis),
+                    CONSTRAINT fk_newsletter_link_person FOREIGN KEY (person_id) REFERENCES newsletter_person (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Mailings an Newsletter-Listen: Empfänger ist eine newsletter_person statt einer Anmeldung
+                "ALTER TABLE mail_ausgang ADD COLUMN nl_person_id INT UNSIGNED NULL AFTER anmeldung_id",
+                "ALTER TABLE rundmail_empfaenger ADD COLUMN nl_person_id INT UNSIGNED NULL AFTER anmeldung_id",
+            ],
+        ],
     ];
 }
 

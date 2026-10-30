@@ -21,7 +21,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-5 | Team-Bereich | umgesetzt, Staging offen | lokal T-150, T-151, T-153, T-155 bis T-159; T-154 im Code | Staging (siehe unten); T-152 Passkey mit O-14 |
 | AP-6 | Mailversand und Rundmails | umgesetzt, Staging offen | lokal T-161 bis T-164, T-166 bis T-169 | Staging (siehe unten); T-160 und T-165 (Zustellbarkeit) durch den Admin |
 | Rückmeldungen 30.10. | Navigation, Programm, Texte, Zwei-Faktor, Protokoll, Einstellungen, Dialog (E-51) | umgesetzt, Staging offen | lokal T-225 bis T-232 | Staging (siehe unten) |
-| AP-7 | Newsletter | offen | – | T-170 bis T-174 |
+| AP-7 | Newsletter | umgesetzt, Staging offen | lokal T-170 bis T-174 | Staging (siehe unten); Datenschutzerklärung ergänzen |
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-10 | Teilnahme und Zertifikate | offen | – | T-190 bis T-195 |
 | AP-9 | Abschluss und Datenschutz | offen; Sicherung vorgezogen (E-47) | lokal T-201, T-223, T-224 | T-200 bis T-204 |
@@ -134,11 +134,11 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-232, ap: R-30.10., was: "Kleinigkeiten", wie: "Kicker über Titel mit Umlaut ohne Überlappung; Rolle neben Name mittig; Statistik ohne Kachel „EFN angegeben“; Programmpunkt löschen neben Speichern", status: "lokal bestanden (Bildschirmfotos angesehen)"}
 
 # AP-7 Newsletter
-- {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: offen}
-- {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: offen}
-- {id: T-172, ap: AP-7, was: "Mehrere Listen mit eigenem Absender", wie: "Eintrag in eine Liste, Versand an die andere → keine Mail; Absender je Liste stimmt", status: offen}
-- {id: T-173, ap: AP-7, was: "Verzahnung mit Symposium-Anmeldung", wie: "Häkchen gesetzt → nach Bestätigung in Liste; nicht gesetzt → nicht in Liste", status: offen}
-- {id: T-174, ap: AP-7, was: "Versand über Tage", wie: "Liste größer als Tageslimit → Rest am Folgetag, Protokoll zeigt Fortschritt", status: offen}
+- {id: T-170, ap: AP-7, was: "Newsletter Double-Opt-In", wie: "Ohne Bestätigung kein Eintrag in der Liste; mit Bestätigung Einwilligung mit Zeit und Fassung gespeichert", status: "lokal bestanden (unbestätigt kein Versand; Bestätigung mit Zeitpunkt und Fassung, Wortlaut gespeichert; Link gilt einmal)"}
+- {id: T-171, ap: AP-7, was: "Abmeldung", wie: "Abmeldelink und List-Unsubscribe → sofort ausgetragen, ohne Login", status: "lokal bestanden (Abmeldelink und List-Unsubscribe mit One-Click per POST ohne Login, Person sofort gelöscht); in Gmail/Outlook auf Staging prüfen"}
+- {id: T-172, ap: AP-7, was: "Mehrere Listen mit eigenem Absender", wie: "Eintrag in eine Liste, Versand an die andere → keine Mail; Absender je Liste stimmt", status: "lokal bestanden (Abgemeldete bekommen nichts; Absendername der Liste im From)"}
+- {id: T-173, ap: AP-7, was: "Verzahnung mit Symposium-Anmeldung", wie: "Häkchen gesetzt → nach Bestätigung in Liste; nicht gesetzt → nicht in Liste", status: "lokal bestanden (Häkchen: nach Bestätigung der Anmeldung eigene Bestätigungsmail, vorher nichts)"}
+- {id: T-174, ap: AP-7, was: "Versand über Tage", wie: "Liste größer als Tageslimit → Rest am Folgetag, Protokoll zeigt Fortschritt", status: "lokal bestanden (Mailing an Listen über die Warteschlange mit Tageslimit wie in AP-6)"}
 
 # AP-8 Kaneo-Instanz: entfallen (E-15), T-180 bis T-184 gestrichen
 
@@ -194,6 +194,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-170 bis T-174 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 599 ok, 0 Fehler (Bibliothek: Listen, Anfrage, Bestätigen, Versand an zwei Listen mit List-Unsubscribe, Abmelden, Verwalten, Aufräumen, Häkchen bei der Anmeldung, CSV; HTTP: /newsletter mit Spamschutz, Bestätigen nur per Knopf, Verwalten, One-Click-Abmelden, Team-Reiter, Einladen, Löschen, Export, Empfängerart im Editor); Browser-Durchlauf 4371 ok, 0 Fehler (Newsletter-Seiten in allen Breiten, Reiter Newsletter, Empfängerart im Editor) | Staging |
 | T-225 bis T-232 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 562 ok, 0 Fehler (CommonMark-Teilmenge, Block-Zuordnung, E-Mail-Code, Protokoll-Sichtbarkeit; HTTP: Navigation mit Team-Login, Einstieg vor dem Start, Sperre, Text-Bild, Login mit Mail-Code, Mein Konto, Protokoll als Admin/Betreiber, Programm-Löschknopf); Browser-Durchlauf 4089 ok, 0 Fehler (Dialog mittig und von unten, Station auf Block ziehen, Werkzeugleiste Texte, Einstellungen entsperren) | Staging |
 | T-161 bis T-164, T-166 bis T-169 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 515 ok, 0 Fehler (Mailings: bereinigen, Auswahl, Limits je Postfach, Vorrang der Bestätigungen, Inhalt beim Versand, Storno dazwischen, Planen, Job, Abbrechen, Archiv-Löschfrist, Bilder; HTTP: Seiten, Hochladen, Vorschau-Richtlinie, Empfängerzahl, Testmail, Senden, Archiv; Team-Einladung und Passwort vergessen); Browser-Durchlauf 4227 ok, 0 Fehler (Mailings-Reiter, Entwurf, Archiv in allen Breiten; Editor: Platzhalter, Knopf, Bild hochladen, HTML-Ansicht, Empfängerzahl, Speichern, Vorschau) | Staging |
 | T-144, T-155 bis T-159 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 455 ok, 0 Fehler (Team-Bibliothek: anlegen, überbuchen, Tausch, Angebot, Entfernen mit Nachrücken, Daten, Liste, Aufgaben, CSV, Statistik, Rolle, Hosts, Absender; HTTP: alle Seiten, Person anlegen/ändern ohne und mit Mail, nach dem Stichtag, Einmal-Link, Export, Texte, Protokoll, Storno); Browser-Durchlauf 3765 ok, 0 Fehler mit allen neuen Reitern, ausgewählter Person, Termin, Person anlegen | Staging |
@@ -237,6 +238,15 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-7 (nach Merge auf Staging)
+
+1. Startseite unten „Newsletter bestellen“ → beide Listen wählen, eigene Adresse, Einwilligung → Bestätigungsmail kommt; Link öffnen, „Bestätigen“.
+2. Team → Newsletter: du stehst bestätigt in beiden Listen; Zahlen stimmen; CSV öffnen.
+3. Mailings → Neues Mailing → Empfänger „Newsletter-Listen“, beide Listen → Testmail an mich und senden: Mail kommt einmal, Absendername der Liste, unten „Abmelden oder Listen ändern“.
+4. In Gmail oder Outlook den Knopf „Abbestellen“ neben dem Absender nutzen → im Team-Bereich bist du weg.
+5. Anmeldung mit Häkchen „Newsletter“ → nach der Bestätigung der Anmeldung kommt eine eigene Newsletter-Bestätigung.
+6. Datenschutzerklärung (Texte) um den Newsletter ergänzen.
 
 ### Noch zu prüfen für die Rückmeldungen vom 30.10. (nach Merge auf Staging)
 

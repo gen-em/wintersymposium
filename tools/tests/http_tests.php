@@ -472,6 +472,61 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe(!str_contains(http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k)['text'], 'ein Betreiber schickt dir'), 'Hinweis „Betreiber schickt Link“ entfernt');
 }
 
+/** Newsletter (AP-7): bestellen, bestätigen, verwalten, One-Click-Abmelden, Team. */
+function newsletter_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Newsletter (AP-7)');
+    db_ausfuehren('DELETE FROM rate_limit');
+    $k = "$tmp/kekse-nl.txt";
+    $r = http_anfrage($basis, 'GET', '/newsletter', $h, [], null, $k);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Wintersymposium') && str_contains($r['text'], 'Allgäu Akut') && str_contains($r['text'], 'name="pow_aufgabe"'), 'Seite /newsletter mit Listen und Spamschutz');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, $k)['text'], 'href="/newsletter"'), 'Link in Fußzeile und Hinweis auf der Startseite');
+    $lw = (int)db_wert("SELECT id FROM newsletter_liste WHERE name = 'Wintersymposium'");
+    preg_match('/name="pow_aufgabe" value="([0-9a-f]{64})"/', $r['text'], $m);
+    $form = ['csrf' => http_csrf($r['text']), 'zeit' => spam_stempel(time() - 10), 'pow_aufgabe' => $m[1] ?? '', 'pow_loesung' => http_pow($m[1] ?? ''), 'website' => '', 'email' => 'sven@example.org', 'vorname' => 'Sven', 'listen' => [$lw]];
+    $r = http_anfrage($basis, 'POST', '/newsletter', $h, [], $form, $k);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Einwilligung'), 'ohne Einwilligung: Hinweis');
+    $r = http_anfrage($basis, 'POST', '/newsletter', $h, [], $form + ['einwilligung' => '1'], $k);
+    $mail = http_mail_an($tmp, 'sven@example.org', 20, '/newsletter/bestaetigen?t=');
+    $tok = preg_match('#/newsletter/bestaetigen\?t=([0-9a-f]{48})#', $mail, $mm) === 1 ? $mm[1] : '';
+    pruefe($r['status'] === 303 && $tok !== '', 'Bestellt: Bestätigungsmail');
+    $r = http_anfrage($basis, 'GET', '/newsletter/bestaetigen?t=' . $tok, $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Bestätigen') && db_wert("SELECT status FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id WHERE p.email = 'sven@example.org'") === 'offen', 'Öffnen allein bestätigt nicht (Mail-Scanner)');
+    http_anfrage($basis, 'POST', '/newsletter/bestaetigen', $h, [], ['csrf' => http_csrf($r['text']), 't' => $tok], $k);
+    pruefe(db_wert("SELECT status FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id WHERE p.email = 'sven@example.org'") === 'bestaetigt', 'Bestätigt (Double-Opt-In)');
+    // Verwalten und One-Click
+    $pid = (int)db_wert("SELECT id FROM newsletter_person WHERE email = 'sven@example.org'");
+    $vt = nl_link_erzeugen($pid, 'verwalten');
+    $r = http_anfrage($basis, 'GET', '/newsletter/verwalten?t=' . $vt, $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'sven@example.org') && str_contains($r['text'], 'Von allen abmelden'), 'Verwalten über den Link aus der Mail');
+    $ch = curl_init($basis . '/newsletter/abmelden?t=' . $vt);
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Host: ' . $h], CURLOPT_POSTFIELDS => 'List-Unsubscribe=One-Click']);
+    curl_exec($ch);
+    $st = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    pruefe($st === 200 && db_wert("SELECT COUNT(*) FROM newsletter_person WHERE email = 'sven@example.org'") == 0, 'One-Click-Abmelden ohne Login: sofort gelöscht (Abnahme AP-7)');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/newsletter/abmelden?t=' . str_repeat('a', 48), $h, [], null, $k)['text'], 'gilt nicht mehr'), 'ungültiger Abmeldelink: freundlicher Hinweis');
+    // Team
+    $r = http_anfrage($basis, 'GET', '/team/newsletter', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'aria-current="page">Newsletter') && str_contains($r['text'], 'Einladen') && str_contains($r['text'], 'Neue Liste'), 'Team: Reiter Newsletter');
+    $c = http_csrf($r['text']);
+    http_anfrage($basis, 'POST', '/team/newsletter', $h, [], ['csrf' => $c, 'aktion' => 'liste', 'name' => 'Testliste', 'beschreibung' => 'Nur Test', 'absender_name' => 'Test', 'sichtbar' => '1'], $b);
+    $tl = (int)db_wert("SELECT id FROM newsletter_liste WHERE name = 'Testliste'");
+    pruefe($tl > 0 && str_contains(http_anfrage($basis, 'GET', '/newsletter', $h, [], null, $k)['text'], 'Testliste'), 'Liste anlegen, öffentlich wählbar');
+    http_anfrage($basis, 'POST', '/team/newsletter', $h, [], ['csrf' => $c, 'aktion' => 'einladen', 'email' => 'tara@example.org', 'listen' => [$tl]], $b);
+    pruefe(http_mail_an($tmp, 'tara@example.org', 20, '/newsletter/bestaetigen?t=') !== '' && db_wert("SELECT a.status FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id WHERE p.email = 'tara@example.org'") === 'offen', 'Einladen: nur Bestätigungsmail, nicht eingetragen');
+    $r = http_anfrage($basis, 'GET', '/team/newsletter?q=tara', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'tara@example.org') && str_contains($r['text'], 'wartet'), 'Suche zeigt offene Einladung');
+    http_anfrage($basis, 'POST', '/team/newsletter', $h, [], ['csrf' => $c, 'aktion' => 'loeschen', 'person' => (int)db_wert("SELECT id FROM newsletter_person WHERE email = 'tara@example.org'")], $b);
+    pruefe(db_wert("SELECT COUNT(*) FROM newsletter_person WHERE email = 'tara@example.org'") == 0, 'Löschen durch das Team');
+    $r = http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_starts_with($r['text'], "\u{FEFF}\"Liste\";\"E-Mail\""), 'Export Newsletter als CSV');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'value="newsletter"') && str_contains($r['text'], 'name="listen[]"'), 'Mailings: Empfängerart Newsletter-Listen');
+    $r = http_anfrage($basis, 'GET', '/team/mailings/empfaenger?auswahl=nl:' . $tl, $h, [], null, $b);
+    pruefe($r['status'] === 200 && (json_decode($r['text'], true)['zahl'] ?? -1) === 0, 'Empfängerzahl einer Liste (nur bestätigte)');
+}
+
 /** Rückmeldung 2026-10-30: Navigation, Einstieg, Sperre, Texte mit Bild, Mail-Code, Dialog. */
 function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
@@ -786,6 +841,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     team_ap5_http_tests($basis, $h, $tmp, $b);
     team_ap6_http_tests($basis, $h, $tmp, $b);
     r30_http_tests($basis, $h, $tmp, $b);
+    newsletter_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";

@@ -355,7 +355,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Mailings', '/team/mailings', 'team-mailings'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
+        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Mailings', '/team/mailings', 'team-mailings'], ['Newsletter', '/team/newsletter', 'team-newsletter'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
           await p.click(`.team-nav a:has-text("${text}")`);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
@@ -372,7 +372,18 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         // AP-6: Mailing-Entwurf (Editor, Vorschau) und gesendetes Mailing (Archiv)
         await pruefeSeite(p, fehler, engine, breite, 'team-mailing-entwurf', basis + '/team/mailings?id=' + vor.mailing_entwurf);
         await pruefeSeite(p, fehler, engine, breite, 'team-mailing-gesendet', basis + '/team/mailings?id=' + vor.mailing_gesendet);
+        // AP-7: öffentliche Newsletter-Seiten
+        await pruefeSeite(p, fehler, engine, breite, 'newsletter', basis + '/newsletter');
+        await pruefeSeite(p, fehler, engine, breite, 'newsletter-verwalten', basis + vor.nl_verwalten);
       }
+      // Mailings: Empfängerart Newsletter blendet die Listen ein
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(basis + '/team/mailings?neu=1');
+      notiere(engine, 'desktop-breit', 'team-mailing-neu', 'Listen erst bei „Newsletter-Listen“', !await p.isVisible('.rm-listen'));
+      await p.check('input[name=art][value=newsletter]');
+      await p.check('.rm-listen input[name="listen[]"] >> nth=0');
+      await p.waitForTimeout(500);
+      notiere(engine, 'desktop-breit', 'team-mailing-neu', 'Newsletter: Listen sichtbar, Zahl der Abonnierenden', await p.isVisible('.rm-listen') && !await p.isVisible('#auswahl') && Number(await p.textContent('#rm-zahl')) >= 1, await p.textContent('#rm-zahl'));
       // Mailings: Editor bedienen (Desktop)
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team/mailings?id=' + vor.mailing_entwurf);

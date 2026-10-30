@@ -22,6 +22,17 @@ $pwNoetig = $k['passwort_hash'] === null || !empty($_SESSION['tk_pw']);
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     switch ((string)($_POST['aktion'] ?? '')) {
+        case 'newsletter':
+            // AP-7: Adresse ist durch das bestätigte Konto bewiesen – Listen gelten gleich
+            $ids = array_map('intval', (array)($_POST['listen'] ?? []));
+            $np = nl_person_per_email((string)$k['email']);
+            if ($ids === [] && $np !== null) {
+                nl_abmelden((int)$np['id']);
+            } elseif ($ids !== []) {
+                nl_listen_setzen(nl_person_anlegen((string)$k['email'], tk_namen($k)['vorname']), $ids, 'konto');
+            }
+            flash_setzen('ok', 'Newsletter gespeichert.');
+            umleiten('/konto');
         case 'passwort_setzen':
             if (!$pwNoetig) {
                 umleiten('/konto');
@@ -163,6 +174,17 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
                 <?php if ($profil['berufsgruppe'] === ($gruppen[0] ?? '')): ?><div><dt>EFN</dt><dd class="mono"><?= $profil['efn'] !== null ? e(efn_text($profil['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
             </dl>
             <div class="aktionen abstand"><a class="knopf zweit" href="/konto?aendern=profil">Profil bearbeiten</a></div>
+        </div>
+        <?php $np = nl_person_per_email((string)$k['email']); $abos = $np !== null ? nl_abos((int)$np['id']) : []; ?>
+        <div class="kasten">
+            <h2 class="zwischen klein-zwischen">Newsletter</h2>
+            <form class="form" method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="newsletter">
+                <fieldset class="feld nl-listen"><legend class="sr">Newsletter</legend>
+                <?php foreach (nl_listen(true) as $l): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= ($abos[(int)$l['id']] ?? '') === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . e($l['beschreibung']) . '</span>' : '' ?></span></label><?php endforeach; ?>
+                </fieldset>
+                <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>
+                <div><button class="knopf zweit" type="submit">Newsletter speichern</button></div>
+            </form>
         </div>
     </div>
     <div class="spalte">

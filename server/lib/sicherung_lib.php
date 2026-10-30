@@ -288,6 +288,7 @@ function testdaten_laden(?int $kontoId): string
         db_ausfuehren('DELETE FROM programm_stand');
         db_ausfuehren('DELETE FROM mail_ausgang');
         db_ausfuehren('DELETE FROM rundmail');
+        db_ausfuehren('DELETE FROM newsletter_person');
         db_ausfuehren('DELETE FROM einstellung WHERE schluessel IN (' . implode(',', array_fill(0, count(VA_KATALOG), '?')) . ')', array_keys(VA_KATALOG));
     });
     anm_workshops(true);
