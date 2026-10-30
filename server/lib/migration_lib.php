@@ -446,6 +446,17 @@ function migration_katalog(): array
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
             ],
         ],
+        12 => [
+            'beschreibung' => 'Ein Editor überall (E-54): Start-Texte als HTML, längere Listen-Beschreibung; Löschfrist für Konten (Erinnerung)',
+            'sql' => [
+                // Start-Texte aus Markdown in HTML (Admin 2026-10-30: es gibt noch keine eigenen Texte, überschreiben)
+                "UPDATE inhalt SET text = REGEXP_REPLACE(text, '\\\\*([^*\\n]+)\\\\*', '<em>$1</em>') WHERE schluessel = 'start_titel' AND text NOT LIKE '%<%'",
+                "UPDATE inhalt SET text = CONCAT(SUBSTRING(REGEXP_REPLACE(REPLACE(text, '\\r', ''), '(^|\\n)## ([^\\n]+)\\n?', '</p><h2>$2</h2><p>'), 5), '</p>') WHERE schluessel = 'start_infos' AND text LIKE '## %' AND text NOT LIKE '%<%'",
+                "ALTER TABLE newsletter_liste MODIFY beschreibung VARCHAR(1000) NOT NULL DEFAULT ''",
+                // Erinnerung vor dem automatischen Löschen (Admin 2026-10-30, E-54)
+                "ALTER TABLE konto ADD COLUMN loesch_erinnert_am DATETIME NULL",
+            ],
+        ],
     ];
 }
 

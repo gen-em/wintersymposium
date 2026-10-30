@@ -4,8 +4,10 @@ declare(strict_types=1);
 /*
  * Sitzungen (angepasst aus NAdoku sitzung_lib.php und session_lib.php).
  *
- * Zwei Arten: 'team' (Team-Bereich, ab AP-5 mit Login) und 'link'
- * (Teilnehmende nach Einlösen eines Einmal-Links, ab AP-4).
+ * Eine Sitzung für alles (Admin 2026-10-30, E-54: „ein Konto für alles“): Die
+ * Arten 'team' und 'link' teilen sich denselben Keks. Team-Login (mit zweitem
+ * Faktor), Konto für Teilnehmende und Einmal-Link stehen nebeneinander in
+ * derselben Sitzung; Ausloggen beendet alles.
  *
  * Lima-City teilt session.save_path mit anderen Kunden und räumt nach 24 min
  * auf (R-08). Deshalb eigene Ablage im Laufzeitordner, kein Aufräumen durch
@@ -14,8 +16,8 @@ declare(strict_types=1);
  */
 
 const SITZUNG_ARTEN = [
-    'team' => ['name' => 'ws_team', 'samesite' => 'Lax'],
-    'link' => ['name' => 'ws_link', 'samesite' => 'Lax'],
+    'team' => ['name' => 'ws_sitzung', 'samesite' => 'Lax'],
+    'link' => ['name' => 'ws_sitzung', 'samesite' => 'Lax'],
 ];
 
 /** Ablauf ohne Aktivität in Sekunden. Technische Sicherheitsgrenze, keine Veranstaltungseinstellung. */
@@ -76,7 +78,8 @@ function sitzung_starten(string $art): void
 function sitzung_wechseln(string $art): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
-        if (($_SESSION['_art'] ?? '') === $art) {
+        // Gleicher Keks (E-54): es ist dieselbe Sitzung, nichts zu wechseln
+        if (($_SESSION['_art'] ?? '') === $art || session_name() === SITZUNG_ARTEN[$art]['name']) {
             return;
         }
         session_write_close();

@@ -40,7 +40,7 @@ seite_kopf('Newsletter verwalten', ['nav' => false]);
         <?= csrf_feld() ?><input type="hidden" name="t" value="<?= e($token) ?>">
         <fieldset class="feld nl-listen"><legend>Newsletter</legend>
         <?php foreach (nl_listen(true) as $l): $st = $abos[(int)$l['id']] ?? null; ?>
-            <label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= $st === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $st === 'offen' ? ' <span class="chip offen">wartet auf Bestätigung</span>' : '' ?><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . e($l['beschreibung']) . '</span>' : '' ?></span></label>
+            <label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= $st === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $st === 'offen' ? ' <span class="chip offen">wartet auf Bestätigung</span>' : '' ?><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '' ?></span></label>
         <?php endforeach; ?>
         </fieldset>
         <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>

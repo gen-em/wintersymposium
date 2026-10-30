@@ -50,36 +50,49 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
         . '</a>';
     if ($nav) {
-        // Team-Login auch auf öffentlichen Seiten zeigen (nur lesen, ohne Ausloggen-Formular)
+        // Ein Konto für alles (E-54): Team-Login, Konto und Einmal-Link in einer Sitzung
         $konto = $opt['konto'] ?? null;
-        $gesehen = $konto === null && !isset($opt['teilnehmer']) ? team_gesehen() : null;
-        // Teilnehmende nach dem Einmal-Link (E-40); nur wenn schon eine Sitzung besteht
-        $tn = !is_array($konto) ? ($opt['teilnehmer'] ?? anm_aus_keks()) : null;
-        $tk = !is_array($konto) && session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
-        $erkannt = is_array($tn) || is_array($tk) || is_array($konto) || is_array($gesehen);
-        $liste = '<li><a href="/#programm"' . ($aktiv === '/' ? ' aria-current="page"' : '') . '>Programm</a></li>';
+        $team = is_array($konto) ? $konto : (!isset($opt['teilnehmer']) ? team_gesehen() : null);
+        $tn = $opt['teilnehmer'] ?? anm_aus_keks();
+        $tk = session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
+        $ich = $tk ?? $team; // eingeloggtes Konto
+        $erkannt = is_array($tn) || is_array($ich);
+        $a = fn(string $href, string $text, string $pfad, string $klasse = '') => '<li><a' . ($klasse !== '' ? ' class="' . $klasse . '"' : '') . ' href="' . e($href) . '"'
+            . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
+        $liste = $a('/#programm', 'Programm', '/');
         // Rückmeldung 2026-10-30: erkannt „Meine Anmeldung“, sonst der grüne Knopf „Anmelden“ zur Einstiegsseite (E-42)
-        if ($erkannt) {
-            $liste .= '<li><a href="/deine-anmeldung"' . ($aktiv === '/deine-anmeldung' ? ' aria-current="page"' : '') . '>Meine Anmeldung</a></li>';
+        $liste .= $erkannt ? $a('/deine-anmeldung', 'Meine Anmeldung', '/deine-anmeldung') : $a('/deine-anmeldung', 'Anmelden', in_array($aktiv, ['/anmelden', '/deine-anmeldung'], true) ? $aktiv : '-', 'nav-anmelden');
+        if (is_array($team)) {
+            $liste .= $a('/team', 'Team-Bereich', '/team');
         }
-        foreach (array_filter([is_array($konto) || is_array($gesehen) ? ['/team', 'Team-Bereich', '/team'] : null, is_array($tk) ? ['/konto', 'Mein Konto', '/konto'] : null]) as [$href, $text, $pfad]) {
-            $liste .= '<li><a href="' . e($href) . '"' . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
-        }
+        // Personen-Menü (Mockup Variante A): ausgeloggt „Einloggen“, sonst Name mit Menü
         if (!$erkannt) {
-            $liste .= '<li><a class="nav-anmelden" href="/deine-anmeldung"' . (in_array($aktiv, ['/anmelden', '/deine-anmeldung'], true) ? ' aria-current="page"' : '') . '>Anmelden</a></li>';
+            $person = '<a class="person-knopf" href="/einloggen"' . ($aktiv === '/einloggen' ? ' aria-current="page"' : '') . '>'
+                . '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>Einloggen</a>';
+            $flach = $a('/einloggen', 'Einloggen', '/einloggen');
+        } else {
+            $name = is_array($ich) ? (string)$ich['name'] : trim($tn['vorname'] . ' ' . $tn['nachname']);
+            $teile = preg_split('/\s+/u', trim($name)) ?: [''];
+            $kuerzel = mb_strtoupper(mb_substr($teile[0], 0, 1) . (count($teile) > 1 ? mb_substr((string)end($teile), 0, 1) : ''));
+            $unter = is_array($ich) ? (konto_ist_team($ich) ? (ROLLEN[$ich['rolle']] ?? '') . ' · ' : '') . $ich['email'] : 'über den Link aus der Mail';
+            $eintraege = [['/deine-anmeldung', 'Meine Anmeldung', 'Workshops, Essen, absagen']];
+            if (is_array($ich)) {
+                $eintraege[] = ['/konto', 'Mein Konto', konto_ist_team($ich) ? 'Profil, Passwort, Zwei-Faktor, Newsletter' : 'Profil, Passwort, Newsletter'];
+            }
+            if (is_array($team)) {
+                $eintraege[] = ['/team', 'Team-Bereich', 'Personen, Programm, Mailings …'];
+            }
+            $ab = '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="person-ab">Ausloggen</button></form>';
+            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span></summary>'
+                . '<div class="person-liste"><p class="person-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p>'
+                . implode('', array_map(fn($x) => '<a href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . e($x[1]) . '<small>' . e($x[2]) . '</small></a>', $eintraege))
+                . $ab . '</div></details>';
+            $flach = '<li class="person-flach"><p class="person-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
+                . (is_array($ich) ? $a('/konto', 'Mein Konto', '/konto') : '') . '<li>' . $ab . '</li>';
         }
-        if (is_array($gesehen) && !is_array($tn) && !is_array($tk)) {
-            $liste .= '<li class="nav-person"><a class="nav-name" href="/team">' . e($gesehen['name']) . ' <small>' . e(ROLLEN[$gesehen['rolle']] ?? '') . '</small></a></li>';
-        } elseif (is_array($konto)) {
-            $liste .= '<li class="nav-person"><span class="nav-name">' . e($konto['name']) . ' <small>' . e(ROLLEN[$konto['rolle']] ?? '') . '</small></span>'
-                . '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="nav-ab">Ausloggen</button></form></li>';
-        } elseif (is_array($tn) || is_array($tk)) {
-            $liste .= '<li class="nav-person"><span class="nav-name">' . e(is_array($tn) ? $tn['vorname'] . ' ' . $tn['nachname'] : $tk['name']) . '</span>'
-                . '<form method="post" action="/deine-anmeldung">' . csrf_feld() . '<input type="hidden" name="aktion" value="ausloggen"><button type="submit" class="nav-ab">Ausloggen</button></form></li>';
-        }
-        // Zwei Darstellungen derselben Liste: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.
-        echo '<nav aria-label="Hauptnavigation"><ul class="nav-liste nav-gross">' . $liste . '</ul>'
-            . '<details class="menue"><summary>Menü</summary><ul class="nav-liste">' . $liste . '</ul></details></nav>';
+        // Zwei Darstellungen: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.
+        echo '<nav aria-label="Hauptnavigation"><ul class="nav-liste nav-gross">' . $liste . '<li class="person">' . $person . '</li></ul>'
+            . '<details class="menue"><summary>Menü</summary><ul class="nav-liste">' . $liste . $flach . '</ul></details></nav>';
     }
     echo '</div></header><main id="inhalt">';
 }
@@ -99,36 +112,45 @@ function seite_fuss(): void
 }
 
 /** Reiter des Team-Bereichs (Mockup E-41); weitere folgen mit AP-3 Schritt 3 und AP-5. */
+/**
+ * Bereiche des Team-Bereichs (Admin 2026-10-30, Mockup Variante A): sechs
+ * Bereiche, darunter die Unterseiten des aktiven Bereichs. Dritter Wert true =
+ * nur für Betreiber (E-49).
+ */
+const TEAM_BEREICHE = [
+    'Übersicht' => [['/team', 'Übersicht']],
+    'Anmeldungen' => [['/team/personen', 'Personen'], ['/team/workshops', 'Workshops']],
+    'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
+    'Kommunikation' => [['/team/mailings', 'Mailings'], ['/team/newsletter', 'Newsletter'], ['/team/texte', 'Texte']],
+    'Statistik' => [['/team/statistik', 'Statistik']],
+    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/konten', 'Team-Konten', true], ['/team/protokoll', 'Protokoll'], ['/team/daten', 'Betrieb', true]],
+];
+
 function team_reiter(array $konto, string $aktiv): string
 {
-    // AP-5 (E-49): Admin und Betreiber; Team-Konten und Betrieb nur Betreiber
-    $reiter = [
-        ['/team', 'Übersicht'],
-        ['/team/personen', 'Personen'],
-        ['/team/workshops', 'Workshops'],
-        ['/team/programm', 'Programm'],
-        ['/team/mailings', 'Mailings'],
-        ['/team/newsletter', 'Newsletter'],
-        ['/team/statistik', 'Statistik'],
-        ['/team/einstellungen', 'Einstellungen'],
-        ['/team/texte', 'Texte'],
-        ['/team/protokoll', 'Protokoll'],
-        ['/team/profil', 'Mein Konto'],
-    ];
-    if ($konto['rolle'] === 'betreiber') {
-        $reiter[] = ['/team/konten', 'Team-Konten'];
-        $reiter[] = ['/team/daten', 'Betrieb'];
+    $betreiber = $konto['rolle'] === 'betreiber';
+    $haupt = '';
+    $unter = '';
+    foreach (TEAM_BEREICHE as $bereich => $seiten) {
+        $seiten = array_values(array_filter($seiten, fn($x) => empty($x[2]) || $betreiber));
+        $an = in_array($aktiv, array_column($seiten, 0), true);
+        $haupt .= '<a href="' . e($seiten[0][0]) . '"' . ($an ? ' class="an" aria-current="' . ($aktiv === $seiten[0][0] && count($seiten) === 1 ? 'page' : 'true') . '"' : '') . '>' . e($bereich) . '</a>';
+        if ($an && count($seiten) > 1) {
+            $unter = '<nav class="team-unter" aria-label="Unterseiten von ' . e($bereich) . '"><span class="team-unter-kopf" aria-hidden="true">' . e($bereich) . ' ›</span>';
+            foreach ($seiten as [$pfad, $text]) {
+                $unter .= '<a href="' . e($pfad) . '"' . ($pfad === $aktiv ? ' aria-current="page"' : '') . '>' . e($text) . '</a>';
+            }
+            $unter .= '</nav>';
+        }
     }
-    $h = '<nav class="team-nav" aria-label="Team-Bereich">';
-    foreach ($reiter as [$pfad, $text]) {
-        $h .= '<a href="' . e($pfad) . '"' . ($pfad === $aktiv ? ' aria-current="page"' : '') . '>' . e($text) . '</a>';
-    }
-    return $h . '</nav>';
+    return '<div class="team-navi"><nav class="team-nav" aria-label="Team-Bereich">' . $haupt . '</nav>' . $unter . '</div>';
 }
 
 /** Kopf einer Team-Seite: Rahmen, Titel, Reiter, Meldung aus der Umleitung. */
 function team_seite_kopf(array $konto, string $titel, string $aktiv, array $opt = []): void
 {
+    // Ein Editor für alle Textfelder (E-54): auf jeder Team-Seite geladen, wirkt nur auf textarea[data-editor]
+    $opt['skripte'] = array_values(array_unique(array_merge(['editor.js'], $opt['skripte'] ?? [])));
     seite_kopf($titel, $opt + ['konto' => $konto, 'aktiv' => '/team']);
     echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div></div>'
         . '<div class="innen">' . team_reiter($konto, $aktiv) . meldung_html(flash_holen());

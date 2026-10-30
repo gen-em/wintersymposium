@@ -16,9 +16,9 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
 ?>
 <div class="innen held">
     <div>
-        <?php if (inhalt('start_kicker') !== ''): ?><p class="kicker"><?= text_inline(inhalt('start_kicker')) ?></p><?php endif; ?>
-        <h1 class="titel"><?= text_inline(inhalt('start_titel') ?: 'Wintersymposium') ?></h1>
-        <?php if (inhalt('start_unter') !== ''): ?><p class="unter"><?= text_inline(inhalt('start_unter')) ?></p><?php endif; ?>
+        <?php if (inhalt('start_kicker') !== ''): ?><p class="kicker"><?= editor_html(inhalt('start_kicker'), 'inline') ?></p><?php endif; ?>
+        <h1 class="titel"><?= editor_html(inhalt('start_titel') ?: 'Wintersymposium', 'inline') ?></h1>
+        <?php if (inhalt('start_unter') !== ''): ?><p class="unter"><?= editor_html(inhalt('start_unter'), 'inline') ?></p><?php endif; ?>
     </div>
     <?php if (inhalt('start_sticker') !== ''): ?><span class="sticker hinweis frei"><?= e(inhalt('start_sticker')) ?></span><?php endif; ?>
     <?php if ($eck !== []): ?>
@@ -30,15 +30,15 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
     <?php if (anm_zeitraum() === 'offen'): ?><div class="held-knoepfe"><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a><a class="knopf zweit" href="/deine-anmeldung">Anmeldung ändern</a></div><?php endif; ?>
 </div>
 
-<?php $infos = text_abschnitte(inhalt('start_infos')); if ($infos !== []): ?>
+<?php $infos = editor_abschnitte(inhalt('start_infos')); if ($infos !== []): ?>
 <section class="abschnitt" aria-labelledby="infos-titel"><div class="innen">
     <p class="kicker">Worum es geht</p>
-    <h2 class="zwischen" id="infos-titel"><?= text_inline(inhalt('start_infos_titel') ?: 'Worum es geht') ?></h2>
+    <h2 class="zwischen" id="infos-titel"><?= editor_html(inhalt('start_infos_titel') ?: 'Worum es geht', 'inline') ?></h2>
     <div class="drei">
         <?php foreach ($infos as $i): ?>
         <div class="kasten">
-            <?php if ($i['titel'] !== ''): ?><strong><?= text_inline($i['titel']) ?></strong><?php endif; ?>
-            <?= text_zu_html($i['text']) ?>
+            <?php if ($i['titel'] !== ''): ?><strong><?= $i['titel'] ?></strong><?php endif; ?>
+            <?= str_replace('<img ', '<img class="text-bild" loading="lazy" ', $i['text']) ?>
         </div>
         <?php endforeach; ?>
     </div>
@@ -53,7 +53,7 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
 
 <?php if (inhalt('start_cme') !== ''): ?>
 <section class="abschnitt"><div class="innen">
-    <div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p><?= text_zu_html(inhalt('start_cme')) ?></div>
+    <div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p><?= editor_html(inhalt('start_cme')) ?></div>
 </div></section>
 <?php endif; ?>
 <section class="abschnitt"><div class="innen">

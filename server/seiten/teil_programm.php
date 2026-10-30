@@ -43,7 +43,6 @@ $ausloeser = fn(array $p, string $inhalt, string $klasse = 'pp-link') => $hatPop
 $namen = fn(array $p) => implode(', ', array_column($p['dozenten'], 'name'));
 // Abweichende Dozierende eines Termins (Rückmeldung 2026-10-30), sonst die des Workshops
 $terminNamen = fn(array $p, array $t) => isset($t['dozenten']) ? implode(', ', array_column($t['dozenten'], 'name')) : $namen($p);
-$absatz = fn(string $t) => $t === '' ? '' : implode('', array_map(fn($a) => '<p>' . nl2br(e($a)) . '</p>', preg_split('/\n{2,}/', $t) ?: []));
 
 if ($gliederung === []): ?>
 <div class="kasten"><p class="hinweis-leer">Das Programm erscheint hier, sobald es veröffentlicht ist.</p></div>
@@ -133,7 +132,7 @@ endforeach; ?>
         <h2 class="titel" id="pp-<?= $p['id'] ?>-titel"><?= e($p['titel']) ?></h2>
         <?php if ($p['typ'] !== 'workshop' && $p['beginn'] !== ''): ?><p class="mono"><?= e($p['beginn'] . '–' . $p['ende']) ?> · <?= $dauer($p['beginn'], $p['ende']) ?> min</p><?php endif; ?>
         <?php if ($p['untertitel'] !== ''): ?><p class="unter-fett"><?= e($p['untertitel']) ?></p><?php endif; ?>
-        <?= $absatz($p['beschreibung']) ?>
+        <?= editor_html($p['beschreibung'], 'block', false) ?>
         <?php if ($p['typ'] === 'workshop'): ?>
             <?php if ($p['bring'] !== ''): ?><p><strong>Bring:</strong> <?= e($p['bring']) ?></p><?php endif; ?>
             <?php if ($p['notiz'] !== ''): ?><div class="zettel"><p class="zettel-kopf">Notiz vom Team</p><p><?= e($p['notiz']) ?></p></div><?php endif; ?>
@@ -149,7 +148,7 @@ endforeach; ?>
             <?php foreach ($p['dozenten'] as $d): ?>
                 <div class="doz">
                     <?php if (!empty($d['foto'])): ?><img class="foto" src="/bild/<?= e($d['foto']) ?>" alt="" width="56" height="56" loading="lazy"><?php else: ?><span class="foto" aria-hidden="true"><?= e(mb_substr($d['name'], 0, 1)) ?></span><?php endif; ?>
-                    <div><p><strong><?= e($d['name']) ?></strong><?= $d['funktion'] !== '' ? '<br><span class="meta klein">' . e($d['funktion']) . '</span>' : '' ?></p><?php if ($d['kurzbio'] !== ''): ?><p class="klein"><?= e($d['kurzbio']) ?></p><?php endif; ?></div>
+                    <div><p><strong><?= e($d['name']) ?></strong><?= $d['funktion'] !== '' ? '<br><span class="meta klein">' . e($d['funktion']) . '</span>' : '' ?></p><?php if ($d['kurzbio'] !== ''): ?><div class="klein"><?= editor_html($d['kurzbio'], 'block', false) ?></div><?php endif; ?></div>
                 </div>
             <?php endforeach; ?>
             </div>

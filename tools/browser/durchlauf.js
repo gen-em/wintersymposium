@@ -27,6 +27,9 @@ if (require('fs').existsSync('/opt/ws-browsers')) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/ws-browsers';
 }
 const pw = require('playwright');
+// Editor der Mailings (assets/editor.js, ein Editor überall)
+const RM_FELD = '.feld:has(#rm-html)';
+const RM_LEISTE = RM_FELD + ' .werkzeug';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -136,6 +139,12 @@ async function pruefeBedienung(p, engine, breite, name) {
     const zu = await p.locator('dialog[open]').count() === 0;
     notiere(engine, breite, name, `Popup „${label}“: öffnet im Fenster, Escape schließt`, auf && imFenster && zu);
   }
+}
+
+/** Ausloggen über das Personen-Menü oben rechts (Desktop). */
+async function ausloggen(p) {
+  await p.click('.nav-gross .person-menue summary');
+  await Promise.all([p.waitForNavigation(), p.click('.nav-gross .person-ab')]);
 }
 
 /** Am Griff ziehen und über dem Ziel loslassen (Anteil = Höhe in der Zielzeile); waehrend() prüft die Anzeige vor dem Loslassen. */
@@ -317,8 +326,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.waitForLoadState('load');
       }
       await p.setViewportSize({ width: 1440, height: 900 });
-      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
-      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
+      await ausloggen(p);
+      notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen über das Personen-Menü', (await p.textContent('body')).includes('Wie willst du rein?'));
 
       // ---- Konten für Teilnehmende (AP-4b) ----
       for (const [breite, w, h] of BREITEN) {
@@ -340,8 +349,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       }
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/konto');
-      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ in der Navigation', await p.isVisible('.nav-gross a[href="/konto"]'));
-      await Promise.all([p.waitForNavigation(), p.click('.nav-gross button:has-text("Ausloggen")')]);
+      await p.click('.nav-gross .person-menue summary');
+      notiere(engine, 'desktop-breit', 'konto', '„Mein Konto“ im Personen-Menü', await p.isVisible('.nav-gross .person-liste a[href="/konto"]'));
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-personen-menue.png`) });
+      await p.click('.nav-gross .person-menue summary');
+      await ausloggen(p);
       notiere(engine, 'desktop-breit', 'konto', 'Ausloggen', (await p.textContent('body')).includes('Wie willst du rein?'));
 
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
@@ -368,12 +380,21 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team', basis + '/team');
-        for (const [text, ziel, name] of [['Personen', '/team/personen', 'team-personen'], ['Workshops', '/team/workshops', 'team-workshops'], ['Programm', '/team/programm', 'team-programm'], ['Mailings', '/team/mailings', 'team-mailings'], ['Newsletter', '/team/newsletter', 'team-newsletter'], ['Statistik', '/team/statistik', 'team-statistik'], ['Einstellungen', '/team/einstellungen', 'team-einstellungen'], ['Texte', '/team/texte', 'team-texte'], ['Protokoll', '/team/protokoll', 'team-protokoll'], ['Mein Konto', '/team/profil', 'team-profil'], ['Team-Konten', '/team/konten', 'team-konten'], ['Betrieb', '/team/daten', 'team-daten']]) {
-          await p.click(`.team-nav a:has-text("${text}")`);
+        // Team-Navigation (Variante A): Bereiche und angehängte Unterseiten
+        for (const [wahl, ziel, name] of [['.team-nav a:has-text("Anmeldungen")', '/team/personen', 'team-personen'], ['.team-unter a:has-text("Workshops")', '/team/workshops', 'team-workshops'],
+          ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
+          ['.team-nav a:has-text("Kommunikation")', '/team/mailings', 'team-mailings'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'],
+          ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
+          await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
+        // Mein Konto des Team-Kontos (ein Konto für alles, E-54) und Zwei-Faktor
+        await pruefeSeite(p, fehler, engine, breite, 'team-mein-konto', basis + '/konto');
+        notiere(engine, breite, 'team-mein-konto', 'Team-Konto mit Zwei-Faktor, ohne Löschen', (await p.textContent('body')).includes('Team-Konto') && await p.locator('a[href="/konto/zweitfaktor"]').count() >= 1);
+        await pruefeSeite(p, fehler, engine, breite, 'team-zweitfaktor', basis + '/konto/zweitfaktor');
       }
 
       // AP-5: ausgewählte Person, voller Termin, Person anlegen
@@ -400,25 +421,25 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Mailings: Editor bedienen (Desktop)
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team/mailings?id=' + vor.mailing_entwurf);
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Schreibfeld statt HTML-Feld', await p.isVisible('#rm-editor') && !await p.isVisible('#rm-html') && await p.isVisible('#rm-leiste'));
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Schreibfeld statt HTML-Feld', await p.isVisible('#rm-html-feld') && !await p.isVisible('#rm-html') && await p.isVisible(RM_LEISTE));
       const vorschau = p.frameLocator('iframe.ml-vorschau-frame');
       notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Vorschau mit Name und Bild', (await vorschau.locator('body').textContent({ timeout: 5000 }).catch(() => '')).includes('Hallo Lea') && await vorschau.locator('img[alt=Lageplan]').evaluate(i => i.complete && i.naturalWidth > 0).catch(() => false));
-      await p.click('#rm-editor p:last-child');
+      await p.click('#rm-html-feld p:last-child');
       await p.keyboard.press('End');
-      await p.click('#rm-leiste [data-platzhalter="{nachname}"]');
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Platzhalter eingefügt', (await p.textContent('#rm-editor')).includes('{nachname}'));
-      await p.click('#rm-leiste [data-befehl=knopf]');
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf-Dialog öffnet', await p.isVisible('#rm-dialog'));
-      await p.fill('#rm-dialog-text', 'Programm ' + engine);
-      await p.fill('#rm-dialog-ziel', 'https://example.org/programm');
-      await p.click('#rm-dialog-ok');
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf eingefügt', await p.locator('#rm-editor a.knopf', { hasText: 'Programm ' + engine }).count() === 1);
-      await p.setInputFiles('#rm-bild', { name: 'test.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJ0lEQVRIiWPc0vOfYSAA04DYOmrxqMWjFo9aPGrxqMWjFo9aPCAAAP6CAmf8hOaeAAAAAElFTkSuQmCC', 'base64') });
-      await p.waitForFunction(() => document.querySelectorAll('#rm-editor img').length >= 2, null, { timeout: 8000 }).catch(() => {});
-      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Bild hochgeladen und eingefügt', await p.locator('#rm-editor img').count() >= 2, await p.textContent('#rm-status'));
-      await p.click('#rm-leiste [data-befehl=html]');
+      await p.click(RM_LEISTE + ' [data-platzhalter="{nachname}"]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Platzhalter eingefügt', (await p.textContent('#rm-html-feld')).includes('{nachname}'));
+      await p.click(RM_LEISTE + ' [data-befehl=knopf]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf-Dialog öffnet', await p.isVisible(RM_FELD + ' .rm-dialog'));
+      await p.locator(RM_FELD + ' .rm-dialog input[type=text]').nth(0).fill('Programm ' + engine);
+      await p.locator(RM_FELD + ' .rm-dialog input[type=text]').nth(1).fill('https://example.org/programm');
+      await p.click(RM_FELD + ' .rm-dialog [data-ok]');
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Knopf eingefügt', await p.locator('#rm-html-feld a.knopf', { hasText: 'Programm ' + engine }).count() === 1);
+      await p.setInputFiles(RM_FELD + ' input[type=file][aria-label="Bild hochladen"]', { name: 'test.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJ0lEQVRIiWPc0vOfYSAA04DYOmrxqMWjFo9aPGrxqMWjFo9aPCAAAP6CAmf8hOaeAAAAAElFTkSuQmCC', 'base64') });
+      await p.waitForFunction(() => document.querySelectorAll('#rm-html-feld img').length >= 2, null, { timeout: 8000 }).catch(() => {});
+      notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'Bild hochgeladen und eingefügt', await p.locator('#rm-html-feld img').count() >= 2, await p.textContent(RM_FELD + ' .editor-status'));
+      await p.click(RM_LEISTE + ' [data-befehl=html]');
       notiere(engine, 'desktop-breit', 'team-mailing-entwurf', 'HTML-Ansicht', await p.isVisible('#rm-html') && (await p.inputValue('#rm-html')).includes('class="knopf"'));
-      await p.click('#rm-leiste [data-befehl=html]');
+      await p.click(RM_LEISTE + ' [data-befehl=html]');
       await p.selectOption('#berufsgruppe', 'ÄrztIn');
       await p.waitForFunction(() => document.getElementById('rm-senden').textContent.trim() !== '', null, { timeout: 3000 }).catch(() => {});
       await p.waitForTimeout(400);
@@ -539,10 +560,21 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
 
       // Texte: Werkzeugleiste schreibt Markdown
       await p.goto(basis + '/team/texte');
-      await p.fill('#t-start_cme', 'Wort');
-      await p.locator('#t-start_cme').evaluate(t => t.setSelectionRange(0, 4));
-      await p.click('.werkzeug[aria-controls="t-start_cme"] button[data-b=fett]');
-      notiere(engine, 'desktop-breit', 'team-texte', 'Werkzeugleiste: fett', (await p.inputValue('#t-start_cme')) === '**Wort**', await p.inputValue('#t-start_cme'));
+      // Texte: derselbe Editor; Fett schaltet an und aus, nummerierte Liste (Rückmeldung 2026-10-30 (2))
+      const cme = p.locator('#t-start_cme-feld');
+      const cmeLeiste = p.locator('.feld:has(#t-start_cme) .werkzeug');
+      await cme.click();
+      await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+      await p.keyboard.type('Wort');
+      await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+      await cmeLeiste.locator('[data-befehl=fett]').click();
+      const fettAn = await cme.locator('b, strong').count() === 1 && await cmeLeiste.locator('[data-befehl=fett]').getAttribute('aria-pressed') === 'true';
+      await cmeLeiste.locator('[data-befehl=fett]').click();
+      const fettAus = await cme.locator('b, strong').count() === 0 && await cmeLeiste.locator('[data-befehl=fett]').getAttribute('aria-pressed') === 'false';
+      notiere(engine, 'desktop-breit', 'team-texte', 'Editor: Fett schaltet an und wieder aus', fettAn && fettAus, await cme.innerHTML());
+      await cmeLeiste.locator('[data-befehl=nliste]').click();
+      notiere(engine, 'desktop-breit', 'team-texte', 'Editor: nummerierte Liste', await cme.locator('ol li').count() === 1, await cme.innerHTML());
+      notiere(engine, 'desktop-breit', 'team-texte', 'Einzeilige Felder mit Editor (Titel)', await p.isVisible('#t-start_titel-feld') && (await p.locator('#t-start_titel-feld em').count()) === 1);
 
       // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
       await p.setViewportSize({ width: 390, height: 844 });
@@ -597,8 +629,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Ausloggen über den Knopf in der Navigation (Desktop) und Login mit Wiederherstellungscode
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team');
-      await p.click('.nav-gross .nav-ab');
-      await p.waitForLoadState('load');
+      await ausloggen(p);
       notiere(engine, 'desktop-breit', 'ausloggen', 'ausgeloggt', new URL(p.url()).pathname === '/einloggen' && (await p.textContent('body')).includes('ausgeloggt'));
       await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
       await p.click('form:has(input[value=passwort]) button');

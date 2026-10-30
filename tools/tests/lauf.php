@@ -106,15 +106,19 @@ pruefe(konfig_maengel() === [] || !$mitDb, 'Test-Konfiguration vollständig');
 pruefe(umgebung() === 'entwicklung', 'Umgebung gelesen');
 pruefe(preg_match('/^\d+\.\d+\.\d+$/', app_version()) === 1, 'VERSION lesbar (' . app_version() . ')');
 
-abschnitt('Textauszeichnung (pflegbare Texte)');
-pruefe(text_inline('Ein **fetter** und *betonter* Satz') === 'Ein <strong>fetter</strong> und <em>betonter</em> Satz', 'fett und betont');
-pruefe(text_inline('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;', 'HTML wird maskiert');
-pruefe(str_contains(text_inline('[Kammer](https://www.blaek.de)'), '<a href="https://www.blaek.de" rel="noopener">Kammer</a>'), 'https-Link');
-pruefe(!str_contains(text_inline('[x](javascript:alert(1))'), '<a '), 'javascript-Link abgelehnt');
-pruefe(!str_contains(text_inline('[x](http://example.org)'), '<a '), 'http-Link (ohne s) abgelehnt');
-pruefe(text_zu_html("## Titel\n\nZeile 1\nZeile 2\n\n- a\n- b") === "<h2>Titel</h2>\n<p>Zeile 1<br>Zeile 2</p>\n<ul><li>a</li><li>b</li></ul>", 'Absätze, Überschrift, Liste');
-$abs = text_abschnitte("## Für wen\nAlle.\n## Wie\nSo.");
-pruefe(count($abs) === 2 && $abs[1]['titel'] === 'Wie' && $abs[1]['text'] === 'So.', 'Abschnitte für Infokästen');
+abschnitt('Editor-Inhalte (ein Editor überall, E-54)');
+pruefe(editor_bereinigen('<p>Ein <b>fetter</b> und <i>betonter</i> Satz</p>') === '<p>Ein <strong>fetter</strong> und <em>betonter</em> Satz</p>', 'fett und kursiv (b/i werden strong/em)');
+pruefe(editor_bereinigen('<p>a<script>alert(1)</script><img src=x onerror=alert(1)></p>') === '<p>a</p>', 'Skript und fremdes Bild entfernt');
+pruefe(editor_bereinigen('<p onclick="x()" style="color:red">Text</p>') === '<p>Text</p>', 'Attribute entfernt');
+pruefe(str_contains(editor_bereinigen('<p><a href="https://www.blaek.de">Kammer</a></p>'), '<a href="https://www.blaek.de" rel="noopener">Kammer</a>'), 'https-Link');
+pruefe(!str_contains(editor_bereinigen('<p><a href="javascript:alert(1)">x</a></p>'), '<a ') && !str_contains(editor_bereinigen('<p><a href="http://example.org">x</a></p>'), '<a '), 'javascript- und http-Link abgelehnt');
+pruefe(editor_bereinigen('<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>') === '<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>', 'Überschrift, Liste, nummerierte Liste');
+pruefe(editor_bereinigen("Zeile 1\nZeile 2\n\nAbsatz 2") === '<p>Zeile 1<br>Zeile 2</p><p>Absatz 2</p>', 'Klartext: Absätze und Zeilen');
+pruefe(editor_bereinigen('<p>Titel <b>fett</b></p><p>zwei</p>', 'inline') === 'Titel <strong>fett</strong> zwei', 'Inline: nur fett, kursiv, Link in einer Zeile');
+pruefe(str_contains(editor_bereinigen('<p><img src="/bild/text-0123456789abcdef.png" alt="Plan" data-breite="50"></p>', 'block', true), '<img src="/bild/text-0123456789abcdef.png" alt="Plan" data-breite="50">') && editor_bereinigen('<p><img src="/bild/text-0123456789abcdef.png"></p>') === '', 'Bilder nur eigene und nur, wo erlaubt');
+pruefe(editor_text('<p>a <b>b</b></p><ul><li>c</li></ul>') === "a b\nc", 'Klartext für Längenprüfung');
+$abs = editor_abschnitte('<h2>Für wen</h2><p>Alle.</p><h2>Wie</h2><p>So.</p>');
+pruefe(count($abs) === 2 && $abs[1]['titel'] === 'Wie' && $abs[1]['text'] === '<p>So.</p>', 'Abschnitte für Infokästen');
 pruefe(tag_text('2027-01-20') === 'Mi 20.01.2027', 'Wochentag zum Datum');
 
 abschnitt('Installer-Eingaben');
@@ -693,15 +697,7 @@ if (!$mitDb) {
     file_put_contents($cfgDatei, $cfgAlt);
     konfig_verwerfen();
 
-    abschnitt('Rückmeldung 2026-10-30: Auszeichnung, Block-Zuordnung, Mail-Code, Protokoll');
-    // CommonMark-Teilmenge
-    pruefe(text_zu_html("# Eins\n### Drei") === "<h2>Eins</h2>\n<h3>Drei</h3>", 'Überschriften # bis ###');
-    pruefe(text_zu_html("* a\n+ b\n\n1. x\n2) y") === "<ul><li>a</li><li>b</li></ul>\n<ol><li>x</li><li>y</li></ol>", 'Listen mit * + und nummeriert');
-    pruefe(text_inline('__f__ und _k_ und snake_case') === '<strong>f</strong> und <em>k</em> und snake_case', 'Unterstriche wie CommonMark, nicht mitten im Wort');
-    pruefe(text_inline('\*kein\* <b>') === '*kein* &lt;b&gt;', 'Backslash maskiert, HTML wird Text');
-    pruefe(text_zu_html("a\n\n---\n\nb") === "<p>a</p>\n<hr>\n<p>b</p>", 'Trennlinie');
-    pruefe(str_contains(text_inline('![Plan](/bild/text-0123456789abcdef.png)'), '<img class="text-bild" src="/bild/text-0123456789abcdef.png" alt="Plan"') && !str_contains(text_inline('![x](https://fremd.example/a.png)'), '<img'), 'nur eigene Bilder');
-    pruefe(text_zu_html("Zeile 1\nZeile 2") === '<p>Zeile 1<br>Zeile 2</p>', 'Zeilenumbruch bleibt (wie GitHub-Kommentare)');
+    abschnitt('Rückmeldung 2026-10-30: Block-Zuordnung, Mail-Code, Protokoll');
     // Block-Zuordnung
     $blockId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'block' LIMIT 1");
     $wsId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'workshop' ORDER BY id LIMIT 1");
@@ -787,6 +783,34 @@ if (!$mitDb) {
     pruefe(db_wert("SELECT art FROM audit ORDER BY id DESC LIMIT 1") === 'protokoll' && audit_ausblenden($pidA, false, 1) && $sieht($admin, $pidA), 'Ausblenden steht im Protokoll, Einblenden geht');
     pruefe(!audit_ausblenden((int)db_wert("SELECT id FROM audit WHERE art = 'protokoll' ORDER BY id DESC LIMIT 1"), true, 1), 'Protokoll-Einträge zum Ausblenden lassen sich nicht ausblenden');
     db_ausfuehren('DELETE FROM konto WHERE id = ?', [$zk]);
+
+    abschnitt('Löschfrist für Konten (E-54)');
+    $jetzt = time();
+    $alt = gmdate('Y-m-d H:i:s', $jetzt - (14 * 30 - 20) * 86400); // in knapp 20 Tagen 14 Monate ohne Login
+    $kl = konto_anlegen('Lotte Lange', 'lotte@example.org', 'teilnehmend', 'lottes-passwort', null);
+    $kt = konto_anlegen('Tara Team', 'tara@example.org', 'admin', 'taras-passwort-12', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id IN (?, ?)', [$alt, $alt, $alt, $kl, $kt]);
+    db_ausfuehren("INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, institution, essen, status, einwilligung_am, erstellt_am, geaendert_am)
+        VALUES (?, 'Lotte', 'Lange', 'lotte@example.org', 'Pflege/MFA', '', 'egal', 'bestaetigt', ?, ?, ?)", [$kl, $alt, $alt, $alt]);
+    $anmL = (int)db()->lastInsertId();
+    $r = tk_loeschfrist($jetzt);
+    $mailL = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'lotte@example.org' ORDER BY id DESC LIMIT 1");
+    pruefe($r['erinnert'] >= 1 && str_contains($mailL, 'einmal ein') && db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kl]) !== null, 'Erinnerung 30 Tage vor der Löschung, per Mail');
+    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kt]) === null, 'Team-Konten ausgenommen');
+    pruefe(tk_loeschfrist($jetzt)['erinnert'] === 0, 'Keine zweite Erinnerung');
+    pruefe(tk_loeschfrist($jetzt + 25 * 86400)['geloescht'] === 0 && konto_laden($kl) !== null, 'Nicht vor Ablauf von 30 Tagen nach der Erinnerung gelöscht');
+    $r = tk_loeschfrist($jetzt + 31 * 86400);
+    pruefe($r['geloescht'] >= 1 && konto_laden($kl) === null && konto_laden($kt) !== null, 'Nach der Frist gelöscht, Team-Konto bleibt');
+    pruefe(db_wert('SELECT konto_id FROM anmeldung WHERE id = ?', [$anmL]) === null && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$anmL]) === 'bestaetigt', 'Anmeldung bleibt (ohne Konto)');
+    $km = konto_anlegen('Mo Login', 'mo@example.org', 'teilnehmend', 'mos-passwort-1', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id = ?', [$alt, $alt, $alt, $km]);
+    tk_loeschfrist($jetzt);
+    $_SESSION = [];
+    tk_einloggen(konto_laden($km));
+    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$km]) === null && tk_loeschfrist($jetzt + 31 * 86400)['geloescht'] === 0 && konto_laden($km) !== null, 'Login setzt die Frist neu');
+    $_SESSION = [];
+    db_ausfuehren("DELETE FROM konto WHERE id IN (?, ?)", [$kt, $km]);
+    db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmL]);
 
     abschnitt('Newsletter (AP-7)');
     $ls = array_column(nl_listen(), 'id', 'name');

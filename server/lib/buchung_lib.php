@@ -509,7 +509,8 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
             $k = konto_per_email($a['email']);
             if ((int)$a['konto_wunsch'] === 1) {
                 $kontoNeu = tk_anlegen_aus_anmeldung($anmId);
-            } elseif ($k !== null && $k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null) {
+            } elseif ($k !== null && ($k['email_bestaetigt_am'] !== null || konto_ist_team($k))) {
+                // ein Konto für alles (E-54): auch Team-Konten
                 tk_verknuepfen((int)$k['id']);
             }
         } elseif ($l['zweck'] === 'email') {
@@ -543,7 +544,8 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
 {
     $jetzt ??= time();
     // Eingeloggt mit bestätigtem Konto und gleicher Adresse: keine zweite Bestätigung nötig (AP-4b)
-    $vomKonto = $konto !== null && $konto['email_bestaetigt_am'] !== null && $konto['email'] === $w['email'];
+    // Team-Konten gelten als bestätigt (Adresse über die Einladung bewiesen, ein Konto für alles, E-54)
+    $vomKonto = $konto !== null && ($konto['email_bestaetigt_am'] !== null || konto_ist_team($konto)) && $konto['email'] === $w['email'];
     return anm_sperre(function () use ($w, $wahl, $newsletter, $jetzt, $kontoWunsch, $konto, $vomKonto): array {
         $vorhanden = anm_per_email($w['email']);
         if ($vorhanden !== null) {
@@ -942,8 +944,7 @@ function anm_aktuell(): ?array
 
 function anm_ausloggen(): void
 {
-    unset($_SESSION['anm'], $_SESSION['tk'], $_SESSION['tk_pw']);
-    sitzung_erneuern();
+    tk_ausloggen(); // eine Sitzung für alles (E-54)
 }
 
 /** Für die Navigation auf öffentlichen Seiten: Anmeldung nur lesen, wenn schon eine Sitzung besteht. */

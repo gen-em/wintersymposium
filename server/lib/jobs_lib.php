@@ -118,7 +118,7 @@ function job_aufraeumen(int $jetzt): array
 /** Anmeldungen (Fristen, Angebote) und unbestätigte Teilnehmenden-Konten. */
 function job_anmeldung(int $jetzt): array
 {
-    return anm_job($jetzt) + ['konten' => tk_aufraeumen($jetzt)];
+    return anm_job($jetzt) + ['konten' => tk_aufraeumen($jetzt), 'loeschfrist' => tk_loeschfrist($jetzt)];
 }
 
 function job_rundmail(int $jetzt): array

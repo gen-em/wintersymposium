@@ -232,22 +232,9 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
             <details class="tabelle-details"><summary>Liste ansehen</summary><ul class="schlicht empfaenger-liste" id="rm-liste"><?php foreach ($empfaenger as $x): ?><li><?= e(trim($x['vorname'] . ' ' . $x['nachname']) ?: $x['email']) ?></li><?php endforeach; ?></ul></details></div>
         <div class="feld"><label for="betreff">Betreff</label><input id="betreff" name="betreff" type="text" maxlength="200" value="<?= e($w['betreff']) ?>"></div>
         <div class="feld">
-            <label for="rm-html" id="rm-html-label">Text der Mail</label>
-            <div class="werkzeug" role="toolbar" aria-label="Formatierung" id="rm-leiste" hidden>
-                <button type="button" data-befehl="bold" title="Fett"><b>B</b></button><button type="button" data-befehl="italic" title="Kursiv"><i>I</i></button><button type="button" data-befehl="titel" title="Überschrift">H</button><span class="trenn"></span>
-                <button type="button" data-befehl="liste" title="Liste">• Liste</button><button type="button" data-befehl="link" title="Link">Link</button><button type="button" data-befehl="bild" title="Bild einfügen">Bild</button><button type="button" data-befehl="knopf" title="Knopf einfügen">Knopf</button><span class="trenn"></span>
-                <?php foreach (RM_PLATZHALTER as $ph => $t): ?><button type="button" data-platzhalter="<?= e($ph) ?>" title="Platzhalter: <?= e($t) ?>"><?= e($ph) ?></button><?php endforeach; ?><span class="trenn"></span>
-                <button type="button" data-befehl="html" title="HTML-Quelltext bearbeiten" aria-pressed="false">&lt;/&gt; HTML</button>
-            </div>
-            <div class="schreibfeld" id="rm-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="rm-html-label" hidden></div>
-            <textarea id="rm-html" name="html" rows="14" class="mono"><?= e($w['html']) ?></textarea>
-            <div class="rm-dialog" id="rm-dialog" hidden>
-                <label for="rm-dialog-text" id="rm-dialog-text-label">Text</label><input id="rm-dialog-text" type="text">
-                <label for="rm-dialog-ziel">Adresse (https://… oder {link})</label><input id="rm-dialog-ziel" type="text" value="{link}">
-                <div class="aktionen"><button type="button" class="knopf klein-knopf" id="rm-dialog-ok">Einfügen</button><button type="button" class="knopf zweit klein-knopf" id="rm-dialog-weg">Abbrechen</button></div>
-            </div>
-            <p class="meta klein" id="rm-status" role="status" aria-live="polite"></p>
-            <p class="hilfe">Bilder werden hochgeladen und auf dieser Webseite gespeichert (JPG/PNG, verkleinert auf höchstens 1200 px), dann direkt in die Mail eingebettet – keine fremden Server. Ein Klick aufs Bild im Text schaltet zwischen voller und halber Breite. Erlaubt sind nur einfache Elemente (Text, Überschrift, Liste, Link, Bild, Knopf). Impressum und Datenschutz hängt die App an.</p>
+            <label for="rm-html">Text der Mail</label>
+            <textarea id="rm-html" name="html" rows="14" class="mono" data-editor="block" data-werkzeug="fett kursiv titel | liste nliste link bild knopf | html" data-bild-url="/team/mailings/bild" data-knopf-ziel="{link}" data-platzhalter="<?= e(json_encode(RM_PLATZHALTER, JSON_UNESCAPED_UNICODE)) ?>"><?= e($w['html']) ?></textarea>
+            <p class="hilfe">Bilder werden hochgeladen und auf dieser Webseite gespeichert (JPG/PNG, verkleinert auf höchstens 1200 px), dann direkt in die Mail eingebettet – keine fremden Server. Ein Klick aufs Bild im Text schaltet zwischen voller und halber Breite. Erlaubt sind nur einfache Elemente (Text, Überschrift, Listen, Link, Bild, Knopf). Derselbe Editor steht bei den Texten der Webseite, im Programm und bei den Dozierenden. Impressum und Datenschutz hängt die App an.</p>
         </div>
         <div class="feld rm-bild-feld"><label for="rm-bild">Bild hochladen</label><input id="rm-bild" name="bild" type="file" accept="image/jpeg,image/png"><button class="knopf zweit klein-knopf" type="submit" name="aktion" value="bild">Bild ans Ende setzen</button></div>
         <div class="aktionen">

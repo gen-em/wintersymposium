@@ -2,10 +2,12 @@
 declare(strict_types=1);
 
 /*
- * „Mein Konto“ für Teilnehmende (AP-4b, E-30, E-48): Passwort festlegen oder
- * ändern, Profil, neue Adresse (gilt nach Bestätigung, Anmeldung zieht mit),
- * Konto löschen – wahlweise mit oder ohne Anmeldung. Workshops, Essen und
- * Storno bleiben auf „Deine Anmeldung“ (gleiche Regeln und Stichtage).
+ * „Mein Konto“ für alle (AP-4b, E-30, E-48; ein Konto für alles, E-54):
+ * Passwort festlegen oder ändern, Profil, Newsletter, neue Adresse (gilt nach
+ * Bestätigung, Anmeldung zieht mit), Konto löschen – wahlweise mit oder ohne
+ * Anmeldung. Team-Konten: zusätzlich der zweite Faktor (/konto/zweitfaktor),
+ * Passwort mit 12 Zeichen; Adresse ändern und Löschen über einen Betreiber.
+ * Workshops, Essen und Storno bleiben auf „Meine Anmeldung“.
  */
 
 anm_sitzung();
@@ -15,6 +17,8 @@ if ($k === null) {
     umleiten('/deine-anmeldung');
 }
 $id = (int)$k['id'];
+$team = konto_ist_team($k);
+$pwMin = $team ? PASSWORT_MIN_LAENGE : PASSWORT_MIN_TN;
 $fehler = [];
 $eingabe = [];
 $pwNoetig = $k['passwort_hash'] === null || !empty($_SESSION['tk_pw']);
@@ -37,7 +41,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$pwNoetig) {
                 umleiten('/konto');
             }
-            $f = passwort_regel_fehler((string)($_POST['passwort'] ?? ''), (string)($_POST['passwort2'] ?? ''), PASSWORT_MIN_TN);
+            $f = passwort_regel_fehler((string)($_POST['passwort'] ?? ''), (string)($_POST['passwort2'] ?? ''), $pwMin);
             if ($f === null) {
                 konto_passwort_setzen($id, (string)$_POST['passwort']);
                 unset($_SESSION['tk_pw']);
@@ -50,10 +54,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         case 'passwort_aendern':
             if (!anmeldung_passwort_ok($k, (string)($_POST['alt'] ?? ''))) {
                 $fehler['alt'] = 'Das bisherige Passwort stimmt nicht.';
-            } elseif (($f = passwort_regel_fehler((string)($_POST['neu'] ?? ''), (string)($_POST['neu2'] ?? ''), PASSWORT_MIN_TN)) !== null) {
+            } elseif (($f = passwort_regel_fehler((string)($_POST['neu'] ?? ''), (string)($_POST['neu2'] ?? ''), $pwMin)) !== null) {
                 $fehler['neu'] = $f;
             } else {
                 konto_passwort_setzen($id, (string)$_POST['neu']);
+                // Andere Sitzungen enden (neue sitzung_version), diese bleibt – beim Team samt zweitem Faktor
+                if ($team) {
+                    $_SESSION['konto'] = ['id' => $id, 'version' => (int)konto_laden($id)['sitzung_version']];
+                }
                 tk_einloggen(konto_laden($id));
                 flash_setzen('ok', 'Dein Passwort ist geändert. Andere Sitzungen sind beendet.');
                 umleiten('/konto');
@@ -69,6 +77,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $_GET['aendern'] = 'profil';
             break;
         case 'email':
+            if ($team) {
+                umleiten('/konto');
+            }
             $f = tk_email_aendern($id, (string)($_POST['email'] ?? ''));
             if ($f === null) {
                 flash_setzen('ok', 'An die neue Adresse ist ein Link unterwegs. Erst damit gilt sie; bis dahin bleibt die bisherige.');
@@ -77,6 +88,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $fehler['email'] = $f;
             break;
         case 'loeschen':
+            if ($team) {
+                umleiten('/konto'); // Team-Konten löscht ein Betreiber
+            }
             if (!anmeldung_passwort_ok($k, (string)($_POST['passwort'] ?? ''))) {
                 $fehler['loeschen'] = 'Das Passwort stimmt nicht. Das Konto wurde nicht gelöscht.';
             } elseif (($f = tk_loeschen($id, ($_POST['anmeldung'] ?? '') === 'stornieren')) !== null) {
@@ -111,11 +125,11 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
 <?php if ($pwNoetig): ?>
     <div class="kasten schmal-kasten">
         <h2 class="zwischen klein-zwischen">Passwort festlegen</h2>
-        <p>Mindestens <?= PASSWORT_MIN_TN ?> Zeichen. Am besten eins aus deinem Passwortmanager.</p>
+        <p>Mindestens <?= $pwMin ?> Zeichen. Am besten eins aus deinem Passwortmanager.</p>
         <form class="form" method="post" action="/konto" novalidate>
             <?= csrf_feld() ?><input type="hidden" name="aktion" value="passwort_setzen">
             <input type="email" name="email" value="<?= e($k['email']) ?>" autocomplete="username" hidden>
-            <div class="feld"><label for="passwort">Neues Passwort</label><input id="passwort" name="passwort" type="password" autocomplete="new-password" minlength="<?= PASSWORT_MIN_TN ?>" required<?= $ungueltig('passwort') ?>><?= $fehlerFeld('passwort') ?></div>
+            <div class="feld"><label for="passwort">Neues Passwort</label><input id="passwort" name="passwort" type="password" autocomplete="new-password" minlength="<?= $pwMin ?>" required<?= $ungueltig('passwort') ?>><?= $fehlerFeld('passwort') ?></div>
             <div class="feld"><label for="passwort2">Noch einmal</label><input id="passwort2" name="passwort2" type="password" autocomplete="new-password" required></div>
             <div><button class="knopf" type="submit">Passwort speichern</button></div>
         </form>
@@ -180,7 +194,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
             <h2 class="zwischen klein-zwischen">Newsletter</h2>
             <form class="form" method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="newsletter">
                 <fieldset class="feld nl-listen"><legend class="sr">Newsletter</legend>
-                <?php foreach (nl_listen(true) as $l): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= ($abos[(int)$l['id']] ?? '') === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . e($l['beschreibung']) . '</span>' : '' ?></span></label><?php endforeach; ?>
+                <?php foreach (nl_listen(true) as $l): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= ($abos[(int)$l['id']] ?? '') === 'bestaetigt' ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '' ?></span></label><?php endforeach; ?>
                 </fieldset>
                 <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>
                 <div><button class="knopf zweit" type="submit">Newsletter speichern</button></div>
@@ -188,6 +202,19 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
         </div>
     </div>
     <div class="spalte">
+        <?php if ($team): $zf = totp_zustand($id); ?>
+        <div class="kasten">
+            <h2 class="zwischen klein-zwischen">Team-Konto</h2>
+            <p><?= e(ROLLEN[$k['rolle']] ?? '') ?> · Login mit zweitem Faktor.</p>
+            <dl class="liste-def">
+                <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? '<span class="chip ok">eingerichtet</span>' : '<span class="chip offen">nicht eingerichtet</span>' ?></dd></div>
+                <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? '<span class="chip ok">an</span>' : '<span class="chip offen">aus</span>' ?></dd></div>
+                <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig</dd></div>
+            </dl>
+            <div class="aktionen abstand"><a class="knopf zweit" href="/konto/zweitfaktor">Zwei-Faktor einstellen</a><a class="knopf zweit" href="/team">Zum Team-Bereich</a></div>
+            <p class="meta klein">Adresse ändern oder das Konto löschen kann ein Betreiber unter Team-Konten.</p>
+        </div>
+        <?php else: ?>
         <div class="kasten">
             <strong>E-Mail-Adresse ändern</strong>
             <form class="form" method="post" action="/konto" novalidate>
@@ -196,19 +223,22 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
                 <div><button class="knopf zweit" type="submit">Link schicken</button></div>
             </form>
         </div>
+        <?php endif; ?>
         <div class="kasten">
             <strong>Passwort ändern</strong>
             <form class="form" method="post" action="/konto" novalidate>
                 <?= csrf_feld() ?><input type="hidden" name="aktion" value="passwort_aendern">
                 <input type="email" name="email" value="<?= e($k['email']) ?>" autocomplete="username" hidden>
                 <div class="feld"><label for="alt">Bisheriges Passwort</label><input id="alt" name="alt" type="password" autocomplete="current-password"<?= $ungueltig('alt') ?>><?= $fehlerFeld('alt') ?></div>
-                <div class="feld"><label for="neu">Neues Passwort</label><input id="neu" name="neu" type="password" autocomplete="new-password" minlength="<?= PASSWORT_MIN_TN ?>"<?= $ungueltig('neu') ?>><?= $fehlerFeld('neu') ?></div>
+                <div class="feld"><label for="neu">Neues Passwort</label><input id="neu" name="neu" type="password" autocomplete="new-password" minlength="<?= $pwMin ?>"<?= $ungueltig('neu') ?>><?= $fehlerFeld('neu') ?></div>
                 <div class="feld"><label for="neu2">Noch einmal</label><input id="neu2" name="neu2" type="password" autocomplete="new-password"></div>
                 <div><button class="knopf zweit" type="submit">Passwort ändern</button></div>
             </form>
         </div>
+        <?php if (!$team): ?>
         <div class="kasten">
             <strong>Konto löschen</strong>
+            <p class="meta klein">Ohne Login löschen wir dein Konto nach <?= KONTO_LOESCHEN_MONATE ?> Monaten von selbst; <?= KONTO_ERINNERN_TAGE ?> Tage vorher schicken wir dir eine Erinnerung. Einloggen genügt, damit es bleibt.</p>
             <?= $fehlerFeld('loeschen') ?>
             <details class="bestaetigen"<?= isset($fehler['loeschen']) ? ' open' : '' ?>><summary class="knopf gefahr">Konto löschen</summary>
                 <form method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="loeschen">
@@ -226,6 +256,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js']]);
                     <button type="submit" class="knopf gefahr">Ja, Konto löschen</button></form>
             </details>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 <?php

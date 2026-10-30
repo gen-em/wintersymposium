@@ -56,7 +56,7 @@ function team_gesehen(): ?array
         return $k;
     }
     if (session_status() === PHP_SESSION_ACTIVE) {
-        return ($_SESSION['_art'] ?? '') === 'team' ? ($k = anmeldung_konto()) : null;
+        return $k = anmeldung_konto(); // eine Sitzung für alles (E-54)
     }
     $name = SITZUNG_ARTEN['team']['name'];
     $c = $_COOKIE[$name] ?? null;
@@ -115,8 +115,9 @@ function anmeldung_voll(array $k): void
     sitzung_erneuern();
     unset($_SESSION['halb']);
     $_SESSION['konto'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
-    db_ausfuehren('UPDATE konto SET letzte_anmeldung = ? WHERE id = ?', [db_jetzt(), (int)$k['id']]);
     audit_schreiben('login', 'Team-Anmeldung', (int)$k['id']);
+    // Ein Konto für alles (E-54): dasselbe Konto gilt auch als Teilnehmenden-Konto (Meine Anmeldung, Mein Konto)
+    tk_einloggen($k);
 }
 
 function anmeldung_beenden(): void

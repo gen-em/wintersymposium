@@ -56,7 +56,7 @@ seite_kopf('Newsletter', ['aktiv' => '/newsletter', 'skripte' => ['pow.js']]);
         <?= csrf_feld() ?>
         <fieldset class="feld nl-listen"><legend>Welche Newsletter?</legend>
             <?php foreach ($listen as $l): ?>
-            <label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= in_array((string)$l['id'], (array)($eingabe['listen'] ?? []), true) ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . e($l['beschreibung']) . '</span>' : '' ?></span></label>
+            <label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= in_array((string)$l['id'], (array)($eingabe['listen'] ?? []), true) ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '' ?></span></label>
             <?php endforeach; ?>
             <?= $fehlerFeld('listen') ?>
         </fieldset>

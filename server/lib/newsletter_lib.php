@@ -38,11 +38,15 @@ function nl_liste(int $id): ?array
 function nl_liste_pruefen(array $e): array
 {
     $t = fn(string $k, int $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($e[$k] ?? '')) ?? ''), 0, $max);
-    $w = ['name' => $t('name', 80), 'beschreibung' => $t('beschreibung', 300), 'absender_name' => $t('absender_name', 80),
+    // Beschreibung mit dem Editor (eine Zeile: fett, kursiv, Link; E-54)
+    $w = ['name' => $t('name', 80), 'beschreibung' => editor_bereinigen(mb_substr((string)($e['beschreibung'] ?? ''), 0, 900), 'inline'), 'absender_name' => $t('absender_name', 80),
         'sichtbar' => empty($e['sichtbar']) ? 0 : 1, 'bei_anmeldung' => empty($e['bei_anmeldung']) ? 0 : 1];
     $f = [];
     if ($w['name'] === '') {
         $f['name'] = 'Bitte einen Namen angeben.';
+    }
+    if (mb_strlen(editor_text($w['beschreibung'])) > 300 || strlen($w['beschreibung']) > 1000) {
+        $f['beschreibung'] = 'Höchstens 300 Zeichen.';
     }
     return ['werte' => $w, 'fehler' => $f];
 }

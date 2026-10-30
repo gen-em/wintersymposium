@@ -60,7 +60,7 @@ $v = fn(string $k) => $eingabe !== null ? (string)($eingabe[$k] ?? '') : (string
 $fehlerFeld = fn(string $k) => isset($fehler[$k]) ? '<p class="feldfehler" id="f-' . $k . '">' . e($fehler[$k]) . '</p>' : '';
 $ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-describedby="f-' . $k . '"' : '';
 
-team_seite_kopf($konto, 'Dozierende', '/team/programm');
+team_seite_kopf($konto, 'Dozierende', '/team/dozierende');
 ?>
 <p><a href="/team/programm">← zurück zum Programm</a></p>
 <div class="filterzeile"><a class="knopf" href="/team/dozierende?neu=1">+ Person</a></div>
@@ -89,7 +89,7 @@ team_seite_kopf($konto, 'Dozierende', '/team/programm');
             <?php if ($bearbeiten !== null): ?><input type="hidden" name="id" value="<?= (int)$bearbeiten['id'] ?>"><?php endif; ?>
             <div class="feld"><label for="d-name">Name</label><input id="d-name" name="name" type="text" maxlength="120" required value="<?= e($v('name')) ?>"<?= $ungueltig('name') ?>><?= $fehlerFeld('name') ?></div>
             <div class="feld"><label for="d-funktion">Funktion</label><input id="d-funktion" name="funktion" type="text" maxlength="160" value="<?= e($v('funktion')) ?>"<?= $ungueltig('funktion') ?>><p class="hilfe">z. B. „Oberärztin, Zentrale Notaufnahme“</p><?= $fehlerFeld('funktion') ?></div>
-            <div class="feld"><label for="d-kurzbio">Kurzbio</label><textarea id="d-kurzbio" name="kurzbio" rows="4"<?= $ungueltig('kurzbio') ?>><?= e($v('kurzbio')) ?></textarea><?= $fehlerFeld('kurzbio') ?></div>
+            <div class="feld"><label for="d-kurzbio">Kurzbio</label><textarea id="d-kurzbio" name="kurzbio" rows="4" data-editor="block" data-werkzeug="fett kursiv | liste nliste link"<?= $ungueltig('kurzbio') ?>><?= e($v('kurzbio')) ?></textarea><?= $fehlerFeld('kurzbio') ?></div>
             <?php if (foto_moeglich()): ?>
             <div class="feld"><label for="d-foto">Foto (optional)</label>
                 <?php if (!empty($bearbeiten['foto'])): ?><img class="foto gross" src="/bild/<?= e($bearbeiten['foto']) ?>" alt="Aktuelles Foto" width="120" height="120">
