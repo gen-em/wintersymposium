@@ -603,7 +603,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     $r = http_anfrage($basis, 'GET', '/konto/zweitfaktor', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'Zwei-Faktor-Authentifizierung') && str_contains($r['text'], 'Code per E-Mail') && str_contains($r['text'], 'Passkey'), 'Mein Konto › Zwei-Faktor');
     $r = http_anfrage($basis, 'POST', '/konto/zweitfaktor', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_aus', 'pw' => 'mia-ihr-passwort-1'], $k2);
-    pruefe(str_contains($r['text'], 'Richte zuerst die Authenticator-App ein') && totp_zustand($mk)['mail'], 'Mail-Code ohne App nicht abschaltbar');
+    pruefe(str_contains($r['text'], 'Richte zuerst die Authenticator-App oder einen Passkey ein') && totp_zustand($mk)['mail'], 'Mail-Code ohne App nicht abschaltbar');
     // Protokoll: Admin sieht keine Sicherung, kann nicht ausblenden
     $r = http_anfrage($basis, 'GET', '/team/protokoll?art=sicherung', $h, [], null, $k2);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Keine Einträge') && !str_contains($r['text'], 'Ausblenden'), 'Admin: keine Sicherungs-Einträge, kein Ausblenden');
@@ -667,6 +667,68 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $r = http_anfrage($basis, 'POST', '/team/programm', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'speichern', 'typ' => 'pause', 'titel' => 'Editor-Test', 'beschreibung' => '<p>Mit <b>fett</b><script>x()</script></p><ol><li>eins</li></ol>'], $b);
     pruefe(db_wert("SELECT beschreibung FROM programmpunkt WHERE titel = 'Editor-Test'") === '<p>Mit <strong>fett</strong></p><ol><li>eins</li></ol>', 'Beschreibung als bereinigtes HTML gespeichert (nummerierte Liste)');
     db_ausfuehren("DELETE FROM programmpunkt WHERE titel = 'Editor-Test'");
+}
+
+/** Passkeys über die Endpunkte, mit dem Software-Authenticator (E-55). Host localhost (Passkeys brauchen eine Domain). */
+function passkey_http_tests(string $basis, string $tmp): void
+{
+    abschnitt('HTTP: Passkeys (E-55)');
+    require_once __DIR__ . '/passkey_hilfe.php';
+    $h = 'localhost';
+    $ursprung = 'http://localhost:' . parse_url($basis, PHP_URL_PORT);
+    $json = fn(array $r) => json_decode($r['text'], true) ?? [];
+    $kp = konto_anlegen('Pia Passkey', 'pia.pk@example.org', 'teilnehmend', 'pias-passwort-1', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $kp]);
+    $k = "$tmp/kekse-pk.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'data-passkey-login') && str_contains($r['text'], 'Mit Passkey einloggen') && str_contains($r['text'], '/assets/passkey.js'), 'Login-Seite: „Mit Passkey einloggen“');
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'pia.pk@example.org', 'passwort' => 'pias-passwort-1'], $k);
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'id="passkeys"') && str_contains($r['text'], 'data-passkey-anlage') && str_contains($r['text'], 'Noch kein Passkey'), 'Mein Konto: Abschnitt Passkeys');
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'anlage_optionen', 'pw' => 'falsch'], $k);
+    pruefe($r['status'] === 400 && str_contains($r['text'], 'Passwort stimmt nicht'), 'Passkey anlegen nur mit Passwort');
+    pruefe(http_anfrage($basis, 'POST', '/passkey', $h, [], ['aktion' => 'login_optionen'], $k)['status'] === 403, 'Ohne CSRF-Token abgelehnt');
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'anlage_optionen', 'pw' => 'pias-passwort-1'], $k))['optionen'] ?? [];
+    pruefe(($o['rp']['id'] ?? '') === 'localhost', 'Anlage-Optionen mit rp.id localhost');
+    $g = test_pk_geraet();
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'bezeichnung' => 'Testgerät', 'antwort' => json_encode(test_pk_anlage($g, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $k);
+    pruefe(($json($r)['ok'] ?? false) === true && pk_zahl($kp) === 1, 'Passkey über den Endpunkt angelegt');
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Testgerät') && str_contains($r['text'], 'noch nicht benutzt'), 'Liste zeigt den Passkey');
+    // Ausloggen, dann ohne Passwort mit dem Passkey einloggen
+    http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    $c = http_csrf($r['text']);
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $k))['optionen'] ?? [];
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($g, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $k);
+    pruefe(($json($r)['ok'] ?? false) === true && ($json($r)['ziel'] ?? '') === '/konto', 'Einloggen mit Passkey ohne Passwort');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k)['text'], 'zuletzt benutzt'), 'Danach eingeloggt, Passkey als benutzt markiert');
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $k))['optionen'] ?? [];
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($g, (string)($o['challenge'] ?? ''), 'localhost', 'https://boese.example'))], $k);
+    pruefe($r['status'] === 400 && str_contains($r['text'], 'nicht angenommen'), 'Fremder Ursprung abgelehnt');
+    // Team-Konto: beim ersten Login Passkey als zweiter Faktor, dann Wiederherstellungscodes
+    konto_anlegen('Tom Team', 'tom.pk@example.org', 'admin', 'toms-passwort-123', null);
+    $kt = "$tmp/kekse-pk-team.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $kt);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'tom.pk@example.org', 'passwort' => 'toms-passwort-123'], $kt);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $kt);
+    pruefe(str_contains($r['text'], 'data-passkey-anlage') && str_contains($r['text'], 'Passkey anlegen') && str_contains($r['text'], 'Möglichkeit 3'), 'Erster Team-Login: Passkey als erste Wahl');
+    $c = http_csrf($r['text']);
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'anlage_optionen'], $kt))['optionen'] ?? [];
+    $gt = test_pk_geraet();
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'antwort' => json_encode(test_pk_anlage($gt, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $kt);
+    pruefe(($json($r)['ziel'] ?? '') === '/einloggen?codes=1', 'Einrichtung mit Passkey abgeschlossen');
+    $r = http_anfrage($basis, 'GET', '/einloggen?codes=1', $h, [], null, $kt);
+    pruefe(substr_count($r['text'], '<li class="mono">') === TOTP_CODES, 'Danach Wiederherstellungscodes, einmal');
+    pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $kt)['status'] === 200, 'Team-Bereich offen');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $kt);
+    http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $kt);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $kt);
+    $c = http_csrf($r['text']);
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $kt))['optionen'] ?? [];
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($gt, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $kt);
+    pruefe(($json($r)['ziel'] ?? '') === '/team' && http_anfrage($basis, 'GET', '/team', $h, [], null, $kt)['status'] === 200, 'Team: Passkey ersetzt Passwort und zweiten Faktor');
 }
 
 function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
@@ -895,6 +957,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     team_ap6_http_tests($basis, $h, $tmp, $b);
     r30_http_tests($basis, $h, $tmp, $b);
     konto_alles_http_tests($basis, $h, $tmp, $b);
+    passkey_http_tests($basis, $tmp);
     newsletter_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
@@ -964,7 +1027,7 @@ function http_tests(string $wurzel, string $tmp): void
         $form = [
             'schluessel' => str_repeat('i', 40), 'name' => 'Erste Betreiberin', 'email' => 'Betrieb@Example.org',
             'passwort' => 'ein-langes-passwort', 'passwort2' => 'ein-langes-passwort',
-            'weitere_hosts' => "www.ws.test",
+            'weitere_hosts' => "www.ws.test\nlocalhost",
         ];
         $r = http_anfrage($basis, 'POST', '/install', $h, [], $form, $keks);
         pruefe($r['status'] === 403, 'POST ohne Token abgelehnt');

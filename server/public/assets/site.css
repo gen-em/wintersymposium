@@ -468,6 +468,7 @@ fieldset.feld > legend { font-weight: 700; font-size: .95rem; padding: 0; margin
 @media (min-width: 760px) { .zg-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }
 @media (min-width: 1000px) { .zg-raster.drei-spalten { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .klein-link { font-size: .9rem; align-self: center; color: var(--fg); }
+button.klein-link, summary.klein-link { background: none; border: 0; padding: 4px 0; min-height: 0; font: inherit; font-size: .9rem; color: var(--akz); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .schmal-kasten { max-width: 560px; }
 .zg { display: grid; gap: 10px; align-content: start; }
 .zg:first-child { border-top: 3px solid var(--gruen); }
@@ -711,3 +712,12 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .menue .person-ab { padding: 12px 0; font-family: var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; }
 .menue .person-kopf { padding: 12px 0 4px; border-top: 1px solid var(--akz); margin-top: 6px; text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
 .feld > .werkzeug + .schreibfeld { margin-top: -6px; }
+/* Passkeys (O-14, E-55) */
+.pk-liste { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.pk-liste li { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid var(--linie); background: var(--bg); }
+.pk-liste li > div:first-child { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.pk-aktionen { display: flex; gap: 14px; align-items: center; }
+.pk-login { display: grid; gap: 8px; margin: 14px 0; }
+.pk-knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.trenner-text { display: flex; align-items: center; gap: 12px; margin: 4px 0; color: var(--meta); font-size: .85rem; }
+.trenner-text::before, .trenner-text::after { content: ""; flex: 1; border-top: 1px solid var(--linie); }

@@ -2,6 +2,22 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.15.0] – 2026-10-30
+
+Passkeys (E-55, O-14).
+
+### Neu
+
+- **Mit Passkey einloggen:** ohne Passwort, mit Fingerabdruck, Gesicht oder Geräte-PIN; für Team-Konten ersetzt der Passkey Passwort und zweiten Faktor.
+- **Mein Konto → Passkeys:** anlegen (mit Passwort bestätigt), umbenennen, entfernen; bis zu 10 je Konto.
+- Erster Team-Login: „Passkey“ als erste Wahl für den zweiten Faktor, danach Wiederherstellungscodes.
+- Prüfung nach WebAuthn (übernommen aus NAdoku, Signatur über OpenSSL): Nutzerprüfung verlangt, Zähler gegen kopierte Passkeys, keine Gerätedaten.
+
+### Geändert
+
+- Code per E-Mail lässt sich ausschalten, wenn App oder Passkey eingerichtet sind.
+- Links, die eine Nachfrage öffnen („Entfernen“, „Entwurf löschen“), sehen wieder wie Links aus.
+
 ## [0.14.0] – 2026-10-30
 
 Ein Editor, ein Konto, Navigation, Löschfrist (E-54).

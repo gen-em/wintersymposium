@@ -812,6 +812,71 @@ if (!$mitDb) {
     db_ausfuehren("DELETE FROM konto WHERE id IN (?, ?)", [$kt, $km]);
     db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmL]);
 
+    abschnitt('Passkeys (O-14, E-55)');
+    require_once __DIR__ . '/passkey_hilfe.php';
+    $hostAlt = $GLOBALS['ws_host'] ?? null;
+    $GLOBALS['ws_host'] = 'localhost';
+    $u = pk_ursprung();
+    pruefe($u === ['ursprung' => 'http://localhost', 'rp_id' => 'localhost'], 'Ursprung aus der Adresse (localhost ohne HTTPS erlaubt)');
+    $GLOBALS['ws_host'] = '127.0.0.1';
+    pruefe(pk_ursprung() === null, 'Keine Passkeys unter einer IP-Adresse');
+    $GLOBALS['ws_host'] = 'localhost';
+    $kp = konto_anlegen('Paul Passkey', 'paul@example.org', 'teilnehmend', 'pauls-passwort-1', null);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $kp]);
+    $pkFehlt = function (callable $f): bool {
+        try {
+            $f();
+            return false;
+        } catch (PkFehler) {
+            return true;
+        }
+    };
+    $g = test_pk_geraet();
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pruefe($o['authenticatorSelection']['userVerification'] === 'required' && $o['attestation'] === 'none' && strlen(pk_b64u_lesen($o['user']['id'])) === 16, 'Anlage-Optionen: UV verlangt, keine Herstellerdaten, Nutzerkennung ohne Kontonummer');
+    $pid = pk_anlegen($kp, test_pk_anlage($g, $o['challenge'], 'localhost', 'http://localhost'), "Handy\u{0007}  von Paul");
+    pruefe($pid > 0 && pk_zahl($kp) === 1 && pk_liste($kp)[0]['bezeichnung'] === 'Handy von Paul', 'Passkey angelegt (ES256), Name bereinigt');
+    pruefe($pkFehlt(fn() => pk_anlegen($kp, test_pk_anlage($g, $o['challenge'], 'localhost', 'http://localhost'), '')), 'Herausforderung gilt nur einmal');
+    $o = pk_login_optionen();
+    pruefe(pk_anmelden(test_pk_login($g, $o['challenge'], 'localhost', 'http://localhost')) === $kp && (int)db_wert('SELECT zaehler FROM passkey WHERE id = ?', [$pid]) === 1, 'Einloggen mit Passkey, Zähler gespeichert');
+    $o = pk_login_optionen();
+    pruefe($pkFehlt(fn() => pk_anmelden(test_pk_login($g, $o['challenge'], 'localhost', 'http://localhost', ['zaehler' => 1]))), 'Zähler zurückgelaufen: abgelehnt (kopierter Passkey)');
+    foreach (['ohne UV (nur Geste)' => ['flags' => 0x01], 'fremder Ursprung' => ['origin' => 'https://boese.example'], 'fremde rpId' => ['rp' => 'boese.example'], 'Signatur verändert' => ['sig_kaputt' => true]] as $was => $opt) {
+        $o = pk_login_optionen();
+        pruefe($pkFehlt(fn() => pk_anmelden(test_pk_login($g, $o['challenge'], 'localhost', 'http://localhost', $opt))), "Anmeldung abgelehnt: $was");
+    }
+    pruefe($pkFehlt(fn() => pk_anmelden(test_pk_login($g, 'AAAA', 'localhost', 'http://localhost'))), 'Ohne gestellte Herausforderung abgelehnt');
+    $g2 = test_pk_geraet();
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pruefe($pkFehlt(fn() => pk_anlegen($kp, test_pk_anlage($g2, $o['challenge'], 'localhost', 'http://localhost', ['flags' => 0x41]), '')), 'Anlage ohne UV abgelehnt');
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pruefe($pkFehlt(fn() => pk_anlegen($kp, test_pk_anlage($g2, $o['challenge'], 'localhost', 'http://localhost', ['cose' => $g2['cose'] + [-4 => new TestBytes(str_repeat('x', 32))]]), '')), 'COSE mit zusätzlichem Feld (privater Teil) abgelehnt');
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pruefe($pkFehlt(fn() => pk_anlegen($kp, test_pk_anlage($g2, $o['challenge'], 'localhost', 'http://localhost', ['cose' => [1 => 2, 3 => -7, -1 => 1, -2 => new TestBytes(str_repeat("\xff", 32)), -3 => new TestBytes(str_repeat("\x01", 32))]]), '')), 'Punkt außerhalb der Kurve abgelehnt');
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pruefe($pkFehlt(fn() => pk_anlegen($kp + 999, test_pk_anlage($g2, $o['challenge'], 'localhost', 'http://localhost'), '')), 'Herausforderung gehört zum Konto');
+    $gr = test_pk_geraet('rs256');
+    $o = pk_anlage_optionen(konto_laden($kp));
+    pk_anlegen($kp, test_pk_anlage($gr, $o['challenge'], 'localhost', 'http://localhost'), 'Laptop');
+    $o = pk_login_optionen();
+    pruefe(pk_anmelden(test_pk_login($gr, $o['challenge'], 'localhost', 'http://localhost')) === $kp && pk_zahl($kp) === 2, 'RS256 (2048 Bit): anlegen und einloggen');
+    // Team: Passkey als einziger zweiter Faktor
+    $kt = konto_anlegen('Tina Team', 'tina@example.org', 'admin', 'tinas-passwort-12', null);
+    pruefe(!zweitfaktor_da(konto_laden($kt)), 'Team ohne zweiten Faktor');
+    $gt = test_pk_geraet();
+    $o = pk_anlage_optionen(konto_laden($kt));
+    $ptid = pk_anlegen($kt, test_pk_anlage($gt, $o['challenge'], 'localhost', 'http://localhost'), '');
+    pruefe(zweitfaktor_da(konto_laden($kt)) && totp_zustand($kt)['eingerichtet'], 'Passkey zählt als zweiter Faktor');
+    pruefe(pk_entfernen($kt, $ptid) !== null && pk_zahl($kt) === 1, 'Letzter zweiter Faktor lässt sich nicht entfernen');
+    pruefe(pk_entfernen($kp, (int)db_wert('SELECT id FROM passkey WHERE konto_id = ? ORDER BY id LIMIT 1', [$kp])) === null && pk_zahl($kp) === 1, 'Teilnehmende: Passkey entfernen');
+    pruefe(pk_entfernen($kp, $ptid) !== null && pk_zahl($kt) === 1, 'Fremden Passkey nicht entfernbar');
+    totp_zuruecksetzen($kt, 'test');
+    pruefe(pk_zahl($kt) === 0, 'Zurücksetzen des zweiten Faktors entfernt auch die Passkeys');
+    db_ausfuehren('DELETE FROM konto WHERE id IN (?, ?)', [$kp, $kt]);
+    pruefe((int)db_wert('SELECT COUNT(*) FROM passkey WHERE konto_id IN (?, ?)', [$kp, $kt]) === 0, 'Konto gelöscht: Passkeys weg');
+    $GLOBALS['ws_host'] = $hostAlt;
+    unset($_SESSION['pk']);
+
     abschnitt('Newsletter (AP-7)');
     $ls = array_column(nl_listen(), 'id', 'name');
     $lw = (int)$ls['Wintersymposium'];

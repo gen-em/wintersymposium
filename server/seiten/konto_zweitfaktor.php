@@ -6,7 +6,7 @@ declare(strict_types=1);
  * erreichbar aus „Mein Konto“ (ein Konto für alles, E-54): Authenticator-App
  * einrichten, Code per E-Mail ein/aus, Wiederherstellungscodes erneuern.
  * Änderungen bestätigt man mit dem Passwort. Das Passwort selbst ändert man
- * unter „Mein Konto“. Passkeys folgen später (O-14).
+ * unter „Mein Konto“. Passkeys verwaltet man unter „Mein Konto“ (E-55).
  */
 
 $konto = team_tor();
@@ -34,8 +34,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             flash_setzen('ok', 'Code per E-Mail ist eingeschaltet. Beim nächsten Einloggen schicken wir dir einen Code.');
             umleiten('/konto/zweitfaktor');
         } elseif ($aktion === 'mail_aus') {
-            if (!$zs['an']) {
-                $fehler[] = 'Richte zuerst die Authenticator-App ein – ohne zweiten Faktor geht es nicht.';
+            if (!$zs['an'] && $zs['passkeys'] === 0) {
+                $fehler[] = 'Richte zuerst die Authenticator-App oder einen Passkey ein – ohne zweiten Faktor geht es nicht.';
             } else {
                 mailcode_einschalten($id, false);
                 flash_setzen('ok', 'Code per E-Mail ist ausgeschaltet. Du loggst dich mit der Authenticator-App ein.');
@@ -80,7 +80,7 @@ if ($neueCodes !== null): ?>
         <dl class="liste-def">
             <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? '<span class="chip ok">eingerichtet</span> seit ' . e(datum_zeit_text($konto['totp_seit'])) : '<span class="chip offen">nicht eingerichtet</span>' ?></dd></div>
             <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? '<span class="chip ok">an</span> bei jedem Einloggen an ' . e($konto['email']) : '<span class="chip offen">aus</span>' ?></dd></div>
-            <div><dt>Passkey</dt><dd class="meta">folgt später</dd></div>
+            <div><dt>Passkeys</dt><dd><?= $zf['passkeys'] > 0 ? '<span class="chip ok">' . $zf['passkeys'] . '</span>' : '<span class="chip offen">keiner</span>' ?> <a href="/konto#passkeys">verwalten</a></dd></div>
             <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig – für den Notfall (Handy weg, Postfach nicht erreichbar)</dd></div>
             <div><dt>Letzte Anmeldung</dt><dd><?= e(datum_zeit_text($konto['letzte_anmeldung'])) ?></dd></div>
         </dl>
@@ -102,7 +102,7 @@ if ($neueCodes !== null): ?>
             <form method="post" action="/konto/zweitfaktor" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="app_start"><?= $pwFeld('app') ?><button type="submit" class="knopf zweit">Authenticator-App einrichten</button></form>
             <?php endif; ?>
             <form method="post" action="/konto/zweitfaktor" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="<?= $zf['mail'] ? 'mail_aus' : 'mail_an' ?>"><?= $pwFeld('mail') ?><button type="submit" class="knopf zweit"><?= $zf['mail'] ? 'Code per E-Mail ausschalten' : 'Jedes Mal einen Code per E-Mail schicken' ?></button>
-                <?php if ($zf['mail'] && !$zf['an']): ?><p class="hilfe">Ausschalten geht erst, wenn die Authenticator-App eingerichtet ist.</p><?php endif; ?></form>
+                <?php if ($zf['mail'] && !$zf['an'] && $zf['passkeys'] === 0): ?><p class="hilfe">Ausschalten geht erst, wenn die Authenticator-App oder ein Passkey eingerichtet ist.</p><?php endif; ?></form>
             <form method="post" action="/konto/zweitfaktor" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="codes"><?= $pwFeld('codes') ?><button type="submit" class="knopf zweit">Neue Wiederherstellungscodes erzeugen</button></form>
             </div>
         </details>
