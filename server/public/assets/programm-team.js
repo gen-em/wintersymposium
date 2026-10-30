@@ -5,7 +5,7 @@
  *   unter dem Zeiger eingefügt wird. Neuer Beginn = Ende des Punkts darüber
  *   (als erster Punkt in einem Workshop-Block: dessen Beginn; ganz oben:
  *   Beginn des ersten Punkts minus Dauer). Mitte eines Blocks:
- *   Workshop oder Station zuordnen (Rückmeldung 2026-10-30). Die Dauer
+ *   Workshop, Station, Vortrag oder Fallbesprechung zuordnen (Rückmeldung 2026-10-30). Die Dauer
  *   bleibt; nachfolgende Punkte rücken auf dem Server nach hinten, bis eine
  *   Lücke reicht. Gespeichert wird über das versteckte Formular „verschieben“.
  * - Felder je Typ ein- und ausblenden (data-fuer), Kürzel-Vorschlag beim Typwechsel.
@@ -30,7 +30,8 @@
   var ziel = null, wo = '', letzt = null;
   function aufraeumen() { liste.querySelectorAll('.ziel-vor, .ziel-nach, .ziel-in').forEach(function (z) { z.classList.remove('ziel-vor', 'ziel-nach', 'ziel-in'); }); }
   function kopfVonLi(li) { return li ? li.querySelector(':scope > .pg-zeile') : null; }
-  function zuordenbar() { var t = gezogen && gezogen.getAttribute('data-typ'); return t === 'workshop' || t === 'station'; }
+  // Rückmeldung 2026-10-30 (2): auch Vorträge und Fallbesprechungen in Blöcke
+  function zuordenbar() { var t = gezogen && gezogen.getAttribute('data-typ'); return ['vortrag', 'fall', 'workshop', 'station'].indexOf(t) !== -1; }
   function imBlock(zeile) { var ol = zeile.closest('ol'); return ol && ol.classList.contains('pg-kinder') ? kopfVonLi(ol.closest('li')) : null; }
   function dauer() { return gezogen.getAttribute('data-beginn') && gezogen.getAttribute('data-ende') ? min(gezogen.getAttribute('data-ende')) - min(gezogen.getAttribute('data-beginn')) : 30; }
   /** Beginn für das Einfügen vor bzw. nach der Zeile. */
@@ -176,29 +177,64 @@
     // ---- Termine ----
     var tbody = document.getElementById('pg-termine');
     var neu = document.getElementById('pg-termin-neu');
+    var zaehler = 0;
+    // Dozierende je Termin: Zusammenfassung im Aufklapper („wie Workshop“ oder die Namen)
+    var dozText = function (zeile) {
+      var s = zeile.querySelector('.t-doz summary');
+      if (!s) { return; }
+      var namen = [];
+      zeile.querySelectorAll('.t-doz input:checked').forEach(function (c) { namen.push(c.parentNode.textContent.trim()); });
+      s.textContent = namen.length ? namen.join(', ') : 'wie Workshop';
+    };
     var leereZeile = function () {
       var vorlage = tbody.querySelector('tr.vorlage') || tbody.lastElementChild;
       var z = vorlage.cloneNode(true);
       z.classList.add('vorlage');
-      z.querySelectorAll('input').forEach(function (i) { if (i.type === 'hidden') { i.value = '0'; } else if (i.type !== 'checkbox') { i.value = ''; } });
-      var weg = z.querySelector('.mini-haken'); if (weg) { weg.remove(); }
+      zaehler += 1;
+      var schl = 'n' + zaehler;
+      z.querySelectorAll('input').forEach(function (i) {
+        if (i.name === 't_key[]') { i.value = schl; } else if (i.type === 'hidden') { i.value = '0'; } else if (i.type === 'checkbox') { i.checked = false; } else { i.value = ''; }
+        if (i.name.indexOf('t_doz[') === 0) { i.name = 't_doz[' + schl + '][]'; }
+      });
+      var weg = z.querySelector('.mini-haken');
+      if (weg) {
+        var knopf = document.createElement('button');
+        knopf.type = 'button'; knopf.className = 'mini'; knopf.setAttribute('data-entfernen', ''); knopf.textContent = 'Entfernen';
+        weg.replaceWith(knopf);
+      }
+      var ent = z.querySelector('[data-entfernen]'); if (ent) { ent.hidden = false; }
+      var det = z.querySelector('details'); if (det) { det.open = false; }
       z.querySelector('.n').textContent = '–';
+      dozText(z);
       tbody.appendChild(z);
       return z;
     };
     if (neu && tbody) {
+      tbody.querySelectorAll('[data-entfernen]').forEach(function (b) { b.hidden = false; });
       neu.addEventListener('click', function () { leereZeile().querySelector('input[type=time]').focus(); });
+      tbody.addEventListener('change', function (ev) { if (ev.target.closest('.t-doz')) { dozText(ev.target.closest('tr')); } });
       tbody.addEventListener('click', function (ev) {
+        if (ev.target.closest('[data-entfernen]')) {
+          var zeile = ev.target.closest('tr');
+          // Die letzte leere Zeile bleibt als Vorlage stehen, nur geleert
+          if (tbody.querySelectorAll('tr').length === 1) { leereZeile(); }
+          zeile.remove();
+          return;
+        }
         if (!ev.target.closest('[data-duplizieren]')) { return; }
         var quelle = ev.target.closest('tr');
         var b = quelle.querySelector('[name="t_beginn[]"]').value, e = quelle.querySelector('[name="t_ende[]"]').value;
         var p = quelle.querySelector('[name="t_plaetze[]"]').value;
+        var gewaehlt = [];
+        quelle.querySelectorAll('.t-doz input:checked').forEach(function (c) { gewaehlt.push(c.value); });
         var z = leereZeile();
         if (b && e) {
           z.querySelector('[name="t_beginn[]"]').value = e;
           z.querySelector('[name="t_ende[]"]').value = hm(min(e) + (min(e) - min(b)));
         }
         z.querySelector('[name="t_plaetze[]"]').value = p;
+        z.querySelectorAll('.t-doz input').forEach(function (c) { c.checked = gewaehlt.indexOf(c.value) !== -1; });
+        dozText(z);
       });
     }
   }

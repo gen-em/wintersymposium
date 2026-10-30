@@ -157,6 +157,8 @@ a.knopf { color: var(--auf-akz); }
 @media (min-width: 760px) { .pp.wsblock { grid-template-columns: 80px minmax(0, 1fr); } .pp.wsblock .zeit { display: block; } .pp.wsblock .zeit small::before { content: none; } }
 .ws-mobil { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
 .ws-zeile, .ws-mobil li.offen { box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; min-height: 44px; background: var(--flaeche); border: 1px solid var(--linie); border-left: 3px solid var(--rot); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ws-mobil li.im-block { box-sizing: border-box; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px; min-height: 44px; background: var(--flaeche); border: 1px solid var(--linie); border-left: 3px solid var(--lila); }
+.ws-mobil li.im-block.fb { border-left-color: var(--rot-300); }
 .ws-mobil li.offen { grid-template-columns: 92px minmax(0, 1fr); border-left: 3px dashed var(--meta); background: repeating-linear-gradient(135deg, var(--blau-700) 0 6px, var(--flaeche) 6px 12px); cursor: default; }
 .ws-mobil .mono { font-size: .82rem; white-space: nowrap; }
 .ws-mobil small { color: var(--meta); }
@@ -181,6 +183,9 @@ span.gl { cursor: default; }
 .gb.frei { background: var(--rot); color: var(--nachtblau); }
 .gb.voll { background: transparent; color: var(--fg); border: 1.5px dashed var(--rot); }
 .gb.offen { background: repeating-linear-gradient(135deg, var(--blau-700) 0 6px, transparent 6px 12px); color: var(--fg); border: 1px solid var(--meta); cursor: default; }
+/* Vorträge und Fallbesprechungen im Block (Rückmeldung 2026-10-30) */
+.gb.vt { background: var(--lila); color: var(--nachtblau); }
+.gb.fb { background: transparent; color: var(--fg); border: 1.5px solid var(--rot-300); }
 .chip.wl { background: var(--rot); }
 
 /* Popups (<dialog>) */
@@ -245,6 +250,8 @@ span.gl { cursor: default; }
 .pg-kinder > li.ziel-vor::before, .pg-kinder > li.ziel-nach::after { left: -10px; border-top: 0; width: auto; }
 .pg-zeile.ziel-in { outline: 2px dashed var(--gruen); outline-offset: 2px; background: rgba(181, 189, 0, .16); }
 .pg-zeile.wird-gezogen { opacity: .5; }
+.t-doz summary { cursor: pointer; font-size: .82rem; color: var(--fg); text-decoration: underline dotted; min-width: 0; overflow-wrap: anywhere; }
+.t-doz-wahl { display: grid; gap: 6px; padding-top: 6px; }
 .griff { touch-action: none; }
 .pg-geist { position: fixed; z-index: 50; margin: 0; pointer-events: none; opacity: .92; box-shadow: 0 10px 28px rgba(0, 0, 0, .45); }
 html.pg-zieht, html.pg-zieht * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
@@ -279,6 +286,7 @@ table.pg-termine tr { display: flex; flex-wrap: wrap; align-items: end; gap: 8px
 table.pg-termine td { display: grid; gap: 4px; padding: 0; border: 0; }
 table.pg-termine td[data-titel]::before { content: attr(data-titel); font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; color: var(--meta); }
 table.pg-termine td.n { min-width: 3.5em; align-self: stretch; align-content: start; }
+table.pg-termine td[data-titel="Dozierende"] { flex: 1 1 10em; min-width: 0; align-self: stretch; align-content: start; }
 table.pg-termine input { min-height: 38px; padding: 4px 8px; width: 9.5em; font-family: var(--f-mono); border: 1px solid var(--meta); background: var(--bg); color: var(--fg); }
 table.pg-termine input[type=number] { width: 5em; }
 table.pg-termine input[type=checkbox] { width: 18px; min-height: 0; padding: 0; }

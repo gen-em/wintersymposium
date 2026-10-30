@@ -41,6 +41,8 @@ $ausloeser = fn(array $p, string $inhalt, string $klasse = 'pp-link') => $hatPop
     ? '<button type="button" class="' . $klasse . '" aria-haspopup="dialog" data-dialog="pp-' . $p['id'] . '">' . $inhalt . '</button>'
     : $inhalt;
 $namen = fn(array $p) => implode(', ', array_column($p['dozenten'], 'name'));
+// Abweichende Dozierende eines Termins (Rückmeldung 2026-10-30), sonst die des Workshops
+$terminNamen = fn(array $p, array $t) => isset($t['dozenten']) ? implode(', ', array_column($t['dozenten'], 'name')) : $namen($p);
 $absatz = fn(string $t) => $t === '' ? '' : implode('', array_map(fn($a) => '<p>' . nl2br(e($a)) . '</p>', preg_split('/\n{2,}/', $t) ?: []));
 
 if ($gliederung === []): ?>
@@ -58,7 +60,9 @@ if ($gliederung === []): ?>
             <ul class="ws-mobil">
             <?php foreach ($g['kinder'] as $k):
                 $kp = $k['punkt'];
-                if ($k['art'] === 'station'): ?>
+                if ($k['art'] === 'punkt' && $kp['typ'] !== 'station'): ?>
+                <li class="im-block <?= $kp['typ'] === 'fall' ? 'fb' : 'vt' ?>"><span class="mono"><?= e($kp['beginn'] . '–' . $kp['ende']) ?></span><span><?= $format($kp) ?> <?= $ausloeser($kp, e($kp['titel']), 'ws-link') ?><?php if ($namen($kp) !== '' || $kp['ort'] !== ''): ?><br><span class="meta klein"><?= e(implode(' · ', array_filter([$namen($kp), $kp['ort']]))) ?></span><?php endif; ?></span></li>
+                <?php elseif ($k['art'] === 'punkt'): ?>
                 <li class="offen"><span class="mono"><?= e($kp['beginn'] . '–' . $kp['ende']) ?></span><span><?= $format($kp) ?> <?= $ausloeser($kp, e($kp['titel']), 'ws-link') ?><br><span class="meta klein">ohne Anmeldung<?= $kp['ort'] !== '' ? ' · ' . e($kp['ort']) : '' ?></span></span></li>
                 <?php else: $t = $k['termin']; ?>
                 <li><button type="button" class="ws-zeile" aria-haspopup="dialog" data-dialog="pp-<?= $kp['id'] ?>"><span class="mono"><?= e($t['beginn'] . '–' . $t['ende']) ?><br><small><?= $dauer($t['beginn'], $t['ende']) ?> min</small></span><span><?= $format($kp) ?> <?= e($kp['titel']) ?><br><?= $chipFrei($t) ?></span><span class="pfeil" aria-hidden="true">›</span></button></li>
@@ -81,7 +85,9 @@ if ($gliederung === []): ?>
                         <?= $ausloeser($zp, $format($zp) . ' ' . e($zp['titel']), 'gl') ?>
                         <div class="gs">
                         <?php foreach ($z['balken'] as $k):
-                            if ($k['art'] === 'station'): ?>
+                            if ($k['art'] === 'punkt' && $zp['typ'] !== 'station'): ?>
+                            <button type="button" class="gb <?= $zp['typ'] === 'fall' ? 'fb' : 'vt' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($zp['beginn']) ?>" data-bis="<?= minuten($zp['ende']) ?>" title="<?= e(trim($zp['kuerzel'] . ' ' . $zp['beginn'] . '–' . $zp['ende'])) ?>"><b><?= e($zp['beginn']) ?></b> <?= e($namen($zp) !== '' ? $namen($zp) : PROGRAMM_TYPEN[$zp['typ']]['name']) ?></button>
+                            <?php elseif ($k['art'] === 'punkt'): ?>
                             <span class="gb offen" data-von="<?= minuten($zp['beginn']) ?>" data-bis="<?= minuten($zp['ende']) ?>"><b><?= e($zp['beginn'] . '–' . $zp['ende']) ?></b> ohne Anmeldung<?= $zp['ort'] !== '' ? ' · ' . e($zp['ort']) : '' ?></span>
                             <?php else: $t = $k['termin']; $f = $frei($t); ?>
                             <button type="button" class="gb <?= $f > 0 ? 'frei' : 'voll' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($t['beginn']) ?>" data-bis="<?= minuten($t['ende']) ?>" title="<?= e($zp['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']) ?>"><b><?= e($t['beginn']) ?></b> <?= $f > 0 ? $f . ' frei' : 'voll' ?></button>
@@ -101,7 +107,7 @@ if ($gliederung === []): ?>
         <div>
             <div class="titelzeile"><?= $format($p) ?><h3><?= $ausloeser($p, e($p['titel']) . ' <span class="pp-mehr">Infos</span>') ?></h3></div>
             <?php if ($p['untertitel'] !== ''): ?><p><?= e($p['untertitel']) ?></p><?php endif; ?>
-            <p class="meta klein"><?= e(implode(' · ', array_filter([$namen($p), $p['ort']]))) ?> <?= $chipFrei($t) ?></p>
+            <p class="meta klein"><?= e(implode(' · ', array_filter([$terminNamen($p, $t), $p['ort']]))) ?> <?= $chipFrei($t) ?></p>
         </div>
     </li>
     <?php elseif ($p['typ'] !== 'workshop'):
@@ -134,7 +140,7 @@ endforeach; ?>
             <p class="unterkopf">Termine</p>
             <div class="pt-liste">
             <?php foreach ($p['termine'] as $t): ?>
-                <div class="pt-zeile"><span class="mono"><?= e($t['beginn'] . '–' . $t['ende']) ?> · <?= $dauer($t['beginn'], $t['ende']) ?> min</span> <?= $chipFrei($t) ?> <span class="meta klein"><?= (int)$t['plaetze'] ?> Plätze</span></div>
+                <div class="pt-zeile"><span class="mono"><?= e($t['beginn'] . '–' . $t['ende']) ?> · <?= $dauer($t['beginn'], $t['ende']) ?> min</span> <?= $chipFrei($t) ?> <span class="meta klein"><?= (int)$t['plaetze'] ?> Plätze<?= isset($t['dozenten']) ? ' · mit ' . e($terminNamen($p, $t)) : '' ?></span></div>
             <?php endforeach; ?>
             </div>
         <?php endif; ?>

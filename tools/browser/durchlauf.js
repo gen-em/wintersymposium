@@ -225,6 +225,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const raster = await p.isVisible('.gantt-wrap');
         const liste = await p.isVisible('.ws-mobil');
         notiere(engine, breite, 'start', w >= 760 ? 'Workshop-Block als Zeitraster' : 'Workshop-Block als Liste', w >= 760 ? (raster && !liste) : (liste && !raster));
+        notiere(engine, breite, 'start', 'Fallbesprechung im Block sichtbar', w >= 760 ? await p.isVisible('.gb.fb') : await p.isVisible('.ws-mobil li.im-block.fb'));
         if (w >= 760) {
           const balken = await p.evaluate(() => [...document.querySelectorAll('.gb')].every(b => b.getBoundingClientRect().width > 8));
           notiere(engine, breite, 'start', 'Balken im Zeitraster gesetzt', balken);
@@ -235,6 +236,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           await ausloeser.click();
           await p.waitForSelector('dialog[open]');
           await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-${name}.png`) });
+          if (name === 'popup-workshop') notiere(engine, breite, 'start', 'Termin mit abweichenden Dozierenden im Popup', ((await p.textContent('dialog[open]')) || '').includes('mit Dr. Erika Muster'));
           await p.click('dialog[open] [data-schliessen]');
           notiere(engine, breite, 'start', `${name}: ✕ schließt`, await p.locator('dialog[open]').count() === 0);
         }
@@ -451,6 +453,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const nachher = await p.locator('#pg-termine tr').count();
         const dup = await p.locator('#pg-termine tr').last().locator('[name="t_beginn[]"]').inputValue();
         notiere(engine, breite, 'team-programm-workshop', '+ Termin und Duplizieren (Anschluss 20:15)', nachher === vorher + 2 && dup === '20:15', `${vorher}→${nachher}, ${dup}`);
+        // Neue Zeilen lassen sich entfernen; Dozierende je Termin (Rückmeldung 2026-10-30)
+        await p.locator('#pg-termine tr').last().locator('[data-entfernen]').click();
+        notiere(engine, breite, 'team-programm-workshop', 'Neue Termin-Zeile entfernen', await p.locator('#pg-termine tr').count() === nachher - 1);
+        notiere(engine, breite, 'team-programm-workshop', 'Zweiter Termin mit abweichenden Dozierenden', ((await p.locator('#pg-termine tr').nth(1).locator('.t-doz summary').textContent()) || '').includes('Erika Muster')
+          && ((await p.locator('#pg-termine tr').nth(0).locator('.t-doz summary').textContent()) || '').includes('wie Workshop'));
         await pruefeSeite(p, fehler, engine, breite, 'team-dozierende', basis + '/team/dozierende?id=1');
         await pruefeSeite(p, fehler, engine, breite, 'team-programm-vorschau', basis + '/team/programm/vorschau');
       }

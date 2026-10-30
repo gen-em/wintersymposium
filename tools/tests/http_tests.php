@@ -682,7 +682,7 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
     $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'")];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
-    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 8 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
     $vorTest = '';
     foreach (sicherung_liste() as $s) {
