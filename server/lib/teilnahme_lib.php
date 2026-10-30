@@ -345,16 +345,25 @@ function zertifikat_pdf(array $d): string
     $pdf->SetDrawColor(...$f['linie']);
     $pdf->SetLineWidth(0.26);
     $pdf->Line(38.1, 15.0, 38.1, 26.6);
-    $pdf->SetFont('antonio', 'B', 12.5);
+    // Name der Veranstaltung groß über die ganze Breite neben der Bildmarke (Admin 2026-10-30)
+    $name = mb_strtoupper(tn_name());
+    $nb = $links + $breite - 42.6;
+    $groesse = 30.0;
+    $pdf->SetFont('antonio', 'B', $groesse);
+    while ($pdf->GetStringWidth($name) > $nb && $groesse > 12) {
+        $groesse -= 0.5;
+        $pdf->SetFont('antonio', 'B', $groesse);
+    }
     $pdf->SetTextColor(...$f['text']);
-    $pdf->SetXY(42.6, 15.2);
-    $pdf->MultiCell(80, 5.4, mb_strtoupper(zertifikat_umbruch(tn_name())), 0, 'L');
+    $pdf->SetXY(42.6, 19.4 - $groesse * 0.3528 * 0.62);
+    $pdf->Cell($nb, $groesse * 0.3528 * 1.24, $name, 0, 0, 'L');
+    // Badge „3. Auflage · 2027“ darunter rechts, leicht gedreht
     $jahr = substr(va('veranstaltung_datum'), 0, 4);
     $badge = mb_strtoupper(trim(va('veranstaltung_auflage') !== '' ? va('veranstaltung_auflage') . ' · ' . $jahr : $jahr));
     $pdf->SetFont('anton', '', 13.5);
     $bw = $pdf->GetStringWidth($badge) + 7.4;
     $bx = $links + $breite - $bw;
-    $by = 16.0;
+    $by = 31.0;
     $pdf->drehen(-3, $bx + $bw / 2, $by + 4.6);
     $pdf->SetFillColor(181, 189, 0);
     $pdf->Rect($bx + 1.6, $by + 1.6, $bw, 9.2, 'F');
