@@ -340,14 +340,15 @@ function zertifikat_pdf(array $d): string
     $pdf->Rect(0, 0, 210, 297, 'F');
 
     // Kopf: Logo, Name der Veranstaltung, Badge „3. Auflage · 2027“
-    $pdf->Image(export_pdf_ordner() . '/ALLGAEU-AKUT_Logo_quer_farbig-lila.png', $links, 13.8, 47.3);
+    // Nur die Bildmarke (Admin 2026-10-30); die Datei hat eine Schutzzone von 7 % rundum
+    $pdf->Image(export_pdf_ordner() . '/ALLGAEU-AKUT_Bildzeichen_lila.png', $links - 1.35, 12.5, 19.0);
     $pdf->SetDrawColor(...$f['linie']);
     $pdf->SetLineWidth(0.26);
-    $pdf->Line(69.1, 15.0, 69.1, 26.6);
+    $pdf->Line(38.1, 15.0, 38.1, 26.6);
     $pdf->SetFont('antonio', 'B', 12.5);
     $pdf->SetTextColor(...$f['text']);
-    $pdf->SetXY(73.6, 15.2);
-    $pdf->MultiCell(62, 5.4, mb_strtoupper(zertifikat_umbruch(tn_name())), 0, 'L');
+    $pdf->SetXY(42.6, 15.2);
+    $pdf->MultiCell(80, 5.4, mb_strtoupper(zertifikat_umbruch(tn_name())), 0, 'L');
     $jahr = substr(va('veranstaltung_datum'), 0, 4);
     $badge = mb_strtoupper(trim(va('veranstaltung_auflage') !== '' ? va('veranstaltung_auflage') . ' · ' . $jahr : $jahr));
     $pdf->SetFont('anton', '', 13.5);
