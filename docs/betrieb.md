@@ -100,6 +100,18 @@ php tools/tests/lauf.php
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
 
+**Stufen** (R-12, E-62):
+
+| Stufe | Wann | Was |
+|---|---|---|
+| 1 | jede Änderung | `php tools/tests/lauf.php` |
+| 2 | Oberfläche einzelner Seiten | `WS_STUFE=2 WS_SEITEN=team-konten,team-statistik node tools/browser/durchlauf.js <ordner>` – nur Chromium, Handy und breiter Desktop; volle Prüfung und Fotos nur für Seiten, deren Name (wie in `bericht.txt`) mit einem Eintrag beginnt; ca. 1 Minute |
+| 3 | Arbeitspaket fertig, gemeinsame Teile (Kopfleiste, Navigation, Knöpfe, Meldungen, Formulare, CSS-Grundlagen, JavaScript, Login/Sitzung), vor Produktion, spätestens nach 5 PRs ohne vollen Lauf | voller Durchlauf, 30–40 Minuten |
+
+Einzeln überschreibbar: `WS_ENGINES=webkit`, `WS_BREITEN=handy,tablet`.
+
+Beide Testserver (`lauf.php` und Browser-Durchlauf) laufen mit `output_buffering=0` wie beim Hoster: Eine Seite, die nach der ersten Ausgabe noch eine Sitzung öffnen will, fällt so schon im Test auf.
+
 **Browser-Durchlauf (R-12)** in Chromium, Firefox und WebKit, je auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px): alle Seiten, Klickwege (Menü, Team-Reiter, Login mit zweitem Faktor, Konto anlegen, Einrichtungslink, Ausloggen), jedes Auswahlfeld, jedes Aufklapp-Element, jedes Popup; dazu seitliches Scrollen, Überstand und Konsolenfehler.
 
 ```bash
@@ -122,7 +134,7 @@ Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (
 
 **Ein Editor überall** (Admin 2026-10-30, E-54): Texte, Programm-Beschreibungen, Kurzbios der Dozierenden, Beschreibungen der Newsletter-Listen und Mailings nutzen denselben Editor (`assets/editor.js`). Man sieht den Text gleich formatiert. Knöpfe: fett, kursiv, Zwischenüberschrift (H), Liste, nummerierte Liste, Link, in Texten und Mailings auch Bild (in Mailings zusätzlich Knopf, Platzhalter, HTML). Die Knöpfe zeigen, was an der Schreibmarke gilt, und schalten es an und aus. Einzeilige Felder (Titel, Untertitel, Zeile über dem Titel, Listen-Beschreibung) kennen nur fett, kursiv und Link; kursiv erscheint im Titel der Startseite in Lila. Infokästen der Startseite: ein Kasten je Zwischenüberschrift.
 
-Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenüberschrift, Listen, fett, kursiv, Link nur https und mailto, eigene Bilder). Alles andere entfernt der Server beim Speichern und noch einmal beim Anzeigen. Bilder (JPG/PNG) werden auf höchstens 1200 px verkleinert und in `var/bilder/` abgelegt, mit gesichert; unbenutzte löscht der Job nach einem Tag. Klick aufs Bild im Editor: halbe oder volle Breite. Ohne JavaScript bleibt ein Textfeld; Klartext wird dann als Absätze übernommen.
+Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenüberschrift, Listen, fett, kursiv, Link nur https und mailto, eigene Bilder). Alles andere entfernt der Server beim Speichern und noch einmal beim Anzeigen. Bilder (JPG/PNG) werden auf höchstens 1200 px verkleinert und in `var/bilder/` abgelegt, mit gesichert; unbenutzte löscht der Job nach einem Tag. Klick aufs Bild im Editor: halbe oder volle Breite. Impressum und Datenschutz haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Ohne JavaScript bleibt ein Textfeld; Klartext wird dann als Absätze übernommen.
 
 ## 8. Team-Login und Konten
 

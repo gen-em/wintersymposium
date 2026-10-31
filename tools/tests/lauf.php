@@ -111,6 +111,7 @@ pruefe(editor_bereinigen('<p>Ein <b>fetter</b> und <i>betonter</i> Satz</p>') ==
 pruefe(editor_bereinigen('<p>a<script>alert(1)</script><img src=x onerror=alert(1)></p>') === '<p>a</p>', 'Skript und fremdes Bild entfernt');
 pruefe(editor_bereinigen('<p onclick="x()" style="color:red">Text</p>') === '<p>Text</p>', 'Attribute entfernt');
 pruefe(str_contains(editor_bereinigen('<p><a href="https://www.blaek.de">Kammer</a></p>'), '<a href="https://www.blaek.de" rel="noopener">Kammer</a>'), 'https-Link');
+pruefe(editor_bereinigen('<p><a class="knopf rot" href="https://example.org/a" onclick="x()">Los</a></p>') === '<p><a class="knopf" href="https://example.org/a" rel="noopener">Los</a></p>' && !str_contains(editor_bereinigen('<p><a class="knopf" href="https://example.org">x</a></p>', 'inline'), 'class='), 'Knopf in Absätzen bleibt Knopf, sonst nur Link (Admin 2026-10-31)');
 pruefe(!str_contains(editor_bereinigen('<p><a href="javascript:alert(1)">x</a></p>'), '<a ') && !str_contains(editor_bereinigen('<p><a href="http://example.org">x</a></p>'), '<a '), 'javascript- und http-Link abgelehnt');
 pruefe(editor_bereinigen('<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>') === '<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>', 'Überschrift, Liste, nummerierte Liste');
 pruefe(editor_bereinigen("Zeile 1\nZeile 2\n\nAbsatz 2") === '<p>Zeile 1<br>Zeile 2</p><p>Absatz 2</p>', 'Klartext: Absätze und Zeilen');

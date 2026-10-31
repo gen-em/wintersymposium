@@ -2,6 +2,30 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.3] – 2026-10-31
+
+### Behoben
+
+- **Startseite zeigte eingeloggt den ausgeloggten Kopf** (Rückmeldung 2026-10-31, Staging, alle Browser): Der Seitenkopf schickte den Anfang der Seite, bevor er die Sitzung öffnete. Beim Hoster ist der Ausgabepuffer aus, danach lässt sich keine Sitzung mehr starten. Die Erkennung von Login, Konto und Einmal-Link läuft jetzt vor der ersten Ausgabe.
+
+### Geändert
+
+- Testserver (`lauf.php` und Browser-Durchlauf) laufen wie der Hoster ohne Ausgabepuffer (`output_buffering=0`), damit solche Fehler im Test auffallen. Der Browser-Durchlauf prüft die Startseite nach dem Team-Login direkt, über das Logo und nach Zurück/Vor.
+
+- **Impressum und Datenschutz** haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Knöpfe bleiben auf der Webseite Knöpfe.
+- **Mailings:** Der Hilfetext unter dem Editor ist kürzer und erklärt die Platzhalter `{vorname}`, `{nachname}`, `{workshops}` und `{link}`.
+
+### Auf Halde (offene Punkte im Konzept)
+
+- O-40: Mails im Erscheinungsbild Allgäu Akut.
+- O-41: Eigene Workshops (angemeldet, Warteliste) im Programm der Startseite markieren – Mockup mit 2–3 Varianten.
+
+## [0.21.2] – 2026-10-31
+
+### Geändert
+
+- **Browser-Prüfung gestuft** (R-12, E-62): Stufe 1 `lauf.php` immer, Stufe 2 gezielt (`WS_STUFE=2 WS_SEITEN=…`, Chromium, Handy und breiter Desktop, ca. 1 Minute), Stufe 3 der volle Lauf bei Arbeitspaket-Ende, gemeinsamen Teilen, vor Produktion und spätestens nach 5 PRs. Der Durchlauf kennt dafür `WS_STUFE`, `WS_SEITEN` und `WS_BREITEN`.
+
 ## [0.21.1] – 2026-10-31
 
 ### Geändert
