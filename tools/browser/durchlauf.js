@@ -400,6 +400,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.fill('#email', vor.lea.email); await p.fill('#passwort', vor.lea.passwort);
         await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=passwort]) button')]);
         await p.goto(lokal + '/konto');
+        await p.click('[data-passkey-anlage] > summary');
         await p.fill('#pk-bez', 'Browser-Test'); await p.fill('#pk-pw', vor.lea.passwort);
         await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-anlegen] button[type=submit]')]);
         await p.waitForLoadState('load');

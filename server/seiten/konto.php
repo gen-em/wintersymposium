@@ -220,7 +220,7 @@ $emailOffen = isset($fehler['email']);
                     <?php else: ?><span class="chip offen">Nicht angemeldet</span><?php endif; ?></p>
                 <?php if ($a !== null): ?>
                     <p class="meta klein">Anmeldung Nr. <?= sprintf('%04d', $a['id']) ?></p>
-                    <div><a class="knopf" href="/deine-anmeldung">Workshops, Essen, absagen</a></div>
+                    <div class="aktionen"><a class="knopf" href="/deine-anmeldung">Workshops, Essen, absagen</a><?php if (zertifikat_verfuegbar($a)): ?><a class="knopf zweit" href="/konto/zertifikat?a=<?= (int)$a['id'] ?>">Bescheinigung (PDF)</a><?php endif; ?></div>
                 <?php elseif (anm_zeitraum() === 'offen'): ?>
                     <p class="meta klein">Mit deinem Konto sind Name und Adresse schon ausgefüllt, eine Bestätigung per Mail entfällt.</p>
                     <div><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a></div>
