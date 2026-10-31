@@ -725,7 +725,7 @@ va_zwischenspeicher_leeren();
     $ueb = "Deine Anmeldung (Nr. 0009):\n\n- WS 02 Kleine PatientInnen · 19:30–20:00: Platz bestätigt\n- WS 01 Atemweg · 20:30–21:15: Warteliste · Platz 3 von 5\n- Essen: egal";
     [$bt, $tx] = mail_vorlage('bestaetigt', ['vorname' => 'Lea', 'uebersicht' => $ueb]);
     $hb = mail_html_aus_text('bestaetigt', $bt, $tx);
-    pruefe(str_contains($hb, 'Anmeldung bestätigt') && str_contains($hb, '>Bestätigt</span>') && str_contains($hb, 'Warteliste · 3</span>') && str_contains($hb, '>19:30–20:00</span>WS 02')
+    pruefe(str_contains($hb, 'Anmeldung bestätigt') && str_contains($hb, '>Bestätigt</span>') && str_contains($hb, 'Warteliste · 3</span>') && str_contains($hb, '>WORKSHOP · 19:30–20:00</span>WS 02') && str_contains($hb, 'border-left:4px solid #FF5A5F') && str_contains($hb, '>ESSEN</span>egal')
         && str_contains($hb, '>Anmeldung ansehen oder ändern</a>') && !str_contains($hb, 'Ändern oder absagen') && str_contains($tx, 'Ändern oder absagen') && str_contains($hb, MAIL_LOGO_PLATZHALTER) && str_contains($hb, 'Impressum</a>') && !str_contains($tx, '<'), 'Mail-HTML: Übersicht als Tabelle mit Schildern, Knopf, Logo, Fuß; Text bleibt Text');
     [$ab, $at] = mail_vorlage('angebot', ['vorname' => 'Lea', 'was' => 'WS 01 · 20:30–21:15', 'frist' => 'Do 18:00', 'link' => 'https://example.org/link?t=abc']);
     $ha = mail_html_aus_text('angebot', $ab, $at);

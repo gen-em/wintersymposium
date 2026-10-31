@@ -870,7 +870,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-30 | AP-10 umgesetzt: E-57 neu (Zertifikat-Entwurf C und Antworten des Admins, Umsetzung, Probleme); AP-10 Status, Ergebnis, Probleme; O-19 entschieden, O-16 teilweise. |
 | 2026-10-31 | AP-11 Mehrere Veranstaltungen neu und umgesetzt (E-58); Antworten zu AP-9 festgehalten (E-59). |
 | 2026-10-31 | Personen-Menü: Team-Bereich für Team-Konten wieder oben, grün mit Symbol (Admin; ändert E-60, wo er nur in der Leiste stand). |
-| 2026-10-31 | E-67 neu: Namen in Mails (Veranstaltung oder Reihe „Allgäu Akut“), Name der Reihe als Einstellung; Übersicht in der Mail ohne leere Zeitspalte. |
+| 2026-10-31 | E-67 neu: Namen in Mails (Veranstaltung oder Reihe „Allgäu Akut“), Name der Reihe als Einstellung; Übersicht in der Mail nach Variante B (farbiger Streifen und Kennung je Zeile: Abend lila, Workshop rot, Essen grau; Schilder mittig). |
 | 2026-10-31 | E-66 neu: Mails im Erscheinungsbild (Variante A), eigene Plätze im Programm (Variante B), Begriff „Platzangebot“; O-40 und O-41 entschieden und umgesetzt. |
 | 2026-10-31 | Editor überall mit derselben Leiste (zentral festgelegt), Bilder und Knöpfe auch im Programm und in Kurzbios; obere Navigationsleiste bleibt wie sie ist (Admin). |
 | 2026-10-31 | „Meine Anmeldung“ zeigt dem Team-Konto den Team-Bereich in der Leiste. |
