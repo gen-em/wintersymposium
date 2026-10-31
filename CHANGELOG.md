@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.6] – 2026-10-31
+
+### Doku
+
+- **AP-16 geplant** (Review-Behebung 2: B-4, B-6, B-7, B-8, B-10 bis B-12, B-14, S-3 bis S-6, S-9, S-11, S-12; Helfer für die Bestätigung des zweiten Faktors) mit neun Unterpunkten; O-45 neu; Prüfprotokoll reserviert T-288 bis T-296.
+
 ## [0.21.5] – 2026-10-31
 
 ### Doku

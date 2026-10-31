@@ -171,7 +171,7 @@ mail:
 | E-59 | Abschluss und Datenschutz (AP-9, Antworten) | Antworten des Admins 2026-10-31: **(1)** Anmeldungen ohne Konto 14 Monate nach der Veranstaltung leeren (E-24), Statistik-Zahlen bleiben. **(2)** CME-Nachweise nur der anwesenden ÄrztInnen (Name, EFN, Datum, VNR, Punkte) getrennt aufbewahren, 10 Jahre ab der Veranstaltung, nur für Betreiber, mit Export. **(3)** Protokoll 14 Monate, Login-Einträge 90 Tage. **(4)** Automatische Sicherung **8× täglich** (alle 3 Stunden); behalten: alle der letzten 3 Tage, bis 7 Tage eine je Tag, bis 14 Tage eine je 3 Tage, bis 28 Tage eine je Woche, danach keine. **(5)** Textvorschlag für die Datenschutzerklärung (Prüfung durch den Admin, keine Rechtsberatung). **(6)** Gesamttest und Repo-Prüfung (T-202 bis T-204). **(7)** Sicherungen von Hand nach **90 Tagen** löschen (Admin: „Ja“). **(8)** Zusätzliche Sicherungen des Hosters spielen keine Rolle – wir verlassen uns nicht darauf (Admin: „verlassen wir uns nicht darauf“). **Aus der Umsetzung:** Job `datenschutz` stündlich (Leeren, CME-Nachweise ablegen und nach 10 Jahren löschen, Protokoll kürzen), Job `sicherung` alle 3 Stunden (anlegen, dann nach Plan aufräumen; automatische ohne Protokolleintrag, sonst stünden 8 Einträge am Tag im Protokoll); Migration 16 (`cme_nachweis`, `anmeldung.anonymisiert_am`). Geleert werden Name, Adresse (ersetzt durch eine ungültige Platzhalter-Adresse, damit die Eindeutigkeit je Veranstaltung hält), Institution, Freitext, EFN, Einmal-Links und Namen in Mailing-Empfängerlisten; Berufsgruppe, Essen, Plätze und Anwesenheit bleiben für die Statistik. CME-Nachweise nur bei Veranstaltungen mit dem Baustein Fortbildungspunkte, nur bestätigte, anwesende Personen der ersten Berufsgruppe (ÄrztInnen); Kasten und Export unter Betrieb nur für Betreiber. Die Fristen sind feste Regeln des Löschkonzepts, keine Einstellungen (R-11 gilt für Veranstaltungswerte). Textvorschlag Datenschutzerklärung: `docs/datenschutz-vorschlag.md`. **Status:** umgesetzt 2026-10-31, Staging offen (T-200 bis T-202, T-260 bis T-263); T-204 bestanden: Name des Hosters und Bezüge auf die frühere Organisation aus dem Repo entfernt, Ordnerpfade bleiben (Admin 2026-10-31) | Admin 2026-10-31 |
 | E-64 | Status-Seite unter Betrieb (AP-15) | Wunsch und Antworten des Admins 2026-10-31: **(1)** **Eigene Seite** Betrieb → Status (nur BetreiberInnen, erste Seite im Reiter) mit Ampel-Zeilen für Cron, Jobs, Mailversand, Datenbank, Sicherung, Fehlerprotokoll und Umgebung; `/health` liefert dieselben Daten als JSON aus einer gemeinsamen Funktion. **(2)** **Cron-Anleitung auf der Seite** mit Kommando zum Kopieren (Shell-Cronjob, E-63) und als Ausweichweg der URL mit Token; **der Token wird erst nach Klick angezeigt** und das Anzeigen protokolliert. **(3)** Fehlerprotokoll (`php-fehler.log`) auf der Seite einsehbar und leerbar, weil es auf dem Webspace sonst keinen Zugang dazu gibt. **(4)** Rote Zeilen erscheinen als Aufgabe auf der Team-Übersicht. **Status:** AP-15 geplant | Admin 2026-10-31 |
 | E-63 | Review-Folgen: Design-Wahrheit, Cron, technische Grenzen | Antworten des Admins 2026-10-31 zu O-42 bis O-44: **(1)** **site.css ist die alleinige Design-Wahrheit.** Aus den echten Klassen entsteht ein Komponentenblatt (jeder Knopf, Kasten, Chip, jede Meldung einmal), das Mockup `docs/mockups/` wird Archiv und ist nicht mehr Vorlage (ändert E-36 und CLAUDE.md, Umsetzung im Review-AP CSS). **(2)** **Cron als Shell-Cronjob:** der Hoster kann Befehle starten; Standard ist `php <Zielordner>/cli/jobs.php` ohne Token in einer URL. Der URL-Aufruf `/jobs?token=` bleibt als Ausweichweg (betrieb.md angepasst). **(3)** **Technische Grenzen bleiben Konstanten:** Link-Gültigkeiten, Ratenschutz, Höchstwerte im Programm-Editor (12 Termine je Workshop, 500 Plätze je Termin) sind Tippfehler-Bremsen, keine Veranstaltungseinstellungen; R-11 ergänzt. | Admin 2026-10-31 |
-| E-62 | Code-Review und Behebung (AP-14 ff.) | Code-Review vom 2026-10-31 mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`; Antworten des Admins 2026-10-31: **(1)** Die Behebung läuft in Review-Arbeitspaketen; das erste (AP-R1 im Review) ist **AP-14**, weitere folgen als AP-15 ff. nach Bestätigung des Umfangs. **(2)** **Die Login-Adresse eines Team-Kontos ist nicht über eine Anmeldung änderbar** – weder durch das Team unter „Personen“ noch durch die Person selbst unter „Meine Anmeldung → Daten“; sie ändert nur eine BetreiberIn unter Betrieb → Team-Konten (O-40). Adressen verknüpfter Teilnehmenden-Konten darf das Team weiter ändern, die alte Adresse bekommt eine Hinweis-Mail. **(3)** **Ein Storno auf „Meine Anmeldung“ beendet die Sitzung nicht mehr**; Konto- und Team-Login bleiben (O-41; ändert E-46/E-48, wo „ausgeloggt“ steht). **(4)** **Ein PR erst, wenn das ganze Paket da ist.** Offen: O-42 bis O-44. **Status:** AP-14 geplant | Admin 2026-10-31 |
+| E-62 | Code-Review und Behebung (AP-14 ff.) | Code-Review vom 2026-10-31 mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`; Antworten des Admins 2026-10-31: **(1)** Die Behebung läuft in Review-Arbeitspaketen; das erste (AP-R1 im Review) ist **AP-14**, weitere folgen als AP-15 ff. nach Bestätigung des Umfangs. **(2)** **Die Login-Adresse eines Team-Kontos ist nicht über eine Anmeldung änderbar** – weder durch das Team unter „Personen“ noch durch die Person selbst unter „Meine Anmeldung → Daten“; sie ändert nur eine BetreiberIn unter Betrieb → Team-Konten (O-40). Adressen verknüpfter Teilnehmenden-Konten darf das Team weiter ändern, die alte Adresse bekommt eine Hinweis-Mail. **(3)** **Ein Storno auf „Meine Anmeldung“ beendet die Sitzung nicht mehr**; Konto- und Team-Login bleiben (O-41; ändert E-46/E-48, wo „ausgeloggt“ steht). **(4)** **Ein PR erst, wenn das ganze Paket da ist.** Offen: O-42 bis O-44. **Status:** AP-14 und AP-16 geplant | Admin 2026-10-31 |
 | E-61 | Team-Konten und Meldungen (AP-13) | Rückmeldung des Admins 2026-10-31 (Entwürfe 8–10): **(1)** Team-Konten nach **Entwurf B**: je Zeile ein Knopf „Bearbeiten“ mit Menü, jede Aktion im Dialog (Sperren und Zurücksetzen mit Nachfrage). **(2)** Meldungen nach **Entwurf B**: volle Farbe (Fehler rot, Hinweis lila, Erfolg grün), dunkle Schrift, Icon aus Phosphor; Fehlermeldung außerhalb des Bildschirms wird angescrollt. **(3)** Ein PR. **Status:** umgesetzt 2026-10-31, Staging offen (T-273, T-274) | Admin 2026-10-31 |
 | E-60 | Team-Navigation und Rechte je Veranstaltung (AP-12) | Antworten und Freigaben des Admins 2026-10-31 (Entwürfe 1–7 im Canvas „Team-Kopf und Personen-Menü“): **(1)** Statt der Leiste ein **Wechsler** rechts neben dem Seitentitel; aufgeklappt die Veranstaltungen mit Status, für BetreiberInnen „Neue Veranstaltung“ und „Alle verwalten“. **(2)** **Neue Veranstaltungen legen nur BetreiberInnen an**; bearbeiten dürfen dafür freigeschaltete Team-Mitglieder. **(3)** **Team-Konten auf Veranstaltungen begrenzbar:** je Admin „Alle, auch künftige“ oder „Nur ausgewählte“; BetreiberInnen sehen alles. Admins sehen auch bei Personen und Konten nur Anmeldungen ihrer Veranstaltungen. **(4)** **Protokoll** nach Veranstaltung filterbar; Admins sehen nur, was ihre Veranstaltungen betrifft und ihre Rolle erlaubt; Einträge ohne Veranstaltung (Konten, Newsletter, Logins) nur BetreiberInnen. **(5)** Neuer Reiter **Betrieb** (nur BetreiberInnen, alles Veranstaltungsübergreifende): Veranstaltungen, Team-Konten, Newsletter, Texte (Impressum, Datenschutz), Betrieb; „Kommunikation“ entfällt, oben steht **Mailings**; **Mailings an Newsletter-Listen nur BetreiberInnen**; die **Startseiten-Texte** bleiben bei der Veranstaltung (Verwaltung → Startseite). **(6)** **Veranstaltungen löschen** (nur BetreiberInnen, auch abgeschlossene, nicht die aktuelle): Dialog und eingetipptes Kürzel, **vorher automatische Sicherung**; CME-Nachweise bleiben. **(7)** **Personen-Menü** nach Entwurf A: ohne Team-Bereich (steht in der Leiste), Knopf mit Fläche, Ring beim Hover und Pfeil, Kopf zum Lesen abgesetzt, Punkte mit Icons aus einem fertigen Set – **Phosphor** (nach Vergleich mit Lucide und Tabler). **(8)** **Knopf-Standard** zuerst Variante B (getönte Fläche), **geändert auf Variante A** (Ring 2 px innen, Hover leicht gefüllt; Admin 2026-10-31, nach AP-13), nur ganze Pixel, Haupt/Zweit/Anmelden/Gefahr, 44 bzw. 36 px. **(9)** **Mein Konto** nach Entwurf 7: Profil zuerst (bei Team-Konten Rolle mit den Veranstaltungen untereinander), Deine Veranstaltungen (Anmeldung und Rückblick zusammen), Newsletter; „Einloggen und Sicherheit“ in einer Kachel mit verständlichen Bezeichnungen („Zweiter Schritt beim Einloggen“, „Notfall-Codes“, „Einloggen ohne Passwort“) und kräftigem Hinweis für Team-Konten. **(10)** **Kopfleiste bleibt stehen**; auf dem Handy beim Scrollen nach unten nur ein kleiner „Menü“-Knopf. **(11)** **Team-Bereich grün** in der Leiste. **(12)** Die Rolle heißt überall **BetreiberIn**. **(13)** Es gibt noch keine Admins; keine Übergangsregel nötig. **Status:** umgesetzt 2026-10-31, Staging offen (T-264 bis T-272) | Admin 2026-10-31 |
 
@@ -508,6 +508,89 @@ nicht_uebernehmen:
     - {problem: "Einstellungen werden an sehr vielen Stellen gelesen", loesung: "einstellung() leitet Veranstaltungs-Schlüssel an va_einstellung weiter"}
     - {problem: "Feste Texte „Wintersymposium“ in Mails und Kopfzeilen", loesung: "Kurzname je Veranstaltung"}
 
+- id: AP-16
+  titel: "Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (Review AP-R2)"
+  ziel: "Alle übrigen bestätigten Funde des Reviews beheben, die kein eigenes Paket brauchen; jeder Fund zuerst mit Test belegt (rot), dann behoben (grün)"
+  quelle: "docs/review-2026-10-31.md (B-4, B-6, B-7, B-8, B-10, B-11, B-12, B-14, S-3, S-4, S-5, S-6, S-9, S-11, S-12; dazu V-4 als Helfer); Entscheidungen E-62"
+  abhaengig_von: [AP-14]
+  nicht_enthalten:
+    - "S-7 (Aussperren eines Kontos durch 5 falsche Passwörter): Zielkonflikt, Entscheidung O-45"
+    - "S-8 (Cron-Token in der URL): durch E-63 (2) und AP-15 erledigt"
+    - "S-10 (Open Redirect in der .htaccess vor der Host-Prüfung): bleibt; wirkt nur bei Klartext-HTTP mit gefälschtem Host, HSTS ist gesetzt; ein fester Hostname in der .htaccess ginge wegen mehrerer Hosts (E-27) nicht"
+  reihenfolge: "Unterpunkte 1 bis 9 nacheinander; ein PR"
+  umfang:
+    - nr: 1
+      fund: B-4
+      titel: "Sitzungseintrag der Anmeldung an die Veranstaltung binden"
+      loesung:
+        - "$_SESSION['anm'] bekommt 'va' (Veranstaltungs-ID); anm_aktuell() verwirft den Eintrag, wenn 'va' nicht zu va_id() passt, und leitet dann neu ab; die automatische Ableitung aus Konto oder Team-Adresse läuft nur, wenn va_id() === va_aktuell_id() (öffentliche Seiten der aktuellen Veranstaltung), nie auf Team-Seiten oder Archivseiten /<kürzel>"
+        - "anm_einloggen() (Einmal-Link) setzt 'va' aus der Anmeldung; Archivseiten zeigen eine fremde Anmeldung nur über tk_veranstaltungen (Konto), nicht über die Sitzung"
+      test: "lauf.php: Konto mit Anmeldung in VA 1 (abgeschlossen) und ohne in VA 2 (aktuell): im Kontext VA 2 liefert anm_aktuell() null; Eintrag mit va=1 im Kontext 2 wird verworfen; http_tests: Team-Mitglied wechselt im Team-Bereich auf die alte VA, öffnet /deine-anmeldung → zeigt die aktuelle VA"
+    - nr: 2
+      fund: B-6
+      titel: "Newsletter speichern lässt ausgeblendete Listen unberührt"
+      loesung:
+        - "nl_listen_setzen(): $weg nur aus den sichtbaren Listen (nl_listen(true)) bilden; Abos ausgeblendeter Listen bleiben"
+        - "konto.php Aktion newsletter: ein leeres $ids meldet nur von sichtbaren Listen ab (nl_listen_setzen mit []), nicht nl_abmelden() für alle; newsletter_verwalten.php dieselbe Funktion"
+      test: "lauf.php: Person mit Abo auf sichtbarer Liste A und ausgeblendeter Liste B speichert nur A → B bleibt; speichert nichts → A weg, B bleibt"
+    - nr: 3
+      fund: "B-7, S-4, V-4"
+      titel: "Bestätigung des zweiten Faktors als ein Helfer, für alle Faktoren und mit Ratenschutz"
+      loesung:
+        - "totp_lib: zweitfaktor_bestaetigen(int $kontoId, string $code): ?string prüft TOTP, Mail-Code (wenn gerade einer gilt) und Wiederherstellungscode, mit Ratenschutz Topf zweitfaktor je Konto und den bisherigen Fehltexten aus einer Stelle (rate_text); bei Erfolg $_SESSION['zf_bestaetigt'] = ['konto' => id, 'bis' => jetzt + 300]"
+        - "zweitfaktor_bestaetigt(int $kontoId): bool liest das Sitzungsfeld (einmal gültig, wird beim Lesen gelöscht); die Seiten team_daten (Sicherung, Wiederherstellen), team_personen (Rolle vergeben), team_konten (Rolle, Zurücksetzen, Sperren) und konto_zweitfaktor nutzen nur noch diese beiden Funktionen"
+        - "Auf diesen Seiten gibt es neben dem Code-Feld „Code per E-Mail schicken“ (POST, mailcode_senden, höchstens einer je Minute je Konto) und, wenn Passkeys vorhanden, „Mit Passkey bestätigen“: neue Aktion bestaetigen in passkey.php (Challenge an das Konto gebunden), die bei Erfolg dasselbe Sitzungsfeld setzt und die Seite neu lädt; die Texte sagen „Code aus der App, aus der Mail oder ein Wiederherstellungscode“"
+        - "konto.php Passwort ändern und Konto löschen: Passwortprüfung mit Ratenschutz Topf login je Konto (wie konto_zweitfaktor) über einen Helfer passwort_bestaetigen(array $k, string $pw): ?string in anmeldung_lib"
+        - "Doku betrieb.md: „Code aus der App“ durch „zweiter Faktor“ ersetzen"
+      test: "lauf.php: Konto nur mit Mail-Code: zweitfaktor_bestaetigen mit gültigem Mail-Code → null, Feld gesetzt; 5 falsche Codes → gesperrt; Konto nur mit Passkey: Aktion bestaetigen setzt das Feld; Passwort ändern mit 5 falschen alten Passwörtern → gesperrt; http_tests: Sicherung anlegen mit Mail-Code"
+    - nr: 4
+      fund: "S-3, B-11"
+      titel: "Team-Mitglieder bekommen nur eigene, bestätigte Anmeldungen; Team-Reiter überall"
+      loesung:
+        - "anm_aktuell(): für Team-Konten nur die verknüpfte Anmeldung (konto_id) oder eine bestätigte mit gleicher Adresse übernehmen; unbestätigte Anmeldungen mit der Team-Adresse werden nicht übernommen und auf „Meine Anmeldung“ nicht als eigene gezeigt"
+        - "seite_kopf(): $team unabhängig von der Option teilnehmer über team_gesehen() bestimmen, damit der grüne Reiter „Team-Bereich“ auch auf „Meine Anmeldung“ steht"
+      test: "lauf.php: unbestätigte Anmeldung mit Team-Adresse → anm_aktuell() null für das Team-Konto; bestätigte → übernommen; http_tests: /deine-anmeldung als Team → Reiter Team-Bereich im HTML"
+    - nr: 5
+      fund: "B-8, B-12, B-14, S-11"
+      titel: "Kleine Korrekturen in Programm, Mailings, Konto, Protokoll"
+      loesung:
+        - "B-8 foto_aufraeumen(): als genutzt gelten dozent.foto und die Fotos aller veröffentlichten Stände (programm_stand aller Veranstaltungen, inkl. termine[].dozenten)"
+        - "B-12 rm_abbrechen(): die Empfänger der gelöschten mail_ausgang-Einträge aus rundmail_empfaenger entfernen, empfaenger_zahl danach aus der Tabelle zählen"
+        - "B-14 tk_profil_setzen() gibt Fehler ohne Feldbezug unter dem Schlüssel '_' zurück; konto.php zeigt solche Fehler als Meldung; rm_speichern() prüft rm_laden() auf null (Fehlertext statt Warnung)"
+        - "S-11 tn_setzen(): Protokolltext ohne Namen („Anmeldung N: anwesend gesetzt“), wie die übrigen Einträge (R-02)"
+      test: "lauf.php: Foto in abgeschlossener VA bleibt nach foto_aufraeumen(); Abbrechen eines Mailings mit 3 offenen von 5 → Empfängerliste 2; tk_profil_setzen auf gelöschte Anmeldung → Fehler sichtbar; Protokolltext ohne Namen"
+    - nr: 6
+      fund: B-10
+      titel: "Kein Rückfall auf Veranstaltung 1"
+      loesung:
+        - "va_id() ohne Kontext und ohne aktuelle Veranstaltung wirft keine Zahl mehr, sondern die öffentlichen Seiten zeigen „Derzeit keine Veranstaltung“ (Startseite: Eckdaten und Anmeldung ausgeblendet; /anmelden und /deine-anmeldung mit Hinweis); anm_zeitraum() liefert dann 'geschlossen'"
+        - "va_loeschen(): die letzte verbliebene Veranstaltung lässt sich nicht löschen (Fehlertext)"
+      test: "lauf.php: alle Veranstaltungen abgeschlossen → Startseite 200 mit Hinweis, anm_anlegen() liefert Fehler; Löschen der letzten → Fehler"
+    - nr: 7
+      fund: "S-5, S-9"
+      titel: "Mailing-Bilder nur für Berechtigte; Mail-Codes je Konto begrenzen"
+      loesung:
+        - "S-5 team_mailings_bild.php: Bild nur ausliefern, wenn es zu einem Mailing gehört, das rm_sichtbar() (aus AP-14 Unterpunkt 2) erlaubt, oder erstellt_von das eigene Konto ist; sonst 404"
+        - "S-9 mailcode_senden(): höchstens ein Versand je Minute und 10 je Stunde je Konto, gezählt in der Tabelle rate_limit (Topf mailcode, Merkmal konto:id); einloggen.php und AP-16 Unterpunkt 3 nutzen nur diese Funktion, die Minuten-Sperre aus der Sitzung entfällt"
+      test: "http_tests: Admin mit eingeschränkter VA ruft Bild eines Newsletter-Mailings → 404; lauf.php: 11 Mail-Codes in einer Stunde → der 11. wird nicht verschickt"
+    - nr: 8
+      fund: "S-6, S-12"
+      titel: "Prüfungen für Proxy und Sitzungs-ID"
+      loesung:
+        - "S-6 betrieb_status() (AP-15) Zeile Umgebung: Warnung, wenn REMOTE_ADDR im privaten Bereich liegt (10/8, 172.16/12, 192.168/16, 127/8) oder X-Forwarded-For gesetzt ist, während https_ueber_proxy aus ist – Text: „Anfragen kommen über einen Proxy; der Ratenschutz zählt dann alle Besucher zusammen. Beim Hoster klären.“ Falls AP-15 noch nicht umgesetzt ist, steht die Prüfung in health.php"
+        - "S-12 Test: Keks mit erfundener, gültig geformter Sitzungs-ID → nach sitzung_starten() hat die Sitzung eine andere ID (use_strict_mode wirkt); kein Codeumbau nötig, wenn der Test besteht; sonst session_id() nicht mehr von Hand setzen"
+      test: "lauf.php: beide Prüfungen wie beschrieben; Staging: Status-Seite zeigt in Zeile Umgebung keine Proxy-Warnung (T-296 durch den Admin)"
+    - nr: 9
+      titel: "Abschluss"
+      loesung:
+        - "Version, CHANGELOG (Behoben mit den Nummern aus dem Review), betrieb.md (zweiter Faktor bei Bestätigungen, keine Veranstaltung), Prüfprotokoll T-288 bis T-296, Konzept AP-16 status/ergebnis/probleme; Review-Dokument Abschnitt 5: behoben am …"
+        - "Beispieldatensatz: eine unbestätigte Anmeldung mit Team-Adresse und ein Konto mit Abo auf einer ausgeblendeten Liste ergänzen"
+        - "Browser-Durchlauf R-12: Bestätigung mit Mail-Code und Passkey, Startseite ohne Veranstaltung"
+      test: "php tools/tests/lauf.php und node tools/browser/durchlauf.js ohne Fehler; Zahlen in PR und Prüfprotokoll"
+  status: "geplant 2026-10-31 (Konzept); Umsetzung in eigener Chat-Instanz nach AP-14"
+  ergebnis: null
+  probleme: []
+
 - id: AP-15
   titel: "Status-Seite unter Betrieb"
   ziel: "BetreiberInnen sehen auf einer Seite, ob der Betrieb läuft (Cron, Jobs, Mail, Datenbank, Sicherung, Fehlerprotokoll, Umgebung) und wie der Cron einzurichten ist; dieselben Daten liefert /health als JSON"
@@ -717,6 +800,7 @@ nicht_uebernehmen:
 - {id: O-42, thema: "Mockup oder site.css als Design-Wahrheit", frage: "Review V-40: docs/mockups/index.html hat ein eigenes Stylesheet mit ~120 Klassen, die es in site.css nicht gibt, und abweichende Knopf-Stile. Mockup an site.css anbinden oder site.css zur alleinigen Vorlage machen und ein Komponentenblatt aus den echten Klassen erzeugen?", zustaendig: Admin, benoetigt_fuer: "Review-AP CSS (AP-R6)", status: "entschieden → E-63 (1): site.css ist die Wahrheit, Komponentenblatt aus den echten Klassen; Mockup wird Archiv (Admin 2026-10-31)"}
 - {id: O-43, thema: "Cron-Token als Kopfzeile", frage: "Review S-8: /jobs?token= landet in Zugriffslogs. Kann der Cron des Hosters eine Kopfzeile oder einen POST schicken? Sonst bleibt es bei der URL.", zustaendig: Admin, benoetigt_fuer: "Review-AP Rest-Bugs (AP-R2)", status: "entschieden → E-63 (2): der Hoster bietet Shell-Cronjobs; Standard ist `php <Zielordner>/cli/jobs.php`, der URL-Aufruf bleibt Ausweichweg (Admin 2026-10-31)"}
 - {id: O-44, thema: "Konstanten als Einstellungen (R-11)", frage: "Review V-9: Gehören Einmal-Link-Gültigkeit (48 h), Zertifikat-Link (30 Tage), Programm-Grenzen (500 Plätze, 12 Termine) in die Veranstaltungs-Einstellungen, oder bleiben sie technische Werte?", zustaendig: Admin, benoetigt_fuer: "Review-AP Konventionen (AP-R3)", status: "entschieden → E-63 (3): bleiben technische Werte; R-11 ergänzt (Admin 2026-10-31)"}
+- {id: O-45, thema: "Aussperren eines Kontos vom Passwort-Login", frage: "Review S-7: 5 falsche Passwörter je Adresse sperren den Passwort-Login dieses Kontos 15 Minuten – jeder kann so ein bekanntes Betreiber-Konto gezielt aussperren (Passkey geht weiter). Lassen (einfach, bremst Angreifer sicher) oder Sperre nur je Adresse und IP zusammen (weniger Aussperrung, Angreifer mit vielen Adressen kommen weiter)?", zustaendig: Admin, benoetigt_fuer: "nach AP-16", status: offen}
 ```
 
 ## 8. Bekannte Risiken und Einschränkungen
@@ -769,6 +853,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-30 | Export als xlsx und PDF umgesetzt: E-56 neu (Antworten zu O-35, Umfang, Ergebnis, Probleme); O-35 entschieden; Hinweis in O-19. |
 | 2026-10-30 | AP-10 umgesetzt: E-57 neu (Zertifikat-Entwurf C und Antworten des Admins, Umsetzung, Probleme); AP-10 Status, Ergebnis, Probleme; O-19 entschieden, O-16 teilweise. |
 | 2026-10-31 | AP-11 Mehrere Veranstaltungen neu und umgesetzt (E-58); Antworten zu AP-9 festgehalten (E-59). |
+| 2026-10-31 | AP-16 (Review AP-R2: B-4, B-6, B-7, B-8, B-10 bis B-12, B-14, S-3 bis S-6, S-9, S-11, S-12, Helfer V-4) geplant mit neun Unterpunkten; O-45 (Aussperren je Adresse) neu; S-8 und S-10 begründet nicht enthalten. |
 | 2026-10-31 | AP-15 Status-Seite unter Betrieb geplant (E-64): Ampel-Zeilen, Cron-Anleitung mit Kopieren und Token nach Klick, Fehlerprotokoll, health aus derselben Quelle. |
 | 2026-10-31 | E-63 neu (site.css als Design-Wahrheit mit Komponentenblatt, Shell-Cronjob als Standard, technische Grenzen bleiben Konstanten); O-42 bis O-44 entschieden; R-11 um technische Grenzen ergänzt. |
 | 2026-10-31 | Code-Review (docs/review-2026-10-31.md): E-62 neu (Review-APs, Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket); AP-14 (Review AP-R1: S-1, B-1, B-2/B-3, S-2, B-5, B-13) geplant mit sieben Unterpunkten; O-40, O-41 entschieden, O-42 bis O-44 neu. |
