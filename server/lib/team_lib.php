@@ -97,7 +97,9 @@ function team_suche_passt(array $p, string $q): bool
 
 /**
  * Daten einer Anmeldung durch das Team ändern; eine neue Adresse gilt sofort
- * (das Team trägt sie ein). Verknüpftes Konto zieht mit. Fehlerliste.
+ * (das Team trägt sie ein). Ein verknüpftes Teilnehmenden-Konto zieht mit, die
+ * alte Adresse bekommt eine Hinweis-Mail. Die Adresse eines Team-Kontos ändert
+ * nur eine BetreiberIn unter Team-Konten (E-63 (2), Review S-1). Fehlerliste.
  */
 function team_anm_daten(int $anmId, array $e, bool $mail): array
 {
@@ -110,23 +112,35 @@ function team_anm_daten(int $anmId, array $e, bool $mail): array
         return $r['fehler'];
     }
     $w = $r['werte'];
-    if ($w['email'] !== $a['email']) {
+    $konto = $a['konto_id'] !== null ? konto_laden((int)$a['konto_id']) : null;
+    $teamKonto = konto_ist_team($konto);
+    $neueAdresse = $w['email'] !== $a['email'];
+    if ($neueAdresse && $teamKonto) {
+        return ['email' => ANM_TEAM_ADRESSE_TEXT];
+    }
+    if ($neueAdresse) {
         $k = konto_per_email($w['email']);
         if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [va_id(), $w['email'], $anmId]) > 0
             || ($k !== null && (int)$k['id'] !== (int)($a['konto_id'] ?? 0))) {
             return ['email' => 'Diese Adresse gehört schon zu einer anderen Anmeldung oder einem anderen Konto.'];
         }
     }
-    db_transaktion(function () use ($anmId, $w, $a): void {
+    $kontoMit = $konto !== null && $konto['rolle'] === 'teilnehmend';
+    db_transaktion(function () use ($anmId, $w, $a, $neueAdresse, $kontoMit): void {
         db_ausfuehren(
             'UPDATE anmeldung SET vorname = ?, nachname = ?, email = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, sitzung_version = sitzung_version + ?, geaendert_am = ? WHERE id = ?',
-            [$w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, $w['email'] !== $a['email'] ? 1 : 0, db_jetzt(), $anmId]
+            [$w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, $neueAdresse ? 1 : 0, db_jetzt(), $anmId]
         );
-        if ($a['konto_id'] !== null) {
+        if ($kontoMit) {
             db_ausfuehren('UPDATE konto SET email = ?, name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
                 [$w['email'], trim($w['vorname'] . ' ' . $w['nachname']), $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, db_jetzt(), $a['konto_id']]);
         }
     });
+    if ($neueAdresse && $kontoMit) {
+        // Login-Adresse eines Kontos geändert: Hinweis an die alte Adresse, Protokoll ohne Adressen (R-02)
+        mail_vorlage_einreihen($a['email'], 'adresse_vom_team', ['vorname' => $w['vorname']]);
+        audit_schreiben('konto', 'Konto ' . (int)$a['konto_id'] . ': Adresse vom Team geändert', anm_team_konto());
+    }
     anm_geaendert_melden($anmId, 'deine Angaben sind aktualisiert.', $mail, true);
     return [];
 }

@@ -451,9 +451,19 @@ function rm_vorschau(array $rm, array $konto): array
 
 function rm_laden(int $id): ?array
 {
-    // Mailings an Angemeldete gehören zu einer Veranstaltung; Newsletter-Mailings (NULL) zu keiner (E-58)
-    // Newsletter-Mailings nur für Betreiber (AP-12, E-60)
-    return db_zeile('SELECT * FROM rundmail WHERE id = ? AND (' . (rm_newsletter_erlaubt() ? 'veranstaltung_id IS NULL OR ' : '') . 'veranstaltung_id = ?)', [$id, va_id()]);
+    // Ohne Rechteprüfung: der Mailversand braucht jedes Mailing, auch nach einer
+    // Admin-Aktion (Review B-1). Team-Seiten prüfen zusätzlich rm_sichtbar().
+    return db_zeile('SELECT * FROM rundmail WHERE id = ?', [$id]);
+}
+
+/**
+ * Darf das angemeldete Team-Konto dieses Mailing sehen und ändern? Mailings an
+ * Angemeldete gehören zur gewählten Veranstaltung; Newsletter-Mailings (ohne
+ * Veranstaltung, E-58) nur für BetreiberInnen (AP-12, E-60).
+ */
+function rm_sichtbar(array $rm): bool
+{
+    return $rm['veranstaltung_id'] === null ? rm_newsletter_erlaubt() : (int)$rm['veranstaltung_id'] === va_id();
 }
 
 /** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */

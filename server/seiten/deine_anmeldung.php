@@ -106,6 +106,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 umleiten('/deine-anmeldung');
             case 'daten':
                 $r = anm_daten_setzen($id, $_POST);
+                if ($r['fehler'] === [] && $r['email_gesperrt']) {
+                    flash_setzen('fehler', 'Deine übrigen Daten sind gespeichert, die Adresse nicht: ' . ANM_ADRESSE_RATE_TEXT);
+                    umleiten('/deine-anmeldung');
+                }
                 if ($r['fehler'] === []) {
                     flash_setzen('ok', $r['email_link'] ? 'Gespeichert. An die neue Adresse ist ein Link unterwegs; erst damit gilt sie. Bis dahin bleibt die bisherige.' : 'Deine Daten sind gespeichert.');
                     umleiten('/deine-anmeldung');
@@ -120,7 +124,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     umleiten('/deine-anmeldung');
                 }
                 anm_stornieren($id);
-                anm_ausloggen();
+                // Nur die Anmeldung aus der Sitzung nehmen; Konto- und Team-Login bleiben (E-63 (3), Review B-5)
+                unset($_SESSION['anm']);
                 flash_setzen('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.');
                 umleiten('/deine-anmeldung');
             case 'annehmen':
@@ -321,7 +326,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
             <div class="feld"><label for="vorname">Vorname</label><input id="vorname" name="vorname" type="text" autocomplete="given-name" maxlength="80" value="<?= $w('vorname') ?>"<?= $ungueltig('vorname') ?>><?= $fehlerFeld('vorname') ?></div>
             <div class="feld"><label for="nachname">Nachname</label><input id="nachname" name="nachname" type="text" autocomplete="family-name" maxlength="80" value="<?= $w('nachname') ?>"<?= $ungueltig('nachname') ?>><?= $fehlerFeld('nachname') ?></div>
         </div>
-        <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="email" maxlength="190" value="<?= $w('email') ?>"<?= $ungueltig('email') ?>><p class="hilfe">Eine neue Adresse gilt erst, wenn du den Link bestätigst, den wir dorthin schicken.</p><?= $fehlerFeld('email') ?></div>
+        <div class="feld"><label for="email">E-Mail</label><?php $teamAdresse = anm_hat_team_konto($a); ?><input id="email" name="email" type="email" autocomplete="email" maxlength="190" value="<?= $teamAdresse ? e($a['email']) : $w('email') ?>"<?= $teamAdresse ? ' readonly' : '' ?><?= $ungueltig('email') ?>><p class="hilfe"><?= $teamAdresse ? 'Das ist die Adresse deines Team-Kontos. ' . e(ANM_TEAM_ADRESSE_TEXT) : 'Eine neue Adresse gilt erst, wenn du den Link bestätigst, den wir dorthin schicken.' ?></p><?= $fehlerFeld('email') ?></div>
         <div class="paar">
             <div class="feld"><label for="berufsgruppe">Berufsgruppe</label>
                 <select id="berufsgruppe" name="berufsgruppe" data-efn-gruppe="<?= e($gruppen[0] ?? '') ?>"<?= $ungueltig('berufsgruppe') ?>>

@@ -85,6 +85,15 @@ function php(args, config) {
   return execFileSync('php', args, { env: { ...process.env, WS_CONFIG: config }, encoding: 'utf8' });
 }
 
+/**
+ * Wanda (AP-14) wieder auf die Warteliste ihres freien Termins setzen: Vor der
+ * Nachrück-Grenze bietet ein früherer Schritt, der dort einen Platz freigibt,
+ * ihr den Termin an. So entsteht der Stand nach der Grenze (Review B-3).
+ */
+function wandaWartet(vor) {
+  php(['-r', `require '${path.join(WURZEL, 'server/bootstrap.php')}'; db_ausfuehren("UPDATE platz SET status = 'warte', angebot_bis = NULL WHERE anmeldung_id = ? AND termin_id = ?", [${vor.wanda_id}, ${vor.wanda_termin}]);`], vor.config);
+}
+
 /** Sichtbare Elemente, die rechts aus dem Fenster ragen. Läuft im Browser. */
 function ueberstand() {
   return [...document.querySelectorAll('body *')].filter(e => {
@@ -365,6 +374,46 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await ausloggen(p);
       notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Ausloggen über das Personen-Menü', (await p.textContent('body')).includes('Wie willst du rein?'));
 
+      // AP-14 (B-3): Wanda steht auf der Warteliste eines Termins mit freien Plätzen
+      // Vor der Nachrück-Grenze bietet ein früherer Schritt (frei gewordener Platz) Wanda den Termin an;
+      // für die Prüfung den Stand nach der Grenze herstellen: wieder auf der Warteliste
+      wandaWartet(vor);
+      await p.goto(basis + vor.wanda_links[ENGINES.indexOf(engine)]);
+      await Promise.all([p.waitForNavigation(), p.click('button:has-text("Weiter")')]);
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-warte', basis + '/deine-anmeldung?aendern=workshops');
+        const wl = p.locator(`input[name="wl[]"][value="${vor.wanda_termin}"]`);
+        notiere(engine, breite, 'deine-anmeldung-warte', 'Warte-Eintrag bei freiem Termin sichtbar, angekreuzt, mit Hinweis',
+          await wl.count() === 1 && await wl.isChecked() && await p.locator('label.wl-zeile.an').isVisible() && (await p.textContent('#workshops')).includes('fest wählen oder auf der Warteliste bleiben'));
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=workshops]) button[type=submit]')]);
+      const meldungWarte = (await p.locator('.meldung').allTextContents()).join(' | ');
+      await p.goto(basis + '/deine-anmeldung?aendern=workshops');
+      notiere(engine, 'desktop-breit', 'deine-anmeldung-warte', 'Speichern ohne Änderung: Warte-Eintrag bleibt', await p.locator(`input[name="wl[]"][value="${vor.wanda_termin}"]`).isChecked(), meldungWarte);
+      await ausloggen(p);
+      // AP-14 (B-5): Storno mit Konto – danach weiter eingeloggt
+      await p.goto(basis + '/deine-anmeldung');
+      await p.fill('#zg-lmail', vor.storno[ENGINES.indexOf(engine)]); await p.fill('#zg-pw', vor.passwort);
+      await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=einloggen]) button[type=submit]')]);
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-storno-login.png`) });
+      const stornoKnopf = p.locator('button[aria-haspopup=dialog]:has-text("Anmeldung stornieren")');
+      if (await stornoKnopf.count() === 0) {
+        notiere(engine, 'desktop-breit', 'storno', 'Storno-Knopf nach dem Login da', false, p.url() + ' ' + (await p.textContent('main')).replace(/\s+/g, ' ').slice(0, 300));
+      } else {
+      await stornoKnopf.click();
+      await p.waitForTimeout(300);
+      notiere(engine, 'desktop-breit', 'storno', 'Storno fragt im Dialog (rot)', await p.isVisible('dialog[open] button:has-text("Ja, stornieren")'));
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-storno-frage.png`) });
+      await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, stornieren")')]);
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-storno-danach.png`) });
+      const nachStorno = await p.textContent('body');
+      notiere(engine, 'desktop-breit', 'storno', 'Storno: Meldung, weiter eingeloggt, „Jetzt anmelden“',
+        nachStorno.includes('ist storniert') && nachStorno.includes('Eingeloggt als Sina Storno') && await p.locator('.person-menue').count() > 0 && await p.locator('a[href="/anmelden"]').count() > 0, new URL(p.url()).pathname);
+      }
+      await ausloggen(p);
+
       // ---- Konten für Teilnehmende (AP-4b) ----
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
@@ -540,6 +589,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'team-person', basis + '/team/personen?a=' + vor.lea_id);
         await pruefeSeite(p, fehler, engine, breite, 'team-person-neu', basis + '/team/personen?neu=1');
+        // AP-14 (B-2): Warte-Eintrag im Team-Modus als vorangekreuztes Kästchen
+        wandaWartet(vor);
+        await pruefeSeite(p, fehler, engine, breite, 'team-person-warte', basis + '/team/personen?a=' + vor.wanda_id);
+        const twl = p.locator(`input[name="wl[]"][value="${vor.wanda_termin}"]`);
+        notiere(engine, breite, 'team-person-warte', 'Team: Warte-Eintrag sichtbar und angekreuzt', await twl.count() === 1 && await twl.isChecked() && await p.locator('label.wl-zeile.an').isVisible());
         await pruefeSeite(p, fehler, engine, breite, 'team-termin', basis + '/team/workshops?t=' + vor.voll_termin);
         // AP-6: Mailing-Entwurf (Editor, Vorschau) und gesendetes Mailing (Archiv)
         await pruefeSeite(p, fehler, engine, breite, 'team-mailing-entwurf', basis + '/team/mailings?id=' + vor.mailing_entwurf);

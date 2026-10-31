@@ -359,3 +359,38 @@ function beispieldaten_admin(int $abendId): int
     va_rechte_setzen($id, false, [$abendId], null);
     return $id;
 }
+
+/**
+ * Warteliste mit freien Plätzen (AP-14, Review B-2/B-3): Wanda steht seit drei
+ * Tagen auf der Warteliste von WS 01 19:30, der Termin hat inzwischen wieder
+ * freie Plätze (typisch nach der Nachrück-Grenze). Ihr Eintrag muss beim
+ * Speichern – durch das Team oder sie selbst – erhalten bleiben.
+ * Nicht Teil von beispieldaten_laden(): Vor der Nachrück-Grenze böte der Job
+ * den freien Platz sofort an, das verschiebt die Abläufe der AP-4-Prüfungen.
+ * Aufruf im Browser-Durchlauf (vorbereiten.php) und in lauf.php (AP-14).
+ * Gibt ['wanda' => Anmeldung, 'termin' => Termin] zurück.
+ */
+function beispieldaten_warteliste(): array
+{
+    $termin = 0;
+    foreach (anm_workshops(true) as $w) {
+        foreach ($w['termine'] as $t) {
+            if ($w['kuerzel'] === 'WS 01' && $t['beginn'] === '19:30') {
+                $termin = (int)$t['id'];
+            }
+        }
+    }
+    if ($termin === 0 || anm_frei($termin) <= 0) {
+        throw new RuntimeException('Beispieldaten Warteliste: WS 01 19:30 fehlt oder ist voll');
+    }
+    $r = anm_daten_pruefen(['vorname' => 'Wanda', 'nachname' => 'Warte', 'email' => 'wanda.warte@example.org', 'berufsgruppe' => 'NotfallsanitäterIn', 'institution' => 'Rettungswache Wartedorf', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal']);
+    $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => []], false);
+    if ($e['art'] !== 'neu') {
+        throw new RuntimeException('Beispieldaten Warteliste: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+    }
+    anm_link_einloesen(anm_link_erzeugen($e['id'], 'bestaetigen', time() + 3600));
+    // direkt eingetragen: ein freier Termin nimmt keine neuen Warte-Einträge an
+    anm_platz_anlegen($e['id'], $termin, 'warte', time() - 3 * 86400);
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['wanda' => $e['id'], 'termin' => $termin];
+}

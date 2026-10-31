@@ -35,6 +35,7 @@ const MAIL_VORLAGE_KOPF = [
     'angebot_abgelaufen' => ['Platzangebot abgelaufen', null],
     'platz_erhalten' => ['Platz bestätigt', null],
     'email_bestaetigen' => ['Neue Adresse bestätigen', 'Neue Adresse bestätigen'],
+    'adresse_vom_team' => ['Adresse geändert', null],
     'konto_bestaetigen' => ['Konto bestätigen', 'Konto bestätigen'],
     'konto_vorhanden' => ['Du hast schon ein Konto', null],
     'konto_passwort' => ['Neues Passwort', 'Neues Passwort festlegen'],

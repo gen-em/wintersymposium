@@ -14,7 +14,7 @@ $ich = (int)$konto['id'];
 $neu = isset($_GET['neu']);
 $id = isset($_GET['id']) ? (int)$_GET['id'] : (isset($_POST['id']) && (int)$_POST['id'] > 0 ? (int)$_POST['id'] : null);
 $rm = $id !== null ? rm_laden($id) : null;
-if ($id !== null && $rm === null) {
+if ($id !== null && ($rm === null || !rm_sichtbar($rm))) {
     nicht_gefunden();
 }
 $fehler = [];

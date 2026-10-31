@@ -218,17 +218,24 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $opt = ['postfach' => $z['postfach']] + ($z['html'] !== null ? ['html' => $z['html']] : []) + ($z['absender_name'] !== null ? ['absender_name' => $z['absender_name']] : []);
         $betreff = $z['betreff'];
         $text = $z['text'];
+        $fehler = null;
         if ($z['rundmail_id'] !== null) {
-            // Rundmail erst jetzt zusammensetzen; Anmeldung inzwischen storniert → entfällt
-            $m = $z['nl_person_id'] !== null ? rm_mail_fuer_nl((int)$z['rundmail_id'], (int)$z['nl_person_id']) : rm_mail_fuer((int)$z['rundmail_id'], (int)$z['anmeldung_id']);
-            if ($m === null) {
-                db_ausfuehren('DELETE FROM mail_ausgang WHERE id = ?', [$z['id']]);
-                continue;
+            // Rundmail erst jetzt zusammensetzen. Gelöscht wird der Eintrag nur, wenn die
+            // Anmeldung storniert oder die Person abgemeldet ist; fehlt das Mailing selbst,
+            // ist das ein Fehler mit Wiederholung (Review B-1)
+            if (rm_laden((int)$z['rundmail_id']) === null) {
+                $fehler = 'Mailing ' . (int)$z['rundmail_id'] . ' nicht gefunden';
+            } else {
+                $m = $z['nl_person_id'] !== null ? rm_mail_fuer_nl((int)$z['rundmail_id'], (int)$z['nl_person_id']) : rm_mail_fuer((int)$z['rundmail_id'], (int)$z['anmeldung_id']);
+                if ($m === null) {
+                    db_ausfuehren('DELETE FROM mail_ausgang WHERE id = ?', [$z['id']]);
+                    continue;
+                }
+                [$betreff, $text] = [$m['betreff'], $m['text']];
+                $opt = ['postfach' => $z['postfach'], 'html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true, 'kopf' => $m['kopf'] ?? [], 'absender_name' => $m['absender_name'] ?? null];
             }
-            [$betreff, $text] = [$m['betreff'], $m['text']];
-            $opt = ['postfach' => $z['postfach'], 'html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true, 'kopf' => $m['kopf'] ?? [], 'absender_name' => $m['absender_name'] ?? null];
         }
-        $fehler = mail_zustellen($z['an'], $betreff, $text, $opt);
+        $fehler ??= mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
             // R-02: Inhalt und Empfänger nach dem Versand leeren
             db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, absender_name = NULL, fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
@@ -610,9 +617,15 @@ function mail_vorlage_roh(string $name, array $d): array
             return ['Du hast den Platz: ' . $d['was'],
                 $hallo . 'du hast den Platz angenommen: ' . $d['was'] . '.' . $u . mail_gruss()];
         case 'email_bestaetigen':
+            // Anrede ohne Vornamen: Wer die Mail bekommt, kennt die Person vielleicht nicht (Review S-2)
             return ['Bitte bestätige deine neue Adresse',
-                $hallo . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
+                "Hallo,\n\n" . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'adresse_vom_team':
+            // an die alte Adresse, wenn das Team die Adresse geändert hat (E-63 (2))
+            return ['Deine Adresse beim ' . va_kurz() . ' wurde geändert',
+                $hallo . 'das Team hat die Adresse deiner Anmeldung und deines Kontos geändert. Mails zum '
+                . va_kurz() . " und der Login laufen ab jetzt über die neue Adresse, diese hier gilt nicht mehr.\n\nDas war nicht mit dir abgesprochen? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'konto_bestaetigen':
             return ['Bitte bestätige dein Konto bei ' . reihe_name(),
                 $hallo . "danke für dein Konto. Bestätige deine Adresse über diesen Link, danach legst du dein Passwort fest:\n\n" . $d['link']

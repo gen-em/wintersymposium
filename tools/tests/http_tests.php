@@ -652,6 +652,20 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'Hallo Mia.'), 'Meine Anmeldung zeigt die eigene Anmeldung');
     pruefe(str_contains($r['text'], 'class="nav-team" href="/team"'), 'Meine Anmeldung zeigt dem Team-Konto den Team-Bereich in der Leiste');
+    // AP-14 Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nicht über die Anmeldung
+    $mAnm = (int)db_wert("SELECT id FROM anmeldung WHERE email = 'mia@example.org'");
+    $r = http_anfrage($basis, 'GET', '/team/personen?a=' . $mAnm, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'value="mia@example.org" readonly') && str_contains($r['text'], 'Bitte wende dich an eine BetreiberIn'), 'Team: E-Mail-Feld eines Team-Kontos schreibgeschützt mit Hinweis');
+    $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $mAnm, $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'speichern', 'a' => $mAnm, 'vorname' => 'Mia', 'nachname' => 'Mailcode', 'email' => 'fremd@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'ZNA', 'essen' => 'egal', 'ohne_mail' => '1'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Bitte wende dich an eine BetreiberIn') && konto_laden($mk)['email'] === 'mia@example.org' && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$mAnm]) === 'mia@example.org', 'POST mit fremder Adresse auf Team-Anmeldung: Fehler, Konto-Adresse gleich');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung?aendern=daten', $h, [], null, $k2);
+    pruefe(str_contains($r['text'], 'value="mia@example.org" readonly') && str_contains($r['text'], 'Adresse deines Team-Kontos'), 'Meine Anmeldung → Daten: Adresse des Team-Kontos schreibgeschützt');
+    // AP-14 Unterpunkt 5 (B-5, T-279): Storno lässt den Team-Login bestehen
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'storno'], $k2);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/deine-anmeldung' && db_wert('SELECT COUNT(*) FROM anmeldung WHERE id = ?', [$mAnm]) == 0, 'Team-Mitglied storniert eigene Anmeldung: 303 auf /deine-anmeldung');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
+    pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $k2)['status'] === 200 && str_contains($r['text'], 'Eingeloggt als Mia Mailcode') && str_contains($r['text'], 'href="/anmelden"') && str_contains($r['text'], '<strong>Mia Mailcode</strong>'), 'nach dem Storno: Team-Bereich erreichbar, „Eingeloggt als …“ mit „Jetzt anmelden“');
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
     // Ausloggen beendet alles
     $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k2);
@@ -663,6 +677,15 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k3);
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'theo@example.org', 'passwort' => 'theos-passwort-1'], $k3);
     pruefe(($r['kopf']['location'] ?? '') === '/konto' && str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['text'], 'Konto löschen'), 'Teilnehmend: Login ohne zweiten Faktor, Mein Konto mit Löschen');
+    // AP-14 Unterpunkt 5 (B-5, T-279): Storno lässt den Konto-Login bestehen
+    $tAnm = team_anlegen(['vorname' => 'Theo', 'nachname' => 'Teil', 'email' => 'theo@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'ZNA', 'efn' => '', 'essen' => 'egal'], true, false)['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$tk, $tAnm]);
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    $sv = str_contains($r['text'], 'Hallo Theo.');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'storno'], $k3);
+    pruefe($sv && $r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/deine-anmeldung' && db_wert('SELECT COUNT(*) FROM anmeldung WHERE id = ?', [$tAnm]) == 0, 'Konto: Anmeldung stornieren → 303 auf /deine-anmeldung');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    pruefe(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['status'] === 200 && str_contains($r['text'], 'Eingeloggt als Theo Teil') && str_contains($r['text'], '<strong>Theo Teil</strong>'), 'nach dem Storno: weiter eingeloggt, Name im Personen-Menü');
     konto_rolle_setzen($tk, 'admin', null);
     pruefe(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['status'] === 303, 'Rolle angehoben: alte Sitzung gilt nicht mehr');
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k3);
@@ -1068,6 +1091,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     newsletter_http_tests($basis, $h, $tmp, $b);
     veranstaltung_http_tests($basis, $h, $tmp, $b);
     rechte_http_tests($basis, $h, $tmp, $b);
+    ap14_http_tests($basis, $h, $tmp);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -1212,6 +1236,24 @@ function veranstaltung_http_tests(string $basis, string $h, string $tmp, string 
     db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = ?", [$v1]);
     va_zwischenspeicher_leeren();
     http_anfrage($basis, 'GET', '/team?va=' . $v1, $h, [], null, $b);
+}
+
+/** Review-Behebung 1 (AP-14): Vorlage „Daten übernehmen“ nach dem Absenden weg (B-13, T-280). */
+function ap14_http_tests(string $basis, string $h, string $tmp): void
+{
+    abschnitt('HTTP: Review-Behebung 1 (AP-14)');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 60));
+    $alt = team_anlegen(['vorname' => 'Vera', 'nachname' => 'Vorlage', 'email' => 'vera.vorlage@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 9', 'efn' => '', 'essen' => 'egal'], true, false)['id'];
+    $tok = anm_link_erzeugen($alt, 'uebernehmen', time() + 3600);
+    $k = "$tmp/kekse-vorlage.txt";
+    $r = http_anfrage($basis, 'GET', '/link?t=' . $tok, $h, [], null, $k);
+    $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => $tok], $k);
+    $vorher = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k);
+    http_anmelden($basis, $h, $k, ['vorname' => 'Vera', 'nachname' => 'Neu', 'email' => 'vera.neu@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 9', 'efn' => '', 'essen' => 'egal']);
+    $neu = db_zeile("SELECT id FROM anmeldung WHERE email = 'vera.neu@example.org'");
+    $nachher = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k);
+    pruefe(($r['kopf']['location'] ?? '') === '/anmelden' && str_contains($vorher['text'], 'value="vera.vorlage@example.org"') && $neu !== null && !str_contains($nachher['text'], 'vera.vorlage@example.org') && !str_contains($nachher['text'], 'Station 9'), 'Vorlage füllt das Formular, nach dem Absenden ist sie weg');
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
 }
 
 function http_tests(string $wurzel, string $tmp): void
