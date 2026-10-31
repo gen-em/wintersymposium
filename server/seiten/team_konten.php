@@ -28,7 +28,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         switch ($aktion) {
             case 'anlegen':
                 $werte = ['name' => (string)($_POST['name'] ?? ''), 'email' => (string)($_POST['email'] ?? ''), 'rolle' => (string)($_POST['rolle'] ?? '')];
-                $fehler = in_array($werte['rolle'], TEAM_ROLLEN, true) ? konto_eingabe_fehler($werte['name'], $werte['email'], $werte['rolle']) : ['Bitte Admin oder Betreiber wählen.'];
+                $fehler = in_array($werte['rolle'], TEAM_ROLLEN, true) ? konto_eingabe_fehler($werte['name'], $werte['email'], $werte['rolle']) : ['Bitte Admin oder BetreiberIn wählen.'];
                 if ($fehler === []) {
                     $id = konto_anlegen($werte['name'], $werte['email'], $werte['rolle'], null, $ich);
                     team_link_weitergeben(konto_laden($id), 'einrichten', empty($_POST['nur_anzeigen']), $ich);
@@ -39,12 +39,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 team_link_weitergeben($ziel, $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort', empty($_POST['nur_anzeigen']), $ich);
                 umleiten('/team/konten');
             case 'zweitfaktor':
-                totp_zuruecksetzen((int)$ziel['id'], 'durch Betreiber', $ich);
+                totp_zuruecksetzen((int)$ziel['id'], 'durch BetreiberIn', $ich);
                 flash_setzen('ok', 'Zweiter Faktor von ' . $ziel['name'] . ' zurückgesetzt. Beim nächsten Einloggen richtet ' . $ziel['name'] . ' ihn neu ein.');
                 umleiten('/team/konten');
             case 'sperren':
                 if ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
-                    $fehler[] = 'Es muss mindestens ein aktiver Betreiber bleiben.';
+                    $fehler[] = 'Es muss mindestens eine aktive BetreiberIn bleiben.';
                     break;
                 }
                 konto_aktiv_setzen((int)$ziel['id'], (int)$ziel['aktiv'] !== 1, $ich);
@@ -52,7 +52,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 umleiten('/team/konten');
             case 'veranstaltungen':
                 if ($ziel['rolle'] !== 'admin') {
-                    $fehler[] = 'Betreiber sehen immer alle Veranstaltungen.';
+                    $fehler[] = 'BetreiberInnen sehen immer alle Veranstaltungen.';
                     break;
                 }
                 $alle = ($_POST['umfang'] ?? '') !== 'auswahl';
@@ -65,7 +65,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 if (!in_array($rolle, TEAM_ROLLEN, true) || $rolle === $ziel['rolle']) {
                     $fehler[] = 'Bitte eine andere Rolle wählen.';
                 } elseif ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
-                    $fehler[] = 'Es muss mindestens ein aktiver Betreiber bleiben.';
+                    $fehler[] = 'Es muss mindestens eine aktive BetreiberIn bleiben.';
                 } elseif (!rate_erlaubt('zweitfaktor', $kennung)) {
                     $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
                 } elseif (!totp_anmeldung_pruefen($ich, (string)($_POST['totp'] ?? ''))['ok']) {
@@ -135,7 +135,7 @@ if (is_array($link)): ?>
                             <label class="haken"><input type="radio" name="umfang" value="auswahl"<?= $erlaubt !== null ? ' checked' : '' ?>><span><strong>Nur ausgewählte:</strong></span></label>
                             <?php foreach (va_alle() as $v): ?><label class="haken einrueck"><input type="checkbox" name="va[]" value="<?= $v['id'] ?>"<?= $erlaubt !== null && in_array($v['id'], $erlaubt, true) ? ' checked' : '' ?>><span><?= e($v['name']) ?> <span class="meta klein">· <?= e($v['kuerzel']) ?> · <?= e(VA_STATUS[$v['status']]) ?></span></span></label><?php endforeach; ?>
                         </fieldset>
-                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen. Neue Veranstaltungen legen nur Betreiber an.</p>
+                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen. Neue Veranstaltungen legen nur BetreiberInnen an.</p>
                         <button class="knopf klein" type="submit">Speichern</button>
                     </form>
                 </details>
@@ -169,7 +169,7 @@ if (is_array($link)): ?>
         <label for="rolle">Rolle</label>
         <select id="rolle" name="rolle">
             <option value="admin"<?= $werte['rolle'] === 'admin' ? ' selected' : '' ?>>Admin – Programm, Einstellungen, Anmeldungen</option>
-            <option value="betreiber"<?= $werte['rolle'] === 'betreiber' ? ' selected' : '' ?>>Betreiber – zusätzlich Team-Konten und Technik</option>
+            <option value="betreiber"<?= $werte['rolle'] === 'betreiber' ? ' selected' : '' ?>>BetreiberIn – zusätzlich Team-Konten und Technik</option>
         </select>
         <label class="haken"><input type="checkbox" name="nur_anzeigen" value="1"><span>Keine Mail – Link nur hier anzeigen (ich gebe ihn selbst weiter)</span></label>
         <button type="submit" class="knopf">Konto anlegen und einladen</button>

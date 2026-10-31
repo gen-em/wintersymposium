@@ -106,7 +106,7 @@ if ($neueCodes !== null): ?>
             <form method="post" action="/konto/zweitfaktor" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="codes"><?= $pwFeld('codes') ?><button type="submit" class="knopf zweit">Neue Wiederherstellungscodes erzeugen</button></form>
             </div>
         </details>
-        <p class="meta klein">Handy gewechselt und kein Code mehr? Logg dich mit einem Wiederherstellungscode ein und richte die App hier neu ein – oder bitte einen Betreiber, deinen zweiten Faktor zurückzusetzen.</p>
+        <p class="meta klein">Handy gewechselt und kein Code mehr? Logg dich mit einem Wiederherstellungscode ein und richte die App hier neu ein – oder bitte eine BetreiberIn, deinen zweiten Faktor zurückzusetzen.</p>
     </section>
 </div>
 <?php

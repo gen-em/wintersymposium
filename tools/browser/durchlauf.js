@@ -708,7 +708,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.click('form:has(input[value=anlegen]) button');
       await p.waitForLoadState('load');
       notiere(engine, 'handy', 'team-konten', 'Einladung per Mail (AP-6)', (await p.textContent('.meldung')).includes(`Einladung an mail-${engine}@example.org geschickt`) && !(await p.textContent('body')).includes('/einrichten?t='));
-      notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'Betreiber');
+      notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'BetreiberIn');
 
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen
       const link = php([path.join(WURZEL, 'server/cli/konto.php'), 'link', 'anna@example.org'], vor.config).trim()

@@ -273,7 +273,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js', 'pas
                 <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig</dd></div>
             </dl>
             <div class="aktionen abstand"><a class="knopf zweit" href="/konto/zweitfaktor">Zwei-Faktor einstellen</a><a class="knopf zweit" href="/team">Zum Team-Bereich</a></div>
-            <p class="meta klein">Adresse ändern oder das Konto löschen kann ein Betreiber unter Team-Konten.</p>
+            <p class="meta klein">Adresse ändern oder das Konto löschen kann eine BetreiberIn unter Team-Konten.</p>
         </div>
         <?php else: ?>
         <div class="kasten">

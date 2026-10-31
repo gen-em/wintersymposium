@@ -44,39 +44,23 @@ function anmeldung_konto(): ?array
 }
 
 /**
- * Team-Login auf öffentlichen Seiten erkennen (Rückmeldung 2026-10-30): Diese
- * Seiten nutzen die Sitzung für Teilnehmende; die Team-Sitzung wird vorher nur
- * gelesen (read_and_close), nichts daran ändert sich. Geht nur, solange noch
- * keine Sitzung läuft – sonst zählt der zuerst gelesene Wert.
+ * Team-Login auf öffentlichen Seiten erkennen (Rückmeldung 2026-10-30).
+ * Bis 0.19 wurde die Sitzung dafür nur gelesen (read_and_close, mit eigenen
+ * Einstellungen); auf Staging erkannte die Startseite so kein eingeloggtes
+ * Konto (Rückmeldung 2026-10-31). Jetzt wird die Sitzung wie auf allen
+ * anderen Seiten geöffnet – derselbe Keks für alles (E-54); das hält auch die
+ * Sitzung beim Lesen öffentlicher Seiten wach.
  */
 function team_gesehen(): ?array
 {
-    static $k = false;
-    if ($k !== false) {
-        return $k;
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        $c = $_COOKIE[SITZUNG_ARTEN['team']['name']] ?? null;
+        if (!is_string($c) || preg_match('/^[A-Za-z0-9,-]{22,256}$/', $c) !== 1) {
+            return null;
+        }
+        team_sitzung();
     }
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        return $k = anmeldung_konto(); // eine Sitzung für alles (E-54)
-    }
-    $name = SITZUNG_ARTEN['team']['name'];
-    $c = $_COOKIE[$name] ?? null;
-    if (!is_string($c) || preg_match('/^[A-Za-z0-9,-]{22,256}$/', $c) !== 1) {
-        return $k = null;
-    }
-    ini_set('session.save_path', sitzung_ablage_pfad());
-    ini_set('session.use_strict_mode', '1');
-    session_name($name);
-    session_id($c);
-    @session_start(['read_and_close' => true]);
-    $s = $_SESSION['konto'] ?? null;
-    $frisch = time() - (int)($_SESSION['_zuletzt'] ?? 0) <= SITZUNG_LEERLAUF_S;
-    $_SESSION = [];
-    if (!$frisch || !is_array($s) || !isset($s['id'], $s['version'])) {
-        return $k = null;
-    }
-    $konto = konto_laden((int)$s['id']);
-    $ok = $konto !== null && (int)$konto['aktiv'] === 1 && konto_ist_team($konto) && (int)$konto['sitzung_version'] === (int)$s['version'] && zweitfaktor_da($konto);
-    return $k = $ok ? $konto : null;
+    return anmeldung_konto(); // eine Sitzung für alles (E-54)
 }
 
 function anmeldung_halb_setzen(array $k): void
@@ -207,7 +191,7 @@ function team_veranstaltung_waehlen(array $konto): void
         } else {
             $erlaubt = va_alle_fuer($konto);
             if ($erlaubt === []) {
-                seite_meldung(403, 'Noch keine Veranstaltung', 'Dir ist noch keine Veranstaltung zugeordnet. Eine Betreiberin oder ein Betreiber schaltet dich unter Team-Konten frei.');
+                seite_meldung(403, 'Noch keine Veranstaltung', 'Dir ist noch keine Veranstaltung zugeordnet. Eine BetreiberIn schaltet dich unter Team-Konten frei.');
             }
             $id = $erlaubt[0]['id'];
         }

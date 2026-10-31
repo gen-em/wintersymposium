@@ -66,7 +66,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             seite_kopf('Installation abgeschlossen', ['nav' => false]);
             echo '<div class="innen seitenkopf"><h1 class="titel">Installation abgeschlossen</h1></div><div class="innen text">'
                 . '<p>Datenbank angelegt, Haupt-Host <strong>' . e($host) . '</strong> eingetragen, '
-                . 'erster Betreiber angelegt. Der Installer ist jetzt gesperrt.</p>'
+                . 'erste BetreiberIn angelegt. Der Installer ist jetzt gesperrt.</p>'
                 . '<p>Als Nächstes <a href="/einloggen">einloggen</a> und den zweiten Faktor mit einer Authenticator-App einrichten.</p></div>';
             seite_fuss();
             exit;
@@ -76,7 +76,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 seite_kopf('Installation', ['nav' => false]);
 echo '<div class="innen seitenkopf"><h1 class="titel">Installation</h1></div><div class="innen">';
-echo '<p class="text">Legt die Datenbank und den ersten Betreiber an. Haupt-Host wird <strong>' . e($host) . '</strong>.</p>';
+echo '<p class="text">Legt die Datenbank und die erste BetreiberIn an. Haupt-Host wird <strong>' . e($host) . '</strong>.</p>';
 if ($fehler !== []) {
     echo '<div class="meldung fehler" role="alert"><ul>';
     foreach ($fehler as $f) {
@@ -90,7 +90,7 @@ if ($fehler !== []) {
     <label for="schluessel">Installationsschlüssel (aus config.php)</label>
     <input id="schluessel" name="schluessel" type="password" required autocomplete="off">
 
-    <label for="name">Name des ersten Betreibers</label>
+    <label for="name">Name der ersten BetreiberIn</label>
     <input id="name" name="name" type="text" required maxlength="120" value="<?= e($werte['name']) ?>" autocomplete="name">
 
     <label for="email">E-Mail</label>

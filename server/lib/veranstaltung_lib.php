@@ -585,7 +585,7 @@ function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch): vo
 function va_rechte_text(array $konto): string
 {
     if ($konto['rolle'] === 'betreiber') {
-        return 'alle (Betreiber)';
+        return 'alle (BetreiberIn)';
     }
     $ids = va_erlaubte_ids($konto);
     if ($ids === null) {

@@ -15,10 +15,10 @@ $betreiber = $konto['rolle'] === 'betreiber';
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     if (!$betreiber) {
-        seite_meldung(403, 'Nicht erlaubt', 'Einträge blendet nur ein Betreiber aus.');
+        seite_meldung(403, 'Nicht erlaubt', 'Einträge blendet nur eine BetreiberIn aus.');
     }
     $aus = ($_POST['aktion'] ?? '') === 'ausblenden';
-    flash_setzen('ok', audit_ausblenden((int)($_POST['id'] ?? 0), $aus, (int)$konto['id']) ? ($aus ? 'Eintrag ausgeblendet – nur Betreiber sehen ihn noch.' : 'Eintrag wieder eingeblendet.') : 'Nichts geändert.');
+    flash_setzen('ok', audit_ausblenden((int)($_POST['id'] ?? 0), $aus, (int)$konto['id']) ? ($aus ? 'Eintrag ausgeblendet – nur BetreiberInnen sehen ihn noch.' : 'Eintrag wieder eingeblendet.') : 'Nichts geändert.');
     umleiten('/team/protokoll?' . http_build_query(array_filter(['art' => $_POST['art'] ?? null, 'q' => $_POST['q'] ?? null, 's' => $_POST['s'] ?? null, 'v' => $_POST['v'] ?? null])));
 }
 $art = (string)($_GET['art'] ?? '');
@@ -57,7 +57,7 @@ $vaNamen = array_column(va_alle(), 'kuerzel', 'id');
 $titel = fn(string $a) => AUDIT_ARTEN[$a] ?? $a;
 team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
 ?>
-<p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur Betreiber.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten, Mailings und Teilnahme aus deinen Veranstaltungen.' ?></p>
+<p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur BetreiberInnen.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten, Mailings und Teilnahme aus deinen Veranstaltungen.' ?></p>
 <div class="filter" role="group" aria-label="Veranstaltung">
     <a class="knopf klein-knopf<?= $vf === '' ? '' : ' zweit' ?>" href="<?= e($link(['v' => null, 's' => null])) ?>"<?= $vf === '' ? ' aria-current="true"' : '' ?>>Gewählte Veranstaltung</a>
     <a class="knopf klein-knopf<?= $vf === 'alle' ? '' : ' zweit' ?>" href="<?= e($link(['v' => 'alle', 's' => null])) ?>"<?= $vf === 'alle' ? ' aria-current="true"' : '' ?>><?= $betreiber ? 'Alle Einträge' : 'Alle meine Veranstaltungen' ?></a>
@@ -85,9 +85,9 @@ team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
         <tr<?= $weg ? ' class="ausgeblendet"' : '' ?>><td data-label="Zeit" class="mono klein"><?= e(datum_zeit_text($z['zeit'])) ?></td><td data-label="Art"><span class="chip offen"><?= e($titel($z['art'])) ?></span></td><td data-label="Veranstaltung" class="klein"><?= isset($z['veranstaltung_id']) ? e($vaNamen[(int)$z['veranstaltung_id']] ?? 'gelöscht') : '<span class="meta">–</span>' ?></td><td data-label="Was"><?= e($z['text']) ?></td><td data-label="Wer"><?= e($z['name'] ?? ($z['konto_id'] !== null ? 'Konto ' . $z['konto_id'] : 'System / Teilnehmende')) ?></td>
         <?php if ($betreiber): ?><td data-label="Sichtbar"><?php if ($z['art'] !== 'protokoll'): ?>
             <form method="post" action="/team/protokoll" class="inline-form"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$z['id'] ?>"><input type="hidden" name="art" value="<?= e($art) ?>"><input type="hidden" name="q" value="<?= e($q) ?>"><input type="hidden" name="s" value="<?= $seite > 1 ? $seite : '' ?>"><input type="hidden" name="v" value="<?= e($vf) ?>">
-                <?php if ($weg): ?><span class="chip gesperrt">nur Betreiber</span> <button class="knopf zweit klein-knopf" type="submit" name="aktion" value="einblenden">Einblenden</button>
+                <?php if ($weg): ?><span class="chip gesperrt">nur BetreiberInnen</span> <button class="knopf zweit klein-knopf" type="submit" name="aktion" value="einblenden">Einblenden</button>
                 <?php else: ?><button class="knopf zweit klein-knopf" type="submit" name="aktion" value="ausblenden">Ausblenden</button><?php endif; ?>
-            </form><?php else: ?><span class="meta klein">nur Betreiber</span><?php endif; ?></td><?php endif; ?></tr>
+            </form><?php else: ?><span class="meta klein">nur BetreiberInnen</span><?php endif; ?></td><?php endif; ?></tr>
     <?php endforeach; ?>
     </tbody>
 </table></div>

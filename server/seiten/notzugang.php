@@ -52,12 +52,12 @@ if ($link !== null): ?>
     <p class="meta klein">Danach empfohlen: den Installationsschlüssel in der config.php durch einen neuen ersetzen.</p>
 </div>
 <?php else: ?>
-<p>Nur für Betreiber, die Handy und Wiederherstellungscodes verloren haben. Du brauchst den Installationsschlüssel aus der <span class="mono">config.php</span> auf dem Webspace.</p>
+<p>Nur für BetreiberInnen, die Handy und Wiederherstellungscodes verloren haben. Du brauchst den Installationsschlüssel aus der <span class="mono">config.php</span> auf dem Webspace.</p>
 <form method="post" action="/notzugang" class="formular">
     <?= csrf_feld() ?>
     <label for="schluessel">Installationsschlüssel</label>
     <input id="schluessel" name="schluessel" type="password" required autocomplete="off">
-    <label for="email">E-Mail-Adresse des Betreiber-Kontos</label>
+    <label for="email">E-Mail-Adresse des BetreiberIn-Kontos</label>
     <input id="email" name="email" type="email" required maxlength="254" autocomplete="username">
     <button type="submit" class="knopf">Zweiten Faktor zurücksetzen</button>
 </form>
