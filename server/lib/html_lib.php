@@ -63,7 +63,8 @@ function seite_kopf(string $titel, array $opt = []): void
         // Rückmeldung 2026-10-30: erkannt „Meine Anmeldung“, sonst der grüne Knopf „Anmelden“ zur Einstiegsseite (E-42)
         $liste .= $erkannt ? $a('/deine-anmeldung', 'Meine Anmeldung', '/deine-anmeldung') : $a('/deine-anmeldung', 'Anmelden', in_array($aktiv, ['/anmelden', '/deine-anmeldung'], true) ? $aktiv : '-', 'nav-anmelden');
         if (is_array($team)) {
-            $liste .= $a('/team', 'Team-Bereich', '/team');
+            // Team-Bereich grün abgesetzt: kein Teil der öffentlichen Seite (Rückmeldung 2026-10-31)
+            $liste .= $a('/team', 'Team-Bereich', '/team', 'nav-team');
         }
         // Personen-Menü (Mockup Variante A): ausgeloggt „Einloggen“, sonst Name mit Menü
         if (!$erkannt) {

@@ -418,6 +418,9 @@ table.t th { font-family: var(--f-zwischen); font-weight: 700; text-transform: u
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* ---- Anmeldung (AP-4; Mockups „Anmelden“, „Wie willst du rein?“, „Deine Anmeldung“) ---- */
+.nav-liste a.nav-team { color: var(--gruen); }
+.nav-liste a.nav-team:hover { color: var(--fg); }
+.nav-liste a.nav-team[aria-current="page"] { color: var(--gruen); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 7px; }
 .nav-liste a.nav-anmelden { display: inline-flex; align-items: center; min-height: 36px; padding: 4px 14px; border-radius: 999px; background: var(--gruen); color: var(--nachtblau); }
 .nav-liste a.nav-anmelden[aria-current="page"] { color: var(--nachtblau); box-shadow: inset 0 0 0 2px var(--nachtblau); }
 .menue .nav-liste a.nav-anmelden { display: inline-flex; margin: 10px 0 4px; border-top: 0; padding: 4px 18px; }

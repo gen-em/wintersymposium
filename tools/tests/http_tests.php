@@ -740,6 +740,10 @@ function passkey_http_tests(string $basis, string $tmp): void
 function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Team-Bereich (AP-5)');
+    // Rückmeldung 2026-10-31: eingeloggt zeigt auch die Startseite das Personen-Menü (nicht „Einloggen“)
+    http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    $r = http_anfrage($basis, 'GET', '/', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'class="person-menue"') && !str_contains($r['text'], '>Einloggen</a>') && str_contains($r['text'], 'href="/team"'), 'Startseite erkennt das eingeloggte Team-Konto');
     foreach (['/team' => 'Zu erledigen', '/team/personen' => '+ Person anlegen', '/team/workshops' => 'Termin anklicken', '/team/statistik' => 'Anmeldungen seit Start', '/team/texte' => 'Datenschutzerklärung', '/team/protokoll' => 'Einträge', '/team/daten' => 'Hostnamen'] as $pfad => $text) {
         $r = http_anfrage($basis, 'GET', $pfad, $h, [], null, $b);
         pruefe($r['status'] === 200 && str_contains($r['text'], $text), "Seite $pfad");
