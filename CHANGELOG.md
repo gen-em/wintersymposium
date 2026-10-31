@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.2] – 2026-10-31
+
+### Geändert
+
+- **Browser-Prüfung gestuft** (R-12, E-62): Stufe 1 `lauf.php` immer, Stufe 2 gezielt (`WS_STUFE=2 WS_SEITEN=…`, Chromium, Handy und breiter Desktop, ca. 1 Minute), Stufe 3 der volle Lauf bei Arbeitspaket-Ende, gemeinsamen Teilen, vor Produktion und spätestens nach 5 PRs. Der Durchlauf kennt dafür `WS_STUFE`, `WS_SEITEN` und `WS_BREITEN`.
+
 ## [0.21.1] – 2026-10-31
 
 ### Geändert

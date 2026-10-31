@@ -100,6 +100,16 @@ php tools/tests/lauf.php
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
 
+**Stufen** (R-12, E-62):
+
+| Stufe | Wann | Was |
+|---|---|---|
+| 1 | jede Änderung | `php tools/tests/lauf.php` |
+| 2 | Oberfläche einzelner Seiten | `WS_STUFE=2 WS_SEITEN=team-konten,team-statistik node tools/browser/durchlauf.js <ordner>` – nur Chromium, Handy und breiter Desktop; volle Prüfung und Fotos nur für Seiten, deren Name (wie in `bericht.txt`) mit einem Eintrag beginnt; ca. 1 Minute |
+| 3 | Arbeitspaket fertig, gemeinsame Teile (Kopfleiste, Navigation, Knöpfe, Meldungen, Formulare, CSS-Grundlagen, JavaScript, Login/Sitzung), vor Produktion, spätestens nach 5 PRs ohne vollen Lauf | voller Durchlauf, 30–40 Minuten |
+
+Einzeln überschreibbar: `WS_ENGINES=webkit`, `WS_BREITEN=handy,tablet`.
+
 **Browser-Durchlauf (R-12)** in Chromium, Firefox und WebKit, je auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px): alle Seiten, Klickwege (Menü, Team-Reiter, Login mit zweitem Faktor, Konto anlegen, Einrichtungslink, Ausloggen), jedes Auswahlfeld, jedes Aufklapp-Element, jedes Popup; dazu seitliches Scrollen, Überstand und Konsolenfehler.
 
 ```bash

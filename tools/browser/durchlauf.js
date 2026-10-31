@@ -19,6 +19,14 @@
  * Lauf (Testdatenbank wird geleert, wie bei lauf.php):
  *   WS_TEST_DB_HOST=… WS_TEST_DB_NAME=… WS_TEST_DB_USER=… WS_TEST_DB_PASS=… \
  *   node tools/browser/durchlauf.js [Ausgabeordner]
+ *
+ * Stufen (R-12, Admin 2026-10-31; docs/betrieb.md Abschnitt 6):
+ *   Stufe 3 (voll): ohne weitere Angaben – 3 Engines × 4 Breiten.
+ *   Stufe 2 (gezielt): WS_STUFE=2 WS_SEITEN=team-konten,statistik – nur Chromium,
+ *     Handy und breiter Desktop; volle Prüfung und Fotos nur für Seiten, deren
+ *     Name mit einem der Einträge beginnt (Namen wie in bericht.txt). Die Abläufe
+ *     dazwischen laufen trotzdem, weil spätere Seiten auf ihnen aufbauen.
+ *   Einzeln überschreibbar: WS_ENGINES=webkit, WS_BREITEN=handy,tablet.
  */
 'use strict';
 // Eigener Ordner mit allen drei Engines (tools/browser/einrichten.sh); die
@@ -39,13 +47,19 @@ const { spawn, execFileSync } = require('child_process');
 const WURZEL = path.resolve(__dirname, '..', '..');
 const AUS = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'ws-browser-' + Date.now()));
 // WS_ENGINES=webkit (kommagetrennt) prüft nur diese Engines, z. B. zur Fehlersuche
-const ENGINES = (process.env.WS_ENGINES || 'chromium,firefox,webkit').split(',');
-const BREITEN = [
+const STUFE2 = process.env.WS_STUFE === '2';
+const ENGINES = (process.env.WS_ENGINES || (STUFE2 ? 'chromium' : 'chromium,firefox,webkit')).split(',');
+const ALLE_BREITEN = [
   ['handy', 390, 844],
   ['tablet', 768, 1024],
   ['desktop-schmal', 1024, 768],
   ['desktop-breit', 1440, 900],
 ];
+const BREITEN_WAHL = (process.env.WS_BREITEN || (STUFE2 ? 'handy,desktop-breit' : '')).split(',').filter(Boolean);
+const BREITEN = BREITEN_WAHL.length ? ALLE_BREITEN.filter(b => BREITEN_WAHL.includes(b[0])) : ALLE_BREITEN;
+// Stufe 2: nur diese Seiten voll prüfen und fotografieren (Präfixe der Seitennamen)
+const SEITEN = (process.env.WS_SEITEN || '').split(',').map(x => x.trim()).filter(Boolean);
+const seiteGewaehlt = name => SEITEN.length === 0 || SEITEN.some(x => name.startsWith(x));
 
 fs.mkdirSync(AUS, { recursive: true });
 const ergebnisse = [];
@@ -165,6 +179,11 @@ async function ziehen(p, griff, ziel, anteil, waehrend) {
 /** Seite prüfen: Status, seitliches Scrollen, Fehler; Bildschirmfoto. */
 async function pruefeSeite(p, fehler, engine, breite, name, url) {
   fehler.length = 0;
+  if (!seiteGewaehlt(name)) {
+    // Stufe 2: nicht gewählte Seite nur aufrufen (der Ablauf braucht sie), nicht prüfen
+    if (url) await p.goto(url, { waitUntil: 'load' });
+    return;
+  }
   const antwort = url ? await p.goto(url, { waitUntil: 'load' }) : null;
   await p.waitForTimeout(150);
   if (antwort) notiere(engine, breite, name, 'Status', antwort.status() < 400, String(antwort.status()));
@@ -829,7 +848,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
 
   const fehlerZahl = ergebnisse.filter(e => !e.ok).length;
   const zeilen = ergebnisse.map(e => `${e.ok ? 'ok    ' : 'FEHLER'} ${e.engine.padEnd(8)} ${e.breite.padEnd(15)} ${e.seite.padEnd(16)} ${e.was}${e.ok ? '' : ' – ' + e.info}`);
-  const zusammen = `${ergebnisse.length - fehlerZahl} ok, ${fehlerZahl} Fehler (${ENGINES.length} Engines × ${BREITEN.length} Breiten)`;
+  const zusammen = `${ergebnisse.length - fehlerZahl} ok, ${fehlerZahl} Fehler (${ENGINES.length} Engines × ${BREITEN.length} Breiten${SEITEN.length ? '; Stufe 2, Seiten: ' + SEITEN.join(', ') : ''})`;
   fs.writeFileSync(path.join(AUS, 'bericht.txt'), zeilen.join('\n') + '\n\n' + zusammen + '\n');
   console.log('\n' + zusammen + '\nBericht und Bildschirmfotos: ' + AUS);
   process.exit(fehlerZahl === 0 ? 0 : 1);
