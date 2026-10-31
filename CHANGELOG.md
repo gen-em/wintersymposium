@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.3] – 2026-10-31
+
+### Doku
+
+- **AP-14 geplant** (Review-Behebung 1: S-1, B-1, B-2/B-3, S-2, B-5, B-13) mit sieben Unterpunkten im Konzept; E-62 mit den Entscheidungen des Admins (Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket); O-40 und O-41 entschieden, O-42 bis O-44 offen; Prüfprotokoll reserviert T-275 bis T-281.
+
 ## [0.21.2] – 2026-10-31
 
 ### Doku
