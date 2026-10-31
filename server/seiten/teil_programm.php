@@ -19,6 +19,9 @@ $anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > t
 $dauer = fn(string $von, string $bis) => minuten($bis) - minuten($von);
 $frei = fn(array $t) => max(0, $t['plaetze'] - termin_belegt((int)$t['id']));
 $chipFrei = function (array $t) use ($frei): string {
+    if (va_abgeschlossen()) {
+        return ''; // Rückblick (E-58): keine Plätze mehr
+    }
     $f = $frei($t);
     if ($f > 0) {
         return '<span class="chip ok">' . $f . ' frei</span>';
@@ -89,7 +92,7 @@ if ($gliederung === []): ?>
                             <?php elseif ($k['art'] === 'punkt'): ?>
                             <span class="gb offen" data-von="<?= minuten($zp['beginn']) ?>" data-bis="<?= minuten($zp['ende']) ?>"><b><?= e($zp['beginn'] . '–' . $zp['ende']) ?></b> ohne Anmeldung<?= $zp['ort'] !== '' ? ' · ' . e($zp['ort']) : '' ?></span>
                             <?php else: $t = $k['termin']; $f = $frei($t); ?>
-                            <button type="button" class="gb <?= $f > 0 ? 'frei' : 'voll' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($t['beginn']) ?>" data-bis="<?= minuten($t['ende']) ?>" title="<?= e($zp['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']) ?>"><b><?= e($t['beginn']) ?></b> <?= $f > 0 ? $f . ' frei' : 'voll' ?></button>
+                            <button type="button" class="gb <?= $f > 0 ? 'frei' : 'voll' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($t['beginn']) ?>" data-bis="<?= minuten($t['ende']) ?>" title="<?= e($zp['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']) ?>"><b><?= e($t['beginn']) ?></b> <?= va_abgeschlossen() ? '' : ($f > 0 ? $f . ' frei' : 'voll') ?></button>
                             <?php endif;
                         endforeach; ?>
                         </div>

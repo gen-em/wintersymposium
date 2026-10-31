@@ -47,6 +47,7 @@ foreach (db_zeilen('SELECT table_name AS t FROM information_schema.tables WHERE 
     db()->exec('DROP TABLE `' . $z['t'] . '`');
 }
 db()->exec('SET FOREIGN_KEY_CHECKS = 1');
+va_zwischenspeicher_leeren();
 
 $pw = 'browser-test-passwort';
 install_ausfuehren('127.0.0.1', ['name' => 'Bea Betreiberin', 'email' => 'betrieb@example.org', 'passwort' => $pw, 'weitere_hosts' => 'localhost']);

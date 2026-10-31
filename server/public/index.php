@@ -67,6 +67,8 @@ const ROUTEN = [
     '/newsletter/abmelden' => 'newsletter_abmelden',
     '/team/newsletter' => 'team_newsletter',
     '/team/teilnahme' => 'team_teilnahme',
+    '/team/veranstaltungen' => 'team_veranstaltungen',
+    '/konto/zertifikat' => 'zertifikat',
     '/team/teilnahme/liste' => 'team_teilnahme_datei',
     '/team/teilnahme/zertifikat' => 'team_teilnahme_datei',
     '/team/teilnahme/unterschrift' => 'team_teilnahme_datei',
@@ -100,7 +102,15 @@ migration_bei_bedarf();
 // 4. Wartung
 wartung_tor($pfad);
 
-// 5. Seite
+// 5. Veranstaltung über ihr Kürzel (E-58): /wintersymposium2027 zeigt deren Startseite;
+//    abgeschlossene nur zum Ansehen, Entwürfe sind nicht öffentlich.
+if ($seite === null && preg_match('#^/([a-z0-9][a-z0-9-]{1,39})$#', $pfad, $m) === 1
+    && ($v = va_per_kuerzel($m[1])) !== null && $v['status'] !== 'entwurf') {
+    va_kontext((int)$v['id']);
+    $seite = 'start';
+}
+
+// 6. Seite
 if ($seite === null || $seite === 'install') {
     nicht_gefunden();
 }

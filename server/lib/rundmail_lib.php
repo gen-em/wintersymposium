@@ -100,7 +100,8 @@ function rm_empfaenger(string $auswahl, string $bg = ''): array
     if ($nl !== null) {
         return nl_empfaenger($nl);
     }
-    $wo = ["a.status = 'bestaetigt'"];
+    // Empfänger aus der Veranstaltung des Kontexts (E-58)
+    $wo = ["a.status = 'bestaetigt'", 'a.veranstaltung_id = ' . va_id()];
     $par = [];
     if ($auswahl === 'angemeldet') {
         $wo[] = "EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')";
@@ -346,7 +347,7 @@ function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $dom
     $text = trim(preg_replace("/\n{3,}/", "\n\n", preg_replace(['/[ \t]+\n/', '/\n[ \t]+/'], "\n", $text) ?? '') ?? '');
     $betreff = rm_platzhalter_text((string)$rm['betreff'], $k);
     // Newsletter (AP-7): Grund, Abmelden und Listen ändern; Mailings an Angemeldete ohne Abmeldelink (E-50)
-    $fuss = $nl === null ? 'Du bekommst diese Mail, weil du zum Wintersymposium angemeldet bist.' : 'Du bekommst diese Mail, weil du den Newsletter „' . $nl['listen'] . '“ abonniert hast.';
+    $fuss = $nl === null ? 'Du bekommst diese Mail, weil du zum ' . va_kurz() . ' angemeldet bist.' : 'Du bekommst diese Mail, weil du den Newsletter „' . $nl['listen'] . '“ abonniert hast.';
     $text .= "\n\n-- \n" . $fuss . ($nl !== null ? "\nAbmelden oder Listen ändern: " . $nl['url'] : '') . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
     $html = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . e($betreff) . '</title></head>'
         . '<body style="margin:0;padding:0;background:#EEF1F5;">'
@@ -411,6 +412,10 @@ function rm_mail_fuer_nl(int $rmId, int $personId): ?array
 /** Für die Warteschlange: Mail eines Mailings an eine Anmeldung (oder null, wenn es sie nicht mehr gibt). */
 function rm_mail_fuer(int $rmId, int $anmId): ?array
 {
+    $va = db_wert('SELECT veranstaltung_id FROM anmeldung WHERE id = ?', [$anmId]);
+    if ($va !== null && (int)$va !== va_id()) {
+        return va_mit((int)$va, fn() => rm_mail_fuer($rmId, $anmId));
+    }
     $rm = rm_laden($rmId);
     $a = db_zeile('SELECT id, vorname, nachname, email FROM anmeldung WHERE id = ?', [$anmId]);
     if ($rm === null || $a === null) {
@@ -440,7 +445,8 @@ function rm_vorschau(array $rm, array $konto): array
 
 function rm_laden(int $id): ?array
 {
-    return db_zeile('SELECT * FROM rundmail WHERE id = ?', [$id]);
+    // Mailings an Angemeldete gehören zu einer Veranstaltung; Newsletter-Mailings (NULL) zu keiner (E-58)
+    return db_zeile('SELECT * FROM rundmail WHERE id = ? AND (veranstaltung_id IS NULL OR veranstaltung_id = ?)', [$id, va_id()]);
 }
 
 /** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */
@@ -482,14 +488,14 @@ function rm_speichern(?int $id, array $w, ?int $kontoId): ?int
     $jetzt = db_jetzt();
     if ($id === null) {
         db_ausfuehren(
-            "INSERT INTO rundmail (betreff, html, auswahl, berufsgruppe, postfach, status, erstellt_von, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, 'entwurf', ?, ?, ?)",
-            [$w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $kontoId, $jetzt, $jetzt]
+            "INSERT INTO rundmail (veranstaltung_id, betreff, html, auswahl, berufsgruppe, postfach, status, erstellt_von, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, 'entwurf', ?, ?, ?)",
+            [rm_nl_listen($w['auswahl']) !== null ? null : va_id(), $w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $kontoId, $jetzt, $jetzt]
         );
         return (int)db()->lastInsertId();
     }
     $n = db_ausfuehren(
-        "UPDATE rundmail SET betreff = ?, html = ?, auswahl = ?, berufsgruppe = ?, postfach = ?, geaendert_am = ? WHERE id = ? AND status = 'entwurf'",
-        [$w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $jetzt, $id]
+        "UPDATE rundmail SET veranstaltung_id = ?, betreff = ?, html = ?, auswahl = ?, berufsgruppe = ?, postfach = ?, geaendert_am = ? WHERE id = ? AND status = 'entwurf'",
+        [rm_nl_listen($w['auswahl']) !== null ? null : va_id(), $w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $jetzt, $id]
     )->rowCount();
     return $n === 1 || rm_laden($id)['status'] === 'entwurf' ? $id : null;
 }
@@ -520,6 +526,11 @@ function rm_sendefehler(array $rm): array
  */
 function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
 {
+    // Empfänger aus der Veranstaltung des Mailings (auch aus dem Job ohne Kontext)
+    $va = db_wert('SELECT veranstaltung_id FROM rundmail WHERE id = ?', [$id]);
+    if ($va !== null && (int)$va !== va_id()) {
+        return va_mit((int)$va, fn() => rm_einreihen($id, $kontoId, $jetzt));
+    }
     $jetzt ??= time();
     $zahl = db_transaktion(function () use ($id, $kontoId, $jetzt): ?int {
         $rm = db_zeile('SELECT * FROM rundmail WHERE id = ? FOR UPDATE', [$id]);
@@ -627,6 +638,7 @@ function rm_liste(): array
     return db_zeilen(
         "SELECT r.id, r.betreff, r.status, r.geplant_fuer, r.gesendet_am, r.empfaenger_zahl, r.auswahl, r.berufsgruppe, r.auswahl_text, r.geaendert_am, k.name AS von
          FROM rundmail r LEFT JOIN konto k ON k.id = COALESCE(r.gesendet_von, r.erstellt_von)
+         WHERE r.veranstaltung_id IS NULL OR r.veranstaltung_id = " . va_id() . "
          ORDER BY FIELD(r.status, 'versand', 'geplant', 'entwurf', 'gesendet', 'abgebrochen'), COALESCE(r.gesendet_am, r.geaendert_am) DESC, r.id DESC"
     );
 }

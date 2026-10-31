@@ -514,7 +514,7 @@ function mail_testen(string $an): ?string
 
 function mail_gruss(): string
 {
-    return "\n\nBis bald\nDein Team vom Wintersymposium\nALLGÄU AKUT – Fortbildung Notfallmedizin\n" . url('/');
+    return "\n\nBis bald\nDein Team vom " . va_kurz() . "\nALLGÄU AKUT – Fortbildung Notfallmedizin\n" . url('/');
 }
 
 /**
@@ -527,21 +527,21 @@ function mail_vorlage(string $name, array $d): array
     $u = isset($d['uebersicht']) ? "\n\n" . $d['uebersicht'] : '';
     switch ($name) {
         case 'bestaetigen':
-            return ['Bitte bestätige deine Anmeldung zum Wintersymposium',
+            return ['Bitte bestätige deine Anmeldung zum ' . va_kurz(),
                 $hallo . "danke für deine Anmeldung. Sie gilt erst, wenn du sie über diesen Link bestätigst:\n\n"
                 . $d['link'] . "\n\nDer Link gilt bis " . $d['gueltig'] . '. Bis dahin halten wir deine Plätze frei; danach verfällt die Anmeldung und die Plätze gehen an andere.'
                 . $u . "\n\nDu hast dich nicht angemeldet? Dann ignoriere diese Mail einfach." . mail_gruss()];
         case 'bestaetigt':
-            return ['Deine Anmeldung zum Wintersymposium ist bestätigt',
+            return ['Deine Anmeldung zum ' . va_kurz() . ' ist bestätigt',
                 $hallo . 'deine Anmeldung ist bestätigt.' . $u
                 . "\n\nÄndern oder absagen kannst du unter " . url('/deine-anmeldung') . ' – dort schicken wir dir einen Link an diese Adresse.' . mail_gruss()];
         case 'zugang':
-            return ['Dein Link zur Anmeldung beim Wintersymposium',
+            return ['Dein Link zur Anmeldung beim ' . va_kurz(),
                 $hallo . "mit diesem Link siehst und änderst du deine Anmeldung:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ' und nur einmal. Danach kannst du dir jederzeit einen neuen schicken lassen.'
                 . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail." . mail_gruss()];
         case 'schon_angemeldet':
-            return ['Du bist schon beim Wintersymposium angemeldet',
+            return ['Du bist schon beim ' . va_kurz() . ' angemeldet',
                 $hallo . "mit dieser Adresse gibt es schon eine Anmeldung. Eine zweite legen wir nicht an. Mit diesem Link siehst und änderst du die bestehende:\n\n"
                 . $d['link'] . "\n\nEr gilt bis " . $d['gueltig'] . ' und nur einmal.'
                 . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
@@ -552,10 +552,10 @@ function mail_vorlage(string $name, array $d): array
                 . $d['datum'] . ".\n\nWillst du es behalten? Dann logg dich einfach bis dahin einmal ein:\n\n" . $d['link']
                 . "\n\nWillst du es nicht mehr? Dann musst du nichts tun. Eine Anmeldung zum Symposium bleibt bestehen; du erreichst sie weiter über einen Link per Mail." . mail_gruss()];
         case 'geaendert':
-            return ['Deine Anmeldung zum Wintersymposium wurde geändert',
+            return ['Deine Anmeldung zum ' . va_kurz() . ' wurde geändert',
                 $hallo . ($d['was'] ?? 'deine Anmeldung wurde geändert.') . $u . mail_gruss()];
         case 'storniert':
-            return ['Deine Anmeldung zum Wintersymposium ist storniert',
+            return ['Deine Anmeldung zum ' . va_kurz() . ' ist storniert',
                 $hallo . "deine Anmeldung ist storniert. Deine Plätze gehen an die Warteliste. Danke, dass du abgesagt hast.\n\nWenn du doch kommen willst, melde dich einfach neu an: " . url('/anmelden') . mail_gruss()];
         case 'angebot':
             return ['Platz frei: ' . $d['was'],
@@ -571,7 +571,7 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'du hast den Platz angenommen: ' . $d['was'] . '.' . $u . mail_gruss()];
         case 'email_bestaetigen':
             return ['Bitte bestätige deine neue Adresse',
-                $hallo . "du willst deine Anmeldung zum Wintersymposium auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
+                $hallo . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'konto_bestaetigen':
             return ['Bitte bestätige dein Konto beim Wintersymposium',
@@ -616,6 +616,12 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']
                 . "\n\nEr gilt 72 Stunden und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App."
                 . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
+        case 'uebernehmen':
+            // Wiederkehrende ohne Konto (E-58)
+            return ['Deine Anmeldung zum ' . va_kurz() . ' – mit deinen bisherigen Angaben',
+                $hallo . 'schön, dass du wieder dabei sein willst! Mit diesem Link öffnest du die Anmeldung zum ' . va_kurz() . " – deine Angaben vom letzten Mal sind schon eingetragen:\n\n"
+                . $d['link'] . "\n\nDer Link gilt bis " . $d['gueltig'] . ' und einmal. Angemeldet bist du erst, wenn du das Formular abschickst und bestätigst.'
+                . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail." . mail_gruss()];
         case 'zertifikat':
             // AP-10, E-57: Freischaltung durch das Team; der Link führt zu „Meine Anmeldung“
             return ['Deine Teilnahmebescheinigung ist da',

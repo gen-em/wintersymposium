@@ -13,6 +13,12 @@ declare(strict_types=1);
 
 anm_sitzung();
 $a = anm_aktuell();
+// Anmeldung einer anderen (vergangenen) Veranstaltung, z. B. über den Link der Zertifikat-Mail (E-58):
+// in deren Kontext anzeigen, nur zum Ansehen
+if ($a !== null && (int)$a['veranstaltung_id'] !== va_id()) {
+    va_kontext((int)$a['veranstaltung_id']);
+}
+$nurAnsehen = $a !== null && (va_zeile()['status'] ?? 'aktuell') !== 'aktuell';
 $beginn = microtime(true);
 $aktion = (string)($_POST['aktion'] ?? '');
 $fehler = [];
@@ -53,6 +59,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $vorhanden = $ok ? anm_per_email($email) : null;
             if ($vorhanden !== null) {
                 anm_zugang_senden((int)$vorhanden['id']);
+            } elseif ($ok && anm_zeitraum() === 'offen' && ($frueher = anm_frueher_per_email($email)) !== null) {
+                // Wiederkehrende ohne Konto (E-58): Link zur Anmeldung mit den früheren Angaben
+                anm_uebernehmen_senden((int)$frueher['id']);
             }
             rate_gleiche_dauer($beginn, 0.6);
             flash_setzen('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . ANM_LINK_GUELTIG_H . ' Stunden und einmal. Schau auch im Spam-Ordner.');
@@ -60,6 +69,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
     } elseif ($a === null) {
         flash_setzen('fehler', 'Deine Sitzung ist abgelaufen. Lass dir einen neuen Link schicken.');
+        umleiten('/deine-anmeldung');
+    } elseif ($nurAnsehen && $aktion !== 'konto_anlegen') {
+        flash_setzen('fehler', 'Diese Veranstaltung ist vorbei – hier lässt sich nichts mehr ändern.');
         umleiten('/deine-anmeldung');
     } else {
         $id = (int)$a['id'];
@@ -154,7 +166,7 @@ if ($a === null) {
     $kap = anm_kapazitaet(0);
     ?>
 <div class="innen form-kopf">
-    <p class="kicker">Wintersymposium · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
+    <p class="kicker"><?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Wie willst du rein?</h1>
     <p class="text">Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.</p>
 </div>
@@ -244,12 +256,13 @@ $status = $a['status'] === 'unbestaetigt' ? 'Noch nicht bestätigt' : ($sym === 
 seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a, 'skripte' => ['anmelden.js']]);
 ?>
 <div class="innen form-kopf">
-    <p class="kicker">Deine Anmeldung</p>
+    <p class="kicker">Deine Anmeldung · <?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Hallo <?= e($a['vorname']) ?>.</h1>
     <div class="status-band"><span class="sticker<?= $a['status'] === 'unbestaetigt' || $sym !== 'fest' ? ' hinweis' : '' ?>"><?= e($status) ?></span><span class="mono">Anmeldung Nr. <?= sprintf('%04d', $id) ?></span></div>
 </div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
+    <?php if ($nurAnsehen): ?><p class="va-archiv" role="status"><strong>Diese Veranstaltung ist vorbei.</strong> Du siehst deine Anmeldung nur noch an<?= va_aktuell_id() !== null ? '; zur aktuellen Veranstaltung geht es über die <a href="/">Startseite</a>' : '' ?>.</p><?php endif; ?>
     <?php if ($a['status'] === 'unbestaetigt'): ?>
     <div class="meldung fehler" role="alert">Bitte bestätige deine Anmeldung über den Link in der Mail – bis <?= e(datum_zeit_text($a['bestaetigen_bis'])) ?> Uhr. Danach verfällt sie und die Plätze gehen an andere.
         <form method="post" action="/deine-anmeldung" class="inline"><?= csrf_feld() ?><input type="hidden" name="aktion" value="bestaetigung_neu"><button type="submit" class="link-knopf">Mail noch einmal schicken</button></form></div>
@@ -363,7 +376,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <?php endforeach; ?>
 
         <div class="kasten">
-            <h2 class="zwischen klein-zwischen">Workshops und Essen</h2>
+            <h2 class="zwischen klein-zwischen"><?= va_an('mit_essen') ? 'Workshops und Essen' : 'Workshops' ?></h2>
             <dl class="liste-def">
                 <?php if ($sym !== 'fest'):
                     $sp = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] === 0))[0] ?? null;
@@ -375,13 +388,13 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
                 <div><dt class="mono"><?= e($t !== null ? $t['beginn'] . '–' . $t['ende'] : '–') ?></dt><dd><?= e($t !== null ? trim($t['workshop']['kuerzel'] . ' ' . $t['workshop']['titel']) : $r['text']) ?><br><span class="chip <?= $p['status'] === 'fest' ? 'ok' : 'wl' ?>"><?= e($p['status'] === 'angebot' ? 'Angebot offen, siehe oben' : $r['status']) ?></span></dd></div>
                 <?php endforeach; ?>
                 <?php if (!$hatWs && $sym === 'fest'): ?><div><dt>Workshops</dt><dd class="meta">Keine gewählt.</dd></div><?php endif; ?>
-                <div><dt>Essen</dt><dd><?= e(ANM_ESSEN[$a['essen']] ?? $a['essen']) ?></dd></div>
+                <?php if (va_an('mit_essen')): ?><div><dt>Essen</dt><dd><?= e(ANM_ESSEN[$a['essen']] ?? $a['essen']) ?></dd></div><?php endif; ?>
             </dl>
             <div class="aktionen abstand">
                 <?php if ($sym === 'fest' && anm_workshops() !== []): ?>
                 <div class="aktion-frist"><?php if (anm_frist_offen('stichtag_workshop')): ?><a class="knopf" href="/deine-anmeldung?aendern=workshops">Workshops ändern</a><?php else: ?><span class="knopf gesperrt" aria-disabled="true">Workshops ändern</span><?php endif; ?><span class="frist"><?= $fristText('stichtag_workshop') ?></span></div>
                 <?php endif; ?>
-                <div class="aktion-frist"><?php if (anm_frist_offen('stichtag_essen')): ?><a class="knopf zweit" href="/deine-anmeldung?aendern=essen">Essen ändern</a><?php else: ?><span class="knopf zweit gesperrt" aria-disabled="true">Essen ändern</span><?php endif; ?><span class="frist"><?= $fristText('stichtag_essen') ?></span></div>
+                <?php if (va_an('mit_essen')): ?><div class="aktion-frist"><?php if (anm_frist_offen('stichtag_essen')): ?><a class="knopf zweit" href="/deine-anmeldung?aendern=essen">Essen ändern</a><?php else: ?><span class="knopf zweit gesperrt" aria-disabled="true">Essen ändern</span><?php endif; ?><span class="frist"><?= $fristText('stichtag_essen') ?></span></div><?php endif; ?>
             </div>
         </div>
 
@@ -392,7 +405,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
                 <div><dt>E-Mail</dt><dd><?= e($a['email']) ?></dd></div>
                 <div><dt>Berufsgruppe</dt><dd><?= e($a['berufsgruppe'] . ($a['beruf_sonstige'] !== '' ? ' (' . $a['beruf_sonstige'] . ')' : '')) ?></dd></div>
                 <div><dt>Institution</dt><dd><?= e($a['institution']) ?></dd></div>
-                <?php if ($a['berufsgruppe'] === (va_liste('berufsgruppen')[0] ?? '')): ?><div><dt>EFN</dt><dd class="mono"><?= $a['efn'] !== null ? e(efn_text($a['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
+                <?php if ($a['berufsgruppe'] === (va_liste('berufsgruppen')[0] ?? '') && va_an('mit_cme')): ?><div><dt>EFN</dt><dd class="mono"><?= $a['efn'] !== null ? e(efn_text($a['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
                 <div><dt>Newsletter</dt><dd><?= (int)$a['newsletter'] === 1 ? 'gewünscht (Bestätigung folgt, sobald er startet)' : 'nein' ?></dd></div>
             </dl>
             <div class="aktionen abstand"><div class="aktion-frist"><a class="knopf zweit" href="<?= $a['konto_id'] !== null && tk_aktuell() !== null ? '/konto?aendern=profil' : '/deine-anmeldung?aendern=daten' ?>">Daten bearbeiten</a><span class="frist">jederzeit · neue E-Mail erst nach Bestätigung</span></div></div>

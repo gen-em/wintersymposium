@@ -118,7 +118,15 @@ function job_aufraeumen(int $jetzt): array
 /** Anmeldungen (Fristen, Angebote) und unbestätigte Teilnehmenden-Konten. */
 function job_anmeldung(int $jetzt): array
 {
-    return anm_job($jetzt) + ['konten' => tk_aufraeumen($jetzt), 'loeschfrist' => tk_loeschfrist($jetzt)];
+    // Fristen und Nachrücken je Veranstaltung, die noch nicht abgeschlossen ist (E-58)
+    $erg = ['verfallen' => 0, 'abgelaufen' => 0, 'angebote' => 0, 'links' => 0];
+    $ids = va_tabellen_da() ? array_map('intval', array_column(db_zeilen("SELECT id FROM veranstaltung WHERE status <> 'abgeschlossen'"), 'id')) : [1];
+    foreach ($ids as $va) {
+        foreach (va_mit($va, fn() => anm_job($jetzt)) as $k => $n) {
+            $erg[$k] += $n;
+        }
+    }
+    return $erg + ['konten' => tk_aufraeumen($jetzt), 'loeschfrist' => tk_loeschfrist($jetzt)];
 }
 
 function job_rundmail(int $jetzt): array

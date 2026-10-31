@@ -486,7 +486,57 @@ function migration_katalog(): array
                 "ALTER TABLE anmeldung ADD COLUMN zertifikat_am DATETIME NULL",
             ],
         ],
+        15 => [
+            'beschreibung' => 'Mehrere Veranstaltungen (E-58): Veranstaltung als Rahmen; Einstellungen, Startseiten-Texte, Programm, Anmeldungen, Plätze und Mailings je Veranstaltung',
+            'sql' => [
+                "CREATE TABLE veranstaltung (
+                    id               INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    kuerzel          VARCHAR(40)  NOT NULL,
+                    status           ENUM('entwurf','aktuell','abgeschlossen') NOT NULL,
+                    erstellt_am      DATETIME     NOT NULL,
+                    abgeschlossen_am DATETIME     NULL,
+                    UNIQUE KEY uq_veranstaltung_kuerzel (kuerzel)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Alles Bisherige wird die erste Veranstaltung (aktuell)
+                "INSERT INTO veranstaltung (id, kuerzel, status, erstellt_am) VALUES (1, 'wintersymposium2027', 'aktuell', UTC_TIMESTAMP())",
+                "CREATE TABLE va_einstellung (
+                    veranstaltung_id INT UNSIGNED NOT NULL,
+                    schluessel       VARCHAR(64)  NOT NULL,
+                    wert             TEXT         NULL,
+                    geaendert_am     DATETIME     NOT NULL,
+                    PRIMARY KEY (veranstaltung_id, schluessel),
+                    CONSTRAINT fk_va_einstellung FOREIGN KEY (veranstaltung_id) REFERENCES veranstaltung (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am)
+                    SELECT 1, schluessel, wert, geaendert_am FROM einstellung WHERE schluessel IN (" . migration_liste(array_keys(VA_KATALOG)) . ")",
+                "DELETE FROM einstellung WHERE schluessel IN (" . migration_liste(array_keys(VA_KATALOG)) . ")",
+                // Startseiten-Texte je Veranstaltung (0 = gemeinsam: Impressum, Datenschutz)
+                "ALTER TABLE inhalt ADD COLUMN veranstaltung_id INT UNSIGNED NOT NULL DEFAULT 0 FIRST, DROP PRIMARY KEY, ADD PRIMARY KEY (veranstaltung_id, schluessel)",
+                "UPDATE inhalt SET veranstaltung_id = 1 WHERE schluessel LIKE 'start\\_%'",
+                "ALTER TABLE programmpunkt ADD COLUMN veranstaltung_id INT UNSIGNED NOT NULL DEFAULT 1 AFTER id, ADD KEY ix_programmpunkt_va (veranstaltung_id)",
+                "ALTER TABLE programmpunkt ALTER veranstaltung_id DROP DEFAULT",
+                // Eine Anmeldung je Veranstaltung und Adresse bzw. Konto
+                "ALTER TABLE anmeldung ADD COLUMN veranstaltung_id INT UNSIGNED NOT NULL DEFAULT 1 AFTER id, ADD KEY ix_anmeldung_konto (konto_id)",
+                "ALTER TABLE anmeldung DROP INDEX uq_anmeldung_email, DROP INDEX uq_anmeldung_konto,
+                    ADD UNIQUE KEY uq_anmeldung_va_email (veranstaltung_id, email), ADD UNIQUE KEY uq_anmeldung_va_konto (veranstaltung_id, konto_id)",
+                "ALTER TABLE anmeldung ALTER veranstaltung_id DROP DEFAULT",
+                // Plätze: Termin 0 (Platz beim Symposium) gibt es je Veranstaltung
+                "ALTER TABLE platz ADD COLUMN veranstaltung_id INT UNSIGNED NOT NULL DEFAULT 1 AFTER anmeldung_id, ADD KEY ix_platz_va_termin (veranstaltung_id, termin_id, status, seit, id)",
+                "ALTER TABLE platz ALTER veranstaltung_id DROP DEFAULT",
+                // Mailings an Angemeldete gehören zu einer Veranstaltung; Newsletter-Mailings nicht (NULL)
+                "ALTER TABLE rundmail ADD COLUMN veranstaltung_id INT UNSIGNED NULL AFTER id",
+                "UPDATE rundmail SET veranstaltung_id = 1 WHERE auswahl NOT LIKE 'nl:%'",
+                // Wiederkehrende ohne Konto: Daten einer früheren Anmeldung per Link übernehmen
+                "ALTER TABLE anmeldung_link MODIFY zweck ENUM('bestaetigen','zugang','email','uebernehmen') NOT NULL",
+            ],
+        ],
     ];
+}
+
+/** Liste von Texten als SQL-Literal für IN (…) (nur feste Schlüssel aus dem Code). */
+function migration_liste(array $werte): string
+{
+    return implode(', ', array_map(fn($w) => "'" . str_replace("'", "''", (string)$w) . "'", $werte));
 }
 
 function migration_tabelle_anlegen(): void
@@ -549,6 +599,7 @@ function migration_anwenden(): array
         }
         return $neu;
     } finally {
+        va_zwischenspeicher_leeren();
         db_wert("SELECT RELEASE_LOCK('ws_migration')");
     }
 }

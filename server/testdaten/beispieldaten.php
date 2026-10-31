@@ -22,6 +22,7 @@ function beispieldaten_laden(): array
     $r['mailings'] = beispieldaten_mailings();
     $r['newsletter'] = beispieldaten_newsletter();
     $r['teilnahme'] = beispieldaten_teilnahme($r['anmeldungen']);
+    $r['vorjahr'] = beispieldaten_vorjahr($r['anmeldungen']);
     return $r;
 }
 
@@ -239,4 +240,46 @@ function beispieldaten_teilnahme(array $anm): array
         imagedestroy($b);
     }
     return ['paula_ws' => $ws !== null ? (int)$ws : null];
+}
+
+/**
+ * Mehrere Veranstaltungen (E-58): eine abgeschlossene Vorjahres-Veranstaltung
+ * „wintersymposium2026“ mit einem Vortrag und einem Workshop. Lea (mit Konto)
+ * war dabei, ihr Zertifikat ist freigeschaltet – für den Rückblick unter
+ * „Mein Konto“ und die Archiv-Seite /wintersymposium2026. Keine Mails.
+ */
+function beispieldaten_vorjahr(array $anm): array
+{
+    $r = va_anlegen('wintersymposium2026', 'Allgäuer Winter-Notfallsymposium', null, null);
+    if (!isset($r['id'])) {
+        throw new RuntimeException('Beispieldaten Vorjahr: ' . ($r['fehler'] ?? ''));
+    }
+    $vid = (int)$r['id'];
+    va_mit($vid, function () use ($anm): void {
+        $tag = gmdate('Y-m-d', time() - 300 * 86400);
+        foreach (['veranstaltung_datum' => $tag, 'veranstaltung_beginn' => '18:00', 'veranstaltung_ende' => '22:00', 'veranstaltung_ort' => 'Hörsaal Testklinik',
+            'veranstaltung_kurz' => 'Wintersymposium', 'veranstaltung_auflage' => '2. Auflage', 'veranstaltung_kapazitaet' => '200',
+            'anmeldung_start' => gmdate('Y-m-d H:i:s', time() - 360 * 86400), 'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
+            'cme_punkte' => '4', 'cme_kategorie' => 'A', 'cme_kammer' => 'Beispiel-Landesärztekammer', 'zertifikat_leitung' => 'Dr. Erika Erfunden'] as $k => $w) {
+            einstellung_setzen($k, $w);
+        }
+        inhalt_setzen('start_titel', 'Wintersymposium <em>2026</em>');
+        inhalt_setzen('start_unter', 'Rückblick auf die zweite Auflage.');
+        foreach ([['typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Schock. Was jetzt?', 'ort' => 'Hörsaal', 'beginn' => '18:15', 'ende' => '19:00'],
+            ['typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Thoraxdrainage', 'ort' => 'Skills-Lab 1', 't_beginn' => ['19:30'], 't_ende' => ['20:30'], 't_plaetze' => ['12']]] as $e) {
+            $p = programm_punkt_pruefen($e);
+            programm_punkt_speichern(null, $p, null);
+        }
+        programm_veroeffentlichen(null);
+        $lea = anm_laden($anm['lea']);
+        $w = anm_daten_pruefen(['vorname' => $lea['vorname'], 'nachname' => $lea['nachname'], 'email' => $lea['email'], 'berufsgruppe' => $lea['berufsgruppe'],
+            'beruf_sonstige' => '', 'institution' => $lea['institution'], 'efn' => (string)$lea['efn'], 'essen' => 'egal'])['werte'];
+        $ws = anm_workshops()[0];
+        $e = anm_anlegen($w, ['fest' => [$ws['id'] => (int)$ws['termine'][0]['id']], 'warte' => []], false);
+        db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL, konto_id = ?, zertifikat_am = ? WHERE id = ?",
+            [db_jetzt(), $anm['lea_konto'], db_jetzt(), $e['id']]);
+    });
+    va_abschliessen($vid, null);
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['id' => $vid];
 }

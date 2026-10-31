@@ -38,7 +38,8 @@ const { spawn, execFileSync } = require('child_process');
 
 const WURZEL = path.resolve(__dirname, '..', '..');
 const AUS = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'ws-browser-' + Date.now()));
-const ENGINES = ['chromium', 'firefox', 'webkit'];
+// WS_ENGINES=webkit (kommagetrennt) prüft nur diese Engines, z. B. zur Fehlersuche
+const ENGINES = (process.env.WS_ENGINES || 'chromium,firefox,webkit').split(',');
 const BREITEN = [
   ['handy', 390, 844],
   ['tablet', 768, 1024],
@@ -164,8 +165,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   const antwort = url ? await p.goto(url, { waitUntil: 'load' }) : null;
   await p.waitForTimeout(150);
   if (antwort) notiere(engine, breite, name, 'Status', antwort.status() < 400, String(antwort.status()));
-  const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
-  notiere(engine, breite, name, 'kein seitliches Scrollen', m.sw <= m.iw, `${m.sw} > ${m.iw}`);
+  const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth,
+    // Zur Fehlersuche: was rechts übersteht, auch unsichtbare Elemente
+    raus: [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1).slice(-3)
+      .map(e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.className ? '.' + String(e.className).split(' ').join('.') : '') + ' ' + Math.round(e.getBoundingClientRect().right)) }));
+  notiere(engine, breite, name, 'kein seitliches Scrollen', m.sw <= m.iw, `${m.sw} > ${m.iw} (${m.raus.join(', ')})`);
+  if (m.sw > m.iw && process.env.WS_HTML) fs.writeFileSync(path.join(AUS, `${engine}-${breite}-${name}.html`), await p.content());
   // Elemente, die rechts aus dem Fenster ragen (außer in scrollbaren Tabellen)
   const raus = await p.evaluate(ueberstand);
   notiere(engine, breite, name, 'alles innerhalb der Fensterbreite', raus.length === 0, raus.join(', '));
@@ -227,6 +232,9 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Öffentliche Seiten in allen Breiten, mit Klickwegen
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
+        // E-58: abgeschlossene Vorjahres-Veranstaltung unter ihrem Kürzel (nur Rückblick)
+        await pruefeSeite(p, fehler, engine, breite, 'archiv', basis + '/wintersymposium2026');
+        notiere(engine, breite, 'archiv', 'Rückblick ohne Anmeldung', (await p.textContent('body')).includes('Diese Veranstaltung ist vorbei') && !await p.isVisible('.held-knoepfe'));
         await pruefeSeite(p, fehler, engine, breite, 'start', basis + '/');
         notiere(engine, breite, 'start', w < 760 ? 'Menü-Knopf sichtbar, Liste versteckt' : 'Navigation sichtbar',
           w < 760 ? (await p.isVisible('.menue summary') && !await p.isVisible('.nav-gross a')) : await p.isVisible('.nav-gross a'));
@@ -347,6 +355,16 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'konto-profil', basis + '/konto?aendern=profil');
         await pruefeSeite(p, fehler, engine, breite, 'deine-anmeldung-konto', basis + '/deine-anmeldung');
       }
+      // E-58: Rückblick unter „Mein Konto“ – Vorjahr mit Zertifikat
+      await p.setViewportSize({ width: 390, height: 844 });
+      await p.goto(basis + '/konto');
+      notiere(engine, 'handy', 'konto', 'Deine Veranstaltungen: Vorjahr mit Zertifikat', await p.isVisible('#veranstaltungen') && (await p.textContent('#veranstaltungen')).includes('teilgenommen') && await p.locator('#veranstaltungen a[href^="/konto/zertifikat"]').count() === 2);
+      {
+        const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#veranstaltungen a[href^="/konto/zertifikat"] >> nth=1')]);
+        const ziel = path.join(AUS, `${engine}-zertifikat-vorjahr.pdf`);
+        await dl.saveAs(ziel);
+        notiere(engine, 'handy', 'konto', 'Zertifikat des Vorjahrs heruntergeladen', fs.readFileSync(ziel).subarray(0, 5).toString('latin1') === '%PDF-');
+      }
       // AP-10: Leas Zertifikat ist im Beispieldatensatz freigeschaltet – Knopf und Download
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/deine-anmeldung');
@@ -421,7 +439,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
           ['.team-nav a:has-text("Kommunikation")', '/team/mailings', 'team-mailings'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'],
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
-          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
           await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());

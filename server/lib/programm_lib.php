@@ -51,7 +51,7 @@ function hm_aus_minuten(int $min): string
 function programm_arbeitsstand(): array
 {
     $punkte = [];
-    foreach (db_zeilen('SELECT * FROM programmpunkt ORDER BY id') as $z) {
+    foreach (db_zeilen('SELECT * FROM programmpunkt WHERE veranstaltung_id = ? ORDER BY id', [va_id()]) as $z) {
         $punkte[(int)$z['id']] = [
             'id' => (int)$z['id'], 'typ' => $z['typ'], 'kuerzel' => $z['kuerzel'], 'titel' => $z['titel'],
             'untertitel' => $z['untertitel'], 'beschreibung' => $z['beschreibung'], 'ort' => $z['ort'],
@@ -63,7 +63,7 @@ function programm_arbeitsstand(): array
             $punkte[(int)$z['id']]['block_id'] = (int)$z['block_id'];
         }
     }
-    foreach (db_zeilen('SELECT * FROM workshop_termin ORDER BY beginn, id') as $t) {
+    foreach (db_zeilen('SELECT t.* FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE p.veranstaltung_id = ? ORDER BY t.beginn, t.id', [va_id()]) as $t) {
         if (isset($punkte[(int)$t['punkt_id']])) {
             $punkte[(int)$t['punkt_id']]['termine'][] = ['id' => (int)$t['id'], 'beginn' => hm($t['beginn']), 'ende' => hm($t['ende']), 'plaetze' => (int)$t['plaetze']];
         }
@@ -95,7 +95,7 @@ function programm_arbeitsstand(): array
 /** Veröffentlichter Stand: ['punkte' => [...], 'am' => UTC] oder null. */
 function programm_veroeffentlicht(): ?array
 {
-    $z = db_zeile('SELECT daten, veroeffentlicht_am FROM programm_stand WHERE id = 1');
+    $z = db_zeile('SELECT daten, veroeffentlicht_am FROM programm_stand WHERE id = ?', [va_id()]);
     if ($z === null) {
         return null;
     }
@@ -241,7 +241,7 @@ function kuerzel_vorschlag(string $typ): string
         return '';
     }
     $hoechste = 0;
-    foreach (db_zeilen('SELECT kuerzel FROM programmpunkt WHERE typ = ?', [$typ]) as $z) {
+    foreach (db_zeilen('SELECT kuerzel FROM programmpunkt WHERE typ = ? AND veranstaltung_id = ?', [$typ, va_id()]) as $z) {
         if (preg_match('/(\d+)\s*$/', $z['kuerzel'], $m) === 1) {
             $hoechste = max($hoechste, (int)$m[1]);
         }
@@ -278,7 +278,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'block_id' => (int)($e['block_id'] ?? 0) ?: null,
     ];
     // Zuordnung zu einem Block nur für Inhalte (PROGRAMM_IM_BLOCK), nur zu einem vorhandenen Block
-    if (!in_array($typ, PROGRAMM_IM_BLOCK, true) || ($w['block_id'] !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$w['block_id']]) != 1)) {
+    if (!in_array($typ, PROGRAMM_IM_BLOCK, true) || ($w['block_id'] !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block' AND veranstaltung_id = ?", [$w['block_id'], va_id()]) != 1)) {
         $w['block_id'] = null;
     }
     foreach (['kuerzel' => 12, 'titel' => 160, 'untertitel' => 200, 'beschreibung' => 4000, 'ort' => 120, 'bring' => 160, 'notiz' => 300] as $k => $max) {
@@ -392,7 +392,7 @@ function programm_nachruecken_kette(int $id, string $beginn, string $ende, ?int 
     $n = 0;
     $cursor = minuten($ende);
     $folgende = db_zeilen(
-        "SELECT id, beginn, ende FROM programmpunkt WHERE id <> ? AND beginn IS NOT NULL AND beginn >= ? AND block_id IS NULL AND typ IN ('" . implode("','", PROGRAMM_HAUPTSPUR) . "') ORDER BY beginn, id",
+        "SELECT id, beginn, ende FROM programmpunkt WHERE veranstaltung_id = " . va_id() . " AND id <> ? AND beginn IS NOT NULL AND beginn >= ? AND block_id IS NULL AND typ IN ('" . implode("','", PROGRAMM_HAUPTSPUR) . "') ORDER BY beginn, id",
         [$id, $beginn . ':00']
     );
     foreach ($folgende as $f) {
@@ -468,14 +468,14 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
             $w['beginn'] === '' ? null : $w['beginn'], $w['ende'] === '' ? null : $w['ende'], $w['bring'], $w['notiz']];
         if ($id === null) {
             db_ausfuehren(
-                'INSERT INTO programmpunkt (typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                array_merge($felder, [$jetzt, $jetzt])
+                'INSERT INTO programmpunkt (veranstaltung_id, typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                array_merge([va_id()], $felder, [$jetzt, $jetzt])
             );
             $id = (int)db()->lastInsertId();
         } else {
             db_ausfuehren(
-                'UPDATE programmpunkt SET typ = ?, block_id = ?, kuerzel = ?, titel = ?, untertitel = ?, beschreibung = ?, ort = ?, beginn = ?, ende = ?, bring = ?, notiz = ?, geaendert_am = ? WHERE id = ?',
-                array_merge($felder, [$jetzt, $id])
+                'UPDATE programmpunkt SET typ = ?, block_id = ?, kuerzel = ?, titel = ?, untertitel = ?, beschreibung = ?, ort = ?, beginn = ?, ende = ?, bring = ?, notiz = ?, geaendert_am = ? WHERE id = ? AND veranstaltung_id = ?',
+                array_merge($felder, [$jetzt, $id, va_id()])
             );
         }
         // Termine: vorhandene aktualisieren, neue anlegen, fehlende entfernen
@@ -507,6 +507,9 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
 
 function programm_punkt_loeschen(int $id, ?int $kontoId): bool
 {
+    if (!programm_punkt_im_kontext($id)) {
+        return false;
+    }
     foreach (db_zeilen('SELECT id FROM workshop_termin WHERE punkt_id = ?', [$id]) as $t) {
         if (termin_belegt((int)$t['id']) > 0) {
             return false;
@@ -531,7 +534,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
     $GLOBALS['programm_nachgerueckt'] = 0;
     return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken): ?string {
         if ($art === 'termin') {
-            $t = db_zeile('SELECT * FROM workshop_termin WHERE id = ?', [$id]);
+            $t = db_zeile('SELECT t.* FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE t.id = ? AND p.veranstaltung_id = ?', [$id, va_id()]);
             if ($t === null) {
                 return null;
             }
@@ -542,7 +545,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             audit_schreiben('programm', 'Termin ' . $id . ' verschoben auf ' . $beginn, $kontoId);
             return "{$beginn}–{$ende}";
         }
-        $p = db_zeile('SELECT * FROM programmpunkt WHERE id = ?', [$id]);
+        $p = db_zeile('SELECT * FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]);
         if ($p === null || $p['typ'] === 'workshop') {
             return null;
         }
@@ -554,14 +557,14 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             $versatz = minuten($beginn) - minuten($alt);
             $altEnde = hm($p['ende']);
             // im Zeitfenster (ohne andere Zuordnung) oder ausdrücklich zugeordnet
-            foreach (db_zeilen('SELECT t.*, p.block_id FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id') as $t) {
+            foreach (db_zeilen('SELECT t.*, p.block_id FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE p.veranstaltung_id = ?', [va_id()]) as $t) {
                 $zu = $t['block_id'] !== null ? (int)$t['block_id'] === $id : (hm($t['beginn']) >= $alt && hm($t['ende']) <= $altEnde);
                 if ($zu) {
                     db_ausfuehren('UPDATE workshop_termin SET beginn = ?, ende = ? WHERE id = ?', [hm_aus_minuten(minuten(hm($t['beginn'])) + $versatz), hm_aus_minuten(minuten(hm($t['ende'])) + $versatz), $t['id']]);
                     db_ausfuehren('UPDATE programmpunkt SET geaendert_am = ? WHERE id = ?', [db_jetzt(), (int)$t['punkt_id']]);
                 }
             }
-            foreach (db_zeilen("SELECT * FROM programmpunkt WHERE typ IN ('vortrag', 'fall', 'station') AND beginn IS NOT NULL") as $s) {
+            foreach (db_zeilen("SELECT * FROM programmpunkt WHERE veranstaltung_id = ? AND typ IN ('vortrag', 'fall', 'station') AND beginn IS NOT NULL", [va_id()]) as $s) {
                 $zu = $s['block_id'] !== null ? (int)$s['block_id'] === $id : ($s['typ'] === 'station' && hm($s['beginn']) >= $alt && hm($s['ende']) <= $altEnde);
                 if ($zu) {
                     db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [hm_aus_minuten(minuten(hm($s['beginn'])) + $versatz), hm_aus_minuten(minuten(hm($s['ende'])) + $versatz), db_jetzt(), $s['id']]);
@@ -609,7 +612,7 @@ function programm_veroeffentlichen(?int $kontoId): array
                 $neu[(int)$t['id']] = (int)$t['plaetze'];
             }
         }
-        foreach (db_zeilen("SELECT termin_id, COUNT(*) AS n FROM platz WHERE termin_id <> 0 AND status IN ('fest','angebot') GROUP BY termin_id") as $b) {
+        foreach (db_zeilen("SELECT termin_id, COUNT(*) AS n FROM platz WHERE veranstaltung_id = ? AND termin_id <> 0 AND status IN ('fest','angebot') GROUP BY termin_id", [va_id()]) as $b) {
             $tid = (int)$b['termin_id'];
             if (!isset($neu[$tid])) {
                 $f[] = 'Ein Workshop-Termin mit ' . $b['n'] . ' vergebenen Plätzen fehlt im Arbeitsstand. Zuerst die Personen umbuchen.';
@@ -621,13 +624,13 @@ function programm_veroeffentlichen(?int $kontoId): array
             return $f;
         }
         db_ausfuehren(
-            'INSERT INTO programm_stand (id, daten, veroeffentlicht_am, veroeffentlicht_von) VALUES (1, ?, ?, ?)
+            'INSERT INTO programm_stand (id, daten, veroeffentlicht_am, veroeffentlicht_von) VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE daten = VALUES(daten), veroeffentlicht_am = VALUES(veroeffentlicht_am), veroeffentlicht_von = VALUES(veroeffentlicht_von)',
-            [json_encode($punkte, JSON_UNESCAPED_UNICODE), db_jetzt(), $kontoId]
+            [va_id(), json_encode($punkte, JSON_UNESCAPED_UNICODE), db_jetzt(), $kontoId]
         );
         // Wartelisten entfallener Termine aufräumen
         $platz = $neu === [] ? '0' : implode(',', array_keys($neu));
-        $weg = db_ausfuehren("DELETE FROM platz WHERE termin_id <> 0 AND termin_id NOT IN ($platz)")->rowCount();
+        $weg = db_ausfuehren("DELETE FROM platz WHERE veranstaltung_id = ? AND termin_id <> 0 AND termin_id NOT IN ($platz)", [va_id()])->rowCount();
         anm_workshops(true);
         audit_schreiben('programm', 'Programm veröffentlicht (' . count($punkte) . ' Punkte' . ($weg > 0 ? ", $weg Wartelisten-Einträge entfallener Termine entfernt" : '') . ')', $kontoId);
         return [];
@@ -640,11 +643,11 @@ function programm_veroeffentlichen(?int $kontoId): array
  */
 function programm_zuordnen(int $punktId, ?int $blockId, ?int $kontoId): bool
 {
-    $p = db_zeile('SELECT id, typ, block_id FROM programmpunkt WHERE id = ?', [$punktId]);
+    $p = db_zeile('SELECT id, typ, block_id FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$punktId, va_id()]);
     if ($p === null || !in_array($p['typ'], PROGRAMM_IM_BLOCK, true)) {
         return false;
     }
-    if ($blockId !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block'", [$blockId]) != 1) {
+    if ($blockId !== null && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND typ = 'block' AND veranstaltung_id = ?", [$blockId, va_id()]) != 1) {
         return false;
     }
     db_ausfuehren('UPDATE programmpunkt SET block_id = ?, geaendert_am = ? WHERE id = ?', [$blockId, db_jetzt(), $punktId]);
@@ -658,12 +661,12 @@ function programm_verwerfen(?int $kontoId): void
     $pub = programm_veroeffentlicht();
     $punkte = $pub['punkte'] ?? [];
     db_transaktion(function () use ($punkte): void {
-        db_ausfuehren('DELETE FROM programmpunkt');
+        db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [va_id()]);
         $jetzt = db_jetzt();
         foreach ($punkte as $p) {
             db_ausfuehren(
-                'INSERT INTO programmpunkt (id, typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [$p['id'], $p['typ'], $p['block_id'] ?? null, $p['kuerzel'], $p['titel'], $p['untertitel'], $p['beschreibung'], $p['ort'], $p['beginn'] ?: null, $p['ende'] ?: null, $p['bring'], $p['notiz'], $jetzt, $jetzt]
+                'INSERT INTO programmpunkt (id, veranstaltung_id, typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$p['id'], va_id(), $p['typ'], $p['block_id'] ?? null, $p['kuerzel'], $p['titel'], $p['untertitel'], $p['beschreibung'], $p['ort'], $p['beginn'] ?: null, $p['ende'] ?: null, $p['bring'], $p['notiz'], $jetzt, $jetzt]
             );
             foreach ($p['termine'] as $t) {
                 db_ausfuehren('INSERT INTO workshop_termin (id, punkt_id, beginn, ende, plaetze) VALUES (?, ?, ?, ?, ?)', [$t['id'], $p['id'], $t['beginn'], $t['ende'], $t['plaetze']]);
@@ -688,6 +691,39 @@ function programm_verwerfen(?int $kontoId): void
         }
     });
     audit_schreiben('programm', 'Änderungen am Programm verworfen', $kontoId);
+}
+
+/** Gehört der Programmpunkt zur Veranstaltung des Kontexts? (Schutz vor Eingriffen in andere Veranstaltungen) */
+function programm_punkt_im_kontext(int $id): bool
+{
+    return (int)db_wert('SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]) === 1;
+}
+
+/** Arbeitsstand einer Veranstaltung in eine andere kopieren (neue IDs, Blöcke und Dozierende mit), E-58. */
+function programm_kopieren(int $von, int $nach): void
+{
+    $karte = [];
+    $jetzt = db_jetzt();
+    $punkte = db_zeilen('SELECT * FROM programmpunkt WHERE veranstaltung_id = ? ORDER BY id', [$von]);
+    foreach ($punkte as $p) {
+        db_ausfuehren(
+            'INSERT INTO programmpunkt (veranstaltung_id, typ, block_id, kuerzel, titel, untertitel, beschreibung, ort, beginn, ende, bring, notiz, erstellt_am, geaendert_am) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$nach, $p['typ'], $p['kuerzel'], $p['titel'], $p['untertitel'], $p['beschreibung'], $p['ort'], $p['beginn'], $p['ende'], $p['bring'], $p['notiz'], $jetzt, $jetzt]
+        );
+        $karte[(int)$p['id']] = (int)db()->lastInsertId();
+    }
+    foreach ($punkte as $p) {
+        $neu = $karte[(int)$p['id']];
+        if ($p['block_id'] !== null && isset($karte[(int)$p['block_id']])) {
+            db_ausfuehren('UPDATE programmpunkt SET block_id = ? WHERE id = ?', [$karte[(int)$p['block_id']], $neu]);
+        }
+        db_ausfuehren('INSERT INTO punkt_dozent (punkt_id, dozent_id, pos) SELECT ?, dozent_id, pos FROM punkt_dozent WHERE punkt_id = ?', [$neu, $p['id']]);
+        foreach (db_zeilen('SELECT * FROM workshop_termin WHERE punkt_id = ? ORDER BY id', [$p['id']]) as $t) {
+            db_ausfuehren('INSERT INTO workshop_termin (punkt_id, beginn, ende, plaetze) VALUES (?, ?, ?, ?)', [$neu, $t['beginn'], $t['ende'], $t['plaetze']]);
+            $tid = (int)db()->lastInsertId();
+            db_ausfuehren('INSERT INTO termin_dozent (termin_id, dozent_id, pos) SELECT ?, dozent_id, pos FROM termin_dozent WHERE termin_id = ?', [$tid, $t['id']]);
+        }
+    }
 }
 
 /* ---- Dozierende ---------------------------------------------------------- */

@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/texte'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $betreiber = $konto['rolle'] === 'betreiber';
 // Schlüssel => [Titel, Art (inline: eine Zeile mit fett/kursiv/Link; block: ganzer Text; text: ohne Auszeichnung), nur Betreiber]
 const TEXTE_KATALOG = [

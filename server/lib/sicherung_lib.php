@@ -109,8 +109,8 @@ function sicherung_anlegen(string $anlass, ?int $kontoId = null): string
         $schreib(['art' => 'datei', 'ordner' => 'bilder', 'name' => basename($f), 'inhalt' => base64_encode((string)file_get_contents($f))]);
     }
     // Unterschrift auf dem Zertifikat (AP-10)
-    if (unterschrift_da()) {
-        $schreib(['art' => 'datei', 'ordner' => 'zertifikat', 'name' => 'unterschrift.png', 'inhalt' => base64_encode((string)file_get_contents(unterschrift_pfad()))]);
+    foreach (glob(laufzeit_pfad('zertifikat') . '/*/unterschrift.png') ?: [] as $f) {
+        $schreib(['art' => 'datei', 'ordner' => 'zertifikat', 'name' => basename(dirname($f)) . '/unterschrift.png', 'inhalt' => base64_encode((string)file_get_contents($f))]);
     }
     $schreib(['art' => 'ende', 'tabellen' => $tabellen, 'zeilen' => $zeilen]);
     fclose($h);
@@ -181,7 +181,7 @@ function sicherung_pruefen(string $name): ?string
         } elseif ($art === 'zeilen' && !isset($tabellen[$d['name'] ?? ''])) {
             break;
         } elseif ($art === 'datei' && !((($d['ordner'] ?? '') === 'bilder' && preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|(mail|text)-[0-9a-f]{16}\.(jpg|png))$/', (string)($d['name'] ?? '')) === 1)
-            || (($d['ordner'] ?? '') === 'zertifikat' && ($d['name'] ?? '') === 'unterschrift.png'))) {
+            || (($d['ordner'] ?? '') === 'zertifikat' && preg_match('#^\d{1,9}/unterschrift\.png$#', (string)($d['name'] ?? '')) === 1))) {
             break;
         } elseif ($art === 'ende') {
             $ende = true;
@@ -248,7 +248,9 @@ function sicherung_wiederherstellen(string $name, ?int $kontoId): ?string
                     $pdo->commit();
                     break;
                 case 'datei':
-                    $ziel = ($d['ordner'] ?? '') === 'zertifikat' ? unterschrift_pfad() : foto_ordner() . '/' . basename((string)$d['name']);
+                    $ziel = ($d['ordner'] ?? '') === 'zertifikat'
+                        ? laufzeit_pfad('zertifikat/' . (int)dirname((string)$d['name'])) . '/unterschrift.png'
+                        : foto_ordner() . '/' . basename((string)$d['name']);
                     @file_put_contents($ziel, base64_decode((string)$d['inhalt'], true) ?: '');
                     break;
             }
@@ -295,8 +297,14 @@ function testdaten_laden(?int $kontoId): string
         db_ausfuehren('DELETE FROM mail_ausgang');
         db_ausfuehren('DELETE FROM rundmail');
         db_ausfuehren('DELETE FROM newsletter_person');
-        db_ausfuehren('DELETE FROM einstellung WHERE schluessel IN (' . implode(',', array_fill(0, count(VA_KATALOG), '?')) . ')', array_keys(VA_KATALOG));
+        // Alle Veranstaltungen auf die erste zurücksetzen (E-58); die Beispieldaten legen weitere an
+        db_ausfuehren('DELETE FROM va_einstellung');
+        db_ausfuehren('DELETE FROM inhalt WHERE veranstaltung_id NOT IN (0, 1)');
+        db_ausfuehren('DELETE FROM veranstaltung WHERE id <> 1');
+        db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = 1");
     });
+    va_zwischenspeicher_leeren();
+    unset($GLOBALS['ws_va_id']);
     anm_workshops(true);
     beispieldaten_laden();
     audit_schreiben('sicherung', 'Testdaten geladen (Sicherung davor: ' . $sicherung . ')', $kontoId);

@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/workshops'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $tId = isset($_GET['t']) ? (int)$_GET['t'] : (isset($_POST['t']) ? (int)$_POST['t'] : -1);
 $fehler = [];
 $frage = null;

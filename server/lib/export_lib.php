@@ -331,7 +331,7 @@ function export_pdf(array $x): string
     if ($gruppen === []) {
         $gruppen[''] = [];
     }
-    $kopfText = 'Wintersymposium · ' . tag_text(va('veranstaltung_datum'));
+    $kopfText = va_kurz() . ' · ' . tag_text(va('veranstaltung_datum'));
     $stand = 'Stand ' . datum_zeit_text(gmdate('Y-m-d H:i:s')) . ($x['bg'] !== '' ? ' · Berufsgruppe: ' . $x['bg'] : '');
 
     $pdf = export_pdf_neu($opt['quer'], $x['titel'], 'Vertraulich – nur für die Organisation · ' . $stand);

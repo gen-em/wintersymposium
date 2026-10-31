@@ -80,7 +80,28 @@ function tk_ausloggen(): void
 /** Verknüpfte Anmeldung eines Kontos oder null. */
 function tk_anmeldung(int $kontoId): ?array
 {
-    return db_zeile('SELECT * FROM anmeldung WHERE konto_id = ?', [$kontoId]);
+    return db_zeile('SELECT * FROM anmeldung WHERE konto_id = ? AND veranstaltung_id = ?', [$kontoId, va_id()]);
+}
+
+/**
+ * Alle Veranstaltungen, zu denen das Konto angemeldet war oder ist (E-58),
+ * neueste zuerst: id (Anmeldung), name, datum, kuerzel, status, stand (Text),
+ * teilgenommen, zertifikat (herunterladbar).
+ */
+function tk_veranstaltungen(int $kontoId): array
+{
+    $liste = [];
+    foreach (db_zeilen("SELECT a.*, v.kuerzel, v.status AS va_status FROM anmeldung a JOIN veranstaltung v ON v.id = a.veranstaltung_id WHERE a.konto_id = ? AND a.status = 'bestaetigt'", [$kontoId]) as $a) {
+        $va = (int)$a['veranstaltung_id'];
+        $sym = db_wert('SELECT status FROM platz WHERE anmeldung_id = ? AND termin_id = 0', [$a['id']]);
+        $vorbei = $a['va_status'] === 'abgeschlossen' || va_von($va, 'veranstaltung_datum') < anm_heute();
+        $da = tn_anwesend((int)$a['id']);
+        $stand = $sym !== 'fest' ? 'Warteliste' : (!$vorbei ? 'angemeldet' : ($da ? 'teilgenommen' : 'nicht erschienen'));
+        $liste[] = ['id' => (int)$a['id'], 'name' => va_von($va, 'veranstaltung_name') ?: va_mit($va, 'va_kurz'), 'datum' => va_von($va, 'veranstaltung_datum'),
+            'kuerzel' => $a['kuerzel'], 'status' => $a['va_status'], 'stand' => $stand, 'teilgenommen' => $vorbei && $da, 'zertifikat' => zertifikat_verfuegbar($a)];
+    }
+    usort($liste, fn($x, $y) => [$y['datum'], $y['id']] <=> [$x['datum'], $x['id']]);
+    return $liste;
 }
 
 /** Vor- und Nachname aus dem Konto (Name „Vorname Nachname“) für das Anmeldeformular. */
@@ -97,7 +118,7 @@ function tk_verknuepfen(int $kontoId): void
     if ($k === null || ($k['email_bestaetigt_am'] === null && !konto_ist_team($k)) || tk_anmeldung($kontoId) !== null) {
         return;
     }
-    $a = db_zeile("SELECT * FROM anmeldung WHERE email = ? AND konto_id IS NULL AND status = 'bestaetigt'", [$k['email']]);
+    $a = db_zeile("SELECT * FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND konto_id IS NULL AND status = 'bestaetigt'", [va_id(), $k['email']]);
     if ($a === null) {
         return;
     }
@@ -231,7 +252,7 @@ function tk_link_einloesen(string $token): ?array
         case 'email':
             $neu = (string)$f['link']['neue_email'];
             $a = tk_anmeldung($id);
-            if (konto_per_email($neu) !== null || db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND id <> ?', [$neu, $a['id'] ?? 0]) > 0) {
+            if (konto_per_email($neu) !== null || db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [va_id(), $neu, $a['id'] ?? 0]) > 0) {
                 $meldung = 'Diese Adresse gehört schon zu einem anderen Konto oder einer anderen Anmeldung. Deine Adresse bleibt, wie sie war.';
             } else {
                 db_transaktion(function () use ($id, $neu, $a): void {

@@ -10,12 +10,12 @@ declare(strict_types=1);
 $konto = team_tor();
 $zf = totp_zustand((int)$konto['id']);
 $z = anm_zahlen();
-$seitGestern = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE status = 'bestaetigt' AND bestaetigt_am >= ?", [gmdate('Y-m-d H:i:s', time() - 86400)]);
+$seitGestern = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND bestaetigt_am >= ?", [va_id(), gmdate('Y-m-d H:i:s', time() - 86400)]);
 $termine = team_termine();
 $wl = array_filter($termine, fn($t) => $t['id'] !== 0 && $t['warte'] > 0);
 $ms = mail_stand();
 $essen = [];
-foreach (db_zeilen("SELECT essen, COUNT(*) AS n FROM anmeldung WHERE status = 'bestaetigt' GROUP BY essen") as $r) {
+foreach (db_zeilen("SELECT essen, COUNT(*) AS n FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' GROUP BY essen", [va_id()]) as $r) {
     $essen[$r['essen']] = (int)$r['n'];
 }
 $aufgaben = team_aufgaben();

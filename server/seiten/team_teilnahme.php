@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/teilnahme'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $kid = (int)$konto['id'];
 $q = trim((string)($_GET['q'] ?? $_POST['q'] ?? ''));
 $filter = (string)($_GET['f'] ?? $_POST['f'] ?? 'alle');

@@ -20,6 +20,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         flash_setzen('fehler', 'Dieser Link gilt nicht mehr: Er war schon benutzt, ist abgelaufen oder die Anmeldung gibt es nicht mehr. Hier kannst du dir einen neuen schicken lassen.');
         umleiten('/deine-anmeldung');
     }
+    if ($r['zweck'] === 'uebernehmen') {
+        // Daten einer früheren Anmeldung ins Formular der aktuellen Veranstaltung (E-58)
+        $_SESSION['anm_vorlage'] = (int)$r['anm'];
+        flash_setzen('ok', 'Deine Angaben vom letzten Mal sind eingetragen. Prüf sie, wähl Workshops und schick die Anmeldung ab.');
+        umleiten('/anmelden');
+    }
     anm_einloggen($r['anm']);
     if (!empty($r['konto_neu'])) {
         // Häkchen „Konto anlegen“ beim Anmelden: jetzt Passwort festlegen (E-48)
@@ -46,7 +52,8 @@ seite_kopf('Weiter', ['nav' => false]);
 <?php else:
     $text = ['bestaetigen' => ['Anmeldung bestätigen', 'Ein Klick, und deine Anmeldung gilt.', 'Anmeldung bestätigen'],
         'zugang' => ['Deine Anmeldung', 'Weiter zu deiner Anmeldung. Der Link gilt nur einmal.', 'Weiter'],
-        'email' => ['Neue Adresse bestätigen', 'Bestätige, dass deine Anmeldung künftig an diese Adresse gehen soll.', 'Adresse bestätigen']][$link['zweck']]; ?>
+        'email' => ['Neue Adresse bestätigen', 'Bestätige, dass deine Anmeldung künftig an diese Adresse gehen soll.', 'Adresse bestätigen'],
+        'uebernehmen' => ['Wieder dabei', 'Weiter zur Anmeldung – deine Angaben vom letzten Mal sind schon eingetragen.', 'Zur Anmeldung']][$link['zweck']]; ?>
     <h1 class="titel"><?= e($text[0]) ?></h1>
     <p class="text"><?= e($text[1]) ?></p>
     <form method="post" action="/link"><?= csrf_feld() ?><input type="hidden" name="t" value="<?= e($token) ?>"><button class="knopf gruen" type="submit"><?= e($text[2]) ?></button></form>

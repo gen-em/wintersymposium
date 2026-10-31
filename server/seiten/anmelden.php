@@ -21,6 +21,9 @@ $wsFehler = [];
 $eingabe = [];
 if ($tk !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     $eingabe = tk_namen($tk) + ['berufsgruppe' => $tk['berufsgruppe'], 'beruf_sonstige' => $tk['beruf_sonstige'], 'institution' => $tk['institution'], 'efn' => (string)$tk['efn']];
+} elseif (($vorlage = anm_vorlage()) !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    // Wiederkehrende ohne Konto (E-58): Daten der früheren Anmeldung über den Link aus der Mail
+    $eingabe = $vorlage;
 }
 $wahl = ['fest' => [], 'warte' => []];
 $danke = false;
@@ -80,7 +83,7 @@ $tagKurz = fn(string $tag) => tag_text($tag);
 seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'pow.js']]);
 ?>
 <div class="innen form-kopf">
-    <p class="kicker">Wintersymposium · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
+    <p class="kicker"><?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Anmelden</h1>
 <?php if ($danke): ?>
     <div class="kasten danke" role="status">
@@ -102,7 +105,7 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
     <div class="stichtage">
         <span>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></span>
         <span>Workshops ändern bis <?= e($tagKurz(anm_stichtag('stichtag_workshop'))) ?></span>
-        <span>Essen ändern bis <?= e($tagKurz(anm_stichtag('stichtag_essen'))) ?></span>
+        <?php if (va_an('mit_essen')): ?><span>Essen ändern bis <?= e($tagKurz(anm_stichtag('stichtag_essen'))) ?></span><?php endif; ?>
         <span>Absagen bis <?= e($tagKurz(anm_stichtag('stichtag_storno'))) ?></span>
     </div>
 </div>
@@ -130,7 +133,7 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
             <div class="feld"><label for="institution">Klinik / Institution</label><input id="institution" name="institution" type="text" autocomplete="organization" maxlength="160" required value="<?= $v('institution') ?>"<?= $ungueltig('institution') ?>><?= $fehlerFeld('institution') ?></div>
         </div>
         <div class="feld" id="sonst-feld"><label for="beruf_sonstige">Sonstige – welche? <span class="meta">(freiwillig)</span></label><input id="beruf_sonstige" name="beruf_sonstige" type="text" maxlength="80" value="<?= $v('beruf_sonstige') ?>"<?= $ungueltig('beruf_sonstige') ?>><?= $fehlerFeld('beruf_sonstige') ?></div>
-        <div class="feld" id="efn-feld"><label for="efn">EFN <span class="meta">(nur für <?= e($gruppen[0] ?? 'ÄrztInnen') ?>, freiwillig, für die Fortbildungspunkte)</span></label><input id="efn" name="efn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" value="<?= $v('efn') ?>"<?= $ungueltig('efn') ?>><p class="hilfe">Die einheitliche Fortbildungsnummer (15 Ziffern) steht auf deinem Fortbildungsausweis. Kannst du auch später nachtragen.</p><?= $fehlerFeld('efn') ?></div>
+        <?php if (va_an('mit_cme')): ?><div class="feld" id="efn-feld"><label for="efn">EFN <span class="meta">(nur für <?= e($gruppen[0] ?? 'ÄrztInnen') ?>, freiwillig, für die Fortbildungspunkte)</span></label><input id="efn" name="efn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" value="<?= $v('efn') ?>"<?= $ungueltig('efn') ?>><p class="hilfe">Die einheitliche Fortbildungsnummer (15 Ziffern) steht auf deinem Fortbildungsausweis. Kannst du auch später nachtragen.</p><?= $fehlerFeld('efn') ?></div><?php endif; ?>
 
         <?php if (!$voll && anm_workshops() !== []):
             $limit = va_zahl('workshop_limit'); $pflicht = va('workshop_pflicht') === 'pflicht'; ?>
@@ -141,11 +144,13 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
         </fieldset>
         <?php endif; ?>
 
+        <?php if (va_an('mit_essen')): ?>
         <fieldset class="feld"><legend>Essen</legend>
             <div class="wahl wahl-reihe">
                 <?php foreach (ANM_ESSEN as $k => $t): ?><label><input type="radio" name="essen" value="<?= e($k) ?>"<?= ($eingabe['essen'] ?? '') === $k ? ' checked' : '' ?>><span><?= e($t) ?></span></label><?php endforeach; ?>
             </div><?= $fehlerFeld('essen') ?>
         </fieldset>
+        <?php endif; ?>
 
         <div class="feld haken-liste">
             <?php if ($tk === null): ?><label class="haken"><input type="checkbox" name="konto" value="1"<?= !empty($eingabe['konto']) ? ' checked' : '' ?>><span>Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.</span></label><?php endif; ?>
