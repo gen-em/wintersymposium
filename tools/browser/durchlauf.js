@@ -117,7 +117,6 @@ async function pruefeBedienung(p, engine, breite, name) {
     const label = ((await sum.textContent()) || '').trim().slice(0, 30);
     // Schon offen (z. B. für das Bildschirmfoto aufgeklappt): erst schließen, am Ende wieder öffnen
     const warOffen = await d.evaluate(e => e.open);
-    if (warOffen) await sum.click();
     await sum.click();
     const offen = await d.evaluate(e => e.open);
     const inhaltSichtbar = await d.evaluate(e => [...e.children].some(c => c.tagName !== 'SUMMARY' && c.getBoundingClientRect().height > 0));
@@ -457,10 +456,10 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
         // AP-12: Wechsler der Veranstaltung aufklappen
-        await p.goto(basis + '/team/personen');
+        await pruefeSeite(p, fehler, engine, breite, 'team-wechsler', basis + '/team/personen');
         await p.click('.va-wechsler > summary');
         notiere(engine, breite, 'team-wechsler', 'Wechsler klappt auf, mit „Neue Veranstaltung“', await p.isVisible('.va-menue') && await p.locator('.va-menue .va-eintrag').count() >= 3 && await p.isVisible('.va-aktionen a[href="/team/veranstaltungen#neu"]'));
-        await pruefeSeite(p, fehler, engine, breite, 'team-wechsler', null);
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-wechsler-offen.png`) });
         await Promise.all([p.waitForNavigation(), p.click('.va-menue .va-eintrag:not([aria-current]) >> nth=0')]);
         notiere(engine, breite, 'team-wechsler', 'Eintrag wechselt die Veranstaltung', new URL(p.url()).searchParams.has('va') && await p.isVisible('.va-hinweis'));
         await p.goto(basis + '/team/personen?va=' + vor.aktuell_id);
@@ -468,7 +467,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         if (w >= 760) {
           await p.click('.nav-gross .person-menue > summary');
           notiere(engine, breite, 'person-menue', 'Personen-Menü: Kopf, Punkte mit Icons, ohne Team-Bereich', await p.isVisible('.nav-gross .person-liste .person-kopf') && await p.locator('.nav-gross .person-liste a.person-punkt svg').count() >= 2 && await p.locator('.nav-gross .person-liste a[href="/team"]').count() === 0);
-          await pruefeSeite(p, fehler, engine, breite, 'person-menue', null);
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-person-menue-offen.png`) });
           await p.click('.nav-gross .person-menue > summary');
           notiere(engine, breite, 'person-menue', 'Team-Bereich grün in der Leiste', await p.evaluate(() => getComputedStyle(document.querySelector('.nav-gross a.nav-team')).color) === 'rgb(181, 189, 0)');
         }
@@ -478,13 +477,16 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.waitForTimeout(450);
         if (w >= 760) {
           notiere(engine, breite, 'kopf-scroll', 'Kopfleiste bleibt beim Scrollen sichtbar', await p.evaluate(() => Math.round(document.querySelector('header.kopf').getBoundingClientRect().top) === 0) && await p.isVisible('.nav-gross'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll.png`) });
         } else {
           notiere(engine, breite, 'kopf-scroll', 'Handy: Leiste weg, „Menü“-Knopf da', await p.evaluate(() => document.querySelector('header.kopf').getBoundingClientRect().bottom <= 1) && await p.isVisible('.kopf-menue-knopf'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll.png`) });
           await p.click('.kopf-menue-knopf');
           await p.waitForTimeout(300);
           notiere(engine, breite, 'kopf-scroll', '„Menü“-Knopf öffnet das Menü', await p.evaluate(() => document.querySelector('details.menue').open) && await p.isVisible('.menue .nav-liste'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll-menue.png`) });
+          await p.evaluate(() => { document.querySelector('details.menue').open = false; });
         }
-        await pruefeSeite(p, fehler, engine, breite, 'kopf-scroll', null);
         // Mein Konto des Team-Kontos (ein Konto für alles, E-54) und Zwei-Faktor
         await pruefeSeite(p, fehler, engine, breite, 'team-mein-konto', basis + '/konto');
         notiere(engine, breite, 'team-mein-konto', 'Mein Konto nach Entwurf 7: Rolle, Einloggen und Sicherheit', await p.isVisible('.rechte-liste') && await p.isVisible('.pflicht-balken') && await p.isVisible('.sicherheit'));
@@ -796,7 +798,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await pruefeSeite(p, fehler, engine, breite, 'admin-team', basis + '/team');
         await p.click('.va-wechsler > summary');
         notiere(engine, breite, 'admin-team', 'Admin: nur der Fortbildungsabend, kein Betrieb', await p.locator('.va-menue .va-eintrag').count() === 1 && (await p.textContent('.va-menue')).includes('Fortbildungsabend') && await p.locator('.team-nav a:has-text("Betrieb")').count() === 0 && await p.locator('.va-aktionen').count() === 0);
-        await pruefeSeite(p, fehler, engine, breite, 'admin-wechsler', null);
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-admin-wechsler-offen.png`) });
+        await p.click('.va-wechsler > summary');
         await pruefeSeite(p, fehler, engine, breite, 'admin-konto', basis + '/konto');
         notiere(engine, breite, 'admin-konto', 'Mein Konto: „Admin für“ den Abend', (await p.textContent('.rechte-liste')).includes('Fortbildungsabend'));
       }
