@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.23.3] – 2026-10-31
+
+### Doku
+
+- **AP-15 auf Staging abgenommen** (Admin 2026-10-31): Shell-Cronjob beim Hoster eingerichtet, alle Ampeln grün, Token-Anzeige, Fehlerprotokoll und `/health` geprüft; Prüfprotokoll T-282 bis T-287 und Konzept nachgetragen.
+- **Konzept E-65:** die beim Zusammenführen mit 0.23.x verlorenen Punkte (5) bis (8) (vor der Umsetzung geklärt) wiederhergestellt.
+
 ## [0.23.2] – 2026-10-31
 
 ### Doku
