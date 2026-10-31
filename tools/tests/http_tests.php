@@ -651,6 +651,7 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     pruefe(($a['status'] ?? '') === 'bestaetigt' && (int)($a['konto_id'] ?? 0) === $mk, 'Team-Konto: eigene Anmeldung, verknüpft und gleich bestätigt');
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'Hallo Mia.'), 'Meine Anmeldung zeigt die eigene Anmeldung');
+    pruefe(str_contains($r['text'], 'class="nav-team" href="/team"'), 'Meine Anmeldung zeigt dem Team-Konto den Team-Bereich in der Leiste');
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
     // Ausloggen beendet alles
     $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k2);

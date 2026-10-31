@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.4] – 2026-10-31
+
+### Behoben
+
+- **„Meine Anmeldung“ zeigte dem Team-Konto keinen Team-Bereich** in der Leiste (Rückmeldung 2026-10-31): Seiten, die die Anmeldung selbst übergeben, haben das Team-Login nicht geprüft. Der Seitenkopf prüft es jetzt immer.
+
 ## [0.21.3] – 2026-10-31
 
 ### Behoben
