@@ -115,6 +115,9 @@ async function pruefeBedienung(p, engine, breite, name) {
     const sum = d.locator(':scope > summary');
     if (!await sum.isVisible()) continue;
     const label = ((await sum.textContent()) || '').trim().slice(0, 30);
+    // Schon offen (z. B. für das Bildschirmfoto aufgeklappt): erst schließen, am Ende wieder öffnen
+    const warOffen = await d.evaluate(e => e.open);
+    if (warOffen) await sum.click();
     await sum.click();
     const offen = await d.evaluate(e => e.open);
     const inhaltSichtbar = await d.evaluate(e => [...e.children].some(c => c.tagName !== 'SUMMARY' && c.getBoundingClientRect().height > 0));
@@ -124,6 +127,7 @@ async function pruefeBedienung(p, engine, breite, name) {
     await sum.click();
     const zu = await d.evaluate(e => !e.open);
     notiere(engine, breite, name, `Aufklappen „${label}“`, offen && inhaltSichtbar && zu);
+    if (warOffen) await sum.click();
   }
   // Popups: Auslöser mit aria-haspopup="dialog" oder data-dialog öffnen dialog[open]
   const ausloeser = p.locator('[aria-haspopup="dialog"], [data-dialog]');
