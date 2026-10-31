@@ -697,8 +697,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.keyboard.press('Escape');
       await p.setViewportSize({ width: 1440, height: 900 });
 
-      // Texte: Werkzeugleiste schreibt Markdown
-      await p.goto(basis + '/team/texte');
+      // Startseiten-Texte (Verwaltung → Startseite, AP-12): Werkzeugleiste
+      await p.goto(basis + '/team/startseite');
       // Texte: derselbe Editor; Fett schaltet an und aus, nummerierte Liste (Rückmeldung 2026-10-30 (2))
       const cme = p.locator('#t-start_cme-feld');
       const cmeLeiste = p.locator('.feld:has(#t-start_cme) .werkzeug');
