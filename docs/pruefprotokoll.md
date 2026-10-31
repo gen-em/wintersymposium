@@ -29,6 +29,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
+| AP-12 | Team-Navigation und Rechte je Veranstaltung (E-60) | umgesetzt, Staging offen | lokal T-264 bis T-272 | Staging (siehe unten) |
 | AP-9 | Abschluss und Datenschutz (E-59) | umgesetzt, Staging offen | lokal T-200 bis T-202, T-204, T-223, T-224, T-260 bis T-263 | Staging (siehe unten); T-203 Checkliste vor dem Anmeldestart |
 
 ## 2. Geplante Prüfungen
@@ -190,6 +191,17 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-259, ap: AP-11, was: "Wiederkehrende und Bausteine", wie: "ohne Konto: „Link per Mail“ schickt „Daten übernehmen“, Formular vorausgefüllt; Veranstaltung ohne Essen bzw. ohne Fortbildungspunkte fragt nicht danach", status: "lokal bestanden"}
 - {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
+# AP-12 Team-Navigation und Rechte je Veranstaltung (E-60)
+- {id: T-264, ap: AP-12, was: "Admin nur für ausgewählte Veranstaltungen", wie: "Team-Konten → Veranstaltungen: „Nur ausgewählte“; Wechsler zeigt nur diese; ?va= einer fremden → 403; Anmeldung einer fremden per Nummer → 404; ohne Freischaltung Hinweis statt Team-Bereich; „Alle, auch künftige“ gibt alles frei", status: "lokal bestanden"}
+- {id: T-265, ap: AP-12, was: "Betrieb nur für BetreiberInnen", wie: "Admin: Veranstaltungen, Team-Konten, Newsletter, Texte, Betrieb → 403; kein Reiter Betrieb, keine „Neue Veranstaltung“; Mailings ohne Newsletter-Listen; Newsletter-Export 404; Startseiten-Texte ja", status: "lokal bestanden"}
+- {id: T-266, ap: AP-12, was: "Protokoll je Veranstaltung", wie: "Admin sieht nur Einträge seiner Veranstaltungen, keine ohne Veranstaltung (Konten, Logins); BetreiberIn mit Filter gewählt/alle/ohne; Spalte Veranstaltung", status: "lokal bestanden"}
+- {id: T-267, ap: AP-12, was: "Veranstaltung löschen", wie: "falsches Kürzel abgewiesen; aktuelle nicht löschbar; mit Kürzel gelöscht samt Anmeldungen, vorher Sicherung „vor dem Löschen von …“", status: "lokal bestanden"}
+- {id: T-268, ap: AP-12, was: "Wechsler und Reiter", wie: "Wechsler klappt auf, Eintrag wechselt; Reiter Übersicht, Anmeldungen, Programm, Mailings, Statistik, Verwaltung (Einstellungen, Startseite, Protokoll), Betrieb", status: "lokal bestanden (Browser)"}
+- {id: T-269, ap: AP-12, was: "Personen-Menü und Team-Bereich grün", wie: "Kopf zum Lesen, Punkte mit Phosphor-Icons, ohne Team-Bereich, Hover-Ring; Team-Bereich grün in der Leiste", status: "lokal bestanden (Browser)"}
+- {id: T-270, ap: AP-12, was: "Mein Konto nach Entwurf 7", wie: "Profil mit Rolle und Veranstaltungen, Deine Veranstaltungen, Newsletter; Einloggen und Sicherheit in einer Kachel; Teilnehmende mit Adresse ändern und Konto löschen", status: "lokal bestanden"}
+- {id: T-271, ap: AP-12, was: "Stehende Kopfleiste", wie: "Desktop: Leiste bleibt oben beim Scrollen; Handy: beim Scrollen nach unten weg, „Menü“-Knopf öffnet das Menü", status: "lokal bestanden (Browser); auf echten Geräten offen"}
+- {id: T-272, ap: AP-12, was: "Startseite erkennt Login (Fehler bis 0.19.1)", wie: "eingeloggt / öffnen → Personen-Menü statt „Einloggen“", status: "lokal bestanden; auf Staging offen"}
+
 # AP-9 Abschluss und Datenschutz
 - {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Veranstaltung länger als 14 Monate her → vom Job geleert (Name, Adresse, Institution, EFN, Links, Mailing-Empfänger); Berufsgruppe und Plätze bleiben; mit Konto bleibt sie; vor 13 Monaten noch nicht (E-24, E-59)", status: "lokal bestanden"}
 - {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "Team-Bereich → Daten: Sicherung anlegen, Daten ändern, wiederherstellen → alter Stand zurück, Stand davor gesichert; unvollständige oder neuere Sicherung abgelehnt; Herunterladen nur mit Code (E-47)", status: "lokal bestanden; auf Staging offen"}
@@ -290,6 +302,15 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-12 Team-Navigation und Rechte (nach Merge auf Staging)
+
+1. Eingeloggt die Startseite öffnen (auch über das Logo). Erwartet: oben dein Personen-Menü, „Team-Bereich“ grün (T-272).
+2. Auf dem Handy eine lange Seite nach unten scrollen. Erwartet: die Leiste verschwindet, rechts oben ein „Menü“-Knopf; nach oben scrollen bringt sie zurück. Am Rechner bleibt sie stehen.
+3. Team-Bereich: Wechsler rechts neben dem Titel aufklappen und eine andere Veranstaltung wählen; Reiter „Betrieb“ ansehen.
+4. Betrieb → Team-Konten: ein Test-Admin-Konto anlegen, unter „Veranstaltungen“ nur eine auswählen, mit dem Konto einloggen. Erwartet: nur diese Veranstaltung, kein Reiter Betrieb, im Protokoll nur ihre Einträge. Danach das Konto wieder sperren oder löschen.
+5. Mein Konto ansehen (Team-Konto und, wenn möglich, ein Teilnehmenden-Konto).
+6. Optional mit Testdaten: Betrieb → Veranstaltungen → eine abgeschlossene löschen (Kürzel eintippen). Erwartet: weg, unter Betrieb eine Sicherung „vor dem Löschen von …“.
 
 ### Noch zu prüfen für AP-9 Abschluss und Datenschutz (nach Merge auf Staging)
 

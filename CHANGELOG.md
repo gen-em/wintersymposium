@@ -2,6 +2,35 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.20.0] – 2026-10-31
+
+Team-Navigation und Rechte je Veranstaltung (AP-12, E-60).
+
+### Neu
+
+- **Rechte je Veranstaltung:** Admins sind für alle (auch künftige) oder nur ausgewählte Veranstaltungen freigeschaltet (Betrieb → Team-Konten) und sehen überall nur diese – auch bei Personen, Konten und im Protokoll. BetreiberInnen sehen alles.
+- **Wechsler** rechts neben dem Seitentitel statt der Leiste; BetreiberInnen mit „Neue Veranstaltung“.
+- **Reiter Betrieb** (nur BetreiberInnen): Veranstaltungen, Team-Konten, Newsletter, Texte (Impressum, Datenschutz), Betrieb. Oben steht „Mailings“ statt „Kommunikation“; Startseiten-Texte unter Verwaltung → Startseite.
+- **Veranstaltungen löschen** (nur BetreiberInnen, nicht die aktuelle): Kürzel eintippen, vorher automatische Sicherung; CME-Nachweise bleiben.
+- **Protokoll** mit Veranstaltung und Filter (gewählte, alle, ohne Veranstaltung).
+- **Personen-Menü** neu: Kopf zum Lesen, Punkte mit Icons (Phosphor, MIT), Hover-Ring; ohne Team-Bereich.
+- **Mein Konto** neu sortiert: Profil (mit Rolle und Veranstaltungen), Deine Veranstaltungen, Newsletter; „Einloggen und Sicherheit“ in einer Kachel mit verständlichen Bezeichnungen.
+- **Kopfleiste bleibt stehen**; auf dem Handy beim Scrollen nach unten nur ein „Menü“-Knopf.
+- Beispieldaten: Ada (Admin nur für den Fortbildungsabend).
+
+### Geändert
+
+- **Knopf-Standard:** getönte Fläche statt Rand; alle Ränder in ganzen Pixeln (vorher 1,5 px, wirkte unrund).
+- Team-Bereich grün in der Kopfleiste.
+- Die Rolle heißt überall „BetreiberIn“.
+- Mailings an Newsletter-Listen, Newsletter und sein Export nur für BetreiberInnen.
+- Migration 17: `konto.alle_veranstaltungen`, `konto_veranstaltung`, `audit.veranstaltung_id`.
+
+### Behoben
+
+- Die Startseite erkannte eingeloggte Team-Konten nicht (Personen-Menü fehlte, Staging).
+- Anmeldungen und Plätze anderer Veranstaltungen ließen sich im Team-Bereich über ihre Nummer öffnen.
+
 ## [0.19.1] – 2026-10-31
 
 ### Geändert
