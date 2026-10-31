@@ -41,7 +41,7 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         . '<meta name="theme-color" content="#001E3A">'
         // dialog.js zuerst: macht aus jeder Nachfrage den einheitlichen Dialog (Rückmeldung 2026-10-30)
-        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_merge(['dialog.js'], $opt['skripte'] ?? [])))
+        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_merge(['dialog.js', 'kopf.js'], $opt['skripte'] ?? [])))
         . '</head><body class="akzent-' . $akzent . '">'
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'

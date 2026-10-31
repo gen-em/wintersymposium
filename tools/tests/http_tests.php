@@ -341,7 +341,7 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
     pruefe($r['status'] === 200 && str_contains($r['text'], 'mindestens 10 Zeichen'), 'Passwort unter 10 Zeichen abgelehnt');
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'passwort_setzen', 'passwort' => 'karlas-passwort', 'passwort2' => 'karlas-passwort'], $k);
     $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
-    pruefe(str_contains($r['text'], 'Dein Profil') && str_contains($r['text'], 'href="/konto" aria-current'), 'Passwort gespeichert, Profil, „Mein Konto“ in der Navigation');
+    pruefe(str_contains($r['text'], 'id="h-profil">Profil<') && str_contains($r['text'], 'Einloggen und Sicherheit') && str_contains($r['text'], 'href="/konto" aria-current'), 'Passwort gespeichert, Profil, „Mein Konto“ in der Navigation');
     $c = http_csrf($r['text']);
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'profil', 'vorname' => 'Karla', 'nachname' => 'Konto', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA', 'efn' => '802760012345673'], $k);
     pruefe($r['status'] === 303 && konto_per_email('karla@example.org')['efn'] === '802760012345673', 'Profil ohne Anmeldung speichern (EFN)');

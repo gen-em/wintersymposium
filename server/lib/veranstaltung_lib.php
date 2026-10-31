@@ -599,3 +599,22 @@ function va_rechte_text(array $konto): string
     }
     return $namen === [] ? 'keine' : implode(', ', $namen);
 }
+
+/** Für „Mein Konto“: wofür ein Team-Konto zuständig ist, als Liste (AP-12, E-60). */
+function va_rechte_liste(array $konto): array
+{
+    if ($konto['rolle'] === 'betreiber') {
+        return ['alle Veranstaltungen', 'Betrieb (Veranstaltungen, Team-Konten, Newsletter, Texte)'];
+    }
+    $ids = va_erlaubte_ids($konto);
+    if ($ids === null) {
+        return ['alle Veranstaltungen, auch künftige'];
+    }
+    $namen = [];
+    foreach (va_alle() as $v) {
+        if (in_array($v['id'], $ids, true)) {
+            $namen[] = $v['name'] . ($v['datum'] !== '' ? ' (' . tag_text($v['datum']) . ')' : '');
+        }
+    }
+    return $namen === [] ? ['noch keine – eine BetreiberIn schaltet dich frei'] : $namen;
+}
