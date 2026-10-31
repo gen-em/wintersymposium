@@ -15,8 +15,12 @@ declare(strict_types=1);
  * werden mit AP-4 wirksam; bis dahin werden sie nur gespeichert.
  */
 
+/** Arten von Veranstaltungen (E-58): beeinflussen nur Texte, das Grundmuster ist für alle gleich. */
+const VA_ARTEN = ['symposium' => 'Symposium', 'vortrag' => 'Vortragsabend', 'journalclub' => 'Journal Club', 'workshop' => 'Workshop-Abend', 'fall' => 'Fallbesprechung', 'sonstige' => 'Sonstige'];
+
 const VA_GRUPPEN = [
     'veranstaltung' => ['Veranstaltung', 'Erscheint in den Eckdaten auf der Startseite.'],
+    'bausteine' => ['Bausteine', 'Was diese Veranstaltung braucht. Workshops gibt es, sobald das Programm welche enthält (E-58).'],
     'cme' => ['Fortbildungspunkte (CME)', 'Die Anzeige erscheint auf der Startseite; Punkte, Kategorie, Kammer und Nummer stehen auf der Teilnahmebescheinigung (AP-10).'],
     'zertifikat' => ['Teilnahmebescheinigung', 'Steht auf dem Zertifikat (AP-10, E-57). Die Unterschrift als Bild lädst du unter „Teilnahme“ hoch.'],
     'anmeldung' => ['Anmeldung', 'Zeitraum und Regeln des Anmeldeformulars.'],
@@ -30,6 +34,8 @@ const VA_GRUPPEN = [
  *      zahl (min/max), text (max), auswahl (optionen), liste (Zeilen)
  */
 const VA_KATALOG = [
+    'veranstaltung_kurz' => ['gruppe' => 'veranstaltung', 'typ' => 'text', 'titel' => 'Kurzname', 'start' => 'Wintersymposium', 'max' => 40, 'hilfe' => 'In Mails, Kopfzeilen und Seitentiteln, z. B. „Wintersymposium“ oder „Journal Club“. Leer: „Wintersymposium“.'],
+    'veranstaltung_art' => ['gruppe' => 'veranstaltung', 'typ' => 'auswahl', 'titel' => 'Art', 'start' => 'symposium', 'optionen' => VA_ARTEN],
     'veranstaltung_name' => ['gruppe' => 'veranstaltung', 'typ' => 'text', 'titel' => 'Name', 'start' => 'Allgäuer Winter-Notfallsymposium', 'max' => 80, 'hilfe' => 'Steht auf der Teilnahmebescheinigung. Leer: „Wintersymposium“.'],
     'veranstaltung_auflage' => ['gruppe' => 'veranstaltung', 'typ' => 'text', 'titel' => 'Auflage', 'start' => '3. Auflage', 'max' => 30, 'hilfe' => 'z. B. „3. Auflage“; steht mit dem Jahr auf der Teilnahmebescheinigung. Leer: nur das Jahr.'],
     'veranstaltung_datum' => ['gruppe' => 'veranstaltung', 'typ' => 'datum', 'titel' => 'Datum', 'start' => '2027-01-20', 'pflicht' => true],
@@ -42,6 +48,9 @@ const VA_KATALOG = [
     'cme_kategorie' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Kategorie', 'start' => '', 'max' => 10, 'hilfe' => 'z. B. „A“ – wie von der Kammer anerkannt.'],
     'cme_kammer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Ärztekammer', 'start' => '', 'max' => 120],
     'cme_veranstaltungsnummer' => ['gruppe' => 'cme', 'typ' => 'text', 'titel' => 'Veranstaltungsnummer (VNR)', 'start' => '', 'max' => 40],
+    'mit_essen' => ['gruppe' => 'bausteine', 'typ' => 'auswahl', 'titel' => 'Essenswahl bei der Anmeldung', 'start' => 'ja', 'optionen' => ['ja' => 'ja', 'nein' => 'nein']],
+    'mit_cme' => ['gruppe' => 'bausteine', 'typ' => 'auswahl', 'titel' => 'Fortbildungspunkte (EFN abfragen, CME-Liste)', 'start' => 'ja', 'optionen' => ['ja' => 'ja', 'nein' => 'nein']],
+    'mit_zertifikat' => ['gruppe' => 'bausteine', 'typ' => 'auswahl', 'titel' => 'Teilnahmebescheinigung', 'start' => 'ja', 'optionen' => ['ja' => 'ja', 'nein' => 'nein']],
     'zertifikat_leitung' => ['gruppe' => 'zertifikat', 'typ' => 'text', 'titel' => 'Name unter der Unterschrift', 'start' => '', 'max' => 120, 'hilfe' => 'z. B. „Dr. Vorname Nachname“. Leer: nur die Rolle.'],
     'zertifikat_leitung_rolle' => ['gruppe' => 'zertifikat', 'typ' => 'text', 'titel' => 'Rolle unter der Unterschrift', 'start' => 'Wissenschaftliche Leitung', 'max' => 80],
     'anmeldung_start' => ['gruppe' => 'anmeldung', 'typ' => 'zeitpunkt', 'titel' => 'Anmeldung ab', 'start' => '2026-11-24 23:00:00', 'pflicht' => true],
@@ -56,6 +65,255 @@ const VA_KATALOG = [
     'stichtag_storno' => ['gruppe' => 'stichtage', 'typ' => 'datum', 'titel' => 'Selbst stornieren bis', 'start' => ''],
     'berufsgruppen' => ['gruppe' => 'listen', 'typ' => 'liste', 'titel' => 'Berufsgruppen', 'start' => "ÄrztIn\nNotfallsanitäterIn\nRettungssanitäterIn\nPflege/MFA\nStudentIn\nSonstige", 'max_zeilen' => 30, 'hilfe' => 'Die erste Zeile fragt die EFN ab (ÄrztInnen, E-22); „Sonstige“ erlaubt einen Freitext (E-21).'],
 ];
+
+/** Ein Baustein (mit_essen, mit_cme, mit_zertifikat) ist eingeschaltet; leer gilt der Startwert. */
+function va_an(string $schluessel): bool
+{
+    $w = va($schluessel);
+    return ($w !== '' ? $w : VA_KATALOG[$schluessel]['start']) === 'ja';
+}
+
+/** Kurzname der Veranstaltung für Mails und Kopfzeilen. */
+function va_kurz(): string
+{
+    return va('veranstaltung_kurz') !== '' ? va('veranstaltung_kurz') : 'Wintersymposium';
+}
+
+/* ---- Mehrere Veranstaltungen (E-58) -------------------------------------- */
+
+/**
+ * Jede Anfrage arbeitet im Kontext genau einer Veranstaltung: öffentlich die
+ * aktuelle (bzw. die zum Kürzel), im Team-Bereich die gewählte, in Jobs die
+ * jeweils bearbeitete. va_id() liefert sie; va_kontext() setzt sie.
+ */
+const VA_STATUS = ['entwurf' => 'Entwurf', 'aktuell' => 'aktuell', 'abgeschlossen' => 'abgeschlossen'];
+/** Adressen, die kein Kürzel sein dürfen (erste Stelle eines Pfads der Anwendung). */
+const VA_KUERZEL_VERBOTEN = ['team', 'konto', 'anmelden', 'link', 'deine-anmeldung', 'newsletter', 'impressum', 'datenschutz', 'einloggen', 'ausloggen',
+    'einrichten', 'notzugang', 'install', 'jobs', 'health', 'passkey', 'bild', 'assets', 'favicon', 'apple-touch-icon', 'robots', 'well-known', 'veranstaltung'];
+
+function va_tabellen_da(): bool
+{
+    if (empty($GLOBALS['ws_va_tab'])) {
+        $GLOBALS['ws_va_tab'] = db_tabelle_da('veranstaltung') && db_tabelle_da('va_einstellung') && db_tabelle_da('inhalt')
+            && (int)db_wert("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'inhalt' AND column_name = 'veranstaltung_id'") > 0;
+    }
+    return $GLOBALS['ws_va_tab'];
+}
+
+/** Nach Migrationen oder geleerter Datenbank neu nachsehen. */
+function va_zwischenspeicher_leeren(): void
+{
+    unset($GLOBALS['ws_va_tab'], $GLOBALS['ws_va_aktuell'], $GLOBALS['ws_inhalt_cache']);
+}
+
+function va_kontext(int $id): void
+{
+    $GLOBALS['ws_va_id'] = $id;
+}
+
+/** Veranstaltung des Kontexts (ohne gesetzten Kontext: die aktuelle). */
+function va_id(): int
+{
+    if (isset($GLOBALS['ws_va_id'])) {
+        return (int)$GLOBALS['ws_va_id'];
+    }
+    return va_aktuell_id() ?? 1;
+}
+
+/** Die aktuelle Veranstaltung (Startseite, Anmeldung) oder null. */
+function va_aktuell_id(): ?int
+{
+    if (!va_tabellen_da()) {
+        return null;
+    }
+    if (!array_key_exists('ws_va_aktuell', $GLOBALS)) {
+        $id = db_wert("SELECT id FROM veranstaltung WHERE status = 'aktuell' ORDER BY id LIMIT 1");
+        $GLOBALS['ws_va_aktuell'] = $id === null ? null : (int)$id;
+    }
+    return $GLOBALS['ws_va_aktuell'];
+}
+
+/** Zeile einer Veranstaltung (Standard: Kontext) oder null. */
+function va_zeile(?int $id = null): ?array
+{
+    if (!va_tabellen_da()) {
+        return null;
+    }
+    return db_zeile('SELECT * FROM veranstaltung WHERE id = ?', [$id ?? va_id()]);
+}
+
+function va_per_kuerzel(string $kuerzel): ?array
+{
+    return va_tabellen_da() ? db_zeile('SELECT * FROM veranstaltung WHERE kuerzel = ?', [mb_strtolower($kuerzel)]) : null;
+}
+
+/** Abgeschlossen = nur noch lesen (Daten bleiben, nichts mehr änderbar). */
+function va_abgeschlossen(?int $id = null): bool
+{
+    return (va_zeile($id)['status'] ?? '') === 'abgeschlossen';
+}
+
+/** Ein Wert einer anderen Veranstaltung lesen, ohne den Kontext zu wechseln. */
+function va_von(int $id, string $schluessel): string
+{
+    $alt = $GLOBALS['ws_va_id'] ?? null;
+    va_kontext($id);
+    try {
+        return va($schluessel);
+    } finally {
+        if ($alt === null) {
+            unset($GLOBALS['ws_va_id']);
+        } else {
+            va_kontext((int)$alt);
+        }
+    }
+}
+
+/** Code im Kontext einer anderen Veranstaltung ausführen (Jobs, Profil, Mailings). */
+function va_mit(int $id, callable $fn): mixed
+{
+    $alt = $GLOBALS['ws_va_id'] ?? null;
+    va_kontext($id);
+    try {
+        return $fn();
+    } finally {
+        if ($alt === null) {
+            unset($GLOBALS['ws_va_id']);
+        } else {
+            va_kontext((int)$alt);
+        }
+    }
+}
+
+/** Alle Veranstaltungen, neueste zuerst (Datum aus den Einstellungen), mit 'name', 'datum', 'kurz'. */
+function va_alle(): array
+{
+    if (!va_tabellen_da()) {
+        return [];
+    }
+    $liste = [];
+    foreach (db_zeilen('SELECT * FROM veranstaltung ORDER BY id') as $v) {
+        $v['id'] = (int)$v['id'];
+        $v['datum'] = va_von($v['id'], 'veranstaltung_datum');
+        $v['name'] = va_von($v['id'], 'veranstaltung_name') ?: va_von($v['id'], 'veranstaltung_kurz') ?: $v['kuerzel'];
+        $v['kurz'] = va_mit($v['id'], 'va_kurz');
+        $liste[] = $v;
+    }
+    usort($liste, fn($a, $b) => [$b['datum'], $b['id']] <=> [$a['datum'], $a['id']]);
+    return $liste;
+}
+
+/** Kürzel prüfen: Fehlertext oder null. */
+function va_kuerzel_fehler(string $kuerzel, ?int $ausser = null): ?string
+{
+    if (preg_match('/^[a-z0-9][a-z0-9-]{1,39}$/', $kuerzel) !== 1) {
+        return 'Kürzel: 2 bis 40 Zeichen, nur Kleinbuchstaben ohne Umlaute, Ziffern und Bindestrich (z. B. wintersymposium2027).';
+    }
+    if (in_array($kuerzel, VA_KUERZEL_VERBOTEN, true)) {
+        return 'Dieses Kürzel ist schon eine Adresse der Seite. Bitte ein anderes wählen.';
+    }
+    if ((int)db_wert('SELECT COUNT(*) FROM veranstaltung WHERE kuerzel = ? AND id <> ?', [$kuerzel, $ausser ?? 0]) > 0) {
+        return 'Dieses Kürzel hat schon eine andere Veranstaltung.';
+    }
+    return null;
+}
+
+function va_kuerzel_setzen(int $id, string $kuerzel, ?int $kontoId): ?string
+{
+    $kuerzel = mb_strtolower(trim($kuerzel));
+    $f = va_kuerzel_fehler($kuerzel, $id);
+    if ($f !== null) {
+        return $f;
+    }
+    $alt = (string)db_wert('SELECT kuerzel FROM veranstaltung WHERE id = ?', [$id]);
+    if ($alt !== $kuerzel) {
+        db_ausfuehren('UPDATE veranstaltung SET kuerzel = ? WHERE id = ?', [$kuerzel, $id]);
+        audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ': Kürzel ' . $alt . ' → ' . $kuerzel, $kontoId);
+    }
+    return null;
+}
+
+/**
+ * Neue Veranstaltung (Entwurf). $vorlage: Einstellungen und Programm einer
+ * bestehenden kopieren (Programm als Arbeitsstand, noch nicht veröffentlicht).
+ */
+function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId): array
+{
+    $kuerzel = mb_strtolower(trim($kuerzel));
+    if (($f = va_kuerzel_fehler($kuerzel)) !== null) {
+        return ['fehler' => $f];
+    }
+    $id = db_transaktion(function () use ($kuerzel, $name, $vorlage): int {
+        db_ausfuehren("INSERT INTO veranstaltung (kuerzel, status, erstellt_am) VALUES (?, 'entwurf', ?)", [$kuerzel, db_jetzt()]);
+        $id = (int)db()->lastInsertId();
+        if ($vorlage !== null) {
+            db_ausfuehren('INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) SELECT ?, schluessel, wert, ? FROM va_einstellung WHERE veranstaltung_id = ?', [$id, db_jetzt(), $vorlage]);
+            db_ausfuehren('INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, text, ?, NULL FROM inhalt WHERE veranstaltung_id = ?', [$id, db_jetzt(), $vorlage]);
+            programm_kopieren($vorlage, $id);
+        } else {
+            // Startwerte der Texte von der aktuellen Veranstaltung, damit die Startseite nicht leer ist
+            db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? 1]);
+        }
+        db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_name', ?, ?)
+            ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
+        return $id;
+    });
+    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : ''), $kontoId);
+    return ['id' => $id];
+}
+
+/** Zur aktuellen machen: nur, wenn keine andere aktuell ist (die vorige zuerst abschließen). */
+function va_aktuell_machen(int $id, ?int $kontoId): ?string
+{
+    $v = va_zeile($id);
+    if ($v === null || $v['status'] !== 'entwurf') {
+        return 'Nur ein Entwurf kann die aktuelle Veranstaltung werden.';
+    }
+    $akt = va_aktuell_id();
+    if ($akt !== null && $akt !== $id) {
+        return 'Es gibt schon eine aktuelle Veranstaltung. Schließ sie zuerst ab.';
+    }
+    db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell' WHERE id = ?", [$id]);
+    unset($GLOBALS['ws_va_aktuell']);
+    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') ist jetzt die aktuelle', $kontoId);
+    return null;
+}
+
+/** Abschließen: danach nur noch lesen; offene Wartelisten und Angebote bleiben als Stand stehen. */
+function va_abschliessen(int $id, ?int $kontoId): ?string
+{
+    $v = va_zeile($id);
+    if ($v === null || $v['status'] === 'abgeschlossen') {
+        return 'Diese Veranstaltung ist schon abgeschlossen.';
+    }
+    db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen', abgeschlossen_am = ? WHERE id = ?", [db_jetzt(), $id]);
+    unset($GLOBALS['ws_va_aktuell']);
+    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') abgeschlossen', $kontoId);
+    return null;
+}
+
+/** Entwurf ohne Anmeldungen löschen (z. B. versehentlich angelegt). */
+function va_loeschen(int $id, ?int $kontoId): ?string
+{
+    $v = va_zeile($id);
+    if ($v === null || $v['status'] !== 'entwurf') {
+        return 'Löschen geht nur bei Entwürfen.';
+    }
+    if ((int)db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ?', [$id]) > 0) {
+        return 'Diese Veranstaltung hat schon Anmeldungen.';
+    }
+    db_transaktion(function () use ($id): void {
+        foreach (db_zeilen('SELECT id FROM programmpunkt WHERE veranstaltung_id = ?', [$id]) as $p) {
+            db_ausfuehren('DELETE FROM programmpunkt WHERE id = ?', [$p['id']]);
+        }
+        db_ausfuehren('DELETE FROM programm_stand WHERE id = ?', [$id]);
+        db_ausfuehren('DELETE FROM inhalt WHERE veranstaltung_id = ?', [$id]);
+        db_ausfuehren('DELETE FROM rundmail WHERE veranstaltung_id = ?', [$id]);
+        db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$id]);
+    });
+    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (Entwurf) gelöscht', $kontoId);
+    return null;
+}
 
 /** Gespeicherter Wert oder Startwert (Speicherform: UTC bei Zeitpunkten). */
 function va(string $schluessel): string

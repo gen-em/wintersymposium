@@ -187,6 +187,21 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js', 'pas
                 <p class="meta">Du bist nicht zum Symposium angemeldet. <?= anm_zeitraum() === 'vorher' ? 'Die Anmeldung öffnet am ' . e(datum_zeit_text(va('anmeldung_start'))) . ' Uhr.' : 'Die Anmeldung ist geschlossen.' ?></p>
             <?php endif; ?>
         </div>
+        <?php $frueher = tk_veranstaltungen((int)$k['id']); if ($frueher !== []): ?>
+        <div class="kasten" id="veranstaltungen">
+            <h2 class="zwischen klein-zwischen">Deine Veranstaltungen</h2>
+            <p class="meta klein">Wo du angemeldet warst – mit Teilnahmebescheinigung, sobald sie freigeschaltet ist. Bleibt, solange es dein Konto gibt.</p>
+            <ul class="va-liste">
+            <?php foreach ($frueher as $f): ?>
+                <li><strong><?= e($f['name']) ?></strong> <span class="mono meta klein"><?= $f['datum'] !== '' ? e(tag_text($f['datum'])) : '' ?></span><br>
+                    <span class="chip <?= $f['teilgenommen'] ? 'ok' : 'offen' ?>"><?= e($f['stand']) ?></span>
+                    <?php if ($f['zertifikat']): ?> <a class="klein-link" href="/konto/zertifikat?a=<?= (int)$f['id'] ?>">Teilnahmebescheinigung (PDF)</a><?php endif; ?>
+                    <?php if ($f['status'] !== 'abgeschlossen'): ?> <a class="klein-link" href="/<?= e($f['kuerzel']) ?>">Zur Veranstaltung</a><?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
         <div class="kasten">
             <h2 class="zwischen klein-zwischen">Dein Profil</h2>
             <dl class="liste-def">

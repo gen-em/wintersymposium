@@ -165,6 +165,7 @@ if (!$mitDb) {
         db()->exec('DROP TABLE `' . $z['t'] . '`');
     }
     db()->exec('SET FOREIGN_KEY_CHECKS = 1');
+va_zwischenspeicher_leeren();
     pruefe(migration_ist() === 0, 'leere Datenbank');
 
     abschnitt('Migrationen');
@@ -177,7 +178,12 @@ if (!$mitDb) {
         db_ausfuehren('INSERT INTO schema_migration (nr, beschreibung, angewendet_am) VALUES (?, ?, ?)', [$nr, 'test', db_jetzt()]);
     }
     db_ausfuehren("INSERT INTO team_konto (id, email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am) VALUES (7, 'alt@example.org', 'Alt', 'h', 'betreiber', 1, ?, ?)", [db_jetzt(), db_jetzt()]);
+    // Einstellung der Veranstaltung und Startseiten-Text im alten Stand (vor E-58)
+    db_ausfuehren("INSERT INTO einstellung (schluessel, wert, geaendert_am) VALUES ('veranstaltung_ort', 'Alter Ort', ?)", [db_jetzt()]);
+    db_ausfuehren("UPDATE inhalt SET text = 'Alter Titel' WHERE schluessel = 'start_titel'");
     $neu = migration_anwenden();
+    pruefe(va_zeile(1)['status'] === 'aktuell' && va_id() === 1 && va('veranstaltung_ort') === 'Alter Ort' && db_wert("SELECT COUNT(*) FROM einstellung WHERE schluessel = 'veranstaltung_ort'") == 0
+        && inhalt('start_titel') === 'Alter Titel' && inhalt('impressum') === '', 'Migration 15: alles wird Veranstaltung 1 (aktuell), Einstellungen und Startseiten-Texte umgezogen');
     pruefe($neu === array_values(array_filter(array_keys(migration_katalog()), fn($n) => $n > 3)), 'restliche Schritte angewendet');
     $alt = db_zeile('SELECT id, rolle, totp_seit FROM konto WHERE email = ?', ['alt@example.org']);
     pruefe($alt !== null && (int)$alt['id'] === 7 && $alt['rolle'] === 'betreiber' && $alt['totp_seit'] === null, 'Team-Konto mit gleicher id in konto übernommen, ohne zweiten Faktor');
@@ -276,7 +282,7 @@ if (!$mitDb) {
     va_speichern(va_pruefen(['veranstaltung_kapazitaet' => '0', 'cme_anzeige' => ''] + $gut)['werte'], null);
     $eckTitel = array_column(va_eckdaten(), 0);
     pruefe(!in_array('Freie Plätze', $eckTitel, true) && !in_array('CME', $eckTitel, true), 'Kapazität 0 und leere CME-Anzeige: nicht in den Eckdaten');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel IN ('" . implode("','", array_keys(VA_KATALOG)) . "')");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel IN ('" . implode("','", array_keys(VA_KATALOG)) . "')");
 
     abschnitt('Programm (AP-3 Schritt 3)');
     $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => 'WS', 't_beginn' => ['20:00', '', '21:00'], 't_ende' => ['20:45', '', '20:30'], 't_plaetze' => ['10', '', '5']]);
@@ -309,6 +315,8 @@ if (!$mitDb) {
     abschnitt('Test-Beispieldatensatz (server/testdaten)');
     require_once dirname(__DIR__, 2) . '/server/testdaten/beispieldaten.php';
     $bd = beispieldaten_laden();
+    $vj = tk_veranstaltungen($bd['anmeldungen']['lea_konto']);
+    pruefe(va_zeile($bd['vorjahr']['id'])['status'] === 'abgeschlossen' && count($vj) === 2 && $vj[1]['zertifikat'] && $vj[1]['stand'] === 'teilgenommen', 'Beispieldaten: abgeschlossenes Vorjahr, Lea mit Zertifikat im Rückblick');
     $pv = programm_veroeffentlicht()['punkte'] ?? [];
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));
@@ -319,7 +327,7 @@ if (!$mitDb) {
     $zeit = fn(string $titel) => db_zeile('SELECT TIME_FORMAT(beginn, "%H:%i") AS b, TIME_FORMAT(ende, "%H:%i") AS e FROM programmpunkt WHERE titel = ?', [$titel]);
     $neu = programm_verschieben('punkt', $neuId, '19:15', null, true);
     pruefe($neu === '19:15–19:45' && $GLOBALS['programm_nachgerueckt'] === 2 && $zeit('Workshops und offene Stationen') == ['b' => '19:45', 'e' => '21:45'] && $zeit('Abschluss') == ['b' => '21:45', 'e' => '22:15'], 'Einfügen: Block und Abschluss rücken nach hinten');
-    pruefe(db_wert("SELECT MIN(beginn) FROM workshop_termin") === '19:45:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station'") === '19:45:00', 'Block nimmt beim Nachrücken Termine und Station mit');
+    pruefe(db_wert("SELECT MIN(t.beginn) FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE p.veranstaltung_id = ?", [va_id()]) === '19:45:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station' AND veranstaltung_id = ?", [va_id()]) === '19:45:00', 'Block nimmt beim Nachrücken Termine und Station mit');
     pruefe($zeit('Fall #1') == ['b' => '18:45', 'e' => '19:15'], 'Punkte davor bleiben');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Ohne Folgen']);
     $id2 = programm_punkt_speichern(null, $r, null);
@@ -542,7 +550,7 @@ if (!$mitDb) {
     einstellung_setzen('workshop_limit', '0');
     // Warteliste: Angebot von Hand, Entfernen lässt nachrücken
     $wl = team_anlegen(['vorname' => 'Wilma', 'email' => 'wilma@example.org'] + $dt, false, false);
-    db_ausfuehren("INSERT INTO platz (anmeldung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, 'warte', ?)", [$wl['id'], $voll, $ws('WS 02'), db_jetzt()]);
+    db_ausfuehren("INSERT INTO platz (anmeldung_id, veranstaltung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, ?, 'warte', ?)", [$wl['id'], va_id(), $voll, $ws('WS 02'), db_jetzt()]);
     $wlPlatz = (int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$wl['id'], $voll]);
     pruefe(team_angebot($wlPlatz) !== null, 'Angebot ohne freien Platz abgelehnt');
     $fest = db_zeilen("SELECT id FROM platz WHERE termin_id = ? AND status = 'fest' ORDER BY id", [$voll]);
@@ -618,7 +626,7 @@ if (!$mitDb) {
     pruefe(export_datei(export_erzeugen('newsletter'), 'pdf') === null && export_datei($ex, 'doc') === null, 'Newsletter ohne PDF, unbekanntes Format nichts');
     pruefe(str_contains(export_knoepfe(['art' => 'cme']), 'format=pdf') && str_contains(export_knoepfe(['art' => 'cme']), 'format=xlsx') && !str_contains(export_knoepfe(['art' => 'newsletter']), 'format=pdf'), 'Knöpfe CSV, Excel, PDF (Newsletter ohne PDF)');
     $sd = stat_daten();
-    pruefe($sd['angemeldet'] === (int)db_wert("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status = 'fest' WHERE a.status = 'bestaetigt'") && array_sum($sd['berufsgruppen']) === $sd['bestaetigt'] && stat_daten('StudentIn')['bestaetigt'] <= $sd['bestaetigt'], 'Statistik stimmt mit der Datenbank (mit Filter)');
+    pruefe($sd['angemeldet'] === (int)db_wert("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status = 'fest' WHERE a.status = 'bestaetigt' AND a.veranstaltung_id = ?", [va_id()]) && array_sum($sd['berufsgruppen']) === $sd['bestaetigt'] && stat_daten('StudentIn')['bestaetigt'] <= $sd['bestaetigt'], 'Statistik stimmt mit der Datenbank (mit Filter)');
     pruefe(str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="50"') && str_contains(stat_balken(['A' => 2, 'B' => 4], 'T'), 'width="100"'), 'Balken als SVG-Attribut (keine Inline-Stile)');
     // Rolle vergeben (Teilnehmende → Team)
     $nkId = (int)konto_per_email('nurkonto@example.org')['id'];
@@ -642,7 +650,7 @@ if (!$mitDb) {
     pruefe($sauber === '<h2>Titel</h2><p>Zeile <strong>fett</strong> <em>k</em> rot</p><p>böse <a href="https://example.org/x?a=1&amp;b=2">gut</a> <a href="{link}" class="knopf">Knopf</a></p><p><img src="/team/mailings/bild?id=' . $bildTest['id'] . '" alt="Plan" data-breite="50"></p>', 'HTML bereinigt: nur erlaubte Elemente, keine Skripte, fremden Bilder oder javascript:');
     pruefe(rm_html_bereinigen('<p>a &lt;b&gt; &amp; "c"</p>') === '<p>a &lt;b&gt; &amp; &quot;c&quot;</p>', 'Text bleibt maskiert');
     // Empfänger
-    $angem = (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')");
+    $angem = (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.veranstaltung_id = " . va_id() . " AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')");
     pruefe(count(rm_empfaenger('angemeldet')) === $angem && $angem > 3, 'Auswahl „Alle Angemeldeten“');
     pruefe(count(rm_empfaenger('angemeldet', 'StudentIn')) === (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND berufsgruppe = 'StudentIn' AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')"), 'zusätzlich nach Berufsgruppe');
     $wsT = $tt('WS 01', '19:30');
@@ -839,8 +847,8 @@ if (!$mitDb) {
     $kl = konto_anlegen('Lotte Lange', 'lotte@example.org', 'teilnehmend', 'lottes-passwort', null);
     $kt = konto_anlegen('Tara Team', 'tara@example.org', 'admin', 'taras-passwort-12', null);
     db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id IN (?, ?)', [$alt, $alt, $alt, $kl, $kt]);
-    db_ausfuehren("INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, institution, essen, status, einwilligung_am, erstellt_am, geaendert_am)
-        VALUES (?, 'Lotte', 'Lange', 'lotte@example.org', 'Pflege/MFA', '', 'egal', 'bestaetigt', ?, ?, ?)", [$kl, $alt, $alt, $alt]);
+    db_ausfuehren("INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, institution, essen, status, einwilligung_am, erstellt_am, geaendert_am)
+        VALUES (?, ?, 'Lotte', 'Lange', 'lotte@example.org', 'Pflege/MFA', '', 'egal', 'bestaetigt', ?, ?, ?)", [va_id(), $kl, $alt, $alt, $alt]);
     $anmL = (int)db()->lastInsertId();
     $r = tk_loeschfrist($jetzt);
     $mailL = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'lotte@example.org' ORDER BY id DESC LIMIT 1");
@@ -1095,6 +1103,79 @@ if (!$mitDb) {
     einstellung_setzen('veranstaltung_datum', $datumAlt);
     db_ausfuehren('DELETE FROM mail_ausgang');
 
+    abschnitt('Mehrere Veranstaltungen (E-58)');
+    $v1 = va_id();
+    $anmV1 = count(anm_liste());
+    pruefe(va_zeile($v1)['status'] === 'aktuell' && $anmV1 > 0, 'Ausgangslage: eine aktuelle Veranstaltung mit Anmeldungen');
+    pruefe(va_kuerzel_fehler('Team 2028') !== null && va_kuerzel_fehler('team') !== null && va_kuerzel_fehler(va_zeile($v1)['kuerzel']) !== null && va_kuerzel_fehler('winter-2028') === null, 'Kürzel: Format, belegte Adressen und doppelte abgelehnt');
+    $r = va_anlegen('winter-2028', 'Winter 2028', $v1, null);
+    $v2 = (int)($r['id'] ?? 0);
+    pruefe($v2 > 0 && va_zeile($v2)['status'] === 'entwurf' && va_von($v2, 'veranstaltung_ort') === va('veranstaltung_ort') && va_von($v2, 'veranstaltung_name') === 'Winter 2028', 'Neue Veranstaltung als Kopie: Entwurf mit Einstellungen und eigenem Namen');
+    $pv1 = count(programm_arbeitsstand());
+    pruefe(va_mit($v2, fn() => count(programm_arbeitsstand())) === $pv1 && va_mit($v2, fn() => programm_veroeffentlicht()) === null, 'Programm kopiert (Arbeitsstand, nicht veröffentlicht)');
+    pruefe(va_mit($v2, fn() => anm_liste()) === [] && va_mit($v2, fn() => anm_belegt(0)) === 0 && anm_belegt(0) > 0, 'Anmeldungen und Plätze getrennt');
+    va_mit($v2, fn() => einstellung_setzen('veranstaltung_ort', 'Neuer Ort'));
+    va_mit($v2, fn() => inhalt_setzen('start_titel', 'Titel 2028'));
+    pruefe(va('veranstaltung_ort') !== 'Neuer Ort' && va_von($v2, 'veranstaltung_ort') === 'Neuer Ort' && inhalt('start_titel') !== 'Titel 2028' && va_mit($v2, fn() => inhalt('start_titel')) === 'Titel 2028', 'Einstellungen und Startseiten-Texte je Veranstaltung');
+    pruefe(va_mit($v2, fn() => anm_zeitraum()) === 'vorher', 'Entwurf nimmt keine Anmeldungen an');
+    pruefe(va_aktuell_machen($v2, null) !== null, 'Zweite aktuelle nur nach Abschluss der ersten');
+    // Gleiche Adresse in beiden Veranstaltungen
+    $e1 = anm_liste()[0];
+    $daten = ['vorname' => $e1['vorname'], 'nachname' => $e1['nachname'], 'email' => $e1['email'], 'berufsgruppe' => $e1['berufsgruppe'], 'institution' => $e1['institution'] ?: 'X', 'essen' => 'egal', 'efn' => '', 'beruf_sonstige' => ''];
+    $neuV2 = va_mit($v2, fn() => anm_anlegen(anm_daten_pruefen($daten)['werte'], ['fest' => [], 'warte' => []], false));
+    pruefe(($neuV2['art'] ?? '') === 'neu' && (int)anm_laden($neuV2['id'])['veranstaltung_id'] === $v2 && anm_per_email($e1['email'])['id'] == $e1['id'], 'Eine Anmeldung je Veranstaltung und Adresse');
+    pruefe(va_mit($v2, fn() => count(rm_empfaenger('angemeldet'))) <= 1 && count(rm_empfaenger('angemeldet')) > 1, 'Mailing-Empfänger aus der eigenen Veranstaltung');
+    // Wiederkehrende ohne Konto: Daten übernehmen
+    $mailVor = (int)db_wert('SELECT COUNT(*) FROM mail_ausgang');
+    $fr = va_mit($v2, fn() => anm_frueher_per_email('wer@example.org'));
+    $mailFrueher = (string)db_wert("SELECT email FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' ORDER BY id LIMIT 1", [$v1]);
+    $fr2 = va_mit($v2, fn() => anm_frueher_per_email($mailFrueher));
+    pruefe($fr === null && $fr2 !== null && (int)$fr2['veranstaltung_id'] === $v1, 'Frühere Anmeldung einer anderen Veranstaltung gefunden');
+    va_mit($v2, fn() => anm_uebernehmen_senden((int)$fr2['id']));
+    $tok = '';
+    if (preg_match('#/link\?t=([0-9a-f]{48})#', (string)db_wert('SELECT text FROM mail_ausgang ORDER BY id DESC LIMIT 1'), $m) === 1) {
+        $tok = $m[1];
+    }
+    $ein = anm_link_einloesen($tok);
+    pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $mailVor + 1 && ($ein['zweck'] ?? '') === 'uebernehmen' && $ein['anm'] === (int)$fr2['id'], 'Link „Daten übernehmen“ per Mail, einlösbar');
+    $_SESSION['anm_vorlage'] = (int)$fr2['id'];
+    pruefe((anm_vorlage()['email'] ?? '') === $fr2['email'] && (anm_vorlage()['institution'] ?? '') === $fr2['institution'], 'Vorlage fürs Formular aus der früheren Anmeldung');
+    unset($_SESSION['anm_vorlage']);
+    // Bausteine: ohne Essen und ohne Fortbildungspunkte
+    va_mit($v2, fn() => einstellung_setzen('mit_essen', 'nein'));
+    va_mit($v2, fn() => einstellung_setzen('mit_cme', 'nein'));
+    $ohne = va_mit($v2, fn() => anm_daten_pruefen(['essen' => '', 'efn' => '802760012345673', 'berufsgruppe' => va_liste('berufsgruppen')[0]] + $daten));
+    pruefe(!isset($ohne['fehler']['essen']) && $ohne['werte']['essen'] === 'kein' && $ohne['werte']['efn'] === '' && va_an('mit_essen'), 'Ohne Essen und Punkte: keine Essenswahl, keine EFN (nur in dieser Veranstaltung)');
+    // Profil: Veranstaltungen eines Kontos
+    tk_registrieren('Vera Viel', 'vera.viel@example.org');
+    $kid = (int)konto_per_email('vera.viel@example.org')['id'];
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $kid]);
+    db_ausfuehren("UPDATE anmeldung SET konto_id = ?, status = 'bestaetigt' WHERE id = ?", [$kid, $neuV2['id']]);
+    $va1Anm = (int)db_wert("SELECT id FROM anmeldung WHERE veranstaltung_id = ? AND konto_id IS NULL AND status = 'bestaetigt' ORDER BY id LIMIT 1", [$v1]);
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kid, $va1Anm]);
+    $liste = tk_veranstaltungen($kid);
+    pruefe(count($liste) === 2 && in_array('Winter 2028', array_column($liste, 'name'), true), 'Mein Konto: alle Veranstaltungen der Person');
+    pruefe(tk_anmeldung($kid)['id'] == $va1Anm && va_mit($v2, fn() => tk_anmeldung($kid))['id'] == $neuV2['id'], 'Anmeldung des Kontos je Veranstaltung');
+    // Abschließen und neue aktuelle
+    pruefe(va_abschliessen($v1, null) === null && va_abgeschlossen($v1) && anm_zeitraum() === 'vorbei' && va_abschliessen($v1, null) !== null, 'Abschließen: nur noch lesen, keine Anmeldung');
+    pruefe(va_aktuell_machen($v2, null) === null && va_aktuell_id() === $v2 && va_id() === $v2, 'Danach wird die neue Veranstaltung die aktuelle');
+    pruefe(va_kuerzel_setzen($v2, 'Ungültig!', null) !== null && va_kuerzel_setzen($v2, 'winter2028', null) === null && va_per_kuerzel('winter2028')['id'] == $v2, 'Kürzel ändern');
+    pruefe(va_loeschen($v2, null) !== null, 'Aktuelle mit Anmeldungen lässt sich nicht löschen');
+    $v3 = (int)va_anlegen('leer-2029', 'Leer', null, null)['id'];
+    pruefe(va_mit($v3, fn() => programm_arbeitsstand()) === [] && va_loeschen($v3, null) === null && va_zeile($v3) === null, 'Leerer Entwurf: ohne Programm, löschbar');
+    pruefe(va_alle()[0]['id'] !== 0 && count(va_alle()) === 1 + (int)db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'"), 'Liste aller Veranstaltungen');
+    // Zertifikat einer vergangenen Veranstaltung im eigenen Kontext
+    $pdfAlt = zertifikat_pdf_fuer(anm_laden($va1Anm));
+    pruefe(str_starts_with($pdfAlt, '%PDF-'), 'Zertifikat einer abgeschlossenen Veranstaltung');
+    // Aufräumen: wieder nur Veranstaltung 1 als aktuelle
+    db_ausfuehren('DELETE FROM anmeldung WHERE veranstaltung_id = ?', [$v2]);
+    db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [$v2]);
+    db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$v2]);
+    db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = ?", [$v1]);
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$kid]);
+    va_zwischenspeicher_leeren();
+    pruefe(va_id() === $v1 && count(anm_liste()) === $anmV1, 'Zurück auf Veranstaltung 1');
+
     abschnitt('Sicherung und Wiederherstellung (E-47)');
     $zahl = fn(string $t) => (int)db_wert("SELECT COUNT(*) FROM `$t`");
     $vorher = ['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')];
@@ -1163,6 +1244,7 @@ if (!$mitDb) {
         db()->exec('DROP TABLE `' . $z['t'] . '`');
     }
     db()->exec('SET FOREIGN_KEY_CHECKS = 1');
+va_zwischenspeicher_leeren();
 
     require __DIR__ . '/http_tests.php';
     http_tests($wurzel, $tmp);

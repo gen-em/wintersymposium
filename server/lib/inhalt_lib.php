@@ -15,23 +15,42 @@ declare(strict_types=1);
  * mit Absätzen.
  */
 
+/** Texte der Startseite (start_…) gehören zur Veranstaltung (E-58); Impressum und Datenschutz sind gemeinsam (0). */
+function inhalt_va(string $schluessel): int
+{
+    return str_starts_with($schluessel, 'start_') && va_tabellen_da() ? va_id() : 0;
+}
+
 /** Text eines Schlüssels oder '' (fehlt die Tabelle noch, ebenfalls ''). */
 function inhalt(string $schluessel): string
 {
-    static $cache = [];
-    if (!array_key_exists($schluessel, $cache)) {
-        $cache[$schluessel] = (string)(db_wert('SELECT text FROM inhalt WHERE schluessel = ?', [$schluessel]) ?? '');
+    $va = inhalt_va($schluessel);
+    $k = $va . ':' . $schluessel;
+    if (!array_key_exists($k, $GLOBALS['ws_inhalt_cache'] ??= [])) {
+        $GLOBALS['ws_inhalt_cache'][$k] = (string)(va_tabellen_da()
+            ? db_wert('SELECT text FROM inhalt WHERE veranstaltung_id = ? AND schluessel = ?', [$va, $schluessel]) ?? ''
+            : db_wert('SELECT text FROM inhalt WHERE schluessel = ?', [$schluessel]) ?? '');
     }
-    return $cache[$schluessel];
+    return $GLOBALS['ws_inhalt_cache'][$k];
 }
 
 function inhalt_setzen(string $schluessel, string $text, ?int $kontoId = null): void
 {
+    $va = inhalt_va($schluessel);
+    if (!va_tabellen_da()) {
+        db_ausfuehren(
+            'INSERT INTO inhalt (schluessel, text, geaendert_am, geaendert_von) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE text = VALUES(text), geaendert_am = VALUES(geaendert_am), geaendert_von = VALUES(geaendert_von)',
+            [$schluessel, $text, db_jetzt(), $kontoId]
+        );
+        return;
+    }
     db_ausfuehren(
-        'INSERT INTO inhalt (schluessel, text, geaendert_am, geaendert_von) VALUES (?, ?, ?, ?)
+        'INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) VALUES (?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE text = VALUES(text), geaendert_am = VALUES(geaendert_am), geaendert_von = VALUES(geaendert_von)',
-        [$schluessel, $text, db_jetzt(), $kontoId]
+        [$va, $schluessel, $text, db_jetzt(), $kontoId]
     );
+    unset($GLOBALS['ws_inhalt_cache'][$va . ':' . $schluessel]);
 }
 
 /** Pfad eines hochgeladenen Text-Bildes (öffentlich unter /bild/). */

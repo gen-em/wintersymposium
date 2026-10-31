@@ -40,9 +40,10 @@ const ANM_ESSEN = [
  */
 function anm_workshops(bool $neu = false): array
 {
-    static $cache = null;
-    if ($cache !== null && !$neu) {
-        return $cache;
+    static $cache = [];
+    $va = va_id();
+    if (isset($cache[$va]) && !$neu) {
+        return $cache[$va];
     }
     $liste = [];
     foreach (programm_veroeffentlicht()['punkte'] ?? [] as $p) {
@@ -54,7 +55,7 @@ function anm_workshops(bool $neu = false): array
         $liste[] = ['id' => (int)$p['id'], 'kuerzel' => $p['kuerzel'], 'titel' => $p['titel'], 'ort' => $p['ort'], 'termine' => $termine];
     }
     usort($liste, fn($a, $b) => [$a['termine'][0]['beginn'], $a['kuerzel'], $a['id']] <=> [$b['termine'][0]['beginn'], $b['kuerzel'], $b['id']]);
-    return $cache = $liste;
+    return $cache[$va] = $liste;
 }
 
 /** Termin mit Workshop-Angaben oder null: ['id','beginn','ende','plaetze','workshop' => [...]]. */
@@ -74,7 +75,7 @@ function anm_termin(int $terminId): ?array
 function anm_termin_text(int $terminId): string
 {
     if ($terminId === 0) {
-        return 'Platz beim Wintersymposium';
+        return 'Platz beim ' . va_kurz();
     }
     $t = anm_termin($terminId);
     if ($t === null) {
@@ -88,12 +89,12 @@ function anm_termin_text(int $terminId): string
 /** Vergebene Plätze (fest und offene Angebote). Termin 0 = Symposium. */
 function anm_belegt(int $terminId): int
 {
-    return (int)db_wert("SELECT COUNT(*) FROM platz WHERE termin_id = ? AND status IN ('fest','angebot')", [$terminId]);
+    return (int)db_wert("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status IN ('fest','angebot')", [va_id(), $terminId]);
 }
 
 function anm_wartend(int $terminId): int
 {
-    return (int)db_wert("SELECT COUNT(*) FROM platz WHERE termin_id = ? AND status = 'warte'", [$terminId]);
+    return (int)db_wert("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status = 'warte'", [va_id(), $terminId]);
 }
 
 /** Plätze insgesamt; null = unbegrenzt (Gesamtkapazität 0). */
@@ -117,8 +118,8 @@ function anm_frei(int $terminId): int
 function anm_position(array $platz): array
 {
     $vor = (int)db_wert(
-        "SELECT COUNT(*) FROM platz WHERE termin_id = ? AND status = 'warte' AND (seit < ? OR (seit = ? AND id < ?))",
-        [$platz['termin_id'], $platz['seit'], $platz['seit'], $platz['id']]
+        "SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status = 'warte' AND (seit < ? OR (seit = ? AND id < ?))",
+        [$platz['veranstaltung_id'], $platz['termin_id'], $platz['seit'], $platz['seit'], $platz['id']]
     );
     return [$vor + 1, anm_wartend((int)$platz['termin_id'])];
 }
@@ -141,6 +142,11 @@ function anm_schluss_utc(): string
 function anm_zeitraum(?int $jetzt = null): string
 {
     $jetzt ??= time();
+    // Nur die aktuelle Veranstaltung nimmt Anmeldungen an (E-58)
+    $status = va_zeile()['status'] ?? 'aktuell';
+    if ($status !== 'aktuell') {
+        return $status === 'abgeschlossen' ? 'vorbei' : 'vorher';
+    }
     if ($jetzt < strtotime(va('anmeldung_start') . ' UTC')) {
         return 'vorher';
     }
@@ -234,8 +240,12 @@ function anm_daten_pruefen(array $e): array
     } elseif (mb_strlen($w['institution']) > 160) {
         $f['institution'] = 'Höchstens 160 Zeichen.';
     }
+    // Bausteine der Veranstaltung (E-58): ohne Essen kein Essen, ohne Fortbildungspunkte keine EFN
+    if (!va_an('mit_essen')) {
+        $w['essen'] = 'kein';
+    }
     // EFN nur bei der ersten Berufsgruppe (ÄrztIn), freiwillig (E-22)
-    if ($w['berufsgruppe'] !== ($gruppen[0] ?? null)) {
+    if ($w['berufsgruppe'] !== ($gruppen[0] ?? null) || !va_an('mit_cme')) {
         $w['efn'] = '';
     } elseif ($w['efn'] !== '' && !efn_gueltig($w['efn'])) {
         $f['efn'] = 'Diese EFN stimmt nicht: 15 Ziffern, die letzte ist eine Prüfziffer. Lass das Feld leer, wenn du sie gerade nicht zur Hand hast.';
@@ -370,7 +380,7 @@ function anm_laden(int $id): ?array
 
 function anm_per_email(string $email): ?array
 {
-    return db_zeile('SELECT * FROM anmeldung WHERE email = ?', [mb_strtolower(trim($email))]);
+    return db_zeile('SELECT * FROM anmeldung WHERE veranstaltung_id = ? AND email = ?', [va_id(), mb_strtolower(trim($email))]);
 }
 
 /** Plätze einer Anmeldung (Symposium zuerst, dann nach Uhrzeit). */
@@ -458,6 +468,39 @@ function anm_link_finden(string $token, ?int $jetzt = null): ?array
     return $z;
 }
 
+/** Frühere bestätigte Anmeldung dieser Adresse bei einer anderen Veranstaltung (Daten noch vorhanden) oder null. */
+function anm_frueher_per_email(string $email): ?array
+{
+    return db_zeile(
+        "SELECT * FROM anmeldung WHERE email = ? AND veranstaltung_id <> ? AND status = 'bestaetigt' ORDER BY id DESC LIMIT 1",
+        [mb_strtolower(trim($email)), va_id()]
+    );
+}
+
+/** Link „Daten übernehmen“ an Wiederkehrende ohne Konto (E-58): öffnet die Anmeldung mit den früheren Angaben. */
+function anm_uebernehmen_senden(int $alteAnmId, ?int $jetzt = null): void
+{
+    $a = anm_laden($alteAnmId);
+    if ($a === null) {
+        return;
+    }
+    $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_H * 3600;
+    $token = anm_link_erzeugen($alteAnmId, 'uebernehmen', $bis);
+    mail_vorlage_einreihen($a['email'], 'uebernehmen', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis))]);
+}
+
+/** Vorlage fürs Anmeldeformular aus einer früheren Anmeldung (nach dem Link „Daten übernehmen“) oder null. */
+function anm_vorlage(): ?array
+{
+    $id = (int)($_SESSION['anm_vorlage'] ?? 0);
+    $a = $id > 0 ? anm_laden($id) : null;
+    if ($a === null) {
+        return null;
+    }
+    return ['vorname' => $a['vorname'], 'nachname' => $a['nachname'], 'email' => $a['email'], 'berufsgruppe' => $a['berufsgruppe'],
+        'beruf_sonstige' => $a['beruf_sonstige'], 'institution' => $a['institution'], 'efn' => (string)$a['efn'], 'essen' => $a['essen']];
+}
+
 /** Zugangslink per Mail (Einstieg „Link per Mail“ und bei doppelter Anmeldung). */
 function anm_zugang_senden(int $anmId, string $vorlage = 'zugang', ?int $jetzt = null): void
 {
@@ -476,6 +519,12 @@ function anm_zugang_senden(int $anmId, string $vorlage = 'zugang', ?int $jetzt =
  */
 function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
 {
+    // Im Kontext der Veranstaltung, zu der die Anmeldung gehört (E-58)
+    $l = anm_link_finden($token, $jetzt);
+    $va = $l !== null ? db_wert('SELECT veranstaltung_id FROM anmeldung WHERE id = ?', [$l['anmeldung_id']]) : null;
+    if ($va !== null && (int)$va !== va_id()) {
+        return va_mit((int)$va, fn() => anm_link_einloesen($token, $jetzt));
+    }
     $jetzt ??= time();
     return anm_sperre(function () use ($token, $jetzt): ?array {
         $l = anm_link_finden($token, $jetzt);
@@ -516,7 +565,7 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
         } elseif ($l['zweck'] === 'email') {
             $neu = (string)$l['neue_email'];
             $andererKonto = konto_per_email($neu);
-            if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND id <> ?', [$neu, $anmId]) > 0
+            if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [$a['veranstaltung_id'], $neu, $anmId]) > 0
                 || ($a['konto_id'] !== null && $andererKonto !== null && (int)$andererKonto['id'] !== (int)$a['konto_id'])) {
                 $meldung = 'Diese Adresse gehört schon zu einer anderen Anmeldung. Deine Adresse bleibt, wie sie war.';
             } else {
@@ -564,9 +613,9 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
         $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
         $bis = $jetzt + va_zahl('anmeldung_bestaetigung_h') * 3600;
         db_ausfuehren(
-            "INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, konto_wunsch, status, bestaetigen_bis, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [$vomKonto ? (int)$konto['id'] : null, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null,
+            "INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, konto_wunsch, status, bestaetigen_bis, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [va_id(), $vomKonto ? (int)$konto['id'] : null, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null,
                 $w['essen'], $newsletter ? 1 : 0, $kontoWunsch && !$vomKonto ? 1 : 0, $vomKonto ? 'bestaetigt' : 'unbestaetigt', $vomKonto ? null : gmdate('Y-m-d H:i:s', $bis), $jetztDb, $jetztDb, $vomKonto ? $jetztDb : null, $jetztDb]
         );
         $id = (int)db()->lastInsertId();
@@ -598,8 +647,8 @@ function anm_platz_anlegen(int $anmId, int $terminId, string $status, int $jetzt
 {
     $wid = $terminId === 0 ? 0 : (int)(anm_termin($terminId)['workshop']['id'] ?? 0);
     db_ausfuehren(
-        'INSERT INTO platz (anmeldung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, ?, ?)',
-        [$anmId, $terminId, $wid, $status, gmdate('Y-m-d H:i:s', $jetzt)]
+        'INSERT INTO platz (anmeldung_id, veranstaltung_id, termin_id, workshop_id, status, seit) VALUES (?, (SELECT veranstaltung_id FROM anmeldung WHERE id = ?), ?, ?, ?, ?)',
+        [$anmId, $anmId, $terminId, $wid, $status, gmdate('Y-m-d H:i:s', $jetzt)]
     );
 }
 
@@ -780,10 +829,10 @@ function anm_nachruecken(int $terminId, ?int $jetzt = null): int
     while (anm_frei($terminId) > 0) {
         $p = db_zeile(
             "SELECT p.* FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id
-             WHERE p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'
+             WHERE p.veranstaltung_id = ? AND p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'
                AND (p.termin_id = 0 OR EXISTS (SELECT 1 FROM platz s WHERE s.anmeldung_id = p.anmeldung_id AND s.termin_id = 0 AND s.status = 'fest'))
              ORDER BY p.seit, p.id LIMIT 1 FOR UPDATE",
-            [$terminId]
+            [va_id(), $terminId]
         );
         if ($p === null) {
             break;
@@ -870,12 +919,12 @@ function anm_job(int $jetzt): array
 {
     $erg = ['verfallen' => 0, 'abgelaufen' => 0, 'angebote' => 0, 'links' => 0];
     $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
-    foreach (db_zeilen("SELECT id FROM anmeldung WHERE status = 'unbestaetigt' AND bestaetigen_bis < ?", [$jetztDb]) as $z) {
+    foreach (db_zeilen("SELECT id FROM anmeldung WHERE veranstaltung_id = ? AND status = 'unbestaetigt' AND bestaetigen_bis < ?", [va_id(), $jetztDb]) as $z) {
         if (anm_stornieren((int)$z['id'], $jetzt, false)) {
             $erg['verfallen']++;
         }
     }
-    foreach (db_zeilen("SELECT id FROM platz WHERE status = 'angebot' AND angebot_bis < ?", [$jetztDb]) as $z) {
+    foreach (db_zeilen("SELECT id FROM platz WHERE veranstaltung_id = ? AND status = 'angebot' AND angebot_bis < ?", [va_id(), $jetztDb]) as $z) {
         $erg['abgelaufen'] += anm_sperre(function () use ($z, $jetzt, $jetztDb): int {
             $p = db_zeile("SELECT * FROM platz WHERE id = ? AND status = 'angebot' AND angebot_bis < ? FOR UPDATE", [$z['id'], $jetztDb]);
             if ($p === null) {
@@ -970,9 +1019,9 @@ function anm_team_konto(): ?int
 /** Alle Anmeldungen mit ihren Plätzen (Team-Liste). */
 function anm_liste(): array
 {
-    $liste = db_zeilen('SELECT * FROM anmeldung ORDER BY id');
+    $liste = db_zeilen('SELECT * FROM anmeldung WHERE veranstaltung_id = ? ORDER BY id', [va_id()]);
     $plaetze = [];
-    foreach (db_zeilen('SELECT * FROM platz ORDER BY id') as $p) {
+    foreach (db_zeilen('SELECT * FROM platz WHERE veranstaltung_id = ? ORDER BY id', [va_id()]) as $p) {
         $plaetze[(int)$p['anmeldung_id']][] = $p;
     }
     foreach ($liste as &$a) {
@@ -985,12 +1034,12 @@ function anm_liste(): array
 function anm_zahlen(): array
 {
     $z = ['bestaetigt' => 0, 'unbestaetigt' => 0];
-    foreach (db_zeilen('SELECT status, COUNT(*) AS n FROM anmeldung GROUP BY status') as $r) {
+    foreach (db_zeilen('SELECT status, COUNT(*) AS n FROM anmeldung WHERE veranstaltung_id = ? GROUP BY status', [va_id()]) as $r) {
         $z[$r['status']] = (int)$r['n'];
     }
     $z['symposium_belegt'] = anm_belegt(0);
     $z['symposium_warte'] = anm_wartend(0);
     $z['kapazitaet'] = anm_kapazitaet(0);
-    $z['angebote'] = (int)db_wert("SELECT COUNT(*) FROM platz WHERE status = 'angebot'");
+    $z['angebote'] = (int)db_wert("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND status = 'angebot'", [va_id()]);
     return $z;
 }

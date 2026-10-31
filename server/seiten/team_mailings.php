@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/mailings'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $ich = (int)$konto['id'];
 $neu = isset($_GET['neu']);
 $id = isset($_GET['id']) ? (int)$_GET['id'] : (isset($_POST['id']) && (int)$_POST['id'] > 0 ? (int)$_POST['id'] : null);

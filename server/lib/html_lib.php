@@ -32,7 +32,7 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         // Bis zum Anmeldestart nicht in Suchmaschinen (Konzept AP-2, Checkliste Abschnitt 9)
         . '<meta name="robots" content="noindex">'
-        . '<title>' . e($titel) . ' – Wintersymposium</title>'
+        . '<title>' . e($titel) . ' – ' . e(seiten_name()) . '</title>'
         . '<link rel="stylesheet" href="/assets/site.css">'
         // .ico zuerst mit fester Größe, SVG danach: so nehmen Chrome, Edge und Firefox die SVG,
         // die sich hellen und dunklen Oberflächen anpasst; Safari bleibt bei der .ico (Kachel).
@@ -123,7 +123,7 @@ const TEAM_BEREICHE = [
     'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
     'Kommunikation' => [['/team/mailings', 'Mailings'], ['/team/newsletter', 'Newsletter'], ['/team/texte', 'Texte']],
     'Statistik' => [['/team/statistik', 'Statistik']],
-    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/konten', 'Team-Konten', true], ['/team/protokoll', 'Protokoll'], ['/team/daten', 'Betrieb', true]],
+    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/veranstaltungen', 'Veranstaltungen'], ['/team/konten', 'Team-Konten', true], ['/team/protokoll', 'Protokoll'], ['/team/daten', 'Betrieb', true]],
 ];
 
 function team_reiter(array $konto, string $aktiv): string
@@ -153,7 +153,36 @@ function team_seite_kopf(array $konto, string $titel, string $aktiv, array $opt 
     $opt['skripte'] = array_values(array_unique(array_merge(['editor.js'], $opt['skripte'] ?? [])));
     seite_kopf($titel, $opt + ['konto' => $konto, 'aktiv' => '/team']);
     echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div></div>'
-        . '<div class="innen">' . team_reiter($konto, $aktiv) . meldung_html(flash_holen());
+        . '<div class="innen">' . team_reiter($konto, $aktiv) . team_veranstaltung_leiste($aktiv) . meldung_html(flash_holen());
+}
+
+/**
+ * Leiste unter der Navigation (E-58): gewählte Veranstaltung mit Status und
+ * Umschalter; bei einer abgeschlossenen der Hinweis „nur lesen“.
+ */
+function team_veranstaltung_leiste(string $aktiv): string
+{
+    if (!va_tabellen_da()) {
+        return '';
+    }
+    $v = va_zeile();
+    $alle = va_alle();
+    $opt = '';
+    foreach ($alle as $x) {
+        $opt .= '<option value="' . $x['id'] . '"' . ($x['id'] === (int)$v['id'] ? ' selected' : '') . '>' . e($x['name'] . ' (' . $x['kuerzel'] . ')' . ($x['status'] !== 'aktuell' ? ' – ' . VA_STATUS[$x['status']] : '')) . '</option>';
+    }
+    $chip = ['aktuell' => 'ok', 'entwurf' => 'offen', 'abgeschlossen' => 'gesperrt'][$v['status']] ?? 'offen';
+    $h = '<form class="va-leiste" method="get" action="' . e($aktiv) . '"><label for="va-wahl">Veranstaltung</label>'
+        . (count($alle) > 1 ? '<select id="va-wahl" name="va">' . $opt . '</select><button class="knopf zweit klein-knopf" type="submit">Wechseln</button>'
+            : '<strong id="va-wahl">' . e($alle[0]['name'] ?? '') . '</strong>')
+        . ' <span class="chip ' . $chip . '">' . e(VA_STATUS[$v['status']]) . '</span>'
+        . ' <a class="klein-link" href="/team/veranstaltungen">Alle Veranstaltungen</a></form>';
+    if ($v['status'] === 'abgeschlossen') {
+        $h .= '<p class="meldung hinweis va-hinweis" role="status">Abgeschlossen am ' . e(datum_zeit_text($v['abgeschlossen_am'])) . ' – alles nur noch zum Ansehen; Exporte und Zertifikate gehen weiter.</p>';
+    } elseif ($v['status'] === 'entwurf') {
+        $h .= '<p class="meldung hinweis va-hinweis" role="status">Entwurf – noch nicht öffentlich. Unter <a href="/team/veranstaltungen">Veranstaltungen</a> machst du sie zur aktuellen.</p>';
+    }
+    return $h;
 }
 
 function team_seite_fuss(): void
@@ -212,4 +241,14 @@ function umleiten(string $pfad): never
 {
     header('Location: ' . $pfad, true, 303);
     exit;
+}
+
+/** Name im Seitentitel: Kurzname der Veranstaltung; vor der Installation „Wintersymposium“. */
+function seiten_name(): string
+{
+    try {
+        return installiert() && va_tabellen_da() ? va_kurz() : 'Wintersymposium';
+    } catch (Throwable) {
+        return 'Wintersymposium';
+    }
 }

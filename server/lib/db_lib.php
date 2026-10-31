@@ -74,18 +74,41 @@ function db_tabelle_da(string $tabelle): bool
     ) > 0;
 }
 
-/** Wert aus der Tabelle einstellung (Schlüssel/Wert), null wenn nicht gesetzt. */
+/**
+ * Wert aus der Tabelle einstellung (Schlüssel/Wert), null wenn nicht gesetzt.
+ * Einstellungen der Veranstaltung (VA_KATALOG) liegen seit E-58 je
+ * Veranstaltung in va_einstellung und gelten für die Veranstaltung des
+ * Kontexts (va_id()).
+ */
 function einstellung(string $schluessel): ?string
 {
-    $w = db_wert('SELECT wert FROM einstellung WHERE schluessel = ?', [$schluessel]);
+    if (einstellung_je_veranstaltung($schluessel)) {
+        $w = db_wert('SELECT wert FROM va_einstellung WHERE veranstaltung_id = ? AND schluessel = ?', [va_id(), $schluessel]);
+    } else {
+        $w = db_wert('SELECT wert FROM einstellung WHERE schluessel = ?', [$schluessel]);
+    }
     return $w === null ? null : (string)$w;
 }
 
 function einstellung_setzen(string $schluessel, ?string $wert): void
 {
+    if (einstellung_je_veranstaltung($schluessel)) {
+        db_ausfuehren(
+            'INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE wert = VALUES(wert), geaendert_am = VALUES(geaendert_am)',
+            [va_id(), $schluessel, $wert, db_jetzt()]
+        );
+        return;
+    }
     db_ausfuehren(
         'INSERT INTO einstellung (schluessel, wert, geaendert_am) VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE wert = VALUES(wert), geaendert_am = VALUES(geaendert_am)',
         [$schluessel, $wert, db_jetzt()]
     );
+}
+
+/** Gehört die Einstellung zur Veranstaltung (und gibt es die Tabelle dafür schon)? */
+function einstellung_je_veranstaltung(string $schluessel): bool
+{
+    return defined('VA_KATALOG') && isset(VA_KATALOG[$schluessel]) && va_tabellen_da();
 }

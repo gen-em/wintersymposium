@@ -139,7 +139,13 @@ function zertifikat_frei_ab_heute(?int $jetzt = null): bool
 /** Herunterladen möglich: anwesend und freigeschaltet. */
 function zertifikat_verfuegbar(array $anm): bool
 {
-    return $anm['zertifikat_am'] !== null && tn_anwesend((int)$anm['id']);
+    return $anm['zertifikat_am'] !== null && tn_anwesend((int)$anm['id']) && va_von((int)$anm['veranstaltung_id'], 'mit_zertifikat') !== 'nein';
+}
+
+/** PDF einer Anmeldung, im Kontext ihrer Veranstaltung (auch für vergangene, E-58). */
+function zertifikat_pdf_fuer(array $anm): string
+{
+    return va_mit((int)$anm['veranstaltung_id'], fn() => zertifikat_pdf(zertifikat_daten($anm)));
 }
 
 /**
@@ -256,9 +262,16 @@ function zertifikat_beispiel(): array
 
 /* ---- Unterschrift (PNG) -------------------------------------------------- */
 
+/** Unterschrift der Veranstaltung des Kontexts (je Veranstaltung, E-58). */
 function unterschrift_pfad(): string
 {
-    return laufzeit_pfad('zertifikat') . '/unterschrift.png';
+    $pfad = laufzeit_pfad('zertifikat/' . va_id()) . '/unterschrift.png';
+    // Ablage bis 0.17 (eine Veranstaltung): einmal an die neue Stelle der ersten Veranstaltung schieben
+    $alt = laufzeit_pfad('zertifikat') . '/unterschrift.png';
+    if (va_id() === 1 && is_file($alt) && !is_file($pfad)) {
+        @rename($alt, $pfad);
+    }
+    return $pfad;
 }
 
 function unterschrift_da(): bool
@@ -634,7 +647,7 @@ function unterschriftenliste_pdf(bool $nurAerzte, string $sortierung): string
     };
     $sub = tn_name() . ' · ' . tag_text(va('veranstaltung_datum')) . ' · sortiert nach ' . TN_SORTIERUNG[$sortierung] . ' · ' . count($liste) . ' ' . (count($liste) === 1 ? 'Person' : 'Personen');
     $pdf->AddPage();
-    export_pdf_seitenkopf($pdf, 'Wintersymposium · ' . tag_text(va('veranstaltung_datum')), $titel, $sub, $stand);
+    export_pdf_seitenkopf($pdf, va_kurz() . ' · ' . tag_text(va('veranstaltung_datum')), $titel, $sub, $stand);
     $pdf->Ln(3);
     $kopf();
     if ($liste === []) {

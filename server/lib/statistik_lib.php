@@ -10,7 +10,9 @@ declare(strict_types=1);
 /** WHERE-Zusatz und Parameter für den Berufsgruppen-Filter. */
 function stat_filter(string $bg, string $alias = 'a'): array
 {
-    return $bg === '' ? ['', []] : [" AND $alias.berufsgruppe = ?", [$bg]];
+    // Immer nur die Veranstaltung des Kontexts (E-58)
+    $va = " AND $alias.veranstaltung_id = " . va_id();
+    return $bg === '' ? [$va, []] : [$va . " AND $alias.berufsgruppe = ?", [$bg]];
 }
 
 /** Alle Zahlen der Statistik-Seite. */
@@ -24,8 +26,8 @@ function stat_daten(string $bg = ''): array
     $wlEintraege = $zahl("SELECT COUNT(*) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.status = 'warte' AND s.termin_id <> 0" . $w);
     $wlPersonen = $zahl("SELECT COUNT(DISTINCT s.anmeldung_id) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.status = 'warte' AND s.termin_id <> 0" . $w);
     $erste = va_liste('berufsgruppen')[0] ?? '';
-    $aerzte = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE status = 'bestaetigt' AND berufsgruppe = ?", [$erste]);
-    $mitEfn = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE status = 'bestaetigt' AND berufsgruppe = ? AND efn IS NOT NULL", [$erste]);
+    $aerzte = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $erste]);
+    $mitEfn = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ? AND efn IS NOT NULL", [va_id(), $erste]);
     $bestaetigt = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w);
     $konten = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.konto_id IS NOT NULL" . $w);
     $newsletter = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.newsletter = 1" . $w);
@@ -53,7 +55,7 @@ function stat_daten(string $bg = ''): array
     }
     $gruppen = [];
     foreach (va_liste('berufsgruppen') as $g) {
-        $gruppen[$g] = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE status = 'bestaetigt' AND berufsgruppe = ?", [$g]);
+        $gruppen[$g] = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $g]);
     }
     $inst = [];
     foreach (db_zeilen("SELECT a.institution, COUNT(*) AS n FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w . ' GROUP BY a.institution ORDER BY n DESC, a.institution LIMIT 15', $p) as $r) {
@@ -147,7 +149,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
     [$w, $p] = stat_filter($bg);
     $anm = db_zeilen("SELECT a.* FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w . ' ORDER BY a.nachname, a.vorname', $p);
     $kurz = fn(string $s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(strtr($s, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', 'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue']))) ?? '', '-');
-    $datei = fn(string $n) => 'wintersymposium-' . $n . ($bg !== '' ? '-' . $kurz($bg) : '') . '-' . gmdate('Ymd') . '.csv';
+    $datei = fn(string $n) => (va_zeile()['kuerzel'] ?? 'wintersymposium') . '-' . $n . ($bg !== '' ? '-' . $kurz($bg) : '') . '-' . gmdate('Ymd') . '.csv';
     switch ($art) {
         case 'teilnehmende':
             $z = [];

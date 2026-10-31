@@ -104,7 +104,7 @@ function team_anm_daten(int $anmId, array $e, bool $mail): array
     $w = $r['werte'];
     if ($w['email'] !== $a['email']) {
         $k = konto_per_email($w['email']);
-        if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND id <> ?', [$w['email'], $anmId]) > 0
+        if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [va_id(), $w['email'], $anmId]) > 0
             || ($k !== null && (int)$k['id'] !== (int)($a['konto_id'] ?? 0))) {
             return ['email' => 'Diese Adresse gehört schon zu einer anderen Anmeldung oder einem anderen Konto.'];
         }
@@ -143,9 +143,9 @@ function team_anlegen(array $e, bool $ueberbuchen, bool $mail): array
         $k = konto_per_email($w['email']);
         $kontoId = $k !== null && $k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null ? (int)$k['id'] : null;
         db_ausfuehren(
-            "INSERT INTO anmeldung (konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, status, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'bestaetigt', ?, ?, ?, ?)",
-            [$kontoId, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, $w['essen'], $jetzt, $jetzt, $jetzt, $jetzt]
+            "INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, status, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'bestaetigt', ?, ?, ?, ?)",
+            [va_id(), $kontoId, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, $w['essen'], $jetzt, $jetzt, $jetzt, $jetzt]
         );
         $id = (int)db()->lastInsertId();
         $fest = anm_frei(0) > 0 || $ueberbuchen;
@@ -289,7 +289,7 @@ function team_termine(): array
         $liste[] = [
             'id' => $tid, 'text' => $tid === 0 ? 'Symposium' : anm_termin_text($tid), 'termin' => $tid === 0 ? null : anm_termin($tid),
             'kap' => $kap, 'belegt' => $belegt, 'frei' => $kap === null ? null : $kap - $belegt, 'warte' => anm_wartend($tid),
-            'angebote' => (int)db_wert("SELECT COUNT(*) FROM platz WHERE termin_id = ? AND status = 'angebot'", [$tid]),
+            'angebote' => (int)db_wert("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status = 'angebot'", [va_id(), $tid]),
         ];
     }
     return $liste;
@@ -300,8 +300,8 @@ function team_termin_personen(int $terminId): array
 {
     $z = db_zeilen(
         "SELECT p.*, a.vorname, a.nachname, a.email, a.status AS anm_status, a.berufsgruppe FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id
-         WHERE p.termin_id = ? ORDER BY FIELD(p.status, 'fest', 'angebot', 'warte'), CASE WHEN p.status = 'warte' THEN p.seit END, p.id, a.nachname",
-        [$terminId]
+         WHERE p.veranstaltung_id = ? AND p.termin_id = ? ORDER BY FIELD(p.status, 'fest', 'angebot', 'warte'), CASE WHEN p.status = 'warte' THEN p.seit END, p.id, a.nachname",
+        [va_id(), $terminId]
     );
     $fest = array_values(array_filter($z, fn($p) => $p['status'] !== 'warte'));
     usort($fest, fn($x, $y) => [$x['status'], mb_strtolower($x['nachname'])] <=> [$y['status'], mb_strtolower($y['nachname'])]);
@@ -315,7 +315,7 @@ function team_aufgaben(?int $jetzt = null): array
     $auf = [];
     $grenzeVorbei = $jetzt + va_zahl('nachrueck_frist_h') * 3600 > anm_grenze_ts();
     foreach (team_termine() as $t) {
-        $wartendBestaetigt = (int)db_wert("SELECT COUNT(*) FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'", [$t['id']]);
+        $wartendBestaetigt = (int)db_wert("SELECT COUNT(*) FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'", [va_id(), $t['id']]);
         if ($t['frei'] !== null && $t['frei'] > 0 && $wartendBestaetigt > 0) {
             $auf[] = ['art' => 'Manuell', 'text' => $t['text'] . ': ' . $t['frei'] . ($t['frei'] === 1 ? ' Platz' : ' Plätze') . ' frei, ' . $wartendBestaetigt . ' auf der Warteliste'
                 . ($grenzeVorbei ? ' – automatische Angebote sind vorbei.' : ' – das Nachrücken läuft beim nächsten Job.'), 'link' => '/team/workshops?t=' . $t['id'], 'knopf' => 'Vergeben'];
@@ -327,8 +327,16 @@ function team_aufgaben(?int $jetzt = null): array
     } elseif ($ms['fehler'] > 0) {
         $auf[] = ['art' => 'Mail', 'text' => $ms['fehler'] . ($ms['fehler'] === 1 ? ' Mail ließ' : ' Mails ließen') . ' sich nicht zustellen.', 'link' => '/team/daten', 'knopf' => 'Ansehen'];
     }
-    foreach (db_zeilen("SELECT p.*, a.vorname, a.nachname FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.status = 'angebot' AND p.angebot_bis < ? ORDER BY p.angebot_bis", [gmdate('Y-m-d H:i:s', $jetzt + 86400)]) as $o) {
+    foreach (db_zeilen("SELECT p.*, a.vorname, a.nachname FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.status = 'angebot' AND p.angebot_bis < ? ORDER BY p.angebot_bis", [va_id(), gmdate('Y-m-d H:i:s', $jetzt + 86400)]) as $o) {
         $auf[] = ['art' => 'Frist', 'text' => 'Angebot an ' . $o['vorname'] . ' ' . $o['nachname'] . ' (' . anm_termin_text((int)$o['termin_id']) . ') läuft am ' . datum_zeit_text($o['angebot_bis']) . ' ab.', 'link' => '/team/personen?a=' . $o['anmeldung_id'], 'knopf' => 'Ansehen'];
+    }
+    // Nach der Veranstaltung: abschließen, sobald die Zertifikate freigeschaltet sind (E-58)
+    if ((va_zeile()['status'] ?? '') === 'aktuell' && va('veranstaltung_datum') !== '' && va('veranstaltung_datum') < anm_heute($jetzt)) {
+        $offen = tn_zahlen()['offen'];
+        $auf[] = ['art' => 'Abschluss', 'text' => $offen > 0 && va_an('mit_zertifikat')
+            ? 'Die Veranstaltung ist vorbei; ' . $offen . ' Zertifikate sind noch nicht freigeschaltet. Danach die Veranstaltung abschließen.'
+            : 'Die Veranstaltung ist vorbei. Schließ sie ab, damit nichts mehr geändert wird, und mach die nächste zur aktuellen.',
+            'link' => $offen > 0 && va_an('mit_zertifikat') ? '/team/teilnahme' : '/team/veranstaltungen', 'knopf' => $offen > 0 && va_an('mit_zertifikat') ? 'Teilnahme' : 'Abschließen'];
     }
     if (programm_status()['offen'] ?? false) {
         $auf[] = ['art' => 'Programm', 'text' => 'Es gibt gespeicherte, noch nicht veröffentlichte Änderungen am Programm.', 'link' => '/team/programm', 'knopf' => 'Ansehen'];

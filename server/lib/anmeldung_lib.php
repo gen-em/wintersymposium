@@ -147,7 +147,40 @@ function team_tor(array $rollen = TEAM_ROLLEN): array
         seite_meldung(403, 'Kein Zugriff', 'Diese Seite ist für deine Rolle nicht freigegeben.');
     }
     $GLOBALS['ws_team_konto'] = (int)$k['id']; // für das Audit-Protokoll bei Team-Änderungen
+    team_veranstaltung_waehlen();
     return $k;
+}
+
+/**
+ * Veranstaltung des Team-Bereichs (E-58): ?va=ID wählt um und merkt sich die
+ * Wahl in der Sitzung; ohne Wahl die aktuelle. Setzt den Kontext für die Seite.
+ */
+function team_veranstaltung_waehlen(): void
+{
+    if (!va_tabellen_da()) {
+        return;
+    }
+    if (isset($_GET['va']) && va_zeile((int)$_GET['va']) !== null) {
+        $_SESSION['team_va'] = (int)$_GET['va'];
+    }
+    $id = (int)($_SESSION['team_va'] ?? 0);
+    if ($id === 0 || va_zeile($id) === null) {
+        $id = va_aktuell_id() ?? (int)db_wert('SELECT MAX(id) FROM veranstaltung');
+        unset($_SESSION['team_va']);
+    }
+    va_kontext($id);
+}
+
+/**
+ * Schreibschutz für abgeschlossene Veranstaltungen (E-58): POST auf Seiten der
+ * Veranstaltung wird abgewiesen; Lesen, Exporte und Downloads bleiben.
+ */
+function team_schreibschutz(string $ziel): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && va_abgeschlossen()) {
+        flash_setzen('fehler', 'Diese Veranstaltung ist abgeschlossen und nur noch zum Ansehen da.');
+        umleiten($ziel);
+    }
 }
 
 /** Passwort prüfen, mit gleicher Laufzeit für unbekannte Adressen. */

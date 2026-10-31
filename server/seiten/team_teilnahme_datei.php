@@ -35,7 +35,7 @@ if ($pfad === '/team/teilnahme/liste') {
         if ($a === null) {
             nicht_gefunden();
         }
-        $inhalt = zertifikat_pdf(zertifikat_daten($a));
+        $inhalt = zertifikat_pdf_fuer($a);
         $datei = 'zertifikat-' . zertifikat_nr((int)$a['id']) . '.pdf';
     }
     $art = 'inline';

@@ -277,7 +277,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     pruefe(str_contains($r['text'], 'nur noch über das Team') && !str_contains($r['text'], 'href="/deine-anmeldung?aendern=workshops"'), 'Nach dem Stichtag: Knopf gesperrt mit Hinweis (E-31)');
     $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'workshops', 'ws' => [$wid => $t1]], $k1);
     pruefe(db_wert('SELECT termin_id FROM platz WHERE anmeldung_id = ? AND termin_id <> 0', [$a['id'] ?? 0]) == $t2, 'Nach dem Stichtag: Änderung abgelehnt (T-143)');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'stichtag_workshop'");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'stichtag_workshop'");
     $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'daten', 'vorname' => 'Lena', 'nachname' => 'Test', 'email' => 'neu@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA Test', 'efn' => ''], $k1);
     pruefe($r['status'] === 303 && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'lena.test@example.org', 'Neue Adresse gilt erst nach Bestätigung');
     preg_match('~/link\?t=([0-9a-f]{48})~', http_mail_an($tmp, 'neu@example.org'), $m2);
@@ -314,7 +314,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     pruefe(http_mail_an($tmp, 'neu@example.org', 20, 'ist storniert') !== '', 'Storno-Mail');
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k1);
     pruefe(str_contains($r['text'], 'Wie willst du rein?'), 'danach keine Sitzung mehr');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
 }
 
 /** Konten für Teilnehmende (AP-4b): anlegen, bestätigen, Passwort, Login, Löschen. $teamPw: Passwort der Betreiberin. */
@@ -390,7 +390,7 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c5, 'aktion' => 'loeschen', 'passwort' => 'hannas-passwort', 'anmeldung' => 'behalten'], $k5);
     pruefe($r['status'] === 303 && konto_per_email('hanna@example.org') === null && db_wert('SELECT COUNT(*) FROM anmeldung WHERE email = ?', ['hanna@example.org']) == 1, 'Konto gelöscht, Anmeldung bleibt (Wahl)');
     db_ausfuehren("DELETE FROM anmeldung WHERE email = 'hanna@example.org'");
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
 }
 
 /** Team-Bereich AP-5: Seiten, Person anlegen und ändern, Export, Texte, Protokoll, Betrieb. */
@@ -647,7 +647,7 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     pruefe(($a['status'] ?? '') === 'bestaetigt' && (int)($a['konto_id'] ?? 0) === $mk, 'Team-Konto: eigene Anmeldung, verknüpft und gleich bestätigt');
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'Hallo Mia.'), 'Meine Anmeldung zeigt die eigene Anmeldung');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'anmeldung_start'");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
     // Ausloggen beendet alles
     $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k2);
     pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $k2)['status'] === 303 && !str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2)['text'], 'Hallo Mia.'), 'Ausloggen beendet Team und Konto zugleich');
@@ -757,7 +757,7 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     einstellung_setzen('stichtag_essen', gmdate('Y-m-d', time() - 86400));
     $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'speichern', 'a' => $pid, 'vorname' => 'Petra', 'nachname' => 'Person', 'email' => 'petra@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 4', 'essen' => 'egal'], $b);
     pruefe(db_wert('SELECT essen FROM anmeldung WHERE id = ?', [$pid]) === 'egal' && http_mail_an($tmp, 'petra@example.org', 20, 'das Team hat deine Anmeldung aktualisiert') !== '', 'Team ändert nach dem Stichtag, Mail „vom Team“ (T-144)');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel = 'stichtag_essen'");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'stichtag_essen'");
     http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'link', 'a' => $pid], $b);
     pruefe(http_mail_an($tmp, 'petra@example.org', 20, 'siehst und änderst du deine Anmeldung') !== '', 'Einmal-Link senden');
     $r = http_anfrage($basis, 'GET', '/team/workshops?t=0', $h, [], null, $b);
@@ -863,7 +863,7 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
     $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'")];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
-    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung') == 3 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE veranstaltung_id = 1') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = 1') == 3 && db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'") == 1 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
     $vorTest = '';
     foreach (sicherung_liste() as $s) {
@@ -1013,7 +1013,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'") == 1, 'Änderung im Audit-Protokoll');
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['veranstaltung_ort' => 'Klinikum Test', 'veranstaltung_kapazitaet' => '120'] + $form, "$tmp/kekse-leer.txt");
     pruefe($r['status'] === 403 || $r['status'] === 303, 'ohne Login nicht speicherbar');
-    db_ausfuehren("DELETE FROM einstellung WHERE schluessel IN ('veranstaltung_ort', 'veranstaltung_kapazitaet')");
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel IN ('veranstaltung_ort', 'veranstaltung_kapazitaet')");
 
     programm_http_tests($basis, $h, $tmp, $b);
     anmeldung_http_tests($basis, $h, $tmp, $b);
@@ -1025,6 +1025,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     konto_alles_http_tests($basis, $h, $tmp, $b);
     passkey_http_tests($basis, $tmp);
     newsletter_http_tests($basis, $h, $tmp, $b);
+    veranstaltung_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -1054,6 +1055,46 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $aus = [];
     exec('WS_CONFIG=' . escapeshellarg("$tmp/config.php") . ' ' . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$wurzel/server/cli/konto.php") . ' link anna@example.org 2>&1', $aus, $code);
     pruefe($code === 0 && str_contains(implode('', $aus), '/einrichten?t='), 'neuen Link erzeugt');
+}
+
+function veranstaltung_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Mehrere Veranstaltungen (E-58)');
+    $v1 = (int)va_aktuell_id();
+    $k1 = (string)va_zeile($v1)['kuerzel'];
+    $r = http_anfrage($basis, 'GET', '/team/veranstaltungen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], '/' . $k1) && str_contains($r['text'], 'Neue Veranstaltung') && str_contains($r['text'], 'id="va-wahl"'), 'Team: Seite Veranstaltungen mit Auswahl im Kopf');
+    $c = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'name' => 'Sommerabend', 'kuerzel' => 'team', 'vorlage' => $v1], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'schon eine Adresse'), 'Kürzel „team“ abgelehnt');
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'name' => 'Sommerabend', 'kuerzel' => 'sommerabend', 'vorlage' => $v1], $b);
+    $v2 = (int)(va_per_kuerzel('sommerabend')['id'] ?? 0);
+    pruefe($r['status'] === 303 && $v2 > 0 && str_contains($r['kopf']['location'] ?? '', '/team/einstellungen?va=' . $v2), 'Neue Veranstaltung angelegt, weiter zu ihren Einstellungen');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen?va=' . $v2, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Entwurf – noch nicht öffentlich') && str_contains($r['text'], 'value="sommerabend"') && str_contains($r['text'], 'Sommerabend'), 'Team arbeitet in der gewählten Veranstaltung (Entwurf)');
+    $r = http_anfrage($basis, 'GET', '/team/personen', $h, [], null, $b);
+    pruefe($r['status'] === 200 && !str_contains($r['text'], 'Person, Petra') && !str_contains($r['text'], 'Petra Person'), 'Personen: nur die der gewählten Veranstaltung');
+    pruefe(http_anfrage($basis, 'GET', '/sommerabend', $h)['status'] === 404 && http_anfrage($basis, 'GET', '/' . $k1, $h)['status'] === 200, 'Entwurf nicht öffentlich, aktuelle unter ihrem Kürzel');
+    // Abschließen: nur noch lesen
+    http_anfrage($basis, 'GET', '/team?va=' . $v1, $h, [], null, $b);
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'abschliessen', 'id' => $v1], $b);
+    pruefe($r['status'] === 303 && va_zeile($v1)['status'] === 'abgeschlossen', 'Abschließen');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'veranstaltung_ort' => 'Geändert'], $b);
+    $r2 = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    pruefe($r['status'] === 303 && str_contains($r2['text'], 'nur noch zum Ansehen') && va_von($v1, 'veranstaltung_ort') !== 'Geändert', 'Abgeschlossen: Speichern abgewiesen');
+    $r = http_anfrage($basis, 'GET', '/' . $k1, $h);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Diese Veranstaltung ist vorbei') && !str_contains($r['text'], 'Jetzt anmelden'), 'Archiv-Seite unter dem Kürzel, ohne Anmeldung');
+    pruefe(str_starts_with(http_anfrage($basis, 'GET', '/team/export?art=teilnehmende', $h, [], null, $b)['text'], "\u{FEFF}"), 'Exporte gehen weiter');
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'aktuell', 'id' => $v2], $b);
+    $r2 = http_anfrage($basis, 'GET', '/', $h);
+    va_zwischenspeicher_leeren(); // Zwischenspeicher dieses Testprozesses, nicht der Seite
+    pruefe(va_aktuell_id() === $v2 && $r2['status'] === 200 && !str_contains($r2['text'], 'Diese Veranstaltung ist vorbei'), 'Neue aktuelle Veranstaltung auf der Startseite');
+    // Zurück: Veranstaltung 1 wieder aktuell, die neue entfernen
+    db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [$v2]);
+    db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$v2]);
+    db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = ?", [$v1]);
+    va_zwischenspeicher_leeren();
+    http_anfrage($basis, 'GET', '/team?va=' . $v1, $h, [], null, $b);
 }
 
 function http_tests(string $wurzel, string $tmp): void

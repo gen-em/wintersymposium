@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/personen'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $ich = (int)$konto['id'];
 $betreiber = $konto['rolle'] === 'betreiber';
 $filter = isset(TEAM_FILTER[$_GET['f'] ?? '']) ? (string)$_GET['f'] : 'alle';

@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 $konto = team_tor();
+team_schreibschutz('/team/programm'); // abgeschlossene Veranstaltung: nur lesen (E-58)
 $ich = (int)$konto['id'];
 $fehler = [];
 $eingabe = null;
@@ -21,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $id = (int)($_POST['id'] ?? 0) ?: null;
     switch ($aktion) {
         case 'speichern':
-            if ($id !== null && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE id = ?', [$id]) != 1) {
+            if ($id !== null && !programm_punkt_im_kontext($id)) {
                 seite_meldung(404, 'Nicht gefunden', 'Diesen Programmpunkt gibt es nicht mehr.');
             }
             $r = programm_punkt_pruefen($_POST, $id);

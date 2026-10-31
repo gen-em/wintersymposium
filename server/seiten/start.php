@@ -13,7 +13,11 @@ $anmeldungAb = va('anmeldung_start');
 $anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
 
 seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
+$archiv = va_abgeschlossen();
 ?>
+<?php if ($archiv): $akt = va_aktuell_id(); ?>
+<div class="innen"><p class="va-archiv" role="status"><strong>Diese Veranstaltung ist vorbei.</strong> Die Seite bleibt als Rückblick stehen<?= $akt !== null ? ' – die aktuelle findest du auf der <a href="/">Startseite</a>' : '' ?>.</p></div>
+<?php endif; ?>
 <div class="innen held">
     <div>
         <?php if (inhalt('start_kicker') !== ''): ?><p class="kicker"><?= editor_html(inhalt('start_kicker'), 'inline') ?></p><?php endif; ?>
@@ -26,7 +30,7 @@ seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
         <?php foreach ($eck as [$dt, $dd]): ?><div><dt><?= e($dt) ?></dt><dd><?= e($dd) ?></dd></div><?php endforeach; ?>
     </dl>
     <?php endif; ?>
-    <?php if ($anmeldungHinweis !== ''): ?><p class="mono meta klein anmeldung-ab"><?= e($anmeldungHinweis) ?></p><?php endif; ?>
+    <?php if ($anmeldungHinweis !== '' && !$archiv): ?><p class="mono meta klein anmeldung-ab"><?= e($anmeldungHinweis) ?></p><?php endif; ?>
     <?php if (anm_zeitraum() === 'offen'): ?><div class="held-knoepfe"><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a><a class="knopf zweit" href="/deine-anmeldung">Anmeldung ändern</a></div><?php endif; ?>
 </div>
 

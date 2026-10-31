@@ -2,6 +2,27 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.18.0] – 2026-10-31
+
+Mehrere Veranstaltungen (AP-11, E-58).
+
+### Neu
+
+- **Veranstaltungen:** Symposien und Abende mit demselben Grundmuster; immer eine aktuelle auf der Startseite, jede unter ihrem Kürzel (`/wintersymposium2027`) erreichbar.
+- **Verwaltung → Veranstaltungen:** anlegen (leer oder als Kopie mit Einstellungen, Texten und Programm), aktuell machen, abschließen, Entwürfe löschen.
+- **Auswahl im Team-Bereich:** Leiste unter der Navigation; alle Seiten gelten für die gewählte Veranstaltung.
+- **Abgeschlossene Veranstaltungen** sind nur noch zum Ansehen da (Rückblick unter dem Kürzel, Team-Bereich ohne Speichern); Exporte und Zertifikate bleiben.
+- **Mein Konto → Deine Veranstaltungen:** alle besuchten Veranstaltungen mit Zertifikat.
+- **Daten übernehmen:** Wiederkehrende ohne Konto bekommen einen Link, mit dem das Anmeldeformular vorausgefüllt ist.
+- Neue Einstellungen: Kürzel, Kurzname, Art, Bausteine (Essenswahl, Fortbildungspunkte, Teilnahmebescheinigung).
+- „Zu erledigen“ erinnert nach dem Veranstaltungstag ans Abschließen.
+
+### Geändert
+
+- Migration 15: alle bisherigen Daten gehören zur Veranstaltung „wintersymposium2027“ (aktuell).
+- Mails, Kopfzeilen und Seitentitel nennen den Kurznamen der Veranstaltung statt fest „Wintersymposium“.
+- Die Unterschrift des Zertifikats liegt je Veranstaltung.
+
 ## [0.17.0] – 2026-10-30
 
 Teilnahme und Zertifikate (AP-10, E-57).
