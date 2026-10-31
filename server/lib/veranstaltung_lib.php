@@ -480,7 +480,7 @@ function va_eckdaten(): array
         $eck[] = ['CME', va('cme_anzeige')];
     }
     $kap = va_zahl('veranstaltung_kapazitaet');
-    if ($kap > 0) {
+    if ($kap > 0 && !va_abgeschlossen()) {
         // Belegt: feste Plätze und offene Angebote, auch unbestätigte Anmeldungen (E-40, E-46)
         $eck[] = ['Freie Plätze', max(0, $kap - anm_belegt(0)) . ' / ' . $kap];
     }

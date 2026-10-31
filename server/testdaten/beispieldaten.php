@@ -263,7 +263,7 @@ function beispieldaten_vorjahr(array $anm): array
             'cme_punkte' => '4', 'cme_kategorie' => 'A', 'cme_kammer' => 'Beispiel-Landesärztekammer', 'zertifikat_leitung' => 'Dr. Erika Erfunden'] as $k => $w) {
             einstellung_setzen($k, $w);
         }
-        inhalt_setzen('start_titel', 'Wintersymposium *2026*');
+        inhalt_setzen('start_titel', 'Wintersymposium <em>2026</em>');
         inhalt_setzen('start_unter', 'Rückblick auf die zweite Auflage.');
         foreach ([['typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Schock. Was jetzt?', 'ort' => 'Hörsaal', 'beginn' => '18:15', 'ende' => '19:00'],
             ['typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Thoraxdrainage', 'ort' => 'Skills-Lab 1', 't_beginn' => ['19:30'], 't_ende' => ['20:30'], 't_plaetze' => ['12']]] as $e) {
