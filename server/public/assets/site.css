@@ -782,6 +782,9 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .person-liste a.person-punkt:hover, .person-liste a.person-punkt[aria-current="page"] { background: var(--bg); }
 .person-liste a.person-punkt:hover .person-titel, .person-liste a.person-punkt[aria-current="page"] .person-titel { color: var(--akz); }
 .person-liste a.person-punkt:hover .person-weiter, .person-liste a.person-punkt:focus-visible .person-weiter { opacity: 1; transform: none; }
+/* Team-Bereich im Personen-Menü: grün wie in der Leiste, auch als aktuelle Seite und beim Überfahren (nach den Regeln oben) */
+.person-liste a.person-punkt.team .icon, .person-liste a.person-punkt.team .person-titel,
+.person-liste a.person-punkt.team:hover .person-titel, .person-liste a.person-punkt.team[aria-current="page"] .person-titel { color: var(--gruen); }
 .person-liste form, .person-flach + li form, .menue form { margin: 0; }
 .person-ab { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 16px; border: 0; border-top: 1px solid var(--linie); background: transparent; color: var(--akz); font: 700 1rem var(--f-text); cursor: pointer; }
 .person-ab:hover { background: var(--bg); color: var(--rot-300); }

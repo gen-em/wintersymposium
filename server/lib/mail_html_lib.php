@@ -86,7 +86,12 @@ function mail_html_schild(string $status): string
     return '<span style="font-size:14px;color:#33475B;">' . e($status) . '</span>';
 }
 
-/** Übersicht der Plätze („- Text: Status“ je Zeile) als Tabelle. */
+/**
+ * Übersicht der Plätze („- Text: Status“ je Zeile) als Tabelle, Variante B
+ * (Admin 2026-10-31): jede Zeile mit farbigem Streifen links und einer
+ * Kennung über dem Titel – Abend lila, Workshop rot wie im Programm, Essen
+ * grau; das Schild rechts senkrecht mittig.
+ */
 function mail_html_uebersicht(array $zeilen): string
 {
     $h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #D5DBE3;border-radius:6px;border-collapse:separate;margin:0 0 16px;">';
@@ -101,10 +106,22 @@ function mail_html_uebersicht(array $zeilen): string
         if (preg_match('/^(.*?)\s·\s(\d{1,2}:\d{2}[–-]\d{1,2}:\d{2})$/u', $text, $m) === 1) {
             [$text, $zeit] = [$m[1], $m[2]];
         }
+        if ($text === 'Essen') {
+            // Essen: Kennung und Wunsch, kein Schild
+            [$art, $farbe, $streifen, $titel, $schild] = ['Essen', '#5B6B7C', '#D5DBE3', $status, ''];
+        } elseif (str_starts_with($text, 'Platz beim ')) {
+            $zeit = va('veranstaltung_beginn') !== '' ? va('veranstaltung_beginn') . (va('veranstaltung_ende') !== '' ? '–' . va('veranstaltung_ende') : '') : '';
+            [$art, $farbe, $streifen, $titel, $schild] = ['Abend', '#6B3FD1', MAIL_LILA, $text, $status];
+        } elseif ($zeit !== '') {
+            [$art, $farbe, $streifen, $titel, $schild] = ['Workshop', '#D2343A', '#FF5A5F', $text, $status];
+        } else {
+            [$art, $farbe, $streifen, $titel, $schild] = ['', '#5B6B7C', '#D5DBE3', $text, $status];
+        }
+        $kennung = trim(mb_strtoupper($art) . ($zeit !== '' ? ' · ' . $zeit : ''), ' ·');
         $h .= '<tr>'
-            . '<td style="' . $rand . 'padding:10px 0 10px 14px;width:96px;font-family:\'Courier New\',monospace;font-size:13px;color:#5B6B7C;vertical-align:top;">' . e($zeit) . '</td>'
-            . '<td style="' . $rand . 'padding:10px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:' . MAIL_NAVY . ';vertical-align:top;">' . e($text) . '</td>'
-            . '<td style="' . $rand . 'padding:10px 14px 10px 0;text-align:right;vertical-align:top;">' . ($status !== '' ? mail_html_schild($status) : '') . '</td>'
+            . '<td style="' . $rand . 'border-left:4px solid ' . $streifen . ';padding:10px 8px 10px 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4;color:' . MAIL_NAVY . ';vertical-align:middle;">'
+            . ($kennung !== '' ? '<span style="display:block;font-size:11px;font-weight:bold;letter-spacing:1px;color:' . $farbe . ';">' . e($kennung) . '</span>' : '') . e($titel) . '</td>'
+            . '<td style="' . $rand . 'padding:10px 14px 10px 0;text-align:right;vertical-align:middle;">' . ($schild !== '' ? mail_html_schild($schild) : '') . '</td>'
             . '</tr>';
     }
     return $h . '</table>';
@@ -149,7 +166,7 @@ function mail_html_aus_text(string $vorlage, string $betreff, string $text): str
         } elseif (str_starts_with($a, '    ') && count($zeilen) === 1) {
             // Code zum Einloggen
             $inhalt .= '<p style="' . $p . 'font-family:\'Courier New\',monospace;font-size:30px;font-weight:bold;letter-spacing:6px;color:' . MAIL_NAVY . ';">' . e(trim($a)) . '</p>';
-        } elseif (str_starts_with($a, 'Bis bald') && str_contains($gruss, $a)) {
+        } elseif (str_starts_with($a, 'Bis bald') && (str_contains($gruss, $a) || str_contains(mail_gruss(true), $a))) {
             // Gruß: Name und Adresse stehen im Fuß
             $inhalt .= '<p style="' . $p . '">' . mail_html_satz(implode("\n", array_slice($zeilen, 0, 2))) . '</p>';
         } else {
@@ -168,11 +185,18 @@ function mail_html_aus_text(string $vorlage, string $betreff, string $text): str
 /** Kicker über der Überschrift: Veranstaltung und Datum; Team-Mails „Team-Bereich“. */
 function mail_kicker(string $vorlage = ''): string
 {
+    // Mails für alle Veranstaltungen nennen die Reihe (E-67)
     if (str_starts_with($vorlage, 'team_') || $vorlage === 'zweitfaktor_code') {
-        return 'Team-Bereich · ' . va_kurz();
+        return 'Team-Bereich · ' . reihe_name();
+    }
+    if (str_starts_with($vorlage, 'konto_')) {
+        return 'Konto · ' . reihe_name();
     }
     if (str_starts_with($vorlage, 'newsletter')) {
-        return 'Newsletter';
+        return 'Newsletter · ' . reihe_name();
+    }
+    if ($vorlage === 'test') {
+        return reihe_name();
     }
     $datum = va('veranstaltung_datum');
     return va_kurz() . ($datum !== '' ? ' · ' . tag_text($datum) : '');
