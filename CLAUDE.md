@@ -12,7 +12,7 @@ Verbindliche Quelle ist [`docs/konzept.md`](docs/konzept.md) (Entscheidungen E-x
 ## Technik
 
 - Aufbau, Einrichtung, Auslieferung und Tests: [`docs/betrieb.md`](docs/betrieb.md). Webroot ist `server/public/`.
-- Gestaltung: freigegebene Mockups in [`docs/mockups/`](docs/mockups/index.html) (Variante A, E-36) sind Vorlage für jede neue Seite; CSS in `server/public/assets/site.css`.
+- Gestaltung: `server/public/assets/site.css` ist die alleinige Vorlage (E-63); neue Seiten nutzen vorhandene Klassen, neue Klassen nur mit Eintrag im Komponentenblatt (entsteht im Review-AP CSS). Die Mockups in [`docs/mockups/`](docs/mockups/index.html) (E-36) sind Archiv.
 - Vor jedem PR: `php tools/tests/lauf.php` mit Testdatenbank (Umgebungsvariablen `WS_TEST_DB_*`); neue Funktionen bekommen Tests dort.
 - **Test-Beispieldatensatz** `server/testdaten/beispieldaten.php` (Admin 2026-10-29): Daten, die für eine Prüfung angelegt werden (Programm, später Anmeldungen, Warteliste …), dort als eigene Funktion ablegen statt nur im Test, damit der Datensatz mit jedem AP wächst. Nur erfundene Namen und `example.org`-Adressen.
 - **Browser-Prüfung vor jedem PR (R-12):** jede Funktion in Chromium, Firefox und WebKit (Safari-Engine) auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px) prüfen – Darstellung, Klickwege, Auswahlfelder, Aufklapp-Elemente, Popups, Konsolenfehler. Einrichtung je Sandbox `bash tools/browser/einrichten.sh`, Lauf `node tools/browser/durchlauf.js` (Testdatenbank wie oben). Neue Seiten und Abläufe dort ergänzen; Ergebnis mit Zahl in PR und Prüfprotokoll. Bildschirmfotos ansehen, nicht nur die Zahl. Der Admin soll möglichst wenig selbst testen müssen.

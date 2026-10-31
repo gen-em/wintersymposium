@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.4] – 2026-10-31
+
+### Doku
+
+- E-63: site.css ist die alleinige Design-Vorlage (Mockups Archiv, CLAUDE.md angepasst), Shell-Cronjob als Standard (betrieb.md Schritt 6), technische Grenzen bleiben Konstanten (R-11 ergänzt); O-42 bis O-44 entschieden.
+
 ## [0.21.3] – 2026-10-31
 
 ### Doku
