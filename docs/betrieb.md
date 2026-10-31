@@ -57,9 +57,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
    - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
-6. **Cron einrichten:** in der Verwaltung des Hosters einen Cronjob alle 5 Minuten anlegen, entweder
-   - als URL-Aufruf: `https://<domain>/jobs?token=<jobs_token>`, oder
-   - auf der Kommandozeile: `php <Zielordner>/cli/jobs.php`
+6. **Cron einrichten:** in der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten anlegen mit dem Kommando `php <Zielordner>/cli/jobs.php` (E-64). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>` – der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
 7. **Prüfen:** `https://<domain>/health?token=<health_token>` zeigt JSON mit `"status": "ok"` und nach dem ersten Cron-Lauf eine Zeit unter `jobs.letzter_lauf`.
 8. **Einloggen:** `https://<domain>/einloggen` mit dem BetreiberIn aus Schritt 5; beim ersten Mal den zweiten Faktor mit einer Authenticator-App einrichten und die Wiederherstellungscodes sichern (Abschnitt 8).
 
