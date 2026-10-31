@@ -115,7 +115,10 @@ function sicherung_anlegen(string $anlass, ?int $kontoId = null): string
     $schreib(['art' => 'ende', 'tabellen' => $tabellen, 'zeilen' => $zeilen]);
     fclose($h);
     rename($tmp, $pfad);
-    audit_schreiben('sicherung', 'Sicherung angelegt: ' . $name . ' (' . $anlass . ')', $kontoId);
+    if ($anlass !== DS_SICHERUNG_AUTOMATISCH) {
+        // Die automatischen (8× täglich) stehen nicht einzeln im Protokoll
+        audit_schreiben('sicherung', 'Sicherung angelegt: ' . $name . ' (' . $anlass . ')', $kontoId);
+    }
     return $name;
 }
 
@@ -147,13 +150,15 @@ function sicherung_liste(): array
     return $liste;
 }
 
-function sicherung_loeschen(string $name, ?int $kontoId): bool
+function sicherung_loeschen(string $name, ?int $kontoId, bool $protokoll = true): bool
 {
     $p = sicherung_pfad($name);
     if ($p === null || !@unlink($p)) {
         return false;
     }
-    audit_schreiben('sicherung', 'Sicherung gelöscht: ' . $name, $kontoId);
+    if ($protokoll) {
+        audit_schreiben('sicherung', 'Sicherung gelöscht: ' . $name, $kontoId);
+    }
     return true;
 }
 

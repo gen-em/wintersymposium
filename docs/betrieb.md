@@ -183,7 +183,7 @@ Team-Bereich → „Programm“ (Admin und Betreiber).
 - **Jobs** (Cron alle 5 Minuten): `anmeldung` (Fristen, abgelaufene Angebote, Nachrücken, alte Links) und `mail` (Warteschlange) jede Minute fällig, `aufraeumen` stündlich.
 - **Team:** Reiter „Anmeldungen“ zeigt Zahlen, Workshop-Termine und alle Anmeldungen (nur lesen; Bearbeiten mit AP-5).
 - **Spamschutz:** Honigtopf, Formular mindestens 4 s offen, Rechenaufgabe im Browser (JavaScript nötig), Ratenschutz je Herkunft, Wegwerfadressen. Greift eine Bremse, sieht die Antwort aus wie bei Erfolg.
-- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung und die Konten beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; Konten bleiben, bis die Person oder das Team sie löscht; sonst E-24).
+- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung und die Konten beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; Konten: Löschfrist nach E-54; weitere Fristen in Abschnitt 16a). Textvorschlag: `docs/datenschutz-vorschlag.md`.
 
 ## 12. Mailversand
 
@@ -220,7 +220,7 @@ Sechs Bereiche (Admin 2026-10-30, Variante A), darunter angehängt die Unterseit
 - **Teilnahme** (AP-10, E-57): Alle mit Platz gelten als anwesend; eingetragen wird nur „nicht erschienen“ – beim Symposium oder je Workshop („doch da“ nimmt es zurück). Suche und Filter, auf dem Handy bedienbar, alles im Protokoll (Art „Teilnahme“). **Listen:** Unterschriftenliste als PDF – alle (mit Berufsgruppe) oder nur ÄrztInnen mit der EFN als Barcode (Code 128, Inhalt `*EFN*`; ohne EFN ein Feld fürs Etikett), sortiert nach Nachname, Vorname oder Berufsgruppe; CME-Liste (nur Anwesende). **Zertifikate:** Vorschau mit Beispiel und je Person; „Freischalten“ einzeln oder „Alle freischalten“ – erst ab dem Veranstaltungstag, wahlweise ohne Mail; die Person bekommt „Deine Teilnahmebescheinigung ist da“ mit einem Link (30 Tage, einmal) und lädt das PDF unter „Meine Anmeldung“ herunter (mit Konto jederzeit). Wer als „nicht erschienen“ markiert ist, bekommt keins – auch nicht nach der Freischaltung. „Zurücknehmen“ sperrt den Download wieder. **Unterschrift:** PNG mit durchsichtigem Hintergrund (oder JPG auf Weiß), höchstens 4 MB; liegt im Laufzeitordner unter `zertifikat/` und ist Teil der Sicherung. Was sonst auf dem Zertifikat steht (Name der Veranstaltung, Auflage, Punkte, Kategorie, Kammer, VNR, Name und Rolle unter der Unterschrift), steht unter Einstellungen.
 - **Statistik:** Kennzahlen (die EFN-Angabe steht in der Kachel „Angemeldet“), Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** je Liste in drei Formaten (E-56): **CSV** (Semikolon, UTF-8 mit BOM, für andere Programme), **Excel** (xlsx: Kopfzeile fixiert und mit Filter, Datum als Datum; braucht die PHP-Erweiterung zip, sonst fehlt der Knopf) und **PDF** (A4 im Branding zum Ausdrucken; Teilnehmende quer und ohne E-Mail, je Termin bzw. Essen eine Seite; nicht für Newsletter): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der anwesenden ÄrztInnen), Statistik, Newsletter. Die Kachel „Anwesenheit“ zeigt anwesend / mit Platz und die freigeschalteten Zertifikate. Exporte stehen mit Format im Protokoll.
 - **Texte:** Startseite (alle im Team); Impressum und Datenschutz nur Betreiber.
-- **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings, Newsletter, Teilnahme und ihre eigenen Einträge; Betreiber sehen alles und können Einträge **ausblenden** (dann nur noch für Betreiber sichtbar, markiert, wieder einblendbar). Löschen geht nicht.
+- **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings, Newsletter, Teilnahme und ihre eigenen Einträge; Betreiber sehen alles und können Einträge **ausblenden** (dann nur noch für Betreiber sichtbar, markiert, wieder einblendbar). Löschen geht nicht von Hand; nach 14 Monaten (Logins nach 90 Tagen) löscht der Job `datenschutz` (Abschnitt 16a).
 - **Betrieb** (Betreiber): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
 
 ## 14. Newsletter (AP-7)
@@ -254,7 +254,25 @@ Team-Bereich → „Betrieb“ (nur Betreiber, E-47; bis 0.8 „Daten“).
 - **Wiederherstellen** ersetzt alles, auch die Team-Konten. Vorher wird der jetzige Stand gesichert. Unvollständige Dateien und Sicherungen aus einem neueren Stand der Anwendung werden abgelehnt; ältere werden nach dem Einspielen per Migration nachgezogen.
 - **Testdaten laden** gibt es nur, wenn `umgebung` `staging` oder `entwicklung` ist: ersetzt Programm, Dozierende, Anmeldungen und Veranstaltungs-Einstellungen durch den Beispieldatensatz (`server/testdaten/beispieldaten.php`), Team-Konten bleiben, vorher automatische Sicherung. Danach ist die Anmeldung offen (Veranstaltung in 60 Tagen).
 - **Mail-Umleitung (Staging):** `mail.umleiten_an` in der `config.php` schickt jede Mail an diese Adresse; der eigentliche Empfänger steht im Betreff. Auf Produktion leer lassen.
-- Sicherungen werden nicht automatisch gelöscht; alte über „Löschen“ entfernen.
+- **Automatisch** (AP-9, E-59): Der Job `sicherung` legt alle 3 Stunden (8× am Tag, über den Cron) eine Sicherung mit Anlass „automatisch“ an und räumt danach auf: behalten werden alle der letzten 3 Tage, bis 7 Tage die neueste je Tag, bis 14 Tage die neueste je 3 Tage, bis 28 Tage die neueste je Woche; ältere automatische werden gelöscht. Von Hand angelegte (auch „vor dem Wiederherstellen“, „vor dem Laden der Testdaten“) werden nach 90 Tagen gelöscht. Automatische Sicherungen und ihr Aufräumen stehen nicht im Protokoll. Für länger: herunterladen und verschlüsselt aufbewahren. Auf zusätzliche Sicherungen des Hosters verlassen wir uns nicht. Im Ordner liegen so etwa 30 automatische Sicherungen gleichzeitig.
+- Einzelne Sicherungen lassen sich jederzeit über „Löschen“ entfernen.
+
+## 16a. Fristen und Datenschutz (AP-9, E-24, E-59)
+
+Der Job `datenschutz` läuft stündlich (über den Cron) und wendet diese Fristen an:
+
+| Was | Frist | Wie |
+|---|---|---|
+| Anmeldungen ohne Konto | 14 Monate nach der Veranstaltung | Name, Adresse, Institution, EFN, Freitext geleert, Links gelöscht, Name in den Mailing-Empfängerlisten entfernt; Berufsgruppe, Essen und Plätze bleiben für die Statistik. Im Team-Bereich „(Daten geleert)“. Protokoll-Art „Datenschutz“. |
+| Anmeldungen mit Konto | solange das Konto besteht | danach wie ohne Konto |
+| Konten Teilnehmender | 14 Monate ohne Login, Erinnerung 30 Tage vorher | E-54, Abschnitt 15 |
+| CME-Nachweise | 10 Jahre nach der Veranstaltung | beim Leeren abgelegt: nur anwesende, bestätigte ÄrztInnen einer Veranstaltung mit Fortbildungspunkten (Name, EFN, Veranstaltung, Datum, VNR, Punkte, Kammer). Betrieb → Kasten „CME-Nachweise“ mit Export (nur Betreiber). |
+| Protokoll | 14 Monate, Logins 90 Tage | gelöscht |
+| Mailing-Empfängerlisten | 14 Monate nach Veranstaltung bzw. Versand | E-50 |
+| Mail-Warteschlange | sofort nach dem Versand | Empfänger und Inhalt geleert |
+| Sicherungen | automatisch höchstens 28 Tage, von Hand 90 Tage | Abschnitt 16 |
+
+Die Fristen sind feste Regeln aus dem Löschkonzept (E-24, E-59), keine Einstellungen. Ein **Textvorschlag für die Datenschutzerklärung**, abgestimmt auf diese Fristen, liegt in `docs/datenschutz-vorschlag.md` (kein Rechtsrat; Platzhalter füllen, prüfen lassen, unter Texte → Datenschutz einfügen).
 
 ## 17. Fehlerprotokoll
 

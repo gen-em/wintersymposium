@@ -1218,6 +1218,142 @@ va_zwischenspeicher_leeren();
     file_put_contents($cfgDatei, $cfgAlt);
     konfig_verwerfen();
 
+    abschnitt('Fristen und Datenschutz (AP-9, E-59)');
+    // Sicherungsplan: automatisch alle 3 h über 40 Tage, dazu zwei von Hand
+    $t0 = gmmktime(12, 0, 0, 6, 1, 2026);
+    $plan = [];
+    for ($h = 0; $h < 40 * 24; $h += 3) {
+        $plan[] = ['name' => 'sicherung-' . gmdate('Ymd-His', $t0 - $h * 3600) . '-aaaaaa.jsonl.gz', 'automatisch' => true];
+    }
+    $plan[] = ['name' => 'sicherung-' . gmdate('Ymd-His', $t0 - 10 * 86400) . '-bbbbbb.jsonl.gz', 'automatisch' => false];
+    $plan[] = ['name' => 'sicherung-' . gmdate('Ymd-His', $t0 - 100 * 86400) . '-cccccc.jsonl.gz', 'automatisch' => false];
+    $weg = ds_sicherungen_zu_loeschen($plan, $t0);
+    $bleibt = array_values(array_filter($plan, fn($x) => !in_array($x['name'], $weg, true)));
+    $alterTage = fn(array $x) => ($t0 - ds_sicherung_zeit($x['name'])) / 86400;
+    $auto = array_values(array_filter($bleibt, fn($x) => $x['automatisch']));
+    $zaehle = fn(float $von, float $bis) => count(array_filter($auto, fn($x) => $alterTage($x) > $von && $alterTage($x) <= $bis));
+    pruefe($zaehle(-1, 3) === 25 && $zaehle(3, 7) >= 4 && $zaehle(3, 7) <= 5 && $zaehle(7, 14) >= 2 && $zaehle(7, 14) <= 4 && $zaehle(14, 28) >= 2 && $zaehle(14, 28) <= 3 && $zaehle(28, 99) === 0, 'Sicherungen: alle 3 Tage, dann je Tag, je 3 Tage, je Woche bis 28 Tage');
+    pruefe(in_array($plan[count($plan) - 1]['name'], $weg, true) && !in_array($plan[count($plan) - 2]['name'], $weg, true), 'Von Hand: nach 90 Tagen gelöscht');
+    pruefe(ds_sicherungen_zu_loeschen(array_values(array_filter($plan, fn($x) => !in_array($x['name'], $weg, true))), $t0) === [], 'Plan ist stabil (zweiter Lauf löscht nichts)');
+    // Automatische Sicherung als Job: nicht im Protokoll
+    $vorAudit = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'sicherung'");
+    $j = ds_sicherung_job(time());
+    pruefe(sicherung_kopf($j['neu'])['anlass'] === DS_SICHERUNG_AUTOMATISCH && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'sicherung'") === $vorAudit, 'Automatische Sicherung angelegt, ohne Protokolleintrag');
+    $altName = 'sicherung-' . gmdate('Ymd-His', time() - 95 * 86400) . '-dddddd.jsonl.gz';
+    copy(sicherung_ordner() . '/' . $j['neu'], sicherung_ordner() . '/' . $altName);
+    $roh = (string)gzdecode((string)file_get_contents(sicherung_ordner() . '/' . $altName));
+    file_put_contents(sicherung_ordner() . '/' . $altName, gzencode(preg_replace('/"anlass":"automatisch"/', '"anlass":"von Hand"', $roh, 1)));
+    $j2 = ds_sicherung_job(time());
+    pruefe(sicherung_pfad($altName) === null && sicherung_pfad($j['neu']) !== null && $j2['geloescht'] >= 1, 'Job löscht alte Sicherung von Hand, behält die neuen');
+    // Anmeldungen leeren: Veranstaltung vor 15 Monaten
+    $vAlt = (int)va_anlegen('alt-test', 'Altes Symposium', null, null)['id'];
+    $altTag = ds_vor_monaten(15, time());
+    va_mit($vAlt, function () use ($altTag): void {
+        foreach (['veranstaltung_datum' => $altTag, 'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'], 'cme_punkte' => '4', 'cme_veranstaltungsnummer' => '2760001', 'cme_kammer' => 'Beispielkammer'] as $k => $w) {
+            einstellung_setzen($k, $w);
+        }
+    });
+    $mk = function (array $d) use ($vAlt): int {
+        return va_mit($vAlt, function () use ($d): int {
+            $e = anm_anlegen(anm_daten_pruefen($d + ['beruf_sonstige' => '', 'essen' => 'egal'])['werte'], ['fest' => [], 'warte' => []], false);
+            db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt' WHERE id = ?", [$e['id']]);
+            return (int)$e['id'];
+        });
+    };
+    $aArzt = $mk(['vorname' => 'Ada', 'nachname' => 'Altdaten', 'email' => 'ada.alt@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik A', 'efn' => '802760012345673']);
+    $aPflege = $mk(['vorname' => 'Pia', 'nachname' => 'Pflege', 'email' => 'pia.alt@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Klinik B', 'efn' => '']);
+    $aKonto = $mk(['vorname' => 'Kai', 'nachname' => 'Konto', 'email' => 'kai.alt@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik C', 'efn' => '']);
+    tk_registrieren('Kai Konto', 'kai.alt@example.org');
+    $kaiKonto = (int)konto_per_email('kai.alt@example.org')['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kaiKonto, $aKonto]);
+    $r = ds_anmeldungen_leeren(time());
+    $ada = anm_laden($aArzt);
+    $cme = db_zeile('SELECT * FROM cme_nachweis WHERE anmeldung_id = ?', [$aArzt]);
+    pruefe($r['geleert'] === 2 && $ada['nachname'] === '' && $ada['efn'] === null && str_ends_with($ada['email'], '@anonym.invalid') && $ada['berufsgruppe'] === 'ÄrztIn' && $ada['anonymisiert_am'] !== null, 'Ohne Konto 14 Monate nach der Veranstaltung geleert, Berufsgruppe bleibt');
+    pruefe($cme !== null && $cme['nachname'] === 'Altdaten' && $cme['efn'] === '802760012345673' && $cme['punkte'] === '4' && db_wert('SELECT COUNT(*) FROM cme_nachweis WHERE anmeldung_id = ?', [$aPflege]) == 0, 'CME-Nachweis nur für anwesende ÄrztInnen, getrennt abgelegt');
+    pruefe(anm_laden($aKonto)['nachname'] === 'Konto' && ds_anmeldungen_leeren(time())['geleert'] === 0, 'Mit Konto bleibt; zweiter Lauf leert nichts mehr');
+    $neuV = (int)va_anlegen('neu-test', 'Neues Symposium', null, null)['id'];
+    va_mit($neuV, fn() => einstellung_setzen('veranstaltung_datum', ds_vor_monaten(13, time())));
+    $aNeu = va_mit($neuV, fn() => anm_anlegen(anm_daten_pruefen(['vorname' => 'Nora', 'nachname' => 'Neu', 'email' => 'nora@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'X', 'efn' => '', 'beruf_sonstige' => '', 'essen' => 'egal'])['werte'], ['fest' => [], 'warte' => []], false)['id']);
+    ds_anmeldungen_leeren(time());
+    pruefe(anm_laden((int)$aNeu)['nachname'] === 'Neu', 'Veranstaltung vor 13 Monaten: noch nicht geleert');
+    pruefe(ds_cme_loeschen(time()) === 0 && ds_cme_loeschen(time() + 11 * 366 * 86400) >= 1 && db_wert('SELECT COUNT(*) FROM cme_nachweis WHERE anmeldung_id = ?', [$aArzt]) == 0, 'CME-Nachweise nach 10 Jahren gelöscht');
+    // Protokoll
+    db_ausfuehren("INSERT INTO audit (zeit, konto_id, art, text) VALUES (?, NULL, 'login', 'alt'), (?, NULL, 'login', 'neu'), (?, NULL, 'programm', 'alt'), (?, NULL, 'programm', 'mittel')",
+        [gmdate('Y-m-d H:i:s', time() - 100 * 86400), gmdate('Y-m-d H:i:s', time() - 10 * 86400), gmdate('Y-m-d H:i:s', time() - 450 * 86400), gmdate('Y-m-d H:i:s', time() - 100 * 86400)]);
+    ds_protokoll_kuerzen(time());
+    pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE text = 'alt' AND art IN ('login', 'programm')") == 0 && db_wert("SELECT COUNT(*) FROM audit WHERE text IN ('neu', 'mittel')") == 2, 'Protokoll: 14 Monate, Logins 90 Tage');
+    pruefe(isset(jobs_katalog()['datenschutz'], jobs_katalog()['sicherung']) && jobs_katalog()['sicherung']['abstand_s'] === 3 * 3600, 'Jobs: Datenschutz stündlich, Sicherung alle 3 Stunden');
+    $ex = export_erzeugen('cme_nachweise');
+    pruefe($ex !== null && str_contains($ex['kopf'][4], 'EFN'), 'Export der CME-Nachweise');
+    foreach ([$vAlt, $neuV] as $vx) {
+        db_ausfuehren('DELETE FROM anmeldung WHERE veranstaltung_id = ?', [$vx]);
+        db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$vx]);
+    }
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$kaiKonto]);
+
+    abschnitt('Gesamtablauf mit zwei Personen (T-202)');
+    $vG = (int)va_anlegen('gesamttest', 'Gesamttest', null, null)['id'];
+    $gesamt = va_mit($vG, function (): array {
+        $e = [];
+        foreach (['veranstaltung_datum' => gmdate('Y-m-d', time() + 20 * 86400), 'veranstaltung_kapazitaet' => '10', 'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
+            'anmeldung_bestaetigung_h' => '48', 'nachrueck_frist_h' => '48', 'nachrueck_grenze_tage' => '1', 'cme_punkte' => '3'] as $k => $w) {
+            einstellung_setzen($k, $w);
+        }
+        programm_punkt_speichern(null, programm_punkt_pruefen(['typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Eröffnung', 'beginn' => '18:00', 'ende' => '18:30']), null);
+        programm_punkt_speichern(null, programm_punkt_pruefen(['typ' => 'workshop', 'kuerzel' => 'WS 01', 'titel' => 'Engpass', 't_beginn' => ['19:00'], 't_ende' => ['20:00'], 't_plaetze' => ['1']]), null);
+        $e['pub'] = programm_veroeffentlichen(null);
+        $ws = anm_workshops(true)[0];
+        $tid = (int)$ws['termine'][0]['id'];
+        $daten = fn(string $v, string $m) => anm_daten_pruefen(['vorname' => $v, 'nachname' => 'Gesamt', 'email' => $m, 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik', 'efn' => '802760012345673', 'beruf_sonstige' => '', 'essen' => 'egal'])['werte'];
+        $mailVon = fn(string $an) => (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$an]);
+        $token = fn(string $text) => preg_match('#/link\?t=([0-9a-f]{48})#', $text, $m) === 1 ? $m[1] : '';
+        // 1. Ohne Konto: anmelden mit dem einzigen Workshop-Platz, über den Link bestätigen
+        $p1 = anm_anlegen($daten('Ohne', 'ohne.konto@example.org'), ['fest' => [$ws['id'] => $tid], 'warte' => []], false);
+        $e['p1_bestaetigt'] = anm_link_einloesen($token($mailVon('ohne.konto@example.org')))['zweck'] ?? '';
+        // 2. Mit Konto-Wunsch: Warteliste für den vollen Workshop, Bestätigung legt das Konto an
+        $p2 = anm_anlegen($daten('Mit', 'mit.konto@example.org'), ['fest' => [], 'warte' => [$tid]], false, null, true);
+        $e['p2_konto'] = anm_link_einloesen($token($mailVon('mit.konto@example.org')))['konto_neu'] ?? null;
+        $e['p2_warte'] = db_wert('SELECT status FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$p2['id'], $tid]);
+        // 3. Änderung: Person 1 gibt den Workshop ab → Nachrück-Angebot an Person 2 → Annahme
+        $e['aendern'] = anm_workshops_setzen($p1['id'], ['fest' => [], 'warte' => []]);
+        $angebot = db_zeile("SELECT * FROM platz WHERE anmeldung_id = ? AND termin_id = ? AND status = 'angebot'", [$p2['id'], $tid]);
+        $e['angebot'] = $angebot !== null;
+        $e['annahme'] = $angebot !== null ? anm_angebot_annehmen($p2['id'], (int)$angebot['id'], true) : ['x'];
+        $e['p2_fest'] = db_wert('SELECT status FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$p2['id'], $tid]);
+        // 4. Stichtag vorbei: Teilnehmende ändern nicht mehr selbst
+        einstellung_setzen('stichtag_workshop', gmdate('Y-m-d', time() - 86400));
+        $e['stichtag'] = anm_frist_offen('stichtag_workshop');
+        // 5. Eine dritte Person storniert
+        $p3 = anm_anlegen($daten('Weg', 'storno@example.org'), ['fest' => [], 'warte' => []], false);
+        anm_link_einloesen($token($mailVon('storno@example.org')));
+        $e['storno'] = anm_stornieren($p3['id']) && anm_laden($p3['id']) === null;
+        // 6. Rundmail an alle Angemeldeten
+        $rw = rm_pruefen(['betreff' => 'Bis bald, {vorname}', 'html' => '<p>Hallo {vorname}</p>', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system']);
+        $e['rundmail'] = rm_einreihen((int)rm_speichern(null, $rw['werte'], null), null);
+        // 7. Veranstaltungstag vorbei: Anwesenheit (Person 1 ist nicht da), Zertifikate
+        einstellung_setzen('veranstaltung_datum', gmdate('Y-m-d', time() - 86400));
+        tn_setzen((int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = 0', [$p1['id']]), false, null);
+        $e['frei'] = zertifikat_freischalten(null, null);
+        $e['z1'] = zertifikat_verfuegbar(anm_laden($p1['id']));
+        $e['z2'] = zertifikat_verfuegbar(anm_laden($p2['id']));
+        $e['pdf'] = str_starts_with(zertifikat_pdf_fuer(anm_laden($p2['id'])), '%PDF-');
+        $e['konto_rueckblick'] = $e['p2_konto'] !== null ? (tk_veranstaltungen((int)$e['p2_konto'])[0]['zertifikat'] ?? false) : false;
+        $e['ids'] = [$p1['id'], $p2['id']];
+        return $e;
+    });
+    pruefe($gesamt['pub'] === [] && $gesamt['p1_bestaetigt'] === 'bestaetigen' && $gesamt['p2_konto'] !== null && $gesamt['p2_warte'] === 'warte', 'Anmelden: ohne Konto bestätigt, mit Konto angelegt, volle Workshops auf die Warteliste');
+    pruefe($gesamt['aendern'] === [] && $gesamt['angebot'] && ($gesamt['annahme'] === [] || isset($gesamt['annahme']['ok'])) && $gesamt['p2_fest'] === 'fest', 'Änderung macht den Platz frei, Angebot, Annahme');
+    pruefe($gesamt['stichtag'] === false && $gesamt['storno'] === true, 'Stichtag sperrt Änderungen; Storno löscht die Anmeldung');
+    pruefe($gesamt['rundmail'] === 2, 'Rundmail an die beiden Angemeldeten');
+    pruefe($gesamt['frei'] === 1 && !$gesamt['z1'] && $gesamt['z2'] && $gesamt['pdf'] && $gesamt['konto_rueckblick'], 'Anwesenheit und Zertifikat: nur die anwesende Person, auch im Konto-Rückblick');
+    db_ausfuehren('DELETE FROM konto WHERE id = ?', [(int)$gesamt['p2_konto']]);
+    db_ausfuehren('DELETE FROM anmeldung WHERE veranstaltung_id = ?', [$vG]);
+    db_ausfuehren('DELETE FROM rundmail WHERE veranstaltung_id = ?', [$vG]);
+    db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [$vG]);
+    db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$vG]);
+    db_ausfuehren('DELETE FROM mail_ausgang');
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');

@@ -530,6 +530,28 @@ function migration_katalog(): array
                 "ALTER TABLE anmeldung_link MODIFY zweck ENUM('bestaetigen','zugang','email','uebernehmen') NOT NULL",
             ],
         ],
+        16 => [
+            'beschreibung' => 'Abschluss und Datenschutz (AP-9, E-59): CME-Nachweise getrennt (10 Jahre), Zeitpunkt des Leerens einer Anmeldung',
+            'sql' => [
+                "CREATE TABLE cme_nachweis (
+                    id               INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    veranstaltung_id INT UNSIGNED NOT NULL,
+                    anmeldung_id     INT UNSIGNED NOT NULL,
+                    veranstaltung    VARCHAR(120) NOT NULL,
+                    datum            DATE         NOT NULL,
+                    nachname         VARCHAR(80)  NOT NULL,
+                    vorname          VARCHAR(80)  NOT NULL,
+                    efn              CHAR(15)     NULL,
+                    vnr              VARCHAR(40)  NOT NULL DEFAULT '',
+                    punkte           VARCHAR(10)  NOT NULL DEFAULT '',
+                    kammer           VARCHAR(120) NOT NULL DEFAULT '',
+                    erstellt_am      DATETIME     NOT NULL,
+                    UNIQUE KEY uq_cme_nachweis_anmeldung (anmeldung_id),
+                    KEY ix_cme_nachweis_datum (datum)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "ALTER TABLE anmeldung ADD COLUMN anonymisiert_am DATETIME NULL",
+            ],
+        ],
     ];
 }
 

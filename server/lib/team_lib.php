@@ -46,7 +46,7 @@ function team_personen(): array
             }
         }
         $status = $a['status'] === 'unbestaetigt' ? 'unbestaetigt' : ($sym === 'fest' ? 'angemeldet' : 'warteliste');
-        $liste[] = ['art' => 'anm', 'id' => (int)$a['id'], 'name' => $a['vorname'] . ' ' . $a['nachname'], 'email' => $a['email'],
+        $liste[] = ['art' => 'anm', 'id' => (int)$a['id'], 'name' => $a['anonymisiert_am'] !== null ? '(Daten geleert)' : $a['vorname'] . ' ' . $a['nachname'], 'email' => $a['email'],
             'status' => $status, 'sym' => $sym, 'konto' => $k, 'anmeldung' => $a, 'essen' => $a['essen'], 'erstellt' => $a['erstellt_am']];
     }
     foreach ($konten as $id => $k) {
