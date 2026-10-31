@@ -29,6 +29,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
+| AP-13 | Team-Konten und Meldungen (E-61) | umgesetzt, Staging offen | lokal T-273, T-274 | Staging (siehe unten) |
 | AP-12 | Team-Navigation und Rechte je Veranstaltung (E-60) | umgesetzt, Staging offen | lokal T-264 bis T-272 | Staging (siehe unten) |
 | AP-9 | Abschluss und Datenschutz (E-59) | umgesetzt, Staging offen | lokal T-200 bis T-202, T-204, T-223, T-224, T-260 bis T-263 | Staging (siehe unten); T-203 Checkliste vor dem Anmeldestart |
 
@@ -191,6 +192,10 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-259, ap: AP-11, was: "Wiederkehrende und Bausteine", wie: "ohne Konto: „Link per Mail“ schickt „Daten übernehmen“, Formular vorausgefüllt; Veranstaltung ohne Essen bzw. ohne Fortbildungspunkte fragt nicht danach", status: "lokal bestanden"}
 - {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
+# AP-13 Team-Konten und Meldungen (E-61)
+- {id: T-273, ap: AP-13, was: "Team-Konten: Menü je Zeile", wie: "je Zeile nur „Bearbeiten“; Menü mit Veranstaltungen, Rolle, Passwort-Link, zweiten Schritt zurücksetzen, Sperren; Veranstaltungen im Dialog, Menü schließt; Handy und Desktop", status: "lokal bestanden (Browser)"}
+- {id: T-274, ap: AP-13, was: "Meldungen auffällig", wie: "Fehler rot, Hinweis lila, Erfolg grün, volle Fläche mit Icon; Fehlermeldung außerhalb des Bildschirms wird angescrollt", status: "lokal bestanden (Bildschirmfotos)"}
+
 # AP-12 Team-Navigation und Rechte je Veranstaltung (E-60)
 - {id: T-264, ap: AP-12, was: "Admin nur für ausgewählte Veranstaltungen", wie: "Team-Konten → Veranstaltungen: „Nur ausgewählte“; Wechsler zeigt nur diese; ?va= einer fremden → 403; Anmeldung einer fremden per Nummer → 404; ohne Freischaltung Hinweis statt Team-Bereich; „Alle, auch künftige“ gibt alles frei", status: "lokal bestanden"}
 - {id: T-265, ap: AP-12, was: "Betrieb nur für BetreiberInnen", wie: "Admin: Veranstaltungen, Team-Konten, Newsletter, Texte, Betrieb → 403; kein Reiter Betrieb, keine „Neue Veranstaltung“; Mailings ohne Newsletter-Listen; Newsletter-Export 404; Startseiten-Texte ja", status: "lokal bestanden"}
@@ -303,6 +308,11 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-13 Team-Konten und Meldungen (nach Merge auf Staging)
+
+1. Betrieb → Team-Konten: bei einem Konto „Bearbeiten“ öffnen, „Veranstaltungen …“ wählen. Erwartet: Dialog, Menü zu.
+2. Eine Fehlermeldung auslösen (z. B. in einer abgeschlossenen Veranstaltung speichern). Erwartet: rote Fläche mit Icon, gut sichtbar.
 
 ### Noch zu prüfen für AP-12 Team-Navigation und Rechte (nach Merge auf Staging)
 
