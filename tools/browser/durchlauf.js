@@ -247,6 +247,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         : { env: deUmgebung });
       const version = browser.version();
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+      // Zwischenablage für „Kopieren“ auf der Status-Seite (AP-15); nur Chromium kennt diese Rechte
+      if (engine === 'chromium') { await ctx.grantPermissions(['clipboard-read', 'clipboard-write']); }
       const p = await ctx.newPage();
       const fehler = [];
       p.on('console', m => { if (m.type() === 'error') fehler.push(m.text()); });
@@ -488,7 +490,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
           ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Startseite")', '/team/startseite', 'team-startseite'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
           // AP-12: Reiter Betrieb (nur BetreiberInnen)
-          ['.team-nav a:has-text("Betrieb")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
+          ['.team-nav a:has-text("Betrieb")', '/team/status', 'team-status'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
           await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
@@ -724,6 +726,33 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       notiere(engine, 'desktop-breit', 'team-programm', '„Ja, löschen“ löscht', (await p.textContent('body')).includes('Gelöscht'));
       await p.click('.entwurf-banner button:has-text("Verwerfen")');
       await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, verwerfen")')]);
+
+      // Betrieb → Status (AP-15): Zeile aufklappen, Befehl kopieren, Token erst nach Klick
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'team-status', basis + '/team/status');
+        await p.click('#zeile-cron details > summary');
+        notiere(engine, breite, 'team-status', 'Cron-Zeile klappt auf, Befehl sichtbar', await p.isVisible('#cron-kommando') && (await p.inputValue('#cron-kommando')).endsWith('/cli/jobs.php'));
+        await p.click('button[data-kopieren="cron-kommando"]');
+        await p.waitForTimeout(300);
+        const rueck = await p.textContent('[data-kopiert="cron-kommando"]');
+        // Chromium mit erlaubter Zwischenablage: „Kopiert“; sonst markiert der Ausweichweg das Feld
+        notiere(engine, breite, 'team-status', 'Kopieren meldet „Kopiert“ (sonst Feld markiert)', engine === 'chromium' ? rueck === 'Kopiert' : /^(Kopiert|Markiert)/.test(rueck || ''), rueck);
+        notiere(engine, breite, 'team-status', 'URL ohne Token', (await p.inputValue('#cron-url')).endsWith('token=<jobs_token>'));
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-status-cron.png`), fullPage: true });
+      }
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await Promise.all([p.waitForNavigation(), p.click('#zeile-cron button:has-text("URL mit Token anzeigen")')]);
+      notiere(engine, 'desktop-breit', 'team-status', 'Token nach Klick sichtbar, Zeile offen', !(await p.inputValue('#cron-url')).includes('<jobs_token>') && await p.isVisible('#cron-url'));
+      await p.click('#zeile-fehlerlog details > summary');
+      await Promise.all([p.waitForNavigation(), p.click('#zeile-fehlerlog button:has-text("Zeilen anzeigen")')]);
+      notiere(engine, 'desktop-breit', 'team-status', 'Fehlerprotokoll auf Abruf', await p.isVisible('#zeile-fehlerlog details[open]'));
+      await p.click('#zeile-fehlerlog button:has-text("Leeren")');
+      await p.waitForTimeout(300);
+      notiere(engine, 'desktop-breit', 'team-status', 'Leeren fragt im Dialog nach', await p.isVisible('dialog.dlg-rot[open]'));
+      await Promise.all([p.waitForNavigation(), p.click('dialog[open] button:has-text("Ja, leeren")')]);
+      notiere(engine, 'desktop-breit', 'team-status', 'Leeren meldet Erfolg', (await p.textContent('body')).includes('Fehlerprotokoll geleert'));
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-team-status-geleert.png`), fullPage: true });
 
       // Dialog auf dem Handy: von unten, Knöpfe untereinander
       await p.setViewportSize({ width: 390, height: 844 });

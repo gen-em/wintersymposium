@@ -638,9 +638,21 @@ nicht_uebernehmen:
         - "Version, CHANGELOG (Neu: Status-Seite; Geändert: Betrieb, health), betrieb.md (Abschnitt Cron verweist auf die Seite; Abschnitt Health beschreibt die Zeilen), Prüfprotokoll T-282 bis T-287, Konzept AP-15 status/ergebnis/probleme; Beispieldatensatz unverändert"
         - "Browser-Durchlauf R-12 mit der neuen Seite"
       test: "php tools/tests/lauf.php und node tools/browser/durchlauf.js ohne Fehler; Zahlen in PR und Prüfprotokoll"
-  status: "geplant 2026-10-31 (Konzept); Umsetzung in eigener Chat-Instanz"
-  ergebnis: null
-  probleme: []
+  status: "umgesetzt 2026-10-31 (0.22.0), Unterpunkte 1 bis 6; Staging offen"
+  ergebnis:
+    - "Unterpunkt 1: server/lib/betrieb_lib.php mit betrieb_status(?int $jetzt) – sieben Zeilen (cron, jobs, mail, datenbank, sicherung, fehlerlog, umgebung) mit ampel, text, details (Beschriftung, Wert, intern) und link; Grenzwerte als Konstanten BETRIEB_*; jede Zeile einzeln abgesichert (Ausnahme → Zeile rot „Konnte nicht geprüft werden“). health.php nutzt betrieb_status() und betrieb_status_json() (ohne interne Details: letzter Mailserver-Fehler; kein Token, kein Pfad); status fehler bei roter Zeile, zusätzlich ampel (schlechteste Ampel); Felder datenbank und jobs entfallen"
+    - "Unterpunkt 2: server/seiten/team_status.php (team_tor(['betreiber'])), Route /team/status, erste Seite unter Betrieb (der Reiter Betrieb führt dorthin); Kasten „N Punkte brauchen Aufmerksamkeit“ (rot vor gelb), Kasten „In Ordnung“, sonst Meldung „Alles in Ordnung, Stand …“; Details je Zeile in details.tabelle-details; „Jetzt prüfen“ als Link"
+    - "Unterpunkt 3: Cron-Zeile „Details und Einrichtung“: Zeitplan und Befehl (php <Installationsordner>/cli/jobs.php aus dem Ort der App) in schreibgeschützten Feldern, Knopf „Befehl kopieren“ (assets/status.js; ohne Zwischenablage Feld markieren); URL mit Platzhalter, „URL mit Token anzeigen“ (POST mit CSRF) zeigt sie und schreibt „Cron-URL mit Token angezeigt“ (neue Protokoll-Art betrieb, nur BetreiberInnen sichtbar)"
+    - "Unterpunkt 4: betrieb_fehlerlog_stand/_ende/_leeren; Zeilen zählen blockweise, Ende aus den letzten 512 KB, je Zeile höchstens 500 Zeichen; Leeren kürzt auf 0 Byte, setzt Einstellung betrieb_fehlerlog_geleert, Protokolleintrag „Fehlerprotokoll geleert“; Leeren mit dem Bestätigungsdialog"
+    - "Unterpunkt 5: team_daten.php Kasten Mailversand nur noch Hinweis auf Status, Umleitung und Testmail; team_aufgaben($jetzt, $rolle) hängt für BetreiberInnen je rote Zeile eine Aufgabe „Betrieb: …“ mit Link /team/status vorne an (Chip rot); BetreiberInnen sehen die Mail-Aufgaben dafür nicht mehr doppelt, Admins wie bisher"
+    - "Unterpunkt 6: Version 0.22.0, CHANGELOG, betrieb.md (Schritt 6/7 der Ersteinrichtung, Abschnitt 5 Health, 13 Team-Bereich, neu 16b Status, 17 Fehlerprotokoll), Prüfprotokoll T-282 bis T-287; lauf.php und Browser-Durchlauf (Stufe 3) siehe Prüfprotokoll"
+  probleme:
+    - "Konzept nannte den Laufzeitordner „fotos“; im Code heißt er bilder (Fotos der Dozierenden, Bilder der Texte). Geprüft wird bilder, angezeigt als „Fotos“."
+    - "site.css hatte keinen lila Chip für „Achtung“ und keinen Stil für Logzeilen: zwei neue Klassen .chip.warnung (Hintergrund --lila) und .status-log (pre mit Rahmen, Umbruch, max. 360 px hoch). Für das Komponentenblatt (Review-AP CSS, E-64 (1)) vormerken."
+    - "/health meldete bisher immer status ok. Mit den Ampeln steht status nach einer Neuinstallation auf fehler, bis Cron und erste automatische Sicherung gelaufen sind; betrieb.md Schritt 7 und Abschnitt 5 entsprechend angepasst. Ein Monitoring, das auf jobs.letzter_lauf schaut, muss auf zeilen.cron umgestellt werden."
+    - "BetreiberInnen hätten „Mailversand nicht eingerichtet“ doppelt gesehen (Mail-Aufgabe und Status-Zeile): Für sie entfallen die Mail-Aufgaben, die Status-Zeile ersetzt sie."
+    - "Seite und Tests: Zeitplan- und Befehlsfeld klebten auf den Bildschirmfotos aneinander → in .form gefasst (vorhandene Klasse, Abstand 20 px). Bestehende Tests erwarteten den Reiter Betrieb auf /team/veranstaltungen und status ok im Health-Test → auf /team/status bzw. die neuen Ampeln angepasst."
+    - "Sandbox: tools/browser/einrichten.sh startet MySQL nur, installiert es aber nicht; in dieser Sandbox fehlte es. Das Skript installiert mysql-server jetzt, wenn es fehlt."
 
 - id: AP-14
   titel: "Review-Behebung 1: Sicherheit und schwere Bugs (Review AP-R1)"
@@ -860,6 +872,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-31 | Editor überall mit derselben Leiste (zentral festgelegt), Bilder und Knöpfe auch im Programm und in Kurzbios; obere Navigationsleiste bleibt wie sie ist (Admin). |
 | 2026-10-31 | „Meine Anmeldung“ zeigt dem Team-Konto den Team-Bereich in der Leiste. |
 | 2026-10-31 | Startseite erkennt Login auch ohne Ausgabepuffer (Sitzung vor der ersten Ausgabe öffnen, Testserver ohne Puffer); O-40 (Mails im Branding) und O-41 (eigene Workshops im Programm markieren) auf Halde; Impressum und Datenschutz mit derselben Werkzeugleiste wie die Mailings (Knopf, HTML), Platzhalter unter dem Mail-Editor erklärt. |
+| 2026-10-31 | AP-15 umgesetzt: Status-Seite, Cron-Anleitung, Fehlerprotokoll, health aus derselben Quelle; vor der Umsetzung geklärte Punkte in E-65 (5) bis (8); status, ergebnis, probleme eingetragen. |
 | 2026-10-31 | AP-16 (Review AP-R2: B-4, B-6, B-7, B-8, B-10 bis B-12, B-14, S-3 bis S-6, S-9, S-11, S-12, Helfer V-4) geplant mit neun Unterpunkten; O-47 (Aussperren je Adresse) neu; S-8 und S-10 begründet nicht enthalten. |
 | 2026-10-31 | AP-15 Status-Seite unter Betrieb geplant (E-65): Ampel-Zeilen, Cron-Anleitung mit Kopieren und Token nach Klick, Fehlerprotokoll, health aus derselben Quelle. |
 | 2026-10-31 | E-64 neu (site.css als Design-Wahrheit mit Komponentenblatt, Shell-Cronjob als Standard, technische Grenzen bleiben Konstanten); O-44 bis O-46 entschieden; R-11 um technische Grenzen ergänzt. |

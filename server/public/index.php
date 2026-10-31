@@ -43,6 +43,7 @@ const ROUTEN = [
     '/team/dozierende' => 'team_dozierende',
     '/team/anmeldungen' => 'team_anmeldungen',
     '/team/daten' => 'team_daten',
+    '/team/status' => 'team_status',
     '/team/personen' => 'team_personen',
     '/team/workshops' => 'team_workshops',
     '/team/statistik' => 'team_statistik',

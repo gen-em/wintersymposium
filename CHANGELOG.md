@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
-## [0.22.0] – 2026-10-31
+## [0.23.0] – 2026-10-31
 
 ### Neu
 
@@ -13,6 +13,21 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 - Begriff **„Platzangebot“** statt „Platz frei für dich“ in Mails, „Meine Anmeldung“ und Team-Bereich; Betreff der Angebotsmail „Platzangebot: …“.
 - Knöpfe in Mailings sind lila wie auf der Webseite.
+
+## [0.22.0] – 2026-10-31
+
+### Neu
+
+- **Status-Seite unter Betrieb** (AP-15, E-65; nur BetreiberInnen, erste Seite im Reiter Betrieb): Ampel für Cron, Jobs, Mailversand, Datenbank, Sicherung, Fehlerprotokoll und Umgebung; was Aufmerksamkeit braucht, steht oben. Details je Zeile zum Aufklappen, Knopf „Jetzt prüfen“.
+- **Cron-Anleitung auf der Seite:** Zeitplan und Befehl für den Shell-Cronjob mit dem richtigen Zielordner und Knopf „Kopieren“; die URL mit Token für den Ausweichweg erst nach Klick, das Anzeigen steht im Protokoll (neue Art „Betrieb“).
+- **Fehlerprotokoll im Team-Bereich:** Größe und Einträge seit dem letzten Leeren, letzte 30 Zeilen auf Abruf, Leeren mit Nachfrage und Protokolleintrag.
+- **Übersicht:** Rote Status-Zeilen erscheinen BetreiberInnen unter „Zu erledigen“.
+
+### Geändert
+
+- **`/health`** liefert dieselben Ampeln wie die Status-Seite (`zeilen`, `ampel`); `status` ist `fehler`, sobald eine Zeile rot ist (HTTP bleibt 200). Die Felder `datenbank` und `jobs` sind entfallen. Nach einer Neuinstallation steht `status` deshalb auf `fehler`, bis Cron und erste automatische Sicherung gelaufen sind.
+- **Seite Betrieb:** Der Kasten Mailversand zeigt nur noch Testmail und Umleitung; die Zahlen stehen unter Status.
+- BetreiberInnen sehen die Mail-Aufgaben auf der Übersicht als Status-Zeile statt doppelt.
 
 ## [0.21.6] – 2026-10-31
 

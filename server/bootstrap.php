@@ -41,6 +41,7 @@ require __DIR__ . '/lib/teilnahme_lib.php';
 require __DIR__ . '/lib/datenschutz_lib.php';
 require __DIR__ . '/lib/rundmail_lib.php';
 require __DIR__ . '/lib/newsletter_lib.php';
+require __DIR__ . '/lib/betrieb_lib.php';
 
 date_default_timezone_set('UTC');
 mb_internal_encoding('UTF-8');

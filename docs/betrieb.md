@@ -16,7 +16,8 @@ server/                 → wird in den Zielordner der Umgebung übertragen
     index.php           → einziger Einstieg, leitet alle Seiten
     assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/,
                           qr.js und vendor/qrcode.js (QR-Code für den zweiten Faktor, MIT),
-                          anmelden.js, pow.js und pow-worker.js (Anmeldung, Spamschutz)
+                          anmelden.js, pow.js und pow-worker.js (Anmeldung, Spamschutz),
+                          status.js (Kopieren auf der Status-Seite)
   lib/                  → Bibliotheken (über HTTP nicht erreichbar)
   seiten/               → Seiten (über HTTP nicht erreichbar)
   pdf/                  → Schriften (TTF) und Logo für die PDF-Exporte (E-56)
@@ -57,8 +58,8 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
    - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
-6. **Cron einrichten:** in der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten anlegen mit dem Kommando `php <Zielordner>/cli/jobs.php` (E-64). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>` – der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
-7. **Prüfen:** `https://<domain>/health?token=<health_token>` zeigt JSON mit `"status": "ok"` und nach dem ersten Cron-Lauf eine Zeit unter `jobs.letzter_lauf`.
+6. **Cron einrichten:** Team-Bereich → Betrieb → **Status**, Zeile „Cron“ → „Details und Einrichtung“: dort stehen Zeitplan und Befehl mit dem richtigen Zielordner zum Kopieren (AP-15, E-65). In der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten mit diesem Befehl anlegen (`php <Zielordner>/cli/jobs.php`, E-64). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>`; die Seite zeigt die URL erst nach Klick auf „URL mit Token anzeigen“ und protokolliert das. Der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
+7. **Prüfen:** Betrieb → Status zeigt nach dem ersten Cron-Lauf und der ersten automatischen Sicherung „Alles in Ordnung“ (Fehlerprotokoll gegebenenfalls ansehen und leeren). Dasselbe liefert `https://<domain>/health?token=<health_token>` als JSON mit `"status": "ok"`.
 8. **Einloggen:** `https://<domain>/einloggen` mit dem BetreiberIn aus Schritt 5; beim ersten Mal den zweiten Faktor mit einer Authenticator-App einrichten und die Wiederherstellungscodes sichern (Abschnitt 8).
 
 ## 3. Auslieferung (GitHub Actions)
@@ -82,13 +83,22 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
 
 ## 5. Health-Endpunkt
 
-`GET https://<domain>/health` mit Kopfzeile `X-Health-Token: <health_token>` oder `?token=<health_token>`. Ohne oder mit falschem Token: 404 (nach 10 Fehlversuchen in 10 Minuten ist die Herkunft für 10 Minuten gesperrt). Antwort:
+`GET https://<domain>/health` mit Kopfzeile `X-Health-Token: <health_token>` oder `?token=<health_token>`. Ohne oder mit falschem Token: 404 (nach 10 Fehlversuchen in 10 Minuten ist die Herkunft für 10 Minuten gesperrt). Antwort (seit AP-15 aus derselben Quelle wie die Seite Betrieb → Status, Abschnitt 16b):
 
 ```json
-{"status": "ok", "version": "…", "umgebung": "staging", "zeit": "…", "datenbank": "ok",
- "schema": {"ist": 1, "soll": 1}, "wartung": false,
- "jobs": {"letzter_lauf": "…", "letzter_ausloeser": "url", "mit_fehler": []}}
+{"status": "ok", "ampel": "warnung", "version": "…", "umgebung": "staging", "zeit": "…",
+ "schema": {"ist": 17, "soll": 17}, "wartung": false,
+ "zeilen": {
+   "cron":      {"ampel": "ok", "text": "Letzter Lauf vor 3 Minuten.", "details": {"Letzter Lauf": "…", "Ausgelöst über": "Shell-Cronjob"}},
+   "jobs":      {"ampel": "ok", "text": "Alle 6 Jobs ohne Fehler.", "details": {"mail": "…"}},
+   "mail":      {"ampel": "ok", "text": "Heute 12 gesendet, 0 offen.", "details": {}},
+   "datenbank": {"ampel": "ok", "text": "Erreichbar, Schema 17 aktuell.", "details": {}},
+   "sicherung": {"ampel": "ok", "text": "Letzte automatische Sicherung vor 2 Stunden.", "details": {}},
+   "fehlerlog": {"ampel": "warnung", "text": "3 Einträge (1 KB).", "details": {}},
+   "umgebung":  {"ampel": "ok", "text": "Version … (staging), PHP 8.3, Laufzeitordner beschreibbar.", "details": {}}}}
 ```
+
+`status` ist `fehler`, sobald eine Zeile rot ist, sonst `ok`; `ampel` ist die schlechteste Ampel (auch `warnung`). HTTP bleibt 200, damit ein Monitoring den Text liest. Ohne Logzeilen, Token, Serverpfade und Fehlertexte des Mailservers (die stehen nur auf der Seite). Die Felder `datenbank` und `jobs` von vorher sind entfallen; Cron und Jobs stehen in `zeilen`.
 
 ## 6. Tests lokal und im Prüf-Workflow
 
@@ -116,7 +126,7 @@ Beide Testserver (`lauf.php` und Browser-Durchlauf) laufen mit `output_buffering
 bash tools/browser/einrichten.sh
 ```
 
-(einmal je Sandbox: MySQL, Bibliotheken für WebKit, Firefox und WebKit in `/opt/ws-browsers`, Chromium dorthin verlinkt; zum Schluss starten alle drei Engines zum Nachweis)
+(einmal je Sandbox: MySQL – wird installiert, falls es fehlt –, Bibliotheken für WebKit, Firefox und WebKit in `/opt/ws-browsers`, Chromium dorthin verlinkt; zum Schluss starten alle drei Engines zum Nachweis)
 
 ```bash
 node tools/browser/durchlauf.js <Ausgabeordner>
@@ -228,7 +238,7 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 **Nachfragen** (löschen, verwerfen, senden …) erscheinen überall als derselbe Dialog über der Seite (Rückmeldung 2026-10-30, Entwurf C): Rahmen grün = bestätigen, rot = löschen/verwerfen, lila = Info; auf dem Handy von unten mit großen Knöpfen. Ohne JavaScript bleibt die Nachfrage zum Aufklappen.
 
-Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter angehängt die Unterseiten des aktiven Bereichs: **Übersicht** · **Anmeldungen** (Personen, Workshops, Teilnahme) · **Programm** (Programm, Dozierende) · **Mailings** (Abschnitt 12) · **Statistik** · **Verwaltung** (Einstellungen, Startseite, Protokoll) · **Betrieb**, nur für BetreiberInnen, alles, was für alle Veranstaltungen gilt (Veranstaltungen – Abschnitt 9a, Team-Konten, Newsletter – Abschnitt 14, Texte, Betrieb).
+Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter angehängt die Unterseiten des aktiven Bereichs: **Übersicht** · **Anmeldungen** (Personen, Workshops, Teilnahme) · **Programm** (Programm, Dozierende) · **Mailings** (Abschnitt 12) · **Statistik** · **Verwaltung** (Einstellungen, Startseite, Protokoll) · **Betrieb**, nur für BetreiberInnen, alles, was für alle Veranstaltungen gilt (Status – Abschnitt 16b, Veranstaltungen – Abschnitt 9a, Team-Konten, Newsletter – Abschnitt 14, Texte, Betrieb).
 
 **Rechte je Veranstaltung** (AP-12, E-60): BetreiberInnen sehen und dürfen alles. Admins sind unter Betrieb → Team-Konten → „Bearbeiten“ → „Veranstaltungen …“ (AP-13: je Zeile ein Menü, jede Aktion im Dialog) für **alle, auch künftige** oder **nur ausgewählte** Veranstaltungen freigeschaltet. Sie sehen dann im Wechsler, in Personen, Workshops, Teilnahme, Programm, Mailings, Statistik, Exporten und im Protokoll nur diese; bei Konten nur Personen, die in einer dieser Veranstaltungen angemeldet sind. Eine fremde Veranstaltung per Adresse (`?va=`) wird abgewiesen, Nummern fremder Anmeldungen oder Plätze ergeben 404. Ohne Freischaltung sehen sie einen Hinweis statt des Team-Bereichs. Mailings an Newsletter-Listen, der Newsletter und sein Export sind nur für BetreiberInnen. „Mein Konto“ steckt im Personen-Menü oben rechts.
 
@@ -239,7 +249,8 @@ Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter 
 - **Statistik:** Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** je Liste in drei Formaten (E-56): **CSV** (Semikolon, UTF-8 mit BOM, für andere Programme), **Excel** (xlsx: Kopfzeile fixiert und mit Filter, Datum als Datum; braucht die PHP-Erweiterung zip, sonst fehlt der Knopf) und **PDF** (A4 im Branding zum Ausdrucken; Teilnehmende quer und ohne E-Mail, je Termin bzw. Essen eine Seite; nicht für Newsletter): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der anwesenden ÄrztInnen), Statistik, Newsletter. Die Kachel „Anwesenheit“ zeigt anwesend / mit Platz und die freigeschalteten Zertifikate. Exporte stehen mit Format im Protokoll.
 - **Startseite** (Verwaltung): Texte der Startseite der gewählten Veranstaltung. **Texte** (Betrieb, nur BetreiberInnen): Impressum und Datenschutz.
 - **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Filter nach Veranstaltung: gewählte, alle (Admins: alle ihre), für BetreiberInnen auch „ohne Veranstaltung“ (Konten, Newsletter, Logins, Betrieb). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und Teilnahme ihrer Veranstaltungen, keine Einträge ohne Veranstaltung (AP-12); BetreiberInnen sehen alles und können Einträge **ausblenden** (dann nur noch für BetreiberInnen sichtbar, markiert, wieder einblendbar). Löschen geht nicht von Hand; nach 14 Monaten (Logins nach 90 Tagen) löscht der Job `datenschutz` (Abschnitt 16a).
-- **Betrieb** (BetreiberIn): Mailversand mit Testmail, Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
+- **Status** (BetreiberIn, erste Seite unter Betrieb, AP-15): Ampel für Cron, Jobs, Mailversand, Datenbank, Sicherung, Fehlerprotokoll und Umgebung (Abschnitt 16b). Rote Zeilen erscheinen BetreiberInnen auch unter „Zu erledigen“ auf der Übersicht (statt der Mail-Aufgaben, die Admins weiter sehen).
+- **Betrieb** (BetreiberIn): Testmail und Umleitung (Zahlen zum Mailversand unter Status), Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
 
 ## 14. Newsletter (AP-7)
 
@@ -292,6 +303,25 @@ Der Job `datenschutz` läuft stündlich (über den Cron) und wendet diese Friste
 
 Die Fristen sind feste Regeln aus dem Löschkonzept (E-24, E-59), keine Einstellungen. Ein **Textvorschlag für die Datenschutzerklärung**, abgestimmt auf diese Fristen, liegt in `docs/datenschutz-vorschlag.md` (kein Rechtsrat; Platzhalter füllen, prüfen lassen, unter Texte → Datenschutz einfügen).
 
+## 16b. Status (AP-15, E-65)
+
+Team-Bereich → Betrieb → **Status** (nur BetreiberInnen). Oben stehen die Zeilen, die Aufmerksamkeit brauchen (rot vor gelb), darunter „In Ordnung“; alles grün: „Alles in Ordnung, Stand …“. Jede Zeile hat aufklappbare Details. „Jetzt prüfen“ lädt neu (die Seite wird nie zwischengespeichert).
+
+| Zeile | Grün | Gelb (Achtung) | Rot (Fehler) |
+|---|---|---|---|
+| Cron | letzter Lauf vor weniger als 15 Minuten | ab 15 Minuten | ab 60 Minuten oder noch nie gelaufen |
+| Jobs | alle Jobs ohne Fehler | ein Job ist noch nie gelaufen | ein Job hatte beim letzten Lauf einen Fehler |
+| Mailversand | – | älteste offene Mail wartet 15 Minuten oder länger; ein Postfach hat 90 % seines Tageslimits erreicht | nicht eingerichtet oder Mails endgültig fehlgeschlagen |
+| Datenbank | Schema aktuell | Wartungsmodus an; Datenbank neuer als der Code | Migrationen stehen aus |
+| Sicherung | letzte automatische jünger als 6 Stunden | ab 6 Stunden | ab 24 Stunden oder keine automatische vorhanden |
+| Fehlerprotokoll | leer | Einträge seit dem letzten Leeren | – |
+| Umgebung | Laufzeitordner (Sitzungen, Sicherungen, Fotos, Zertifikat, Logs) beschreibbar | – | ein Ordner nicht beschreibbar |
+
+Die Grenzen sind technische Werte in `server/lib/betrieb_lib.php` (R-11, E-64 (3)).
+
+- **Cron einrichten:** in der Zeile Cron unter „Details und Einrichtung“ (Abschnitt 2, Schritt 6): Zeitplan und Befehl mit Knopf „Befehl kopieren“ (ohne Zwischenablage wird das Feld markiert). Die URL für den Ausweichweg steht zuerst mit Platzhalter da; „URL mit Token anzeigen“ zeigt sie vollständig und schreibt „Cron-URL mit Token angezeigt“ ins Protokoll (Art Betrieb). Der Serverpfad steht nur auf dieser Seite.
+- **Fehlerprotokoll:** Größe und Zahl der Einträge seit dem letzten Leeren; „Letzte 30 Zeilen anzeigen“ zeigt sie (jede höchstens 500 Zeichen); „Leeren“ (mit Nachfrage) kürzt die Datei auf 0 Byte und schreibt „Fehlerprotokoll geleert“ ins Protokoll.
+
 ## 17. Fehlerprotokoll
 
-PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (per FTP lesbar, über HTTP nicht erreichbar).
+PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (über HTTP nicht erreichbar). Ansehen und leeren unter Betrieb → Status (Abschnitt 16b), sonst per FTP.

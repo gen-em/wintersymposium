@@ -48,7 +48,7 @@ const AUDIT_ARTEN = [
     'anmeldung' => 'Anmeldungen', 'nachruecken' => 'Nachrücken', 'programm' => 'Programm', 'einstellungen' => 'Einstellungen',
     'texte' => 'Texte', 'export' => 'Export', 'mailing' => 'Mailings', 'newsletter' => 'Newsletter', 'login' => 'Login', 'konto' => 'Konten',
     'zweitfaktor' => 'Zweiter Faktor', 'mail' => 'Mailversand', 'host' => 'Hostnamen', 'sicherung' => 'Sicherung',
-    'installation' => 'Installation', 'migration' => 'Migration', 'notzugang' => 'Notzugang', 'protokoll' => 'Protokoll', 'teilnahme' => 'Teilnahme', 'datenschutz' => 'Datenschutz',
+    'installation' => 'Installation', 'migration' => 'Migration', 'notzugang' => 'Notzugang', 'protokoll' => 'Protokoll', 'teilnahme' => 'Teilnahme', 'datenschutz' => 'Datenschutz', 'betrieb' => 'Betrieb',
 ];
 /* Admins sehen diese Arten (Newsletter liegt seit AP-12 unter Betrieb, E-60). */
 const AUDIT_ARTEN_ADMIN = ['anmeldung', 'nachruecken', 'programm', 'einstellungen', 'texte', 'export', 'mailing', 'teilnahme'];
