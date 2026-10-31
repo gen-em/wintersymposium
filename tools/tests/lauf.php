@@ -295,6 +295,16 @@ va_zwischenspeicher_leeren();
     pruefe(isset($r['fehler']['termine']), 'Termin mit 0 Plätzen abgelehnt');
     $r = programm_punkt_pruefen(['typ' => 'vortrag', 'titel' => 'X', 'beginn' => '18:00']);
     pruefe(isset($r['fehler']['ende']), 'Beginn ohne Ende abgelehnt');
+    [$t1, $t3] = va_mit(va_aktuell_id() ?? 1, function (): array {
+        $nameAlt = va('veranstaltung_name');
+        einstellung_setzen('veranstaltung_name', 'Abend');
+        $a = va_titel_html();
+        einstellung_setzen('veranstaltung_name', 'Fortbildungsabend klinische Notfallmedizin');
+        $b = va_titel_html();
+        einstellung_setzen('veranstaltung_name', $nameAlt === '' ? null : $nameAlt);
+        return [$a, $b];
+    });
+    pruefe($t1 === '<em>Abend</em>' && $t3 === 'Fortbildungsabend <em>klinische Notfallmedizin</em>', 'Titel der Startseite: ein Wort lila, sonst erstes Wort weiß und Rest lila');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'P']);
     pruefe($r['fehler'] === [], 'Punkt ohne Uhrzeit speicherbar (wird im Plan gezogen)');
     $r = programm_punkt_pruefen(['typ' => 'vortrag', 'titel' => 'Bild', 'beschreibung' => '<p>Text <img src="/bild/text-0123456789abcdef.jpg" alt="x"></p><p><a class="knopf" href="https://example.org">Mehr</a></p>']);

@@ -21,8 +21,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (($kf = va_kuerzel_fehler($kuerzel, va_id())) !== null) {
         $r['fehler']['kuerzel'] = $kf;
     }
+    // Texte der Startseite (Admin 2026-10-31: alles einer Veranstaltung auf einer Seite)
+    foreach (START_TEXTE as $tk => [$tt, $ta]) {
+        if (isset($_POST[$tk]) && (mb_strlen((string)$_POST[$tk]) > EDITOR_MAX || ($ta === 'text' && mb_strlen((string)$_POST[$tk]) > 120))) {
+            $r['fehler'][$tk] = 'Zu lang.';
+        }
+    }
     if ($r['fehler'] === []) {
         $geaendert = va_speichern($r['werte'], (int)$konto['id']);
+        [$textGeaendert] = start_texte_speichern($_POST, (int)$konto['id']);
+        if ($textGeaendert !== []) {
+            audit_schreiben('texte', 'Startseite geändert: ' . implode(', ', $textGeaendert), (int)$konto['id'], -1);
+            $geaendert = array_merge($geaendert, $textGeaendert);
+        }
         if ($kuerzel !== va_zeile()['kuerzel']) {
             va_kuerzel_setzen(va_id(), $kuerzel, (int)$konto['id']);
             $geaendert[] = 'kuerzel';
@@ -90,6 +101,27 @@ if ($fehler !== []) {
         </div>
     </fieldset>
     <?php endforeach; ?>
+    <fieldset class="kasten gruppe" id="startseite"<?= $offen ? '' : ' disabled' ?>>
+        <legend class="zwischen">Startseite</legend>
+        <p class="meta klein">Zeile über dem Titel: „<?= e(reihe_name() . ' · ' . va_kurz()) ?>“ (Name der Reihe · Kurzname). Titel: der Name der Veranstaltung, das erste Wort weiß, der Rest lila (ein Wort: ganz lila).</p>
+        <div class="felder">
+        <?php foreach (START_TEXTE as $k => [$tTitel, $art, $tHilfe]):
+            $f = $fehler[$k] ?? null;
+            $w = $eingabe !== null ? (string)($eingabe[$k] ?? '') : start_text_wert($k); ?>
+            <div class="feld breit">
+                <label for="t-<?= e($k) ?>"><?= e($tTitel) ?></label>
+                <?php if (!$offen): ?>
+                <div><?= $w === '' ? '<span class="meta klein">leer</span>' : ($art === 'text' ? e($w) : editor_html($w, $art)) ?></div>
+                <?php elseif ($art === 'text'): ?>
+                <input type="text" id="t-<?= e($k) ?>" name="<?= e($k) ?>" maxlength="120" value="<?= e($w) ?>"<?= $f !== null ? ' aria-invalid="true"' : '' ?>>
+                <?php else: ?>
+                <textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="<?= $art === 'inline' ? 2 : 6 ?>"<?= editor_attribute($art) ?>><?= e($w) ?></textarea>
+                <?php endif; ?>
+                <?php if ($f !== null): ?><p class="feldfehler"><?= e($f) ?></p><?php elseif ($tHilfe !== ''): ?><p class="hilfe"><?= e($tHilfe) ?></p><?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    </fieldset>
     <p class="meta klein">Zeiten in Ortszeit (Deutschland). Stichtage gelten bis einschließlich des genannten Tages.</p>
     <?php if ($offen): ?><button type="submit" class="knopf">Einstellungen speichern</button><?php endif; ?>
 </form>

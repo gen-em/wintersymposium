@@ -20,8 +20,9 @@ $archiv = va_abgeschlossen();
 <?php endif; ?>
 <div class="innen held">
     <div>
-        <?php if (inhalt('start_kicker') !== ''): ?><p class="kicker"><?= editor_html(inhalt('start_kicker'), 'inline') ?></p><?php endif; ?>
-        <h1 class="titel"><?= editor_html(inhalt('start_titel') ?: 'Wintersymposium', 'inline') ?></h1>
+        <?php // Zeile und Titel aus der Veranstaltung (Admin 2026-10-31): Reihe · Kurzname; Name mit erstem Wort weiß, Rest lila ?>
+        <p class="kicker"><?= e(reihe_name() . ' · ' . va_kurz()) ?></p>
+        <h1 class="titel"><?= va_titel_html() ?></h1>
         <?php if (inhalt('start_unter') !== ''): ?><p class="unter"><?= editor_html(inhalt('start_unter'), 'inline') ?></p><?php endif; ?>
     </div>
     <?php if (inhalt('start_sticker') !== ''): ?><span class="sticker hinweis frei"><?= e(inhalt('start_sticker')) ?></span><?php endif; ?>
@@ -34,15 +35,15 @@ $archiv = va_abgeschlossen();
     <?php if (anm_zeitraum() === 'offen'): ?><div class="held-knoepfe"><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a><a class="knopf zweit" href="/deine-anmeldung">Anmeldung ändern</a></div><?php endif; ?>
 </div>
 
-<?php $infos = editor_abschnitte(inhalt('start_infos')); if ($infos !== []): ?>
+<?php $infos = array_filter(start_kacheln(), fn($k) => $k['titel'] !== '' || $k['text'] !== ''); if ($infos !== []): ?>
 <section class="abschnitt" aria-labelledby="infos-titel"><div class="innen">
     <p class="kicker">Worum es geht</p>
     <h2 class="zwischen" id="infos-titel"><?= editor_html(inhalt('start_infos_titel') ?: 'Worum es geht', 'inline') ?></h2>
     <div class="drei">
         <?php foreach ($infos as $i): ?>
         <div class="kasten">
-            <?php if ($i['titel'] !== ''): ?><strong><?= $i['titel'] ?></strong><?php endif; ?>
-            <?= str_replace('<img ', '<img class="text-bild" loading="lazy" ', $i['text']) ?>
+            <?php if ($i['titel'] !== ''): ?><strong><?= e($i['titel']) ?></strong><?php endif; ?>
+            <?= editor_html($i['text']) ?>
         </div>
         <?php endforeach; ?>
     </div>

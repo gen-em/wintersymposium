@@ -537,7 +537,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
           ['.team-nav a:has-text("Mailings")', '/team/mailings', 'team-mailings'],
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
-          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Startseite")', '/team/startseite', 'team-startseite'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
           // AP-12: Reiter Betrieb (nur BetreiberInnen)
           ['.team-nav a:has-text("Betrieb")', '/team/status', 'team-status'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
           await p.click(wahl);
@@ -819,8 +819,11 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.keyboard.press('Escape');
       await p.setViewportSize({ width: 1440, height: 900 });
 
-      // Startseiten-Texte (Verwaltung → Startseite, AP-12): Werkzeugleiste
-      await p.goto(basis + '/team/startseite');
+      // Startseiten-Texte bei den Einstellungen (Admin 2026-10-31): Werkzeugleiste
+      await p.goto(basis + '/team/einstellungen?bearbeiten=1');
+      notiere(engine, 'desktop-breit', 'team-einstellungen', 'Startseite bei den Einstellungen: drei Kacheln, kein Titelfeld', await p.isVisible('#startseite #t-start_kachel_3_titel') && await p.isVisible('#startseite #t-start_kachel_3_text-feld') && await p.locator('#t-start_titel, #t-start_kicker').count() === 0);
+      await p.locator('#startseite').scrollIntoViewIfNeeded();
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-einstellungen-startseite.png`) });
       // Texte: derselbe Editor; Fett schaltet an und aus, nummerierte Liste (Rückmeldung 2026-10-30 (2))
       const cme = p.locator('#t-start_cme-feld');
       const cmeLeiste = p.locator('.feld:has(#t-start_cme) .werkzeug');
@@ -835,7 +838,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       notiere(engine, 'desktop-breit', 'team-texte', 'Editor: Fett schaltet an und wieder aus', fettAn && fettAus, await cme.innerHTML());
       await cmeLeiste.locator('[data-befehl=nliste]').click();
       notiere(engine, 'desktop-breit', 'team-texte', 'Editor: nummerierte Liste', await cme.locator('ol li').count() === 1, await cme.innerHTML());
-      notiere(engine, 'desktop-breit', 'team-texte', 'Einzeilige Felder mit Editor (Titel)', await p.isVisible('#t-start_titel-feld') && (await p.locator('#t-start_titel-feld em').count()) === 1);
+      notiere(engine, 'desktop-breit', 'team-texte', 'Einzeilige Felder mit Editor (Untertitel)', await p.isVisible('#t-start_unter-feld'));
 
       // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
       await p.setViewportSize({ width: 390, height: 844 });
