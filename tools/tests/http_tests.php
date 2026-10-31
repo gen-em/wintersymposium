@@ -652,6 +652,14 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'Hallo Mia.'), 'Meine Anmeldung zeigt die eigene Anmeldung');
     pruefe(str_contains($r['text'], 'class="nav-team" href="/team"'), 'Meine Anmeldung zeigt dem Team-Konto den Team-Bereich in der Leiste');
+    // AP-14 Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nicht über die Anmeldung
+    $mAnm = (int)db_wert("SELECT id FROM anmeldung WHERE email = 'mia@example.org'");
+    $r = http_anfrage($basis, 'GET', '/team/personen?a=' . $mAnm, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'value="mia@example.org" readonly') && str_contains($r['text'], 'ändert eine BetreiberIn unter Betrieb'), 'Team: E-Mail-Feld eines Team-Kontos schreibgeschützt mit Hinweis');
+    $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $mAnm, $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'speichern', 'a' => $mAnm, 'vorname' => 'Mia', 'nachname' => 'Mailcode', 'email' => 'fremd@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'ZNA', 'essen' => 'egal', 'ohne_mail' => '1'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'ändert eine BetreiberIn unter Betrieb') && konto_laden($mk)['email'] === 'mia@example.org' && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$mAnm]) === 'mia@example.org', 'POST mit fremder Adresse auf Team-Anmeldung: Fehler, Konto-Adresse gleich');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung?aendern=daten', $h, [], null, $k2);
+    pruefe(str_contains($r['text'], 'value="mia@example.org" readonly') && str_contains($r['text'], 'Adresse deines Team-Kontos'), 'Meine Anmeldung → Daten: Adresse des Team-Kontos schreibgeschützt');
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
     // Ausloggen beendet alles
     $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k2);

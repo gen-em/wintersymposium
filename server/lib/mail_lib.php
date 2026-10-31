@@ -579,6 +579,11 @@ function mail_vorlage(string $name, array $d): array
             return ['Bitte bestätige deine neue Adresse',
                 $hallo . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
+        case 'adresse_vom_team':
+            // an die alte Adresse, wenn das Team die Adresse geändert hat (E-63 (2))
+            return ['Deine Adresse beim ' . va_kurz() . ' wurde geändert',
+                $hallo . 'das Team hat die Adresse deiner Anmeldung und deines Kontos geändert. Mails zum '
+                . va_kurz() . " und der Login laufen ab jetzt über die neue Adresse, diese hier gilt nicht mehr.\n\nDas war nicht mit dir abgesprochen? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'konto_bestaetigen':
             return ['Bitte bestätige dein Konto beim Wintersymposium',
                 $hallo . "danke für dein Konto. Bestätige deine Adresse über diesen Link, danach legst du dein Passwort fest:\n\n" . $d['link']

@@ -25,6 +25,8 @@ declare(strict_types=1);
 
 /** Einmal-Links gelten 48 Stunden und einmal (Admin 2026-10-29). */
 const ANM_LINK_GUELTIG_H = 48;
+/** Hinweis, wenn die Adresse eines Team-Kontos über eine Anmeldung geändert werden soll (E-63 (2)). */
+const ANM_TEAM_ADRESSE_TEXT = 'Die Adresse eines Team-Kontos ändert eine BetreiberIn unter Betrieb → Team-Konten.';
 
 const ANM_ESSEN = [
     'egal' => 'Keine speziellen Wünsche',
@@ -565,7 +567,10 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
         } elseif ($l['zweck'] === 'email') {
             $neu = (string)$l['neue_email'];
             $andererKonto = konto_per_email($neu);
-            if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [$a['veranstaltung_id'], $neu, $anmId]) > 0
+            if (anm_hat_team_konto($a)) {
+                // zweite Sperre: ein Team-Konto ändert seine Adresse nie über die Anmeldung (E-63 (2))
+                $meldung = ANM_TEAM_ADRESSE_TEXT . ' Deine Adresse bleibt, wie sie war.';
+            } elseif (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [$a['veranstaltung_id'], $neu, $anmId]) > 0
                 || ($a['konto_id'] !== null && $andererKonto !== null && (int)$andererKonto['id'] !== (int)$a['konto_id'])) {
                 $meldung = 'Diese Adresse gehört schon zu einer anderen Anmeldung. Deine Adresse bleibt, wie sie war.';
             } else {
@@ -744,6 +749,10 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
         return ['fehler' => $r['fehler'], 'email_link' => false];
     }
     $w = $r['werte'];
+    // Login-Adresse eines Team-Kontos nicht über die Anmeldung (E-63 (2), Review S-1)
+    if ($w['email'] !== $a['email'] && anm_hat_team_konto($a)) {
+        return ['fehler' => ['email' => ANM_TEAM_ADRESSE_TEXT], 'email_link' => false];
+    }
     db_ausfuehren(
         'UPDATE anmeldung SET vorname = ?, nachname = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
         [$w['vorname'], $w['nachname'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, db_jetzt(), $anmId]
@@ -758,6 +767,12 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
         $link = true;
     }
     return ['fehler' => [], 'email_link' => $link];
+}
+
+/** Ist die Anmeldung mit einem Team-Konto (admin, betreiber …) verknüpft? */
+function anm_hat_team_konto(array $a): bool
+{
+    return $a['konto_id'] !== null && konto_ist_team(konto_laden((int)$a['konto_id']));
 }
 
 /** Anmeldung stornieren: Zeile löschen (R-02), Plätze gehen ans Nachrücken. */

@@ -1474,6 +1474,34 @@ va_zwischenspeicher_leeren();
     pruefe($geleert && filesize($log) === 0 && einstellung('betrieb_fehlerlog_geleert') !== null
         && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'betrieb' AND text = 'Fehlerprotokoll geleert'") === $audit0 + 1 && $amp('fehlerlog') === 'ok', 'Leeren: 0 Byte, Zeitpunkt gesetzt, Protokolleintrag, wieder ok');
 
+    abschnitt('Review-Behebung 1 (AP-14, T-275 bis T-281)');
+    $GLOBALS['ws_team_konto'] = null;
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    $rd = ['nachname' => 'Review', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'];
+    // Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nur unter Team-Konten
+    $bId = konto_anlegen('Bea Betrieb', 'bea.betrieb@example.org', 'betreiber');
+    $bAnm = team_anlegen(['vorname' => 'Bea', 'email' => 'bea.betrieb@example.org'] + $rd, true, false)['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$bId, $bAnm]);
+    $f = team_anm_daten($bAnm, ['vorname' => 'Bea', 'email' => 'angreifer@example.org'] + $rd, false);
+    pruefe(($f['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', '(a) Team ändert Adresse einer Anmeldung mit Betreiber-Konto: abgelehnt, beides unverändert');
+    pruefe(team_anm_daten($bAnm, ['vorname' => 'Beate', 'email' => 'bea.betrieb@example.org'] + $rd, false) === [] && anm_laden($bAnm)['vorname'] === 'Beate' && konto_laden($bId)['name'] === 'Bea Betrieb', 'übrige Felder änderbar, Team-Konto zieht nicht mit');
+    $r = anm_daten_setzen($bAnm, ['vorname' => 'Beate', 'email' => 'bea.privat@example.org'] + $rd);
+    pruefe(($r['fehler']['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && !$r['email_link'] && (int)db_wert("SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$bAnm]) === 0 && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === 0, '(b) Team-Mitglied ändert eigene Adresse über Meine Anmeldung: abgelehnt, kein Link, keine Mail');
+    $tok = anm_link_erzeugen($bAnm, 'email', time() + 3600, 'bea.privat@example.org');
+    $e = anm_link_einloesen($tok);
+    pruefe($e !== null && str_contains((string)$e['meldung'], 'Team-Konten') && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', 'zweite Sperre: alter E-Mail-Link schreibt nicht ins Team-Konto');
+    $tId = konto_anlegen('Tom Teil', 'tom.teil@example.org', 'teilnehmend');
+    $tAnm = team_anlegen(['vorname' => 'Tom', 'email' => 'tom.teil@example.org'] + $rd, true, false)['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$tId, $tAnm]);
+    $au0 = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'konto' AND text = ?", ['Konto ' . $tId . ': Adresse vom Team geändert']);
+    $f = team_anm_daten($tAnm, ['vorname' => 'Tom', 'email' => 'tom.neu@example.org'] + $rd, false);
+    $hin = db_zeile("SELECT * FROM mail_ausgang WHERE an = 'tom.teil@example.org' ORDER BY id DESC LIMIT 1");
+    pruefe($f === [] && anm_laden($tAnm)['email'] === 'tom.neu@example.org' && konto_laden($tId)['email'] === 'tom.neu@example.org', '(c) Teilnehmenden-Konto: Adresse in Anmeldung und Konto geändert');
+    pruefe($hin !== null && str_contains($hin['text'], 'Adresse deiner Anmeldung und deines Kontos geändert') && !str_contains($hin['text'], 'tom.neu@'), 'Hinweis-Mail an die alte Adresse (ohne neue Adresse)');
+    $au = db_zeile("SELECT text FROM audit WHERE art = 'konto' ORDER BY id DESC LIMIT 1");
+    pruefe((int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'konto' AND text = ?", ['Konto ' . $tId . ': Adresse vom Team geändert']) === $au0 + 1 && !str_contains($au['text'], '@'), 'Protokoll „Konto N: Adresse vom Team geändert“ ohne Adressen');
+    db_ausfuehren('DELETE FROM mail_ausgang');
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');
