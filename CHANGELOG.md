@@ -6,13 +6,20 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 ### Neu
 
-- **Mails im Erscheinungsbild Allgäu Akut** (O-40, E-63, Variante A): Alle automatischen Mails, Mailings und Newsletter kommen als HTML mit Textfassung – dunkler Kopf mit eingebettetem Logo, Überschrift, grüner Streifen, Übersicht der Plätze als Tabelle mit Schildern (bestätigt, Platzangebot, Warteliste mit Position), lila Knopf mit Ersatzadresse, Fuß mit Impressum und Datenschutz. Neue Datei `mail_html_lib.php`, Logo `assets/logo/mail-logo.png`, Migration 18 (HTML-Fassung in der Warteschlange).
-- **Eigene Plätze im Programm** (O-41, E-63, Variante B): Wer eingeloggt ist oder über den Link kommt, sieht auf der Startseite am eigenen Termin einen weißen Rahmen und ein Schild („Dein Platz“, „Platzangebot“, „Warteliste N“), die Zeile des Workshops ist markiert („Du: …“); auch in der Handy-Liste.
+- **Mails im Erscheinungsbild Allgäu Akut** (O-40, E-66, Variante A): Alle automatischen Mails, Mailings und Newsletter kommen als HTML mit Textfassung – dunkler Kopf mit eingebettetem Logo, Überschrift, grüner Streifen, Übersicht der Plätze als Tabelle mit Schildern (bestätigt, Platzangebot, Warteliste mit Position), lila Knopf mit Ersatzadresse, Fuß mit Impressum und Datenschutz. Neue Datei `mail_html_lib.php`, Logo `assets/logo/mail-logo.png`, Migration 18 (HTML-Fassung in der Warteschlange).
+- **Eigene Plätze im Programm** (O-41, E-66, Variante B): Wer eingeloggt ist oder über den Link kommt, sieht auf der Startseite am eigenen Termin einen weißen Rahmen und ein Schild („Dein Platz“, „Platzangebot“, „Warteliste N“), die Zeile des Workshops ist markiert („Du: …“); auch in der Handy-Liste.
 
 ### Geändert
 
 - Begriff **„Platzangebot“** statt „Platz frei für dich“ in Mails, „Meine Anmeldung“ und Team-Bereich; Betreff der Angebotsmail „Platzangebot: …“.
 - Knöpfe in Mailings sind lila wie auf der Webseite.
+
+## [0.21.6] – 2026-10-31
+
+### Doku
+
+- **Code-Review** mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`: 14 Bugs, 12 Sicherheitspunkte, 53 Vereinheitlichungspunkte, Vorschlag für Arbeitspakete. Noch keine Behebung.
+- **Konzept:** E-63 (Review-Behebung: Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket), E-64 (site.css als alleinige Design-Vorlage, Mockups Archiv, CLAUDE.md angepasst; Shell-Cronjob als Standard, betrieb.md Schritt 6; technische Grenzen bleiben Konstanten, R-11 ergänzt), E-65 (Status-Seite unter Betrieb). **AP-14** Review-Behebung 1, **AP-15** Status-Seite, **AP-16** Review-Behebung 2 geplant mit Unterpunkten und Tests; O-42 bis O-46 entschieden, O-47 offen; Prüfprotokoll reserviert T-275 bis T-296.
 
 ## [0.21.5] – 2026-10-31
 
