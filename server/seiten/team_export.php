@@ -13,8 +13,8 @@ if ($bg !== '' && !in_array($bg, va_liste('berufsgruppen'), true)) {
     $bg = '';
 }
 $format = (string)($_GET['format'] ?? 'csv');
-if ($art === 'cme_nachweise' && $konto['rolle'] !== 'betreiber') {
-    nicht_gefunden(); // CME-Nachweise nur für Betreiber (AP-9)
+if (in_array($art, ['cme_nachweise', 'newsletter'], true) && $konto['rolle'] !== 'betreiber') {
+    nicht_gefunden(); // CME-Nachweise (AP-9) und Newsletter (AP-12, E-60) nur für Betreiber
 }
 $x = export_erzeugen($art, $bg, (int)($_GET['t'] ?? -1));
 $datei = $x !== null && isset(EXPORT_FORMATE[$format]) ? export_datei($x, $format) : null;

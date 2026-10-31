@@ -128,7 +128,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-$alle = team_personen();
+$alle = team_personen($konto);
 $zahlen = [];
 foreach (TEAM_FILTER as $f => $_) {
     $zahlen[$f] = count(array_filter($alle, fn($p) => team_filter_passt($p, $f)));

@@ -7,7 +7,8 @@ declare(strict_types=1);
  * zweiten Faktor zurücksetzen, sperren, Rolle ändern. Ein Rollenwechsel
  * verlangt den eigenen zweiten Faktor (E-41). Das eigene Konto lässt sich
  * hier nicht sperren oder herabstufen, und es bleibt immer mindestens ein
- * aktiver Betreiber.
+ * aktiver Betreiber. Admins sind für alle Veranstaltungen (auch künftige) oder
+ * nur für ausgewählte freigeschaltet (AP-12, E-60).
  */
 
 $konto = team_tor(['betreiber']);
@@ -48,6 +49,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
                 konto_aktiv_setzen((int)$ziel['id'], (int)$ziel['aktiv'] !== 1, $ich);
                 flash_setzen('ok', $ziel['name'] . ((int)$ziel['aktiv'] === 1 ? ' gesperrt.' : ' entsperrt.'));
+                umleiten('/team/konten');
+            case 'veranstaltungen':
+                if ($ziel['rolle'] !== 'admin') {
+                    $fehler[] = 'Betreiber sehen immer alle Veranstaltungen.';
+                    break;
+                }
+                $alle = ($_POST['umfang'] ?? '') !== 'auswahl';
+                va_rechte_setzen((int)$ziel['id'], $alle, (array)($_POST['va'] ?? []), $ich);
+                flash_setzen('ok', 'Veranstaltungen von ' . $ziel['name'] . ': ' . va_rechte_text(konto_laden((int)$ziel['id'])) . '.');
                 umleiten('/team/konten');
             case 'rolle':
                 $rolle = (string)($_POST['rolle'] ?? '');
@@ -98,7 +108,7 @@ if (is_array($link)): ?>
 </div>
 <?php endif; ?>
 <div class="tabelle-wrap"><table class="t karten">
-    <thead><tr><th>Name</th><th>Rolle</th><th>Status</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
+    <thead><tr><th>Name</th><th>Rolle</th><th>Veranstaltungen</th><th>Status</th><th>Letzte Anmeldung</th><th>Aktionen</th></tr></thead>
     <tbody>
     <?php foreach (konto_team_liste() as $k):
         $eigen = (int)$k['id'] === $ich;
@@ -106,6 +116,7 @@ if (is_array($link)): ?>
         <tr>
             <td data-label="Name"><strong><?= e($k['name']) ?></strong><?= $eigen ? ' <span class="meta">(du)</span>' : '' ?><br><span class="meta klein"><?= e($k['email']) ?></span></td>
             <td data-label="Rolle"><?= e(ROLLEN[$k['rolle']]) ?></td>
+            <td data-label="Veranstaltungen" class="klein"><?= e(va_rechte_text($k)) ?></td>
             <td data-label="Status"><span class="chip <?= (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen') ?>"><?= e($status) ?></span></td>
             <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
@@ -115,6 +126,20 @@ if (is_array($link)): ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="zweitfaktor"><button class="knopf zweit klein" type="submit">2. Faktor zurücksetzen</button></form>
                 <?php endif; ?>
                 <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="sperren"><button class="knopf zweit klein" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></button></form>
+                <?php if ($k['rolle'] === 'admin'): $erlaubt = va_erlaubte_ids($k); ?>
+                <details class="rolle-wechsel"><summary>Veranstaltungen</summary>
+                    <form method="post" action="/team/konten" class="formular">
+                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="veranstaltungen">
+                        <fieldset class="feld"><legend>Darf diese Veranstaltungen bearbeiten</legend>
+                            <label class="haken"><input type="radio" name="umfang" value="alle"<?= $erlaubt === null ? ' checked' : '' ?>><span><strong>Alle</strong>, auch künftige</span></label>
+                            <label class="haken"><input type="radio" name="umfang" value="auswahl"<?= $erlaubt !== null ? ' checked' : '' ?>><span><strong>Nur ausgewählte:</strong></span></label>
+                            <?php foreach (va_alle() as $v): ?><label class="haken einrueck"><input type="checkbox" name="va[]" value="<?= $v['id'] ?>"<?= $erlaubt !== null && in_array($v['id'], $erlaubt, true) ? ' checked' : '' ?>><span><?= e($v['name']) ?> <span class="meta klein">· <?= e($v['kuerzel']) ?> · <?= e(VA_STATUS[$v['status']]) ?></span></span></label><?php endforeach; ?>
+                        </fieldset>
+                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen. Neue Veranstaltungen legen nur Betreiber an.</p>
+                        <button class="knopf klein" type="submit">Speichern</button>
+                    </form>
+                </details>
+                <?php endif; ?>
                 <details class="rolle-wechsel"><summary>Rolle ändern</summary>
                     <form method="post" action="/team/konten" class="formular">
                         <?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="rolle">

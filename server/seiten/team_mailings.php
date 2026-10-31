@@ -212,14 +212,16 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
         <?= csrf_feld() ?>
         <?php if ($id !== null): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
         <?php $nlAuswahl = rm_nl_listen($w['auswahl']); ?>
+        <?php if (rm_newsletter_erlaubt()): // Newsletter-Listen nur für Betreiber (AP-12, E-60) ?>
         <fieldset class="feld rm-art"><legend>Empfänger</legend>
-            <label class="haken"><input type="radio" name="art" value="teilnehmende"<?= $nlAuswahl === null ? ' checked' : '' ?>><span>Teilnehmende des Symposiums</span></label>
+            <label class="haken"><input type="radio" name="art" value="teilnehmende"<?= $nlAuswahl === null ? ' checked' : '' ?>><span>Teilnehmende der Veranstaltung</span></label>
             <label class="haken"><input type="radio" name="art" value="newsletter"<?= $nlAuswahl !== null ? ' checked' : '' ?>><span>Newsletter-Listen</span></label>
         </fieldset>
         <fieldset class="feld rm-listen" data-empfaenger="newsletter"><legend>Newsletter-Listen</legend>
             <?php foreach (nl_zahlen() as $lid => $z): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= $lid ?>"<?= in_array($lid, $nlAuswahl ?? [], true) ? ' checked' : '' ?>><span><?= e($z['liste']['name']) ?> <span class="meta klein">(<?= $z['bestaetigt'] ?> bestätigt)</span></span></label><?php endforeach; ?>
             <p class="hilfe">Wer auf mehreren Listen steht, bekommt die Mail nur einmal. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“.</p>
         </fieldset>
+        <?php endif; ?>
         <div class="paar" data-empfaenger="teilnehmende">
             <div class="feld"><label for="auswahl">An</label>
                 <select id="auswahl" name="auswahl"<?= $ungueltig('auswahl') ?>><?php foreach (rm_auswahl_gruppen() as $gruppe => $opt): ?><?= $gruppe !== '' ? '<optgroup label="' . e($gruppe) . '">' : '' ?><?php foreach ($opt as $k => $t): ?><option value="<?= e($k) ?>"<?= $w['auswahl'] === $k ? ' selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?><?= $gruppe !== '' ? '</optgroup>' : '' ?><?php endforeach; ?></select><?= $fehlerFeld('auswahl') ?></div>

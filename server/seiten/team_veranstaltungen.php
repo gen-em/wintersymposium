@@ -4,11 +4,13 @@ declare(strict_types=1);
 /*
  * Veranstaltungen (E-58): alle Veranstaltungen mit Status; neue anlegen
  * (leer oder als Kopie mit Einstellungen, Texten und Programm), zur aktuellen
- * machen, abschließen (danach nur lesen), Entwürfe ohne Anmeldungen löschen.
+ * machen, abschließen (danach nur lesen), löschen.
  * Immer nur eine ist aktuell: Startseite, Anmeldung und „Meine Anmeldung“.
+ * Nur Betreiber (AP-12, E-60). Löschen geht bei allen außer der aktuellen,
+ * mit Dialog und eingetipptem Kürzel; vorher legt die App eine Sicherung an.
  */
 
-$konto = team_tor();
+$konto = team_tor(['betreiber']);
 $ich = (int)$konto['id'];
 $fehler = [];
 $eingabe = [];
@@ -45,8 +47,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             flash_setzen($f === null ? 'ok' : 'fehler', $f ?? 'Abgeschlossen. Sie ist nur noch zum Ansehen da; Zertifikate bleiben herunterladbar.');
             umleiten('/team/veranstaltungen');
         case 'loeschen':
-            $f = va_loeschen($id, $ich);
-            flash_setzen($f === null ? 'ok' : 'fehler', $f ?? 'Entwurf gelöscht.');
+            $f = va_loeschen($id, $ich, (string)($_POST['kuerzel'] ?? ''));
+            flash_setzen($f === null ? 'ok' : 'fehler', $f ?? 'Veranstaltung gelöscht. Der Stand davor liegt als Sicherung unter Betrieb.');
             unset($_SESSION['team_va']);
             umleiten('/team/veranstaltungen');
     }
@@ -73,18 +75,20 @@ team_seite_kopf($konto, 'Veranstaltungen', '/team/veranstaltungen');
                     <form method="post" action="/team/veranstaltungen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="aktuell"><input type="hidden" name="id" value="<?= $v['id'] ?>">
                         <p><?= e($v['name']) ?> erscheint dann auf der Startseite; die Anmeldung öffnet zum eingestellten Zeitpunkt. Es darf keine andere aktuelle geben.</p>
                         <button class="knopf" type="submit">Ja, aktuell machen</button></form></details>
-                <?php if ($n === 0): ?>
-                <details class="bestaetigen inline-details" data-titel="Entwurf löschen?"><summary class="klein-link">Löschen</summary>
-                    <form method="post" action="/team/veranstaltungen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="loeschen"><input type="hidden" name="id" value="<?= $v['id'] ?>">
-                        <p>Einstellungen, Texte und Programm dieses Entwurfs werden gelöscht.</p>
-                        <button class="knopf gefahr" type="submit">Ja, löschen</button></form></details>
-                <?php endif; ?>
                 <?php endif; ?>
                 <?php if ($v['status'] !== 'abgeschlossen'): ?>
                 <details class="bestaetigen inline-details" data-titel="Veranstaltung abschließen?"><summary class="knopf zweit klein-knopf">Abschließen</summary>
                     <form method="post" action="/team/veranstaltungen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="abschliessen"><input type="hidden" name="id" value="<?= $v['id'] ?>">
                         <p>Danach lässt sich an <?= e($v['name']) ?> nichts mehr ändern: keine Anmeldungen, kein Programm, keine Anwesenheit, keine Freischaltungen. Ansehen, Exporte und bereits freigeschaltete Zertifikate bleiben. Erst Anwesenheit eintragen und Zertifikate freischalten.</p>
                         <button class="knopf gefahr" type="submit">Ja, abschließen</button></form></details>
+                <?php endif; ?>
+                <?php if ($v['status'] !== 'aktuell'): ?>
+                <details class="bestaetigen inline-details" data-titel="Veranstaltung löschen?"><summary class="klein-link">Löschen</summary>
+                    <form method="post" action="/team/veranstaltungen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="loeschen"><input type="hidden" name="id" value="<?= $v['id'] ?>">
+                        <p><?= e($v['name']) ?> wird mit Programm, Einstellungen, Texten, <?= $n ?> Anmeldungen, Wartelisten, Teilnahme und Mailings gelöscht. Die CME-Nachweise bleiben. Vorher legt die App eine Sicherung an.</p>
+                        <div class="feld"><label for="lo-<?= $v['id'] ?>">Zur Bestätigung das Kürzel eintippen: <span class="mono"><?= e($v['kuerzel']) ?></span></label>
+                            <input id="lo-<?= $v['id'] ?>" name="kuerzel" autocomplete="off" required pattern="<?= e($v['kuerzel']) ?>"></div>
+                        <button class="knopf gefahr" type="submit">Endgültig löschen</button></form></details>
                 <?php endif; ?>
             </span></td>
         </tr>

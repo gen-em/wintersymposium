@@ -71,10 +71,19 @@ function rm_nl_listen(string $auswahl): ?array
 }
 
 /** Ist die Auswahl gültig (Teilnehmende oder vorhandene Newsletter-Listen)? */
+/** Mailings an Newsletter-Listen: nur Betreiber (AP-12, E-60); außerhalb des Team-Bereichs (Jobs) erlaubt. */
+function rm_newsletter_erlaubt(): bool
+{
+    return !isset($GLOBALS['ws_team_rolle']) || $GLOBALS['ws_team_rolle'] === 'betreiber';
+}
+
 function rm_auswahl_gueltig(string $auswahl): bool
 {
     $nl = rm_nl_listen($auswahl);
     if ($nl !== null) {
+        if (!rm_newsletter_erlaubt()) {
+            return false;
+        }
         return array_diff($nl, array_map('intval', array_column(nl_listen(), 'id'))) === [];
     }
     return array_key_exists($auswahl, rm_auswahl_optionen());
@@ -446,7 +455,8 @@ function rm_vorschau(array $rm, array $konto): array
 function rm_laden(int $id): ?array
 {
     // Mailings an Angemeldete gehören zu einer Veranstaltung; Newsletter-Mailings (NULL) zu keiner (E-58)
-    return db_zeile('SELECT * FROM rundmail WHERE id = ? AND (veranstaltung_id IS NULL OR veranstaltung_id = ?)', [$id, va_id()]);
+    // Newsletter-Mailings nur für Betreiber (AP-12, E-60)
+    return db_zeile('SELECT * FROM rundmail WHERE id = ? AND (' . (rm_newsletter_erlaubt() ? 'veranstaltung_id IS NULL OR ' : '') . 'veranstaltung_id = ?)', [$id, va_id()]);
 }
 
 /** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */
@@ -560,7 +570,7 @@ function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
         return count($liste);
     });
     if ($zahl !== null) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' an ' . $zahl . ' Empfänger in die Warteschlange gestellt', $kontoId);
+        audit_schreiben('mailing', 'Mailing ' . $id . ' an ' . $zahl . ' Empfänger in die Warteschlange gestellt', $kontoId, rm_va((int)$id));
         mail_nach_antwort_vormerken();
     }
     return $zahl;
@@ -571,7 +581,7 @@ function rm_planen(int $id, string $utc, int $kontoId): bool
 {
     $n = db_ausfuehren("UPDATE rundmail SET status = 'geplant', geplant_fuer = ?, gesendet_von = ?, geaendert_am = ? WHERE id = ? AND status IN ('entwurf','geplant')", [$utc, $kontoId, db_jetzt(), $id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' geplant für ' . datum_zeit_text($utc), $kontoId);
+        audit_schreiben('mailing', 'Mailing ' . $id . ' geplant für ' . datum_zeit_text($utc), $kontoId, rm_va((int)$id));
     }
     return $n === 1;
 }
@@ -588,14 +598,14 @@ function rm_abbrechen(int $id, int $kontoId): ?string
     }
     if ($rm['status'] === 'geplant') {
         db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL, geaendert_am = ? WHERE id = ?", [db_jetzt(), $id]);
-        audit_schreiben('mailing', 'Planung von Mailing ' . $id . ' aufgehoben', $kontoId);
+        audit_schreiben('mailing', 'Planung von Mailing ' . $id . ' aufgehoben', $kontoId, rm_va((int)$id));
         return 'Planung aufgehoben – das Mailing ist wieder ein Entwurf.';
     }
     if ($rm['status'] === 'versand') {
         $weg = db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id = ? AND status = 'offen'", [$id])->rowCount();
         $raus = (int)$rm['empfaenger_zahl'] - $weg;
         db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
-        audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId);
+        audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId, rm_va((int)$id));
         return 'Versand abgebrochen: ' . $weg . ' Mails gehen nicht mehr raus.';
     }
     return null;
@@ -625,9 +635,10 @@ function rm_kopieren(int $id, int $kontoId): ?int
 
 function rm_loeschen(int $id, int $kontoId): bool
 {
+    $va = rm_va($id);
     $n = db_ausfuehren("DELETE FROM rundmail WHERE id = ? AND status = 'entwurf'", [$id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Entwurf ' . $id . ' gelöscht', $kontoId);
+        audit_schreiben('mailing', 'Entwurf ' . $id . ' gelöscht', $kontoId, $va);
     }
     return $n === 1;
 }
@@ -638,7 +649,7 @@ function rm_liste(): array
     return db_zeilen(
         "SELECT r.id, r.betreff, r.status, r.geplant_fuer, r.gesendet_am, r.empfaenger_zahl, r.auswahl, r.berufsgruppe, r.auswahl_text, r.geaendert_am, k.name AS von
          FROM rundmail r LEFT JOIN konto k ON k.id = COALESCE(r.gesendet_von, r.erstellt_von)
-         WHERE r.veranstaltung_id IS NULL OR r.veranstaltung_id = " . va_id() . "
+         WHERE " . (rm_newsletter_erlaubt() ? 'r.veranstaltung_id IS NULL OR ' : '') . "r.veranstaltung_id = " . va_id() . "
          ORDER BY FIELD(r.status, 'versand', 'geplant', 'entwurf', 'gesendet', 'abgebrochen'), COALESCE(r.gesendet_am, r.geaendert_am) DESC, r.id DESC"
     );
 }
@@ -655,7 +666,7 @@ function rm_job(int $jetzt): array
         } else {
             // Nicht mehr sendbar (z. B. keine Empfänger): zurück zum Entwurf, im Protokoll vermerkt
             db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL WHERE id = ? AND status = 'geplant'", [$r['id']]);
-            audit_schreiben('mailing', 'Geplantes Mailing ' . $r['id'] . ' nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf');
+            audit_schreiben('mailing', 'Geplantes Mailing ' . $r['id'] . ' nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf', null, rm_va((int)$r['id']));
         }
     }
     $erg['fertig'] = db_ausfuehren(
@@ -785,4 +796,10 @@ function rm_bilder_aufraeumen(int $jetzt): int
         }
     }
     return $n;
+}
+
+/** Veranstaltung eines Mailings für das Protokoll; 0 = Newsletter (keine Veranstaltung, AP-12). */
+function rm_va(int $id): int
+{
+    return (int)(db_wert('SELECT veranstaltung_id FROM rundmail WHERE id = ?', [$id]) ?? 0);
 }

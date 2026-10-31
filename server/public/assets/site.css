@@ -696,22 +696,42 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .editor-status:empty { display: none; }
 /* Personen-Menü oben rechts (ein Konto für alles, E-54; Mockup Variante A) */
 .nav-liste li.person { position: relative; }
-.person-knopf { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1.5px solid var(--meta); border-radius: 999px; color: var(--fg); text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
-.person-knopf[aria-current="page"] { border-color: var(--akz); }
-.person-menue > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 3px 14px 3px 3px; border: 1.5px solid var(--akz); border-radius: 999px; cursor: pointer; font-family: var(--f-text); text-transform: none; letter-spacing: 0; }
+.person-knopf { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 10px; border-radius: 999px; background: var(--flaeche); color: var(--fg); text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 700; transition: background .15s, box-shadow .15s; }
+.person-knopf:hover, .person-knopf[aria-current="page"] { background: var(--flaeche2); box-shadow: 0 0 0 2px var(--akz); color: var(--fg); }
+/* Personen-Menü (AP-12, E-60, Entwurf A): Fläche statt Rand, Ring beim Hover, Pfeil zeigt das Menü */
+.person-menue > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 6px; border-radius: 999px; background: var(--flaeche); cursor: pointer; font-family: var(--f-text); font-weight: 700; text-transform: none; letter-spacing: 0; transition: background .15s, box-shadow .15s; }
 .person-menue > summary::-webkit-details-marker { display: none; }
-.person-menue > summary:focus-visible { outline: 2px solid var(--akz); outline-offset: 2px; }
-.person-kuerzel { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: var(--akz); color: var(--auf-akz); font: 700 .78rem var(--f-mono); }
-.person-liste { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 300px; max-width: calc(100vw - 32px); background: var(--flaeche); border: 1.5px solid var(--akz); box-shadow: 6px 6px 0 var(--gruen); text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 400; }
-.person-kopf { margin: 0; padding: 12px 16px; display: grid; gap: 2px; overflow-wrap: anywhere; }
-.person-kopf span { font-size: .82rem; color: var(--meta); }
-.person-liste a { display: grid; gap: 1px; padding: 10px 16px; border-top: 1px solid var(--linie); color: var(--fg); text-decoration: none; font-weight: 700; }
-.person-liste a small { font-weight: 400; font-size: .8rem; color: var(--meta); }
-.person-liste a:hover, .person-liste a[aria-current="page"] { background: var(--bg); color: var(--akz); }
+.person-menue > summary:hover, .person-menue[open] > summary { background: var(--flaeche2); box-shadow: 0 0 0 2px var(--akz); }
+.person-menue > summary:focus-visible { outline: 2px solid var(--akz); outline-offset: 3px; }
+.person-pfeil { color: var(--akz); transition: transform .15s; }
+.person-menue > summary:hover .person-pfeil { transform: translateY(2px); }
+.person-menue[open] .person-pfeil { transform: rotate(180deg); }
+.person-kuerzel { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: var(--akz); color: var(--auf-akz); font: 700 .75rem var(--f-mono); }
+.person-kuerzel.gross { width: 44px; height: 44px; font-size: .95rem; }
+.person-liste { position: absolute; right: 0; top: calc(100% + 10px); z-index: 20; width: 320px; max-width: calc(100vw - 32px); background: var(--flaeche); border: 1.5px solid var(--akz); border-radius: 10px; overflow: hidden; box-shadow: 6px 6px 0 var(--gruen); text-transform: none; letter-spacing: 0; font-family: var(--f-text); font-weight: 400; }
+/* Kopf: nur zum Lesen – dunkler Grund, keine Hover-Wirkung */
+.person-kopf { margin: 0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; background: var(--bg); cursor: default; }
+.person-wer { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.person-wer strong { color: var(--fg); }
+.person-wer > span { font-size: .82rem; color: var(--meta); }
+.person-wer .person-rolle { justify-self: start; font: 700 .64rem var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border: 1px solid var(--meta); color: var(--meta); }
+.person-liste a.person-punkt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--linie); color: var(--fg); text-decoration: none; }
+.person-punkt > .icon { flex: none; color: var(--akz); }
+.person-text { flex: 1; display: grid; gap: 1px; min-width: 0; }
+.person-titel { font-weight: 700; }
+.person-text small { font-weight: 400; font-size: .8rem; color: var(--meta); }
+.person-weiter { flex: none; color: var(--akz); opacity: 0; transform: translateX(-4px); transition: opacity .12s, transform .12s; }
+.person-liste a.person-punkt:hover, .person-liste a.person-punkt[aria-current="page"] { background: var(--bg); }
+.person-liste a.person-punkt:hover .person-titel, .person-liste a.person-punkt[aria-current="page"] .person-titel { color: var(--akz); }
+.person-liste a.person-punkt:hover .person-weiter, .person-liste a.person-punkt:focus-visible .person-weiter { opacity: 1; transform: none; }
 .person-liste form, .person-flach + li form, .menue form { margin: 0; }
-.person-ab { width: 100%; text-align: left; padding: 12px 16px; border: 0; border-top: 1px solid var(--linie); background: transparent; color: var(--akz); font: 700 1rem var(--f-text); cursor: pointer; }
+.person-ab { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 16px; border: 0; border-top: 1px solid var(--linie); background: transparent; color: var(--akz); font: 700 1rem var(--f-text); cursor: pointer; }
+.person-ab:hover { background: var(--bg); color: var(--rot-300); }
 .menue .person-ab { padding: 12px 0; font-family: var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; font-size: .9rem; }
-.menue .person-kopf { padding: 12px 0 4px; border-top: 1px solid var(--akz); margin-top: 6px; text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
+.menue .person-ab:hover { background: transparent; }
+.person-flach-kopf { margin: 6px 0 0; padding: 12px 0 4px; border-top: 1px solid var(--akz); display: grid; gap: 2px; overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font-family: var(--f-text); }
+.person-flach-kopf span { font-size: .82rem; color: var(--meta); }
+.haken.einrueck { margin-left: 28px; }
 .feld > .werkzeug + .schreibfeld { margin-top: -6px; }
 /* Passkeys (O-14, E-55) */
 .pk-liste { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
@@ -732,9 +752,34 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 .ws-anwesend button[disabled] { opacity: .5; cursor: not-allowed; }
 
 /* Mehrere Veranstaltungen (E-58) */
-.va-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; font-size: .9rem; }
-.va-leiste label { font-family: var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; font-size: .8rem; color: var(--meta); }
-.va-leiste select { flex: 1 1 200px; width: 100%; min-width: 0; max-width: 100%; }
+/* Wechsler rechts neben dem Seitentitel (AP-12, E-60) */
+.team-kopf { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 20px; }
+.team-kopf > div:first-child { min-width: 0; }
+.va-wechsler { position: relative; max-width: 100%; }
+.va-wechsler > summary { list-style: none; display: flex; align-items: center; gap: 12px; min-height: 52px; max-width: 100%; box-sizing: border-box; padding: 6px 12px 6px 16px; border: 1px solid var(--linie); border-radius: 10px; background: var(--flaeche); cursor: pointer; transition: background .15s, box-shadow .15s; }
+.va-wechsler > summary::-webkit-details-marker { display: none; }
+.va-wechsler > summary:hover, .va-wechsler[open] > summary { background: var(--flaeche2); box-shadow: 0 0 0 2px var(--akz); }
+.va-wechsler > summary:focus-visible { outline: 2px solid var(--akz); outline-offset: 3px; }
+.va-wahl { display: grid; gap: 1px; min-width: 0; }
+.va-wahl .va-name { font-weight: 700; overflow-wrap: anywhere; }
+.va-label { margin: 0; font: 700 .7rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--meta); }
+.va-pfeil { flex: none; color: var(--akz); transition: transform .15s; }
+.va-wechsler[open] .va-pfeil { transform: rotate(180deg); }
+.va-menue { position: absolute; right: 0; top: calc(100% + 8px); z-index: 25; width: 380px; max-width: calc(100vw - 32px); background: var(--flaeche); border: 1.5px solid var(--akz); border-radius: 10px; overflow: hidden; box-shadow: 6px 6px 0 var(--gruen); }
+.va-menue > .va-label { padding: 10px 16px 6px; }
+.va-eintrag { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: var(--fg); text-decoration: none; }
+.va-eintrag:hover, .va-eintrag:focus-visible { background: var(--bg); }
+.va-eintrag:hover .va-name { color: var(--akz); }
+.va-haken { flex: none; width: 18px; display: inline-flex; justify-content: center; color: var(--akz); }
+.va-text { flex: 1; display: grid; gap: 1px; min-width: 0; }
+.va-text .va-name { font-weight: 700; }
+.va-text small { font-size: .8rem; color: var(--meta); }
+.va-aktionen { border-top: 1px solid var(--linie); }
+.va-aktionen a { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--akz); font-weight: 700; text-decoration: none; }
+.va-aktionen a.va-verwalten { border-top: 1px solid var(--linie); color: var(--meta); font-weight: 400; }
+.va-aktionen a:hover { background: var(--bg); color: var(--fg); }
+@media (max-width: 759px) { .va-wechsler, .va-wechsler > summary { width: 100%; } .va-menue { left: 0; right: auto; width: 100%; max-width: 100%; } }
+.icon { display: inline-block; vertical-align: middle; flex: none; }
 /* WebKit zählt den Text einer langen gewählten Option zur Seitenbreite (seitliches Scrollen auf dem Handy) */
 select { contain: paint; max-width: 100%; }
 .va-hinweis { margin-top: -4px; }

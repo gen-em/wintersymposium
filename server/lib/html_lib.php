@@ -68,26 +68,26 @@ function seite_kopf(string $titel, array $opt = []): void
         // Personen-Menü (Mockup Variante A): ausgeloggt „Einloggen“, sonst Name mit Menü
         if (!$erkannt) {
             $person = '<a class="person-knopf" href="/einloggen"' . ($aktiv === '/einloggen' ? ' aria-current="page"' : '') . '>'
-                . '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>Einloggen</a>';
+                . icon('user-circle', 20) . 'Einloggen</a>';
             $flach = $a('/einloggen', 'Einloggen', '/einloggen');
         } else {
             $name = is_array($ich) ? (string)$ich['name'] : trim($tn['vorname'] . ' ' . $tn['nachname']);
             $teile = preg_split('/\s+/u', trim($name)) ?: [''];
             $kuerzel = mb_strtoupper(mb_substr($teile[0], 0, 1) . (count($teile) > 1 ? mb_substr((string)end($teile), 0, 1) : ''));
             $unter = is_array($ich) ? (konto_ist_team($ich) ? (ROLLEN[$ich['rolle']] ?? '') . ' · ' : '') . $ich['email'] : 'über den Link aus der Mail';
-            $eintraege = [['/deine-anmeldung', 'Meine Anmeldung', 'Workshops, Essen, absagen']];
+            // Personen-Menü (AP-12, E-60, Entwurf A): Kopf zum Lesen, darunter Punkte mit Icons; der Team-Bereich steht in der Leiste
+            $eintraege = [['/deine-anmeldung', 'Meine Anmeldung', 'Workshops, Essen, absagen', 'ticket']];
             if (is_array($ich)) {
-                $eintraege[] = ['/konto', 'Mein Konto', konto_ist_team($ich) ? 'Profil, Passwort, Zwei-Faktor, Newsletter' : 'Profil, Passwort, Newsletter'];
+                $eintraege[] = ['/konto', 'Mein Konto', konto_ist_team($ich) ? 'Profil, Passwort, Zwei-Faktor, Newsletter' : 'Profil, Passwort, Newsletter', 'user-circle'];
             }
-            if (is_array($team)) {
-                $eintraege[] = ['/team', 'Team-Bereich', 'Personen, Programm, Mailings …'];
-            }
-            $ab = '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="person-ab">Ausloggen</button></form>';
-            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span></summary>'
-                . '<div class="person-liste"><p class="person-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p>'
-                . implode('', array_map(fn($x) => '<a href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . e($x[1]) . '<small>' . e($x[2]) . '</small></a>', $eintraege))
+            $ab = '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="person-ab">' . icon('sign-out', 22) . '<span>Ausloggen</span></button></form>';
+            $rolle = is_array($ich) && konto_ist_team($ich) ? '<span class="person-rolle">' . e(ROLLEN[$ich['rolle']] ?? '') . '</span>' : '';
+            $adresse = is_array($ich) ? (string)$ich['email'] : 'über den Link aus der Mail';
+            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
+                . '<div class="person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
+                . implode('', array_map(fn($x) => '<a class="person-punkt" href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . icon($x[3], 22) . '<span class="person-text"><span class="person-titel">' . e($x[1]) . '</span><small>' . e($x[2]) . '</small></span>' . icon('caret-right', 16, 'icon person-weiter') . '</a>', $eintraege))
                 . $ab . '</div></details>';
-            $flach = '<li class="person-flach"><p class="person-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
+            $flach = '<li class="person-flach"><p class="person-flach-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
                 . (is_array($ich) ? $a('/konto', 'Mein Konto', '/konto') : '') . '<li>' . $ab . '</li>';
         }
         // Zwei Darstellungen: aufklappbar (Handy) und daneben (Desktop), ohne JavaScript.
@@ -111,19 +111,38 @@ function seite_fuss(): void
         . '</ul></nav></div></footer></body></html>';
 }
 
-/** Reiter des Team-Bereichs (Mockup E-41); weitere folgen mit AP-3 Schritt 3 und AP-5. */
 /**
- * Bereiche des Team-Bereichs (Admin 2026-10-30, Mockup Variante A): sechs
- * Bereiche, darunter die Unterseiten des aktiven Bereichs. Dritter Wert true =
- * nur für Betreiber (E-49).
+ * Icon aus dem Phosphor-Set (lib/vendor/phosphor, MIT) als Inline-SVG; Farbe
+ * über currentColor, nur Schmuck (aria-hidden). Unbekannte Namen: leer.
+ */
+function icon(string $name, int $groesse = 20, string $klasse = 'icon'): string
+{
+    static $cache = [];
+    if (!isset($cache[$name])) {
+        $datei = __DIR__ . '/vendor/phosphor/' . $name . '.svg';
+        $svg = preg_match('/^[a-z0-9-]+$/', $name) === 1 && is_file($datei) ? (string)file_get_contents($datei) : '';
+        $cache[$name] = preg_match('#<svg[^>]*>(.*)</svg>#s', $svg, $m) === 1 ? $m[1] : '';
+    }
+    if ($cache[$name] === '') {
+        return '';
+    }
+    return '<svg class="' . e($klasse) . '" width="' . $groesse . '" height="' . $groesse . '" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false">' . $cache[$name] . '</svg>';
+}
+
+/**
+ * Bereiche des Team-Bereichs (Admin 2026-10-30, Mockup Variante A; neu
+ * geordnet mit AP-12, E-60): darunter die Unterseiten des aktiven Bereichs.
+ * Dritter Wert true = nur für Betreiber; ein Bereich ohne sichtbare Seite
+ * entfällt. „Betrieb“ bündelt alles, was für alle Veranstaltungen gilt.
  */
 const TEAM_BEREICHE = [
     'Übersicht' => [['/team', 'Übersicht']],
     'Anmeldungen' => [['/team/personen', 'Personen'], ['/team/workshops', 'Workshops'], ['/team/teilnahme', 'Teilnahme']],
     'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
-    'Kommunikation' => [['/team/mailings', 'Mailings'], ['/team/newsletter', 'Newsletter'], ['/team/texte', 'Texte']],
+    'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
-    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/veranstaltungen', 'Veranstaltungen'], ['/team/konten', 'Team-Konten', true], ['/team/protokoll', 'Protokoll'], ['/team/daten', 'Betrieb', true]],
+    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/startseite', 'Startseite'], ['/team/protokoll', 'Protokoll']],
+    'Betrieb' => [['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
 ];
 
 function team_reiter(array $konto, string $aktiv): string
@@ -133,6 +152,9 @@ function team_reiter(array $konto, string $aktiv): string
     $unter = '';
     foreach (TEAM_BEREICHE as $bereich => $seiten) {
         $seiten = array_values(array_filter($seiten, fn($x) => empty($x[2]) || $betreiber));
+        if ($seiten === []) {
+            continue;
+        }
         $an = in_array($aktiv, array_column($seiten, 0), true);
         $haupt .= '<a href="' . e($seiten[0][0]) . '"' . ($an ? ' class="an" aria-current="' . ($aktiv === $seiten[0][0] && count($seiten) === 1 ? 'page' : 'true') . '"' : '') . '>' . e($bereich) . '</a>';
         if ($an && count($seiten) > 1) {
@@ -152,37 +174,54 @@ function team_seite_kopf(array $konto, string $titel, string $aktiv, array $opt 
     // Ein Editor für alle Textfelder (E-54): auf jeder Team-Seite geladen, wirkt nur auf textarea[data-editor]
     $opt['skripte'] = array_values(array_unique(array_merge(['editor.js'], $opt['skripte'] ?? [])));
     seite_kopf($titel, $opt + ['konto' => $konto, 'aktiv' => '/team']);
-    echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div></div>'
-        . '<div class="innen">' . team_reiter($konto, $aktiv) . team_veranstaltung_leiste($aktiv) . meldung_html(flash_holen());
+    echo '<div class="innen team-kopf"><div><p class="kicker">Team-Bereich</p><h1 class="titel">' . e($titel) . '</h1></div>' . team_veranstaltung_wechsler($konto, $aktiv) . '</div>'
+        . '<div class="innen">' . team_reiter($konto, $aktiv) . team_veranstaltung_hinweis() . meldung_html(flash_holen());
 }
 
 /**
- * Leiste unter der Navigation (E-58): gewählte Veranstaltung mit Status und
- * Umschalter; bei einer abgeschlossenen der Hinweis „nur lesen“.
+ * Wechsler rechts neben dem Seitentitel (AP-12, E-60, ersetzt die Leiste aus
+ * E-58): gewählte Veranstaltung mit Status, aufgeklappt die erlaubten mit
+ * Häkchen; Betreiber dazu „Neue Veranstaltung“ und „Alle verwalten“. Ohne
+ * JavaScript (details/summary), die Einträge sind Links mit ?va=.
  */
-function team_veranstaltung_leiste(string $aktiv): string
+function team_veranstaltung_wechsler(array $konto, string $aktiv): string
 {
-    if (!va_tabellen_da()) {
+    if (!va_tabellen_da() || ($v = va_zeile()) === null) {
         return '';
     }
-    $v = va_zeile();
-    $alle = va_alle();
-    $opt = '';
-    foreach ($alle as $x) {
-        $opt .= '<option value="' . $x['id'] . '"' . ($x['id'] === (int)$v['id'] ? ' selected' : '') . '>' . e($x['name'] . ' (' . $x['kuerzel'] . ')' . ($x['status'] !== 'aktuell' ? ' – ' . VA_STATUS[$x['status']] : '')) . '</option>';
+    $chip = fn(string $st) => '<span class="chip ' . (['aktuell' => 'ok', 'entwurf' => 'offen', 'abgeschlossen' => 'gesperrt'][$st] ?? 'offen') . '">' . e(VA_STATUS[$st]) . '</span>';
+    $liste = '';
+    $gewaehltName = '';
+    foreach (va_alle_fuer($konto) as $x) {
+        $gewaehlt = $x['id'] === (int)$v['id'];
+        if ($gewaehlt) {
+            $gewaehltName = $x['name'];
+        }
+        $unter = implode(' · ', array_filter([VA_ARTEN[va_von($x['id'], 'veranstaltung_art')] ?? '', $x['datum'] !== '' ? tag_text($x['datum']) : '']));
+        $liste .= '<a class="va-eintrag" href="' . e($aktiv) . '?va=' . $x['id'] . '"' . ($gewaehlt ? ' aria-current="true"' : '') . '>'
+            . '<span class="va-haken">' . ($gewaehlt ? icon('check', 16) : '') . '</span>'
+            . '<span class="va-text"><span class="va-name">' . e($x['name']) . '</span><small>' . e($unter) . '</small></span>' . $chip($x['status']) . '</a>';
     }
-    $chip = ['aktuell' => 'ok', 'entwurf' => 'offen', 'abgeschlossen' => 'gesperrt'][$v['status']] ?? 'offen';
-    $h = '<form class="va-leiste" method="get" action="' . e($aktiv) . '"><label for="va-wahl">Veranstaltung</label>'
-        . (count($alle) > 1 ? '<select id="va-wahl" name="va">' . $opt . '</select><button class="knopf zweit klein-knopf" type="submit">Wechseln</button>'
-            : '<strong id="va-wahl">' . e($alle[0]['name'] ?? '') . '</strong>')
-        . ' <span class="chip ' . $chip . '">' . e(VA_STATUS[$v['status']]) . '</span>'
-        . ' <a class="klein-link" href="/team/veranstaltungen">Alle Veranstaltungen</a></form>';
+    $aktionen = $konto['rolle'] === 'betreiber' ? '<div class="va-aktionen"><a href="/team/veranstaltungen#neu">' . icon('plus', 18) . '<span>Neue Veranstaltung …</span></a>'
+        . '<a class="va-verwalten" href="/team/veranstaltungen">' . icon('list-bullets', 18) . '<span>Alle Veranstaltungen verwalten</span></a></div>' : '';
+    return '<details class="va-wechsler"><summary aria-label="Veranstaltung wechseln, gewählt: ' . e($gewaehltName) . '">'
+        . '<span class="va-wahl"><span class="va-label">Veranstaltung</span><span class="va-name">' . e($gewaehltName) . '</span></span>' . $chip($v['status']) . icon('caret-down', 16, 'icon va-pfeil') . '</summary>'
+        . '<div class="va-menue"><p class="va-label">Wechseln zu</p>' . $liste . $aktionen . '</div></details>';
+}
+
+/** Hinweis unter den Reitern, wenn die gewählte Veranstaltung ein Entwurf oder abgeschlossen ist (E-58). */
+function team_veranstaltung_hinweis(): string
+{
+    if (!va_tabellen_da() || ($v = va_zeile()) === null) {
+        return '';
+    }
     if ($v['status'] === 'abgeschlossen') {
-        $h .= '<p class="meldung hinweis va-hinweis" role="status">Abgeschlossen am ' . e(datum_zeit_text($v['abgeschlossen_am'])) . ' – alles nur noch zum Ansehen; Exporte und Zertifikate gehen weiter.</p>';
-    } elseif ($v['status'] === 'entwurf') {
-        $h .= '<p class="meldung hinweis va-hinweis" role="status">Entwurf – noch nicht öffentlich. Unter <a href="/team/veranstaltungen">Veranstaltungen</a> machst du sie zur aktuellen.</p>';
+        return '<p class="meldung hinweis va-hinweis" role="status">Abgeschlossen am ' . e(datum_zeit_text($v['abgeschlossen_am'])) . ' – alles nur noch zum Ansehen; Exporte und Zertifikate gehen weiter.</p>';
     }
-    return $h;
+    if ($v['status'] === 'entwurf') {
+        return '<p class="meldung hinweis va-hinweis" role="status">Entwurf – noch nicht öffentlich. Unter Betrieb → Veranstaltungen wird sie zur aktuellen.</p>';
+    }
+    return '';
 }
 
 function team_seite_fuss(): void
