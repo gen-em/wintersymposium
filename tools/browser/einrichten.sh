@@ -2,7 +2,8 @@
 # Einrichtung der Sandbox für den Browser-Durchlauf (Regel R-12), einmal je
 # Container. Vorbild: NAdoku tools/sandbox/aufbauen.sh.
 #
-# - startet MySQL (lokale Testdatenbank, siehe docs/betrieb.md Abschnitt 6)
+# - installiert MySQL, falls es fehlt, und startet es (lokale Testdatenbank,
+#   siehe docs/betrieb.md Abschnitt 6)
 # - holt die Systembibliotheken, die WebKit braucht
 # - lädt Firefox und WebKit für das vorinstallierte Playwright in einen
 #   eigenen Ordner (/opt/ws-browsers) und verlinkt das vorhandene Chromium
@@ -12,6 +13,11 @@ set -u
 ZIEL=/opt/ws-browsers
 
 echo "MySQL"
+# Fehlt MySQL in der Sandbox, wird es nachinstalliert (AP-15: kam in einer Sandbox vor)
+if ! command -v mysqld >/dev/null 2>&1; then
+    echo "  MySQL fehlt, wird installiert"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mysql-server >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mysql-server >/dev/null 2>&1 || echo "  ACHTUNG: MySQL ließ sich nicht installieren"; }
+fi
 service mysql start >/dev/null 2>&1 || echo "  ACHTUNG: MySQL startet nicht"
 
 echo "Bibliotheken für WebKit"

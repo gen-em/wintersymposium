@@ -149,7 +149,7 @@ const TEAM_BEREICHE = [
     'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
     'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/startseite', 'Startseite'], ['/team/protokoll', 'Protokoll']],
-    'Betrieb' => [['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
+    'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
 ];
 
 function team_reiter(array $konto, string $aktiv): string

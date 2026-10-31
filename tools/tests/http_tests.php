@@ -631,7 +631,7 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Anmeldungen"') && str_contains($r['text'], 'href="/team/workshops"') && str_contains($r['text'], '>Mailings<') && !str_contains($r['text'], '>Kommunikation<') && !str_contains($r['text'], '>Team-Konten<') && !str_contains($r['text'], '>Betrieb<') && !str_contains($r['text'], 'Neue Veranstaltung'), 'Team-Navigation: Bereiche mit Unterseiten; Betrieb (Team-Konten, Neue Veranstaltung) nur für Betreiber (AP-12)');
     pruefe(str_contains($r['text'], 'class="person-menue"') && str_contains($r['text'], '<strong>Mia Mailcode</strong>') && str_contains($r['text'], 'href="/konto"'), 'Personen-Menü mit Name und „Mein Konto“');
     $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Verwaltung"') && str_contains($r['text'], '>Startseite<') && str_contains($r['text'], 'href="/team/veranstaltungen">Betrieb<'), 'Betreiber: Verwaltung mit Startseite, Reiter Betrieb');
+    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Verwaltung"') && str_contains($r['text'], '>Startseite<') && str_contains($r['text'], 'href="/team/status">Betrieb<'), 'Betreiber: Verwaltung mit Startseite, Reiter Betrieb führt zu Status (AP-15)');
     $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Betrieb"') && str_contains($r['text'], '>Team-Konten<') && str_contains($r['text'], '>Newsletter<') && str_contains($r['text'], '>Texte<') && str_contains($r['text'], 'class="va-wechsler"') && str_contains($r['text'], 'Neue Veranstaltung'), 'Betreiber: Reiter Betrieb mit Unterseiten, Wechsler mit „Neue Veranstaltung“ (AP-12)');
     $r = http_anfrage($basis, 'GET', '/team/profil', $h, [], null, $k2);
@@ -889,6 +889,31 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'wiederherstellen', 'name' => $vorTest, 'totp' => strtolower($codes[1])], $b);
     pruefe($r['status'] === 303 && (int)db_wert('SELECT COUNT(*) FROM programmpunkt') === $vorher['punkte'] && (int)db_wert('SELECT COUNT(*) FROM anmeldung') === $vorher['anm'], 'Wiederherstellen: Stand vor den Testdaten zurück');
     pruefe(count(sicherung_liste()) === count($alt) + 3 && http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 200, 'davor automatisch gesichert, Team bleibt eingeloggt');
+    status_http_tests($basis, $h, $b);
+}
+
+/** Betrieb → Status (AP-15, E-65): Seite, Cron-Anleitung, Token nach Klick, Fehlerprotokoll. */
+function status_http_tests(string $basis, string $h, string $b): void
+{
+    abschnitt('HTTP: Status-Seite (AP-15, T-283 bis T-285)');
+    $token = (string)konfig('jobs_token');
+    $r = http_anfrage($basis, 'GET', '/team/status', $h, [], null, $b);
+    $zeilen = preg_match_all('/<div id="zeile-[a-z]+"><dt>/', $r['text']);
+    pruefe($r['status'] === 200 && $zeilen === 7 && str_contains($r['text'], 'href="/team/status" aria-current') && str_contains($r['text'], 'Jetzt prüfen'), 'Betreiber: Status mit allen sieben Zeilen, Reiter aktiv');
+    $unter = substr($r['text'], (int)strpos($r['text'], 'aria-label="Unterseiten von Betrieb"'));
+    pruefe(str_contains($r['text'], 'href="/team/status" class="an"') && strpos($unter, 'href="/team/status"') < strpos($unter, 'href="/team/veranstaltungen"'), 'Status ist die erste Seite unter Betrieb');
+    pruefe(str_contains($r['text'], '/cli/jobs.php') && str_contains($r['text'], 'token=&lt;jobs_token&gt;') && !str_contains($r['text'], $token) && str_contains($r['text'], 'data-kopieren="cron-kommando"') && str_contains($r['text'], '/assets/status.js'), 'GET: Befehl mit Kopieren, URL mit Platzhalter, kein Token im HTML');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['text'], 'href="/team/status#zeile-mail"'), 'Betrieb verweist für Mail-Zahlen auf Status');
+    $csrf = http_csrf($r['text']);
+    $a0 = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'betrieb' AND text = 'Cron-URL mit Token angezeigt'");
+    $r = http_anfrage($basis, 'POST', '/team/status', $h, [], ['csrf' => $csrf, 'aktion' => 'token_zeigen'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'token=' . $token) && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'betrieb' AND text = 'Cron-URL mit Token angezeigt'") === $a0 + 1, 'POST anzeigen: Token im HTML, Protokolleintrag');
+    file_put_contents(betrieb_fehlerlog_datei(), "[test] erste Zeile <b>\n[test] zweite Zeile\n", FILE_APPEND);
+    $r = http_anfrage($basis, 'POST', '/team/status', $h, [], ['csrf' => $csrf, 'aktion' => 'log_zeigen'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], '<pre class="status-log">') && str_contains($r['text'], '[test] erste Zeile &lt;b&gt;'), 'Letzte Zeilen auf Abruf, maskiert');
+    $r = http_anfrage($basis, 'POST', '/team/status', $h, [], ['csrf' => $csrf, 'aktion' => 'log_leeren'], $b);
+    clearstatcache();
+    pruefe($r['status'] === 303 && filesize(betrieb_fehlerlog_datei()) === 0 && str_contains(http_anfrage($basis, 'GET', '/team/status', $h, [], null, $b)['text'], 'Fehlerprotokoll geleert'), 'Leeren: Datei leer, Meldung');
 }
 
 function team_login_tests(string $basis, string $h, string $tmp, string $wurzel): void
@@ -1115,10 +1140,10 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
     pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $aktuell, $h, [], null, $k)['status'] === 403, 'fremde Veranstaltung per ?va= abgewiesen (403)');
     pruefe(http_anfrage($basis, 'GET', '/team/personen?a=' . $fremdAnm, $h, [], null, $k)['status'] === 404, 'Anmeldung einer fremden Veranstaltung: 404');
     $nur = [];
-    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten'] as $pfad) {
+    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten', '/team/status'] as $pfad) {
         $nur[] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
     }
-    pruefe($nur === [403, 403, 403, 403, 403], 'Betrieb-Seiten nur für BetreiberInnen');
+    pruefe($nur === [403, 403, 403, 403, 403, 403], 'Betrieb-Seiten (auch Status, AP-15) nur für BetreiberInnen');
     pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k)['status'] === 200 && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja, Newsletter-Export nein');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
@@ -1278,7 +1303,13 @@ function http_tests(string $wurzel, string $tmp): void
         pruefe($r['status'] === 404, 'falsches Token 404');
         $r = http_anfrage($basis, 'GET', '/health', $h, ['X-Health-Token: ' . str_repeat('h', 40)]);
         $j = json_decode($r['text'], true);
-        pruefe($r['status'] === 200 && ($j['status'] ?? '') === 'ok', 'mit Token 200 und JSON');
+        pruefe($r['status'] === 200 && in_array($j['status'] ?? '', ['ok', 'fehler'], true) && count($j['zeilen'] ?? []) === 7, 'mit Token 200 und JSON mit sieben Zeilen (AP-15)');
+        pruefe(($j['zeilen']['cron']['ampel'] ?? '') === 'fehler' && ($j['status'] ?? '') === 'fehler', 'Cron noch nie gelaufen → Zeile rot, status fehler (HTTP 200)');
+        $gleich = true;
+        foreach (betrieb_status() as $bz) {
+            $gleich = $gleich && ($j['zeilen'][$bz['id']]['ampel'] ?? '') === $bz['ampel'];
+        }
+        pruefe($gleich, 'health liefert dieselben Ampeln wie betrieb_status() (T-282)');
         pruefe(($j['schema']['ist'] ?? -1) === ($j['schema']['soll'] ?? -2), 'Schema aktuell');
         pruefe(str_starts_with($r['kopf']['content-type'] ?? '', 'application/json'), 'Content-Type JSON');
 
@@ -1289,6 +1320,8 @@ function http_tests(string $wurzel, string $tmp): void
         $j = json_decode($r['text'], true);
         pruefe($r['status'] === 200 && ($j['status'] ?? '') === 'ok', 'Lauf ausgeführt');
         pruefe(einstellung('jobs_letzter_ausloeser') === 'url', 'Auslöser url gespeichert');
+        $j = json_decode(http_anfrage($basis, 'GET', '/health', $h, ['X-Health-Token: ' . str_repeat('h', 40)])['text'], true);
+        pruefe(($j['zeilen']['cron']['ampel'] ?? '') === 'ok' && ($j['zeilen']['cron']['details']['Ausgelöst über'] ?? '') === 'URL-Aufruf', 'nach dem Lauf: Cron-Zeile grün');
 
         abschnitt('Jobs per Kommandozeile (T-105)');
         $aus = [];

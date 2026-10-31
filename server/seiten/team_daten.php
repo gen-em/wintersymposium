@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /*
- * Daten: Sicherungen und Testdaten (nur Betreiber; E-47).
+ * Daten: Sicherungen und Testdaten (nur Betreiber; E-47). Zahlen zum
+ * Mailversand stehen seit AP-15 auf der Status-Seite (E-65).
  * Herunterladen und Wiederherstellen verlangen den eigenen Code aus der
  * Authenticator-App (wie der Rollenwechsel, E-41). Testdaten laden gibt es nur
  * auf Staging und in der Entwicklung, nie auf Produktion.
@@ -140,15 +141,8 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
 
 <div class="kasten abstand-oben">
     <h2 class="zwischen">Mailversand</h2>
-    <dl class="liste-def">
-        <div><dt>Eingerichtet</dt><dd><?= $ms['eingerichtet'] ? '<span class="chip ok">ja</span> Modus ' . e($ms['modus']) : '<span class="chip wl">nein</span> In der config.php fehlt im Abschnitt mail der Eintrag host.' ?></dd></div>
-        <?php foreach ($ms['postfaecher'] as $pf): ?>
-        <div><dt><?= e($pf['titel']) ?></dt><dd><?php if ($pf['da']): ?><span class="mono"><?= e($pf['absender']) ?></span><br><span class="meta klein">heute <?= $pf['heute'] ?> / <?= $pf['limit'] ?> gesendet (Mailings bis <?= $pf['rundmail'] ?>)<?= $pf['offen'] > 0 ? ' · ' . $pf['offen'] . ' warten' : '' ?></span><?php else: ?><span class="chip offen">nicht eingerichtet</span> <span class="meta klein">In der config.php fehlt im Abschnitt mail der Eintrag newsletter (Benutzer und Passwort des Postfachs). Mailings gehen bis dahin über anmeldung@.</span><?php endif; ?></dd></div>
-        <?php endforeach; ?>
-        <?php if ($ms['umleiten'] !== ''): ?><div><dt>Umleitung</dt><dd>Alle Mails gehen an <span class="mono"><?= e($ms['umleiten']) ?></span></dd></div><?php endif; ?>
-        <div><dt>Warteschlange</dt><dd><?= $ms['offen'] ?> offen<?= $ms['aelteste_offen'] !== null ? ' (älteste seit ' . e(datum_zeit_text($ms['aelteste_offen'])) . ')' : '' ?> · <?= $ms['fehler'] ?> endgültig fehlgeschlagen · heute gesendet <?= $ms['heute'] ?></dd></div>
-        <?php if ($ms['letzter_fehler'] !== null): ?><div><dt>Letzter Fehler</dt><dd><span class="mono"><?= e($ms['letzter_fehler']['fehler']) ?></span><br><span class="meta klein">Mail vom <?= e(datum_zeit_text($ms['letzter_fehler']['erstellt_am'])) ?>, <?= (int)$ms['letzter_fehler']['versuche'] ?> Versuche</span></dd></div><?php endif; ?>
-    </dl>
+    <p>Eingerichtet, Warteschlange, Tagesstand je Postfach und letzter Fehler stehen unter <a href="/team/status#zeile-mail">Status</a>.</p>
+    <?php if ($ms['umleiten'] !== ''): ?><p>Umleitung: alle Mails gehen an <span class="mono"><?= e($ms['umleiten']) ?></span>.</p><?php endif; ?>
     <form method="post" action="/team/daten" class="abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="testmail"><button class="knopf zweit" type="submit">Testmail an mich</button></form>
     <p class="meta klein">Versendet sofort an <?= e($konto['email']) ?> und zeigt den Fehler des Mailservers, falls er die Mail ablehnt. Das Passwort wird nie angezeigt.</p>
 </div>
