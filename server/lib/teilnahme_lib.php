@@ -539,15 +539,22 @@ function zertifikat_pdf(array $d): string
     $pdf->SetTextColor(...$f['meta']);
     $pdf->Cell(68, 5, va('zertifikat_leitung_rolle'), 0, 2);
 
-    $fuss = array_filter([$punkte !== '' && $kammer !== '' ? '¹ anerkannt durch die ' . $kammer : '', 'Teilnahme vom Team erfasst', 'Nr. ' . $d['nr']]);
-    $pdf->SetXY($links, 272.0);
+    // Fußzeile in einer Zeile: links Hinweis und Nummer, rechts die Webadresse, beides grün (Admin 2026-10-31).
+    // Passt der Kammer-Hinweis nicht mehr daneben, steht er eine Zeile darüber.
+    $kammerHinweis = $punkte !== '' && $kammer !== '' ? '¹ anerkannt durch die ' . $kammer : '';
+    $domain = (string)parse_url(url('/'), PHP_URL_HOST);
     $pdf->SetFont('mono', '', 8.25);
     $pdf->SetTextColor(107, 112, 0);
-    $pdf->MultiCell($breite, 4, implode(' · ', $fuss), 0, 'L');
+    $links_text = implode(' · ', array_filter([$kammerHinweis, 'Teilnahme vom Team erfasst', 'Nr. ' . $d['nr']]));
+    if ($kammerHinweis !== '' && $pdf->GetStringWidth($links_text) + $pdf->GetStringWidth($domain) + 6 > $breite) {
+        $pdf->SetXY($links, 276.5);
+        $pdf->Cell($breite, 4, $kammerHinweis, 0, 0, 'L');
+        $links_text = 'Teilnahme vom Team erfasst · Nr. ' . $d['nr'];
+    }
     $pdf->SetXY($links, 281.0);
-    $pdf->SetFont('mono', '', 9);
-    $pdf->SetTextColor(...$f['meta']);
-    $pdf->Cell($breite, 4.5, (string)parse_url(url('/'), PHP_URL_HOST), 0, 0, 'C');
+    $pdf->Cell($breite, 4.5, $links_text, 0, 0, 'L');
+    $pdf->SetXY($links, 281.0);
+    $pdf->Cell($breite, 4.5, $domain, 0, 0, 'R');
     return $pdf->Output('S');
 }
 

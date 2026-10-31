@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.19.1] – 2026-10-31
+
+### Geändert
+
+- Beispieldatensatz mit drei Veranstaltungen: neu ein abgeschlossener „Fortbildungsabend klinische Notfallmedizin“ (Vortragsabend ohne Essen und Workshops, mit Punkten; Lea und Kai da, Nora nicht erschienen); Browser-Durchlauf prüft seinen Rückblick.
+- Teilnahmebescheinigung: Fußzeile in einer Zeile – links „Teilnahme vom Team erfasst · Nr.“, rechts die Webadresse, beides grün; ein langer Kammer-Hinweis steht darüber.
+
 ## [0.19.0] – 2026-10-31
 
 Abschluss und Datenschutz (AP-9, E-59).
