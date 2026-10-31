@@ -107,16 +107,16 @@ html { scroll-padding-top: 88px; }
     .nav-gross { display: flex; }
 }
 
-/* ---- Knöpfe (Standard AP-12, E-60, Variante B: getönte Fläche, kein Rand) ----
- * Haupt: Akzent gefüllt. Zweit: Akzent getönt. Gefahr: Rot getönt. Grün: Anmelden.
+/* ---- Knöpfe (Standard AP-12, E-60; Variante A seit 0.21.1: Ring 2 px innen, Admin 2026-10-31) ----
+ * Haupt: Akzent gefüllt. Zweit: Ring in Akzentfarbe. Gefahr: Ring in Rot; Hover füllt leicht. Grün: Anmelden.
  * Normal 44 px, klein 36 px; voll gerundet; nur ganze Pixel; Hover ändert nur
  * Fläche und Farbe, Tastatur-Fokus mit weißem Ring. */
 .knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 22px; box-sizing: border-box; border-radius: 999px; background: var(--akz); color: var(--auf-akz); font: 700 1rem var(--f-text); line-height: 1.2; text-decoration: none; border: 0; cursor: pointer; transition: background-color .15s, color .15s; }
 a.knopf { color: var(--auf-akz); }
 .knopf:hover { background: color-mix(in srgb, var(--akz) 82%, #FFFFFF); color: var(--auf-akz); }
 .knopf:focus-visible { outline: 2px solid var(--weiss); outline-offset: 3px; }
-.knopf.zweit, a.knopf.zweit { background: color-mix(in srgb, var(--akz) 16%, transparent); color: color-mix(in srgb, var(--akz) 72%, #FFFFFF); border: 0; }
-.knopf.zweit:hover, a.knopf.zweit:hover { background: color-mix(in srgb, var(--akz) 28%, transparent); color: var(--weiss); }
+.knopf.zweit, a.knopf.zweit { background: transparent; color: var(--akz); border: 0; box-shadow: inset 0 0 0 2px var(--akz); }
+.knopf.zweit:hover, a.knopf.zweit:hover { background: color-mix(in srgb, var(--akz) 14%, transparent); color: var(--akz); }
 .knopf.gruen, a.knopf.gruen { background: var(--gruen); color: var(--nachtblau); box-shadow: 0 3px 10px rgba(0, 0, 0, .28); }
 .knopf.gruen:hover, a.knopf.gruen:hover { background: color-mix(in srgb, var(--gruen) 85%, #FFFFFF); color: var(--nachtblau); }
 
@@ -231,13 +231,13 @@ span.gl { cursor: default; }
 .entwurf-banner.vorschau { background: rgba(180, 140, 255, .16); border-color: var(--lila); margin-top: 20px; }
 .entwurf-banner .eb-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
 .entwurf-banner .eb-knoepfe form { margin: 0; }
-.entwurf-banner .knopf.zweit, .entwurf-banner a.knopf.zweit { background: rgba(255, 255, 255, .14); color: var(--fg); }
+.entwurf-banner .knopf.zweit, .entwurf-banner a.knopf.zweit { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 2px var(--fg); }
 .bestaetigen > summary { list-style: none; cursor: pointer; }
 .bestaetigen > summary::-webkit-details-marker { display: none; }
 .bestaetigen[open] > form { margin-top: 8px; padding: 10px 12px; background: var(--bg); color: var(--fg); border: 2px solid var(--rot); display: grid; gap: 8px; max-width: 360px; }
 .bestaetigen[open] > form p { margin: 0; }
-.knopf.gefahr, a.knopf.gefahr { background: rgba(255, 90, 95, .16); color: var(--rot-300); border: 0; }
-.knopf.gefahr:hover, a.knopf.gefahr:hover { background: rgba(255, 90, 95, .3); color: var(--weiss); }
+.knopf.gefahr, a.knopf.gefahr { background: transparent; color: var(--rot); border: 0; box-shadow: inset 0 0 0 2px var(--rot); }
+.knopf.gefahr:hover, a.knopf.gefahr:hover { background: rgba(255, 90, 95, .14); color: var(--rot); }
 .entwurf-banner .knopf.gefahr { background: var(--rot); color: var(--nachtblau); }
 .gefahrzone { margin-top: 18px; }
 .filterzeile { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
@@ -375,7 +375,7 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .meldung.ok::before { -webkit-mask-image: url(/assets/icons/check-circle.svg); mask-image: url(/assets/icons/check-circle.svg); }
 .meldung.hinweis { background: var(--lila); }
 .meldung a, .meldung a:hover { color: var(--nachtblau); text-decoration: underline; font-weight: 700; }
-.meldung .knopf.zweit, .meldung a.knopf.zweit { background: rgba(0, 30, 58, .14); color: var(--nachtblau); }
+.meldung .knopf.zweit, .meldung a.knopf.zweit { background: transparent; color: var(--nachtblau); box-shadow: inset 0 0 0 2px var(--nachtblau); }
 
 /* Zeilen-Menü „Bearbeiten“ (Team-Konten, AP-13, Entwurf 9) */
 .zeilen-menue { position: relative; display: inline-block; }
@@ -408,11 +408,13 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .team-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--fg); text-decoration: none; border-bottom: 3px solid transparent; }
 .team-nav a.an { color: var(--akz); background: var(--bg); border-top: 3px solid var(--akz); border-bottom-color: var(--bg); margin-bottom: -1px; }
 .team-navi > .team-nav:only-child a.an { margin-bottom: 0; border-bottom-color: transparent; }
-.team-unter { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; padding: 0 14px; background: var(--bg); }
+.team-unter { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; padding: 0 10px; background: var(--bg); }
 .team-unter-kopf { font: 600 .74rem var(--f-zwischen); letter-spacing: .08em; text-transform: uppercase; color: var(--akz); }
-.team-unter a { display: inline-flex; align-items: center; min-height: 42px; padding: 0 2px; font: 600 .85rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .05em; color: var(--meta); text-decoration: none; border-bottom: 2px solid transparent; }
-.team-unter a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--akz); }
-.team-unter a:hover { color: var(--fg); }
+.team-unter a { display: inline-flex; align-items: center; min-height: 32px; margin: 5px 0; padding: 0 12px; border-radius: 999px; font: 600 .85rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .05em; color: var(--meta); text-decoration: none; }
+/* Aktiver Unterpunkt als lila Fläche (Rückmeldung 2026-10-31: der Strich war kaum zu sehen) */
+.team-unter a[aria-current="page"] { background: var(--akz); color: var(--auf-akz); }
+.team-unter a:hover { color: var(--fg); background: color-mix(in srgb, var(--akz) 14%, transparent); }
+.team-unter a[aria-current="page"]:hover { background: var(--akz); color: var(--auf-akz); }
 .kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
 .kachel { background: var(--flaeche); border: 1px solid var(--linie); padding: 14px 16px; }
 .kachel p { margin: 6px 0 0; }

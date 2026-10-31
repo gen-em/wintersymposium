@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.1] – 2026-10-31
+
+### Geändert
+
+- **Knopf-Standard Variante A** (Entwurf 6): Zweit- und Gefahr-Knöpfe mit 2-px-Ring statt getönter Fläche, beim Hover leicht gefüllt (Admin 2026-10-31).
+- Team-Bereich: der aktive Unterpunkt (z. B. Betrieb → Texte) ist eine lila Fläche statt eines dünnen Strichs.
+- Statistik: die EFN-Zeile in der Kachel „Angemeldet“ entfällt.
+
 ## [0.21.0] – 2026-10-31
 
 Team-Konten aufgeräumt, Meldungen auffälliger (AP-13, E-61).

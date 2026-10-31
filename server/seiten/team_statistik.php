@@ -27,7 +27,7 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
 <p class="meta klein">Stand <?= e(datum_zeit_text(db_jetzt())) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
 
 <div class="kacheln">
-    <div class="kachel"><div class="lbl">Angemeldet</div><div class="zahl"><?= $d['angemeldet'] ?><?= $d['kapazitaet'] !== null && $bg === '' ? ' / ' . $d['kapazitaet'] : '' ?></div><p class="meta klein"><?= $d['kapazitaet'] !== null && $bg === '' ? stat_prozent($d['angemeldet'], $d['kapazitaet']) . ' der Kapazität · ' : '' ?>+ <?= $d['unbestaetigt'] ?> Mail nicht bestätigt<br>EFN: <?= $d['mit_efn'] ?> von <?= $d['aerzte'] ?> <?= e(va_liste('berufsgruppen')[0] ?? '') ?></p></div>
+    <div class="kachel"><div class="lbl">Angemeldet</div><div class="zahl"><?= $d['angemeldet'] ?><?= $d['kapazitaet'] !== null && $bg === '' ? ' / ' . $d['kapazitaet'] : '' ?></div><p class="meta klein"><?= $d['kapazitaet'] !== null && $bg === '' ? stat_prozent($d['angemeldet'], $d['kapazitaet']) . ' der Kapazität · ' : '' ?>+ <?= $d['unbestaetigt'] ?> Mail nicht bestätigt</p></div>
     <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl"><?= $d['wl_eintraege'] ?></div><p class="meta klein">Einträge · <?= $d['wl_personen'] ?> Personen · <?= $d['warteliste'] ?> fürs Symposium</p></div>
     <div class="kachel"><div class="lbl">Konten</div><div class="zahl"><?= $d['konten'] ?></div><p class="meta klein"><?= stat_prozent($d['konten'], $d['bestaetigt']) ?> der Angemeldeten · Newsletter-Wunsch <?= $d['newsletter'] ?></p></div>
 </div>
