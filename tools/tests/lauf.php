@@ -316,7 +316,10 @@ va_zwischenspeicher_leeren();
     require_once dirname(__DIR__, 2) . '/server/testdaten/beispieldaten.php';
     $bd = beispieldaten_laden();
     $vj = tk_veranstaltungen($bd['anmeldungen']['lea_konto']);
-    pruefe(va_zeile($bd['vorjahr']['id'])['status'] === 'abgeschlossen' && count($vj) === 2 && $vj[1]['zertifikat'] && $vj[1]['stand'] === 'teilgenommen', 'Beispieldaten: abgeschlossenes Vorjahr, Lea mit Zertifikat im Rückblick');
+    pruefe(va_zeile($bd['vorjahr']['id'])['status'] === 'abgeschlossen' && count($vj) === 3 && $vj[1]['zertifikat'] && $vj[1]['stand'] === 'teilgenommen' && $vj[2]['zertifikat'], 'Beispieldaten: abgeschlossenes Vorjahr, Lea mit Zertifikat im Rückblick');
+    $ab = $bd['abend'];
+    pruefe(va_zeile($ab['id'])['status'] === 'abgeschlossen' && !va_mit($ab['id'], fn() => va_an('mit_essen')) && va_von($ab['id'], 'veranstaltung_art') === 'vortrag'
+        && tn_anwesend($ab['kai']) && !tn_anwesend($ab['nora']) && $vj[1]['kuerzel'] === 'fortbildungsabend-notfallmedizin', 'Beispieldaten: Fortbildungsabend ohne Essen, Kai da, Nora nicht erschienen, Lea mit drei Veranstaltungen');
     $pv = programm_veroeffentlicht()['punkte'] ?? [];
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));

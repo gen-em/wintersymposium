@@ -23,6 +23,7 @@ function beispieldaten_laden(): array
     $r['newsletter'] = beispieldaten_newsletter();
     $r['teilnahme'] = beispieldaten_teilnahme($r['anmeldungen']);
     $r['vorjahr'] = beispieldaten_vorjahr($r['anmeldungen']);
+    $r['abend'] = beispieldaten_abend($r['anmeldungen']);
     return $r;
 }
 
@@ -282,4 +283,63 @@ function beispieldaten_vorjahr(array $anm): array
     va_abschliessen($vid, null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['id' => $vid];
+}
+
+/**
+ * Fortbildungsabend klinische Notfallmedizin (Admin 2026-10-31): vergangener,
+ * abgeschlossener Vortragsabend vor 100 Tagen – ohne Essen und Workshops, mit
+ * Fortbildungspunkten. Lea (mit Konto) und Kai (Arzt ohne Konto) waren da,
+ * Nora ist nicht erschienen. Damit stehen drei Veranstaltungen im Datensatz:
+ * Wintersymposium 2027 (aktuell), dieser Abend, Wintersymposium 2026.
+ */
+function beispieldaten_abend(array $anm): array
+{
+    $r = va_anlegen('fortbildungsabend-notfallmedizin', 'Fortbildungsabend klinische Notfallmedizin', null, null);
+    if (!isset($r['id'])) {
+        throw new RuntimeException('Beispieldaten Abend: ' . ($r['fehler'] ?? ''));
+    }
+    $vid = (int)$r['id'];
+    $ids = va_mit($vid, function () use ($anm): array {
+        $tag = gmdate('Y-m-d', time() - 100 * 86400);
+        foreach (['veranstaltung_art' => 'vortrag', 'veranstaltung_datum' => $tag, 'veranstaltung_beginn' => '19:00', 'veranstaltung_ende' => '21:00',
+            'veranstaltung_ort' => 'Hörsaal Testklinik', 'veranstaltung_kurz' => 'Fortbildungsabend', 'veranstaltung_kapazitaet' => '80',
+            'mit_essen' => 'nein', 'mit_cme' => 'ja', 'mit_zertifikat' => 'ja',
+            'anmeldung_start' => gmdate('Y-m-d H:i:s', time() - 160 * 86400), 'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
+            'cme_punkte' => '2', 'cme_kategorie' => 'A', 'cme_kammer' => 'Beispiel-Landesärztekammer', 'zertifikat_leitung' => 'Dr. Erika Erfunden'] as $k => $w) {
+            einstellung_setzen($k, $w);
+        }
+        inhalt_setzen('start_titel', 'Fortbildungsabend <em>klinische Notfallmedizin</em>');
+        inhalt_setzen('start_unter', 'Zwei Vorträge, ein Fall, viel Zeit für Fragen.');
+        foreach ([['typ' => 'vortrag', 'kuerzel' => 'VT 01', 'titel' => 'Lungenembolie in der Notaufnahme', 'ort' => 'Hörsaal', 'beginn' => '19:00', 'ende' => '19:40'],
+            ['typ' => 'vortrag', 'kuerzel' => 'VT 02', 'titel' => 'Hyperkaliämie. Erkennen und handeln.', 'ort' => 'Hörsaal', 'beginn' => '19:45', 'ende' => '20:25'],
+            ['typ' => 'fall', 'kuerzel' => 'FB 01', 'titel' => 'Fall des Abends', 'ort' => 'Hörsaal', 'beginn' => '20:30', 'ende' => '21:00']] as $e) {
+            $p = programm_punkt_pruefen($e);
+            if ($p['fehler'] !== []) {
+                throw new RuntimeException('Beispieldaten Abend: ' . json_encode($p['fehler'], JSON_UNESCAPED_UNICODE));
+            }
+            programm_punkt_speichern(null, $p, null);
+        }
+        programm_veroeffentlichen(null);
+        $bg = va_liste('berufsgruppen');
+        $lea = anm_laden($anm['lea']);
+        $personen = [
+            'lea' => [$lea['vorname'], $lea['nachname'], $lea['email'], $lea['berufsgruppe'], $lea['institution'], (string)$lea['efn'], $anm['lea_konto']],
+            'kai' => ['Kai', 'Abend', 'kai.abend@example.org', $bg[0], 'Klinikum Beispielstadt', '', null],
+            'nora' => ['Nora', 'Notfall', 'nora.notfall@example.org', $bg[1] ?? $bg[0], 'Rettungswache Musterdorf', '', null],
+        ];
+        $ids = [];
+        foreach ($personen as $k => [$vor, $nach, $mail, $beruf, $inst, $efn, $konto]) {
+            $w = anm_daten_pruefen(['vorname' => $vor, 'nachname' => $nach, 'email' => $mail, 'berufsgruppe' => $beruf,
+                'beruf_sonstige' => '', 'institution' => $inst, 'efn' => $efn, 'essen' => 'egal'])['werte'];
+            $e = anm_anlegen($w, ['fest' => [], 'warte' => []], false);
+            db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL, konto_id = ?, zertifikat_am = ? WHERE id = ?",
+                [db_jetzt(), $konto, $k === 'nora' ? null : db_jetzt(), $e['id']]);
+            $ids[$k] = (int)$e['id'];
+        }
+        tn_setzen((int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = 0', [$ids['nora']]), false, null);
+        return $ids;
+    });
+    va_abschliessen($vid, null);
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['id' => $vid] + $ids;
 }

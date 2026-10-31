@@ -235,6 +235,9 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         // E-58: abgeschlossene Vorjahres-Veranstaltung unter ihrem Kürzel (nur Rückblick)
         await pruefeSeite(p, fehler, engine, breite, 'archiv', basis + '/wintersymposium2026');
         notiere(engine, breite, 'archiv', 'Rückblick ohne Anmeldung', (await p.textContent('body')).includes('Diese Veranstaltung ist vorbei') && !await p.isVisible('.held-knoepfe'));
+        // Fortbildungsabend (Vortragsabend ohne Workshops und Essen, Beispieldaten 2026-10-31)
+        await pruefeSeite(p, fehler, engine, breite, 'archiv-abend', basis + '/fortbildungsabend-notfallmedizin');
+        notiere(engine, breite, 'archiv-abend', 'Abend: Rückblick mit Vorträgen', (await p.textContent('body')).includes('Hyperkaliämie') && (await p.textContent('body')).includes('Diese Veranstaltung ist vorbei'));
         await pruefeSeite(p, fehler, engine, breite, 'start', basis + '/');
         notiere(engine, breite, 'start', w < 760 ? 'Menü-Knopf sichtbar, Liste versteckt' : 'Navigation sichtbar',
           w < 760 ? (await p.isVisible('.menue summary') && !await p.isVisible('.nav-gross a')) : await p.isVisible('.nav-gross a'));
@@ -358,7 +361,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // E-58: Rückblick unter „Mein Konto“ – Vorjahr mit Zertifikat
       await p.setViewportSize({ width: 390, height: 844 });
       await p.goto(basis + '/konto');
-      notiere(engine, 'handy', 'konto', 'Deine Veranstaltungen: Vorjahr mit Zertifikat', await p.isVisible('#veranstaltungen') && (await p.textContent('#veranstaltungen')).includes('teilgenommen') && await p.locator('#veranstaltungen a[href^="/konto/zertifikat"]').count() === 2);
+      notiere(engine, 'handy', 'konto', 'Deine Veranstaltungen: drei mit Zertifikat', await p.isVisible('#veranstaltungen') && (await p.textContent('#veranstaltungen')).includes('teilgenommen') && await p.locator('#veranstaltungen a[href^="/konto/zertifikat"]').count() === 3);
       {
         const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#veranstaltungen a[href^="/konto/zertifikat"] >> nth=1')]);
         const ziel = path.join(AUS, `${engine}-zertifikat-vorjahr.pdf`);
