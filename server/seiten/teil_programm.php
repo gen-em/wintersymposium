@@ -135,7 +135,7 @@ endforeach; ?>
         <h2 class="titel" id="pp-<?= $p['id'] ?>-titel"><?= e($p['titel']) ?></h2>
         <?php if ($p['typ'] !== 'workshop' && $p['beginn'] !== ''): ?><p class="mono"><?= e($p['beginn'] . '–' . $p['ende']) ?> · <?= $dauer($p['beginn'], $p['ende']) ?> min</p><?php endif; ?>
         <?php if ($p['untertitel'] !== ''): ?><p class="unter-fett"><?= e($p['untertitel']) ?></p><?php endif; ?>
-        <?= editor_html($p['beschreibung'], 'block', false) ?>
+        <?= editor_html($p['beschreibung']) ?>
         <?php if ($p['typ'] === 'workshop'): ?>
             <?php if ($p['bring'] !== ''): ?><p><strong>Bring:</strong> <?= e($p['bring']) ?></p><?php endif; ?>
             <?php if ($p['notiz'] !== ''): ?><div class="zettel"><p class="zettel-kopf">Notiz vom Team</p><p><?= e($p['notiz']) ?></p></div><?php endif; ?>
@@ -151,7 +151,7 @@ endforeach; ?>
             <?php foreach ($p['dozenten'] as $d): ?>
                 <div class="doz">
                     <?php if (!empty($d['foto'])): ?><img class="foto" src="/bild/<?= e($d['foto']) ?>" alt="" width="56" height="56" loading="lazy"><?php else: ?><span class="foto" aria-hidden="true"><?= e(mb_substr($d['name'], 0, 1)) ?></span><?php endif; ?>
-                    <div><p><strong><?= e($d['name']) ?></strong><?= $d['funktion'] !== '' ? '<br><span class="meta klein">' . e($d['funktion']) . '</span>' : '' ?></p><?php if ($d['kurzbio'] !== ''): ?><div class="klein"><?= editor_html($d['kurzbio'], 'block', false) ?></div><?php endif; ?></div>
+                    <div><p><strong><?= e($d['name']) ?></strong><?= $d['funktion'] !== '' ? '<br><span class="meta klein">' . e($d['funktion']) . '</span>' : '' ?></p><?php if ($d['kurzbio'] !== ''): ?><div class="klein"><?= editor_html($d['kurzbio']) ?></div><?php endif; ?></div>
                 </div>
             <?php endforeach; ?>
             </div>

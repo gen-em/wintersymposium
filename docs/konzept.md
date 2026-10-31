@@ -512,7 +512,7 @@ nicht_uebernehmen:
 - id: AP-16
   titel: "Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (Review AP-R2)"
   ziel: "Alle übrigen bestätigten Funde des Reviews beheben, die kein eigenes Paket brauchen; jeder Fund zuerst mit Test belegt (rot), dann behoben (grün)"
-  quelle: "docs/review-2026-10-31.md (B-4, B-6, B-7, B-8, B-10, B-11, B-12, B-14, S-3, S-4, S-5, S-6, S-9, S-11, S-12; dazu V-4 als Helfer); Entscheidungen E-63"
+  quelle: "docs/review-2026-10-31.md (B-4, B-6, B-7, B-8, B-10, B-12, B-14, S-3, S-4, S-5, S-6, S-9, S-11, S-12; dazu V-4 als Helfer); Entscheidungen E-63"
   abhaengig_von: [AP-14]
   nicht_enthalten:
     - "S-7 (Aussperren eines Kontos durch 5 falsche Passwörter): Zielkonflikt, Entscheidung O-47"
@@ -545,12 +545,11 @@ nicht_uebernehmen:
         - "Doku betrieb.md: „Code aus der App“ durch „zweiter Faktor“ ersetzen"
       test: "lauf.php: Konto nur mit Mail-Code: zweitfaktor_bestaetigen mit gültigem Mail-Code → null, Feld gesetzt; 5 falsche Codes → gesperrt; Konto nur mit Passkey: Aktion bestaetigen setzt das Feld; Passwort ändern mit 5 falschen alten Passwörtern → gesperrt; http_tests: Sicherung anlegen mit Mail-Code"
     - nr: 4
-      fund: "S-3, B-11"
-      titel: "Team-Mitglieder bekommen nur eigene, bestätigte Anmeldungen; Team-Reiter überall"
+      fund: "S-3 (B-11 ist schon in 0.21.4 behoben)"
+      titel: "Team-Mitglieder bekommen nur eigene, bestätigte Anmeldungen"
       loesung:
         - "anm_aktuell(): für Team-Konten nur die verknüpfte Anmeldung (konto_id) oder eine bestätigte mit gleicher Adresse übernehmen; unbestätigte Anmeldungen mit der Team-Adresse werden nicht übernommen und auf „Meine Anmeldung“ nicht als eigene gezeigt"
-        - "seite_kopf(): $team unabhängig von der Option teilnehmer über team_gesehen() bestimmen, damit der grüne Reiter „Team-Bereich“ auch auf „Meine Anmeldung“ steht"
-      test: "lauf.php: unbestätigte Anmeldung mit Team-Adresse → anm_aktuell() null für das Team-Konto; bestätigte → übernommen; http_tests: /deine-anmeldung als Team → Reiter Team-Bereich im HTML"
+      test: "lauf.php: unbestätigte Anmeldung mit Team-Adresse → anm_aktuell() null für das Team-Konto; bestätigte → übernommen"
     - nr: 5
       fund: "B-8, B-12, B-14, S-11"
       titel: "Kleine Korrekturen in Programm, Mailings, Konto, Protokoll"
@@ -856,6 +855,8 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-30 | Export als xlsx und PDF umgesetzt: E-56 neu (Antworten zu O-35, Umfang, Ergebnis, Probleme); O-35 entschieden; Hinweis in O-19. |
 | 2026-10-30 | AP-10 umgesetzt: E-57 neu (Zertifikat-Entwurf C und Antworten des Admins, Umsetzung, Probleme); AP-10 Status, Ergebnis, Probleme; O-19 entschieden, O-16 teilweise. |
 | 2026-10-31 | AP-11 Mehrere Veranstaltungen neu und umgesetzt (E-58); Antworten zu AP-9 festgehalten (E-59). |
+| 2026-10-31 | Editor überall mit derselben Leiste (zentral festgelegt), Bilder und Knöpfe auch im Programm und in Kurzbios; obere Navigationsleiste bleibt wie sie ist (Admin). |
+| 2026-10-31 | „Meine Anmeldung“ zeigt dem Team-Konto den Team-Bereich in der Leiste. |
 | 2026-10-31 | Startseite erkennt Login auch ohne Ausgabepuffer (Sitzung vor der ersten Ausgabe öffnen, Testserver ohne Puffer); O-40 (Mails im Branding) und O-41 (eigene Workshops im Programm markieren) auf Halde; Impressum und Datenschutz mit derselben Werkzeugleiste wie die Mailings (Knopf, HTML), Platzhalter unter dem Mail-Editor erklärt. |
 | 2026-10-31 | AP-16 (Review AP-R2: B-4, B-6, B-7, B-8, B-10 bis B-12, B-14, S-3 bis S-6, S-9, S-11, S-12, Helfer V-4) geplant mit neun Unterpunkten; O-47 (Aussperren je Adresse) neu; S-8 und S-10 begründet nicht enthalten. |
 | 2026-10-31 | AP-15 Status-Seite unter Betrieb geplant (E-65): Ampel-Zeilen, Cron-Anleitung mit Kopieren und Token nach Klick, Fehlerprotokoll, health aus derselben Quelle. |

@@ -2,12 +2,25 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
-## [0.21.4] – 2026-10-31
+## [0.21.6] – 2026-10-31
 
 ### Doku
 
 - **Code-Review** mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`: 14 Bugs, 12 Sicherheitspunkte, 53 Vereinheitlichungspunkte, Vorschlag für Arbeitspakete. Noch keine Behebung.
 - **Konzept:** E-63 (Review-Behebung: Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket), E-64 (site.css als alleinige Design-Vorlage, Mockups Archiv, CLAUDE.md angepasst; Shell-Cronjob als Standard, betrieb.md Schritt 6; technische Grenzen bleiben Konstanten, R-11 ergänzt), E-65 (Status-Seite unter Betrieb). **AP-14** Review-Behebung 1, **AP-15** Status-Seite, **AP-16** Review-Behebung 2 geplant mit Unterpunkten und Tests; O-42 bis O-46 entschieden, O-47 offen; Prüfprotokoll reserviert T-275 bis T-296.
+
+## [0.21.5] – 2026-10-31
+
+### Geändert
+
+- **Editor überall mit derselben Leiste** (Admin 2026-10-31): Alle mehrzeiligen Felder (Texte der Startseite, Impressum, Datenschutz, Programm-Beschreibung, Kurzbio, Mailings) haben B, I, H · Liste, 1. Liste, Link, Bild, Knopf · HTML. Die Leiste ist an einer Stelle festgelegt (`EDITOR_LEISTE`, `editor_attribute()` in `inhalt_lib.php`). Ausnahmen: Platzhalter nur in Mails, einzeilige Felder (Titel, Untertitel, Beschreibung einer Newsletter-Liste) nur fett, kursiv, Link.
+- **Bilder und Knöpfe im Programm-Popup und in Kurzbios**; der Aufräum-Job sucht Text-Bilder jetzt auch im Programm, im veröffentlichten Stand und bei den Dozierenden.
+
+## [0.21.4] – 2026-10-31
+
+### Behoben
+
+- **„Meine Anmeldung“ zeigte dem Team-Konto keinen Team-Bereich** in der Leiste (Rückmeldung 2026-10-31): Seiten, die die Anmeldung selbst übergeben, haben das Team-Login nicht geprüft. Der Seitenkopf prüft es jetzt immer.
 
 ## [0.21.3] – 2026-10-31
 
