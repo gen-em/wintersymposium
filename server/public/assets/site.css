@@ -203,6 +203,18 @@ span.gl { cursor: default; }
 /* Vorträge und Fallbesprechungen im Block (Rückmeldung 2026-10-30) */
 .gb.vt { background: var(--lila); color: var(--nachtblau); }
 .gb.fb { background: transparent; color: var(--fg); border: 2px solid var(--rot-300); }
+/* Eigene Plätze im Programm (O-41, Variante B): weißer Rahmen, Schild mit Stand, markierte Zeile */
+.gb.meins { box-shadow: inset 0 0 0 3px var(--weiss); }
+.gz.meins { box-shadow: inset 4px 0 0 var(--lila); background: rgba(180, 140, 255, .08); }
+.gl { flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; }
+.gl-titel { display: flex; align-items: center; gap: 6px; }
+.du-zeile { font-family: var(--f-text); font-size: .74rem; font-weight: 700; color: #D9C6FF; }
+.schild { display: inline-block; margin-left: auto; padding: 2px 6px; font-family: var(--f-mono); font-size: .66rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.schild.sicher { background: var(--gruen); color: var(--nachtblau); }
+.schild.angebot { background: var(--lila); color: var(--nachtblau); }
+.schild.warte { background: var(--nachtblau); color: #D9C6FF; border: 1px dashed var(--lila); padding: 1px 5px; }
+.ws-zeile.meins { box-shadow: inset 0 0 0 2px var(--weiss); border-left-color: var(--lila); }
+.du-hinweis { margin-top: 10px; }
 .chip.wl { background: var(--rot); }
 
 /* Popups (<dialog>) */

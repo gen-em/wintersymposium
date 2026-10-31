@@ -29,6 +29,7 @@ require __DIR__ . '/lib/anmeldung_lib.php';
 require __DIR__ . '/lib/veranstaltung_lib.php';
 require __DIR__ . '/lib/programm_lib.php';
 require __DIR__ . '/lib/mail_lib.php';
+require __DIR__ . '/lib/mail_html_lib.php';
 require __DIR__ . '/lib/spamschutz_lib.php';
 require __DIR__ . '/lib/buchung_lib.php';
 require __DIR__ . '/lib/tnkonto_lib.php';

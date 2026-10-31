@@ -251,7 +251,7 @@ $fristText = function (string $schluessel): string {
     $tag = anm_stichtag($schluessel);
     return anm_frist_offen($schluessel) ? 'möglich bis <b>' . e(tag_text($tag)) . '</b>' : 'nur noch über das Team (Stichtag war ' . e(tag_text($tag)) . ')';
 };
-$status = $a['status'] === 'unbestaetigt' ? 'Noch nicht bestätigt' : ($sym === 'fest' ? 'Anmeldung bestätigt' : ($sym === 'angebot' ? 'Platz frei für dich' : 'Warteliste'));
+$status = $a['status'] === 'unbestaetigt' ? 'Noch nicht bestätigt' : ($sym === 'fest' ? 'Anmeldung bestätigt' : ($sym === 'angebot' ? 'Platzangebot' : 'Warteliste'));
 
 seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a, 'skripte' => ['anmelden.js']]);
 ?>
@@ -343,7 +343,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
             $vorschau = anm_tausch($id, $o);
             $bestaetigen = $tausch !== null && $tauschPlatz === (int)$o['id']; ?>
         <div class="angebot" id="angebot-<?= (int)$o['id'] ?>">
-            <p class="kicker">Platz frei geworden</p>
+            <p class="kicker">Platzangebot</p>
             <h2 class="zwischen"><?= e(anm_termin_text($tid)) ?></h2>
             <p>Du standest auf der Warteliste. Der Platz ist für dich reserviert bis</p>
             <p class="uhr"><?= e(datum_zeit_text($o['angebot_bis'])) ?> Uhr</p>

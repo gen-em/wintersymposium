@@ -567,6 +567,12 @@ function migration_katalog(): array
                 "UPDATE audit SET veranstaltung_id = (SELECT MIN(id) FROM veranstaltung) WHERE art IN ('anmeldung','nachruecken','programm','einstellungen','export','mailing','teilnahme')",
             ],
         ],
+        18 => [
+            'beschreibung' => 'Mails im Erscheinungsbild (O-40): HTML-Fassung der automatischen Mails in der Warteschlange',
+            'sql' => [
+                "ALTER TABLE mail_ausgang ADD COLUMN html MEDIUMTEXT NULL AFTER text",
+            ],
+        ],
     ];
 }
 

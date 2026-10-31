@@ -411,7 +411,7 @@ function anm_platz_zeile(array $p): array
             $st = 'Platz bestätigt';
             break;
         case 'angebot':
-            $st = 'Platz frei für dich – annehmen bis ' . datum_zeit_text($p['angebot_bis']);
+            $st = 'Platzangebot – annehmen bis ' . datum_zeit_text($p['angebot_bis']);
             break;
         default:
             [$pos, $von] = anm_position($p);

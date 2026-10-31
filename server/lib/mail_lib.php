@@ -130,7 +130,7 @@ function mail_adresse(string $roh): ?string
 }
 
 /** Mail in die Warteschlange stellen. Gibt die ID zurück. */
-function mail_einreihen(string $an, string $betreff, string $text, int $prio = MAIL_PRIO_SYSTEM): int
+function mail_einreihen(string $an, string $betreff, string $text, int $prio = MAIL_PRIO_SYSTEM, ?string $html = null): int
 {
     $adresse = mail_adresse($an);
     if ($adresse === null) {
@@ -138,8 +138,8 @@ function mail_einreihen(string $an, string $betreff, string $text, int $prio = M
     }
     $jetzt = db_jetzt();
     db_ausfuehren(
-        "INSERT INTO mail_ausgang (an, betreff, text, prio, status, versuche, naechster_versuch, erstellt_am) VALUES (?, ?, ?, ?, 'offen', 0, ?, ?)",
-        [$adresse, $betreff, $text, $prio, $jetzt, $jetzt]
+        "INSERT INTO mail_ausgang (an, betreff, text, html, prio, status, versuche, naechster_versuch, erstellt_am) VALUES (?, ?, ?, ?, ?, 'offen', 0, ?, ?)",
+        [$adresse, $betreff, $text, $html, $prio, $jetzt, $jetzt]
     );
     $id = (int)db()->lastInsertId();
     mail_nach_antwort_vormerken();
@@ -160,7 +160,8 @@ function mail_nach_antwort_vormerken(): void
 function mail_vorlage_einreihen(string $an, string $vorlage, array $daten, int $prio = MAIL_PRIO_SYSTEM): int
 {
     [$betreff, $text] = mail_vorlage($vorlage, $daten);
-    return mail_einreihen($an, $betreff, $text, $prio);
+    // HTML-Fassung im Erscheinungsbild (O-40); der Text bleibt für Programme ohne HTML
+    return mail_einreihen($an, $betreff, $text, $prio, mail_html_aus_text($vorlage, $betreff, $text));
 }
 
 /** Heute (Ortszeit) versendete Mails – für das Tageslimit (je Postfach oder alle). */
@@ -196,7 +197,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
     db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
     for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
         $z = db_zeile(
-            "SELECT id, an, betreff, text, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
+            "SELECT id, an, betreff, text, html, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
              WHERE status = 'offen' AND naechster_versuch <= ?
                AND (prio = ? OR (postfach = 'system' AND ? = 1) OR (postfach = 'newsletter' AND ? = 1))
              ORDER BY prio, id LIMIT 1",
@@ -211,7 +212,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         if ($n !== 1) {
             continue;
         }
-        $opt = ['postfach' => $z['postfach']];
+        $opt = ['postfach' => $z['postfach']] + ($z['html'] !== null ? ['html' => $z['html']] : []);
         $betreff = $z['betreff'];
         $text = $z['text'];
         if ($z['rundmail_id'] !== null) {
@@ -227,7 +228,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $fehler = mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
             // R-02: Inhalt und Empfänger nach dem Versand leeren
-            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
+            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
             $erg['gesendet']++;
         } else {
             $versuche = (int)$z['versuche'] + 1;
@@ -366,11 +367,16 @@ function mail_nachricht(array $c, string $an, string $betreff, string $text, arr
         $kopf[] = 'Content-Transfer-Encoding: quoted-printable';
         return implode("\r\n", $kopf) . "\r\n\r\n" . mail_qp($text) . "\r\n";
     }
+    $bilder = $opt['bilder'] ?? [];
+    if (str_contains((string)$html, MAIL_LOGO_PLATZHALTER)) {
+        // Logo eingebettet (O-40): erscheint ohne Nachladen, auch wenn Bilder von außen gesperrt sind
+        $html = mail_logo_einsetzen((string)$html, 'cid:logo@' . $domain);
+        $bilder = ['logo' => mail_logo()] + $bilder;
+    }
     $ga = 'alt-' . bin2hex(random_bytes(8));
     $alt = '--' . $ga . "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n" . mail_qp($text) . "\r\n"
         . '--' . $ga . "\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n" . mail_qp((string)$html) . "\r\n"
         . '--' . $ga . "--\r\n";
-    $bilder = $opt['bilder'] ?? [];
     if ($bilder === []) {
         $kopf[] = 'Content-Type: multipart/alternative; boundary="' . $ga . '"';
         return implode("\r\n", $kopf) . "\r\n\r\n" . $alt;
@@ -558,7 +564,7 @@ function mail_vorlage(string $name, array $d): array
             return ['Deine Anmeldung zum ' . va_kurz() . ' ist storniert',
                 $hallo . "deine Anmeldung ist storniert. Deine Plätze gehen an die Warteliste. Danke, dass du abgesagt hast.\n\nWenn du doch kommen willst, melde dich einfach neu an: " . url('/anmelden') . mail_gruss()];
         case 'angebot':
-            return ['Platz frei: ' . $d['was'],
+            return ['Platzangebot: ' . $d['was'],
                 $hallo . 'auf der Warteliste ist ein Platz für dich frei geworden: ' . $d['was'] . ".\n\nDer Platz ist für dich reserviert bis " . $d['frist']
                 . ". Annehmen oder ablehnen kannst du hier:\n\n" . $d['link']
                 . "\n\nLässt du die Frist verstreichen, geht der Platz an die nächste Person und du rückst ans Ende der Warteliste."

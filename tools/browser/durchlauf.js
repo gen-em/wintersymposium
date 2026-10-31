@@ -377,6 +377,18 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.fill('#zg-lmail', vor.lea.email); await p.fill('#zg-pw', vor.lea.passwort);
       await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=einloggen]) button[type=submit]')]);
       notiere(engine, 'handy', 'konto', 'Login im Kasten → Deine Anmeldung', (await p.textContent('body')).includes('Hallo Lea.') && (await p.textContent('body')).includes('Mit Konto eingeloggt'));
+      // Eigene Plätze im Programm (O-41, Variante B): Handy-Liste und Zeitraster am Desktop
+      for (const [breite, w, h] of BREITEN) {
+        await p.setViewportSize({ width: w, height: h });
+        await pruefeSeite(p, fehler, engine, breite, 'start-meine-plaetze', basis + '/');
+        const raster = await p.isVisible('.gantt-wrap');
+        notiere(engine, breite, 'start-meine-plaetze', 'eigene Termine markiert (Schild „Dein Platz“, Hinweis)',
+          (raster ? await p.locator('.gb.meins .schild.sicher').count() === 2 && await p.isVisible('.gz.meins .du-zeile') : await p.locator('.ws-zeile.meins .schild.sicher').count() === 2) && await p.isVisible('.du-hinweis'));
+        if (raster) {
+          await p.locator('.gantt-wrap').scrollIntoViewIfNeeded();
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-start-meine-plaetze-raster.png`) });
+        }
+      }
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
         await pruefeSeite(p, fehler, engine, breite, 'konto', basis + '/konto');
@@ -627,7 +639,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.fill('#suche', 'paula'); await Promise.all([p.waitForNavigation(), p.click('.filterzeile button[type=submit]')]);
       notiere(engine, 'desktop-breit', 'team-personen', 'Suche findet Paula', (await p.locator('table.personen tbody tr').count()) === 1 && (await p.textContent('table.personen')).includes('Paula Probe'));
       await Promise.all([p.waitForNavigation(), p.click('table.personen a:has-text("Paula Probe")')]);
-      notiere(engine, 'desktop-breit', 'team-personen', 'Auswahl zeigt Angebot und Aktionen', (await p.textContent('.detail')).includes('Platz frei für dich') && await p.isVisible('.detail button:has-text("Platz geben")'));
+      notiere(engine, 'desktop-breit', 'team-personen', 'Auswahl zeigt Angebot und Aktionen', (await p.textContent('.detail')).includes('Platzangebot') && await p.isVisible('.detail button:has-text("Platz geben")'));
 
       // Programm: Punkt bearbeiten (Formular, Termine), Dozierende, Vorschau in allen Breiten
       for (const [breite, w, h] of BREITEN) {
