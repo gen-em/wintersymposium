@@ -660,6 +660,12 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     pruefe($r['status'] === 200 && str_contains($r['text'], 'ändert eine BetreiberIn unter Betrieb') && konto_laden($mk)['email'] === 'mia@example.org' && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$mAnm]) === 'mia@example.org', 'POST mit fremder Adresse auf Team-Anmeldung: Fehler, Konto-Adresse gleich');
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung?aendern=daten', $h, [], null, $k2);
     pruefe(str_contains($r['text'], 'value="mia@example.org" readonly') && str_contains($r['text'], 'Adresse deines Team-Kontos'), 'Meine Anmeldung → Daten: Adresse des Team-Kontos schreibgeschützt');
+    // AP-14 Unterpunkt 5 (B-5, T-279): Storno lässt den Team-Login bestehen
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'storno'], $k2);
+    pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/deine-anmeldung' && db_wert('SELECT COUNT(*) FROM anmeldung WHERE id = ?', [$mAnm]) == 0, 'Team-Mitglied storniert eigene Anmeldung: 303 auf /deine-anmeldung');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k2);
+    pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $k2)['status'] === 200 && str_contains($r['text'], 'Eingeloggt als Mia Mailcode') && str_contains($r['text'], 'href="/anmelden"') && str_contains($r['text'], '<strong>Mia Mailcode</strong>'), 'nach dem Storno: Team-Bereich erreichbar, „Eingeloggt als …“ mit „Jetzt anmelden“');
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
     // Ausloggen beendet alles
     $r = http_anfrage($basis, 'POST', '/ausloggen', $h, [], ['csrf' => http_csrf($r['text'])], $k2);
@@ -671,6 +677,15 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k3);
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'theo@example.org', 'passwort' => 'theos-passwort-1'], $k3);
     pruefe(($r['kopf']['location'] ?? '') === '/konto' && str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['text'], 'Konto löschen'), 'Teilnehmend: Login ohne zweiten Faktor, Mein Konto mit Löschen');
+    // AP-14 Unterpunkt 5 (B-5, T-279): Storno lässt den Konto-Login bestehen
+    $tAnm = team_anlegen(['vorname' => 'Theo', 'nachname' => 'Teil', 'email' => 'theo@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'ZNA', 'efn' => '', 'essen' => 'egal'], true, false)['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$tk, $tAnm]);
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    $sv = str_contains($r['text'], 'Hallo Theo.');
+    $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'storno'], $k3);
+    pruefe($sv && $r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/deine-anmeldung' && db_wert('SELECT COUNT(*) FROM anmeldung WHERE id = ?', [$tAnm]) == 0, 'Konto: Anmeldung stornieren → 303 auf /deine-anmeldung');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k3);
+    pruefe(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['status'] === 200 && str_contains($r['text'], 'Eingeloggt als Theo Teil') && str_contains($r['text'], '<strong>Theo Teil</strong>'), 'nach dem Storno: weiter eingeloggt, Name im Personen-Menü');
     konto_rolle_setzen($tk, 'admin', null);
     pruefe(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k3)['status'] === 303, 'Rolle angehoben: alte Sitzung gilt nicht mehr');
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k3);

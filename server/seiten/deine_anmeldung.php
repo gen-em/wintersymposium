@@ -124,7 +124,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     umleiten('/deine-anmeldung');
                 }
                 anm_stornieren($id);
-                anm_ausloggen();
+                // Nur die Anmeldung aus der Sitzung nehmen; Konto- und Team-Login bleiben (E-63 (3), Review B-5)
+                unset($_SESSION['anm']);
                 flash_setzen('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.');
                 umleiten('/deine-anmeldung');
             case 'annehmen':
