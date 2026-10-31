@@ -419,7 +419,7 @@ va_zwischenspeicher_leeren();
     $kimP = array_column(anm_plaetze($kim['id']), 'status', 'termin_id');
     $uteP = array_column(anm_plaetze($ute['id']), 'status', 'termin_id');
     pruefe(($kimP[$voll] ?? '') === 'angebot' && ($uteP[$voll] ?? '') === 'warte', 'Nachrücken überspringt Unbestätigte (Ute vor Kim)');
-    pruefe(db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'kim@example.org' AND betreff LIKE 'Platz frei%'") == 1, 'Angebotsmail an Kim');
+    pruefe(db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'kim@example.org' AND betreff LIKE 'Platzangebot%'") == 1, 'Angebotsmail an Kim');
     $spaeter = time() + 49 * 3600;
     $j = anm_job($spaeter);
     pruefe($j['verfallen'] >= 1 && anm_laden($ute['id']) === null && anm_laden($an['tom']) === null, 'Job: unbestätigte nach der Frist gelöscht');
@@ -713,13 +713,27 @@ va_zwischenspeicher_leeren();
     sort($dateien);
     $roh = '';
     foreach ($dateien as $d) {
-        if (str_contains((string)file_get_contents($d), 'multipart/related')) {
+        // Seit O-40 haben alle HTML-Mails das Logo eingebettet: das Mailing am eigenen Bild erkennen
+        if (str_contains((string)file_get_contents($d), 'Content-ID: <bild' . $bildTest['id'] . '@')) {
             $roh = (string)file_get_contents($d);
             break;
         }
     }
     $dek = quoted_printable_decode($roh);
     pruefe(str_contains($roh, 'Content-Type: multipart/related') && str_contains($roh, 'multipart/alternative') && preg_match('/Content-ID: <bild' . $bildTest['id'] . '@[^>]+>/', $roh) === 1 && str_contains($dek, 'src="cid:bild' . $bildTest['id'] . '@'), 'HTML-Mail mit Textfassung und eingebettetem Bild (Content-ID)');
+    // Mails im Erscheinungsbild (O-40, Variante A): HTML aus dem Text, Knopf, Übersicht, Logo eingebettet
+    $ueb = "Deine Anmeldung (Nr. 0009):\n\n- WS 02 Kleine PatientInnen · 19:30–20:00: Platz bestätigt\n- WS 01 Atemweg · 20:30–21:15: Warteliste · Platz 3 von 5\n- Essen: egal";
+    [$bt, $tx] = mail_vorlage('bestaetigt', ['vorname' => 'Lea', 'uebersicht' => $ueb]);
+    $hb = mail_html_aus_text('bestaetigt', $bt, $tx);
+    pruefe(str_contains($hb, 'Anmeldung bestätigt') && str_contains($hb, '>Bestätigt</span>') && str_contains($hb, 'Warteliste · 3</span>') && str_contains($hb, '>19:30–20:00</td>')
+        && str_contains($hb, '>Anmeldung ansehen oder ändern</a>') && !str_contains($hb, 'Ändern oder absagen') && str_contains($tx, 'Ändern oder absagen') && str_contains($hb, MAIL_LOGO_PLATZHALTER) && str_contains($hb, 'Impressum</a>') && !str_contains($tx, '<'), 'Mail-HTML: Übersicht als Tabelle mit Schildern, Knopf, Logo, Fuß; Text bleibt Text');
+    [$ab, $at] = mail_vorlage('angebot', ['vorname' => 'Lea', 'was' => 'WS 01 · 20:30–21:15', 'frist' => 'Do 18:00', 'link' => 'https://example.org/link?t=abc']);
+    $ha = mail_html_aus_text('angebot', $ab, $at);
+    pruefe(str_starts_with($ab, 'Platzangebot:') && str_contains($ha, 'href="https://example.org/link?t=abc"') && str_contains($ha, '>Platz annehmen oder ablehnen</a>') && str_contains($ha, 'Knopf geht nicht? https://example.org/link?t=abc'), 'Mail-HTML: Link allein im Absatz wird Knopf mit Ersatzadresse');
+    $rohM = mail_nachricht(mail_konfig(), 'lea@example.org', $ab, $at, ['html' => $ha]);
+    pruefe(preg_match('/Content-ID: <logo@[^>]+>/', $rohM) === 1 && str_contains(quoted_printable_decode($rohM), 'src="cid:logo@') && !str_contains($rohM, MAIL_LOGO_PLATZHALTER) && is_file(mail_logo()[1]), 'Mail: Logo als eingebettetes PNG (Content-ID)');
+    [, $ct] = mail_vorlage('zweitfaktor_code', ['vorname' => 'Bea', 'code' => '123456']);
+    pruefe(str_contains(mail_html_aus_text('zweitfaktor_code', 'Code', $ct), 'letter-spacing:6px;color:#001E3A;">123456</p>'), 'Mail-HTML: Code groß und gut lesbar');
     pruefe(preg_match('#Ansehen: http\S+/link\?t=[0-9a-f]{48}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
     pruefe(!str_contains($roh, 'Auto-Submitted') && preg_match('/^Subject: .*f=C3=BCr.*Kim|^Subject: .*f=C3=BCr/m', $roh) === 1 && !str_contains($roh, '{vorname}'), 'Rundmail ohne Auto-Submitted, Betreff mit Vorname');
     $rest = rm_fortschritt($rmId)['wartet'];

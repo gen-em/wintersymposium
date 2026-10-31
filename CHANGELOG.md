@@ -2,6 +2,18 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.22.0] – 2026-10-31
+
+### Neu
+
+- **Mails im Erscheinungsbild Allgäu Akut** (O-40, E-63, Variante A): Alle automatischen Mails, Mailings und Newsletter kommen als HTML mit Textfassung – dunkler Kopf mit eingebettetem Logo, Überschrift, grüner Streifen, Übersicht der Plätze als Tabelle mit Schildern (bestätigt, Platzangebot, Warteliste mit Position), lila Knopf mit Ersatzadresse, Fuß mit Impressum und Datenschutz. Neue Datei `mail_html_lib.php`, Logo `assets/logo/mail-logo.png`, Migration 18 (HTML-Fassung in der Warteschlange).
+- **Eigene Plätze im Programm** (O-41, E-63, Variante B): Wer eingeloggt ist oder über den Link kommt, sieht auf der Startseite am eigenen Termin einen weißen Rahmen und ein Schild („Dein Platz“, „Platzangebot“, „Warteliste N“), die Zeile des Workshops ist markiert („Du: …“); auch in der Handy-Liste.
+
+### Geändert
+
+- Begriff **„Platzangebot“** statt „Platz frei für dich“ in Mails, „Meine Anmeldung“ und Team-Bereich; Betreff der Angebotsmail „Platzangebot: …“.
+- Knöpfe in Mailings sind lila wie auf der Webseite.
+
 ## [0.21.5] – 2026-10-31
 
 ### Geändert

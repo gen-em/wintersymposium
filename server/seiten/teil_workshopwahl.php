@@ -25,7 +25,7 @@ foreach (anm_workshops() as $w):
         $tid = (int)$t['id'];
         $st = $eigen[$tid] ?? null;
         if ($st === 'angebot') {
-            $warteZeilen .= '<p class="meta klein">' . e($t['beginn'] . '–' . $t['ende']) . ': Platz frei für dich – annehmen oder ablehnen oben unter „Platz frei geworden“.</p>';
+            $warteZeilen .= '<p class="meta klein">' . e($t['beginn'] . '–' . $t['ende']) . ': Platzangebot für dich – annehmen oder ablehnen oben unter „Platzangebot“.</p>';
             continue;
         }
         $frei = anm_frei($tid);

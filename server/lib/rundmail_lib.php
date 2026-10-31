@@ -267,8 +267,8 @@ function rm_knoten(DOMNode $n, string $modus, array $k): string
                 return trim($innen) . ': ' . $ziel . ($knopf ? "\n" : '');
             }
             $stil = $knopf
-                ? 'display:inline-block;background:#6F52A8;color:#FFFFFF;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold;'
-                : 'color:#6F52A8;text-decoration:underline;';
+                ? 'display:inline-block;background:' . MAIL_LILA . ';color:' . MAIL_NAVY . ';padding:13px 26px;border-radius:999px;text-decoration:none;font-weight:bold;'
+                : 'color:#6B3FD1;text-decoration:underline;';
             return '<a href="' . e($ziel) . '" style="' . $stil . '">' . $innen . '</a>';
         case 'img':
             $id = rm_bild_id($n->getAttribute('src'));
@@ -358,16 +358,12 @@ function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $dom
     // Newsletter (AP-7): Grund, Abmelden und Listen ändern; Mailings an Angemeldete ohne Abmeldelink (E-50)
     $fuss = $nl === null ? 'Du bekommst diese Mail, weil du zum ' . va_kurz() . ' angemeldet bist.' : 'Du bekommst diese Mail, weil du den Newsletter „' . $nl['listen'] . '“ abonniert hast.';
     $text .= "\n\n-- \n" . $fuss . ($nl !== null ? "\nAbmelden oder Listen ändern: " . $nl['url'] : '') . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
-    $html = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . e($betreff) . '</title></head>'
-        . '<body style="margin:0;padding:0;background:#EEF1F5;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF1F5;"><tr><td align="center" style="padding:24px 12px;">'
-        . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:8px;">'
-        . '<tr><td style="background:#001E3A;padding:18px 28px;border-radius:8px 8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.4;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:#FFFFFF;">'
-        . 'Wintersymposium Notfallmedizin<br><span style="color:#B48CFF;font-weight:normal;letter-spacing:1px;">Allgäu Akut</span></td></tr>'
-        . '<tr><td style="padding:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#001E3A;">' . $inhalt . '</td></tr>'
-        . '<tr><td style="padding:16px 28px 24px;border-top:1px solid #E1E6EC;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#5A6B7D;">'
-        . e($fuss) . ($nl !== null ? '<br><a href="' . e($nl['url']) . '" style="color:#5A6B7D;">Abmelden oder Listen ändern</a>' : '') . '<br><a href="' . e(url('/impressum')) . '" style="color:#5A6B7D;">Impressum</a> · <a href="' . e(url('/datenschutz')) . '" style="color:#5A6B7D;">Datenschutz</a></td></tr>'
-        . '</table></td></tr></table></body></html>';
+    // Rahmen wie alle Mails (O-40, Variante A); Fuß mit Grund, Abmelden, Impressum und Datenschutz
+    $fussHtml = mail_fuss_html(e($fuss) . ($nl !== null ? '<br><a href="' . e($nl['url']) . '" style="color:#B9C6D3;text-decoration:underline;">Abmelden oder Listen ändern</a>' : ''));
+    $html = mail_rahmen($betreff, $nl === null ? mail_kicker() : 'Newsletter', $betreff, $inhalt, $fussHtml);
+    if ($bildArt === 'url') {
+        $html = mail_logo_einsetzen($html, '/' . MAIL_LOGO_DATEI);
+    }
     return ['betreff' => $betreff, 'html' => $html, 'text' => $text, 'bilder' => $bilder];
 }
 

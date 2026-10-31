@@ -44,6 +44,43 @@ $ausloeser = fn(array $p, string $inhalt, string $klasse = 'pp-link') => $hatPop
     ? '<button type="button" class="' . $klasse . '" aria-haspopup="dialog" data-dialog="pp-' . $p['id'] . '">' . $inhalt . '</button>'
     : $inhalt;
 $namen = fn(array $p) => implode(', ', array_column($p['dozenten'], 'name'));
+// Eigene Plätze (O-41, Variante B): nur wer erkannt ist (eingeloggt oder per Link) und zu dieser Veranstaltung angemeldet ist
+$meine = [];
+$ich = session_status() === PHP_SESSION_ACTIVE && !va_abgeschlossen() ? anm_aktuell() : null;
+if ($ich !== null && (int)($ich['veranstaltung_id'] ?? va_id()) === va_id()) {
+    foreach (anm_plaetze((int)$ich['id']) as $pl) {
+        if ((int)$pl['termin_id'] > 0) {
+            $meine[(int)$pl['termin_id']] = $pl;
+        }
+    }
+}
+// Schild am eigenen Termin: grün Dein Platz, lila Platzangebot, gestrichelt Warteliste
+$schild = function (array $t) use ($meine): string {
+    $pl = $meine[(int)$t['id']] ?? null;
+    if ($pl === null) {
+        return '';
+    }
+    return match ($pl['status']) {
+        'fest' => '<span class="schild sicher">Dein Platz</span>',
+        'angebot' => '<span class="schild angebot" title="annehmen bis ' . e(datum_zeit_text($pl['angebot_bis'])) . '">Platzangebot</span>',
+        default => '<span class="schild warte">Warteliste ' . anm_position($pl)[0] . '</span>',
+    };
+};
+// Zeile unter dem Workshop-Titel: „Du: 19:30 Dein Platz · 20:30 Platzangebot bis …“
+$duZeile = function (array $termine) use ($meine): string {
+    $teile = [];
+    foreach ($termine as $t) {
+        $pl = $meine[(int)$t['id']] ?? null;
+        if ($pl !== null) {
+            $teile[] = $t['beginn'] . ' ' . match ($pl['status']) {
+                'fest' => 'Dein Platz',
+                'angebot' => 'Platzangebot bis ' . datum_zeit_text($pl['angebot_bis']),
+                default => 'Warteliste, Platz ' . anm_position($pl)[0],
+            };
+        }
+    }
+    return $teile === [] ? '' : '<span class="du-zeile">Du: ' . e(implode(' · ', $teile)) . '</span>';
+};
 // Abweichende Dozierende eines Termins (Rückmeldung 2026-10-30), sonst die des Workshops
 $terminNamen = fn(array $p, array $t) => isset($t['dozenten']) ? implode(', ', array_column($t['dozenten'], 'name')) : $namen($p);
 
@@ -67,7 +104,7 @@ if ($gliederung === []): ?>
                 <?php elseif ($k['art'] === 'punkt'): ?>
                 <li class="offen"><span class="mono"><?= e($kp['beginn'] . '–' . $kp['ende']) ?></span><span><?= $format($kp) ?> <?= $ausloeser($kp, e($kp['titel']), 'ws-link') ?><br><span class="meta klein">ohne Anmeldung<?= $kp['ort'] !== '' ? ' · ' . e($kp['ort']) : '' ?></span></span></li>
                 <?php else: $t = $k['termin']; ?>
-                <li><button type="button" class="ws-zeile" aria-haspopup="dialog" data-dialog="pp-<?= $kp['id'] ?>"><span class="mono"><?= e($t['beginn'] . '–' . $t['ende']) ?><br><small><?= $dauer($t['beginn'], $t['ende']) ?> min</small></span><span><?= $format($kp) ?> <?= e($kp['titel']) ?><br><?= $chipFrei($t) ?></span><span class="pfeil" aria-hidden="true">›</span></button></li>
+                <li><button type="button" class="ws-zeile<?= isset($meine[(int)$t['id']]) ? ' meins' : '' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $kp['id'] ?>"><span class="mono"><?= e($t['beginn'] . '–' . $t['ende']) ?><br><small><?= $dauer($t['beginn'], $t['ende']) ?> min</small></span><span><?= $format($kp) ?> <?= e($kp['titel']) ?><br><?= $chipFrei($t) ?> <?= $schild($t) ?></span><span class="pfeil" aria-hidden="true">›</span></button></li>
                 <?php endif;
             endforeach; ?>
             </ul>
@@ -82,9 +119,10 @@ if ($gliederung === []): ?>
             <div class="gantt-wrap" data-von="<?= minuten($p['beginn']) ?>" data-bis="<?= minuten($p['ende']) ?>" hidden>
                 <div class="gantt">
                     <div class="gz kopf"><span></span><div class="gs skala"></div></div>
-                    <?php foreach ($zeilen as $z): $zp = $z['punkt']; ?>
-                    <div class="gz">
-                        <?= $ausloeser($zp, $format($zp) . ' ' . e($zp['titel']), 'gl') ?>
+                    <?php foreach ($zeilen as $z): $zp = $z['punkt'];
+                        $du = $duZeile(array_map(fn($k) => $k['termin'], array_filter($z['balken'], fn($k) => $k['art'] !== 'punkt'))); ?>
+                    <div class="gz<?= $du !== '' ? ' meins' : '' ?>">
+                        <?= $ausloeser($zp, '<span class="gl-titel">' . $format($zp) . ' ' . e($zp['titel']) . '</span>' . $du, 'gl') ?>
                         <div class="gs">
                         <?php foreach ($z['balken'] as $k):
                             if ($k['art'] === 'punkt' && $zp['typ'] !== 'station'): ?>
@@ -92,7 +130,8 @@ if ($gliederung === []): ?>
                             <?php elseif ($k['art'] === 'punkt'): ?>
                             <span class="gb offen" data-von="<?= minuten($zp['beginn']) ?>" data-bis="<?= minuten($zp['ende']) ?>"><b><?= e($zp['beginn'] . '–' . $zp['ende']) ?></b> ohne Anmeldung<?= $zp['ort'] !== '' ? ' · ' . e($zp['ort']) : '' ?></span>
                             <?php else: $t = $k['termin']; $f = $frei($t); ?>
-                            <button type="button" class="gb <?= $f > 0 ? 'frei' : 'voll' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($t['beginn']) ?>" data-bis="<?= minuten($t['ende']) ?>" title="<?= e($zp['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']) ?>"><b><?= e($t['beginn']) ?></b> <?= va_abgeschlossen() ? '' : ($f > 0 ? $f . ' frei' : 'voll') ?></button>
+                            <?php $sch = $schild($t); ?>
+                            <button type="button" class="gb <?= $f > 0 ? 'frei' : 'voll' ?><?= $sch !== '' ? ' meins' : '' ?>" aria-haspopup="dialog" data-dialog="pp-<?= $zp['id'] ?>" data-von="<?= minuten($t['beginn']) ?>" data-bis="<?= minuten($t['ende']) ?>" title="<?= e($zp['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']) ?>"><b><?= e($t['beginn']) ?></b> <?= $sch !== '' ? '' : (va_abgeschlossen() ? '' : ($f > 0 ? $f . ' frei' : 'voll')) ?><?= $sch ?></button>
                             <?php endif;
                         endforeach; ?>
                         </div>
@@ -109,7 +148,7 @@ if ($gliederung === []): ?>
         <div>
             <div class="titelzeile"><?= $format($p) ?><h3><?= $ausloeser($p, e($p['titel']) . ' <span class="pp-mehr">Infos</span>') ?></h3></div>
             <?php if ($p['untertitel'] !== ''): ?><p><?= e($p['untertitel']) ?></p><?php endif; ?>
-            <p class="meta klein"><?= e(implode(' · ', array_filter([$terminNamen($p, $t), $p['ort']]))) ?> <?= $chipFrei($t) ?></p>
+            <p class="meta klein"><?= e(implode(' · ', array_filter([$terminNamen($p, $t), $p['ort']]))) ?> <?= $chipFrei($t) ?> <?= $schild($t) ?></p>
         </div>
     </li>
     <?php elseif ($p['typ'] !== 'workshop'):
@@ -126,6 +165,9 @@ if ($gliederung === []): ?>
 endforeach; ?>
 </ol>
 
+<?php if ($meine !== []): ?>
+<p class="meta klein du-hinweis">Weißer Rahmen und Schild = deine Termine: grün Dein Platz, lila Platzangebot, gestrichelt Warteliste. Nur für dich sichtbar. <a href="/deine-anmeldung">Meine Anmeldung</a></p>
+<?php endif; ?>
 <?php foreach (programm_sortieren($punkte) as $p): if (!$hatPopup($p)) continue;
     $rot = PROGRAMM_TYPEN[$p['typ']]['farbe'] === 'rot'; ?>
 <dialog class="popup" id="pp-<?= $p['id'] ?>" aria-labelledby="pp-<?= $p['id'] ?>-titel">
