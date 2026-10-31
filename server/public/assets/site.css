@@ -775,9 +775,6 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .person-wer .person-rolle { justify-self: start; font: 700 .64rem var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border: 1px solid var(--meta); color: var(--meta); }
 .person-liste a.person-punkt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--linie); color: var(--fg); text-decoration: none; }
 .person-punkt > .icon { flex: none; color: var(--akz); }
-/* Team-Bereich im Personen-Menü: grün wie in der Leiste */
-.person-liste a.person-punkt.team .icon, .person-liste a.person-punkt.team .person-titel { color: var(--gruen); }
-.person-liste a.person-punkt.team:hover .person-titel { color: var(--gruen); }
 .person-text { flex: 1; display: grid; gap: 1px; min-width: 0; }
 .person-titel { font-weight: 700; }
 .person-text small { font-weight: 400; font-size: .8rem; color: var(--meta); }
@@ -785,6 +782,9 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .person-liste a.person-punkt:hover, .person-liste a.person-punkt[aria-current="page"] { background: var(--bg); }
 .person-liste a.person-punkt:hover .person-titel, .person-liste a.person-punkt[aria-current="page"] .person-titel { color: var(--akz); }
 .person-liste a.person-punkt:hover .person-weiter, .person-liste a.person-punkt:focus-visible .person-weiter { opacity: 1; transform: none; }
+/* Team-Bereich im Personen-Menü: grün wie in der Leiste, auch als aktuelle Seite und beim Überfahren (nach den Regeln oben) */
+.person-liste a.person-punkt.team .icon, .person-liste a.person-punkt.team .person-titel,
+.person-liste a.person-punkt.team:hover .person-titel, .person-liste a.person-punkt.team[aria-current="page"] .person-titel { color: var(--gruen); }
 .person-liste form, .person-flach + li form, .menue form { margin: 0; }
 .person-ab { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 16px; border: 0; border-top: 1px solid var(--linie); background: transparent; color: var(--akz); font: 700 1rem var(--f-text); cursor: pointer; }
 .person-ab:hover { background: var(--bg); color: var(--rot-300); }
