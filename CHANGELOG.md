@@ -2,6 +2,19 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.5] – 2026-10-31
+
+### Geändert
+
+- **Editor überall mit derselben Leiste** (Admin 2026-10-31): Alle mehrzeiligen Felder (Texte der Startseite, Impressum, Datenschutz, Programm-Beschreibung, Kurzbio, Mailings) haben B, I, H · Liste, 1. Liste, Link, Bild, Knopf · HTML. Die Leiste ist an einer Stelle festgelegt (`EDITOR_LEISTE`, `editor_attribute()` in `inhalt_lib.php`). Ausnahmen: Platzhalter nur in Mails, einzeilige Felder (Titel, Untertitel, Beschreibung einer Newsletter-Liste) nur fett, kursiv, Link.
+- **Bilder und Knöpfe im Programm-Popup und in Kurzbios**; der Aufräum-Job sucht Text-Bilder jetzt auch im Programm, im veröffentlichten Stand und bei den Dozierenden.
+
+## [0.21.4] – 2026-10-31
+
+### Behoben
+
+- **„Meine Anmeldung“ zeigte dem Team-Konto keinen Team-Bereich** in der Leiste (Rückmeldung 2026-10-31): Seiten, die die Anmeldung selbst übergeben, haben das Team-Login nicht geprüft. Der Seitenkopf prüft es jetzt immer.
+
 ## [0.21.3] – 2026-10-31
 
 ### Behoben

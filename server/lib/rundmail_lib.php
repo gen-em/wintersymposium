@@ -764,10 +764,19 @@ function text_bild_speichern(array $upload, int $kontoId): string
     return '/bild/' . $b['datei'];
 }
 
-/** Text-Bilder, die nach einem Tag in keinem Text vorkommen, löschen. */
+/**
+ * Text-Bilder, die nach einem Tag nirgends vorkommen, löschen. Gesucht wird in
+ * den Texten, im Programm (auch im veröffentlichten Stand) und bei den Dozierenden.
+ */
 function text_bilder_aufraeumen(int $jetzt): int
 {
-    $alle = db_tabelle_da('inhalt') ? implode("\n", array_column(db_zeilen('SELECT text FROM inhalt'), 'text')) : '';
+    $quellen = ['inhalt' => 'text', 'programmpunkt' => 'beschreibung', 'dozent' => 'kurzbio', 'programm_stand' => 'daten'];
+    $alle = '';
+    foreach ($quellen as $tabelle => $spalte) {
+        if (db_tabelle_da($tabelle)) {
+            $alle .= str_replace('\\/', '/', implode("\n", array_column(db_zeilen("SELECT $spalte AS t FROM $tabelle WHERE $spalte LIKE '%text-%'"), 't'))) . "\n";
+        }
+    }
     $n = 0;
     foreach (array_merge(glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: []) as $d) {
         if (!str_contains($alle, '/bild/' . basename($d)) && filemtime($d) < $jetzt - 86400 && @unlink($d)) {

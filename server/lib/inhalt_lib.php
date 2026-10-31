@@ -60,6 +60,31 @@ const TEXT_BILD_MUSTER = '#^/bild/text-[0-9a-f]{16}\.(jpg|png)$#';
 const EDITOR_MAX = 60000;
 
 /**
+ * Werkzeugleisten des Editors, an einer Stelle (Admin 2026-10-31: überall
+ * gleich). Mehrzeilige Felder haben alle dieselbe Leiste; einzeilige Felder
+ * (Titel, Untertitel) nur fett, kursiv und Link. Platzhalter gibt es nur in
+ * Mails, weil nur dort beim Versand ersetzt wird.
+ */
+const EDITOR_LEISTE = ['block' => 'fett kursiv titel | liste nliste link bild knopf | html', 'inline' => 'fett kursiv link'];
+
+/**
+ * Attribute für ein <textarea> mit Editor. $mail: Bilder der Mailings,
+ * Platzhalter und {link} als Knopf-Ziel; sonst Bilder der Webseite.
+ */
+function editor_attribute(string $art = 'block', bool $mail = false): string
+{
+    $art = $art === 'inline' ? 'inline' : 'block';
+    $h = ' data-editor="' . $art . '" data-werkzeug="' . EDITOR_LEISTE[$art] . '"';
+    if ($art === 'block') {
+        $h .= ' data-bild-url="' . ($mail ? '/team/mailings/bild' : '/team/texte/bild') . '"';
+    }
+    if ($mail) {
+        $h .= ' data-knopf-ziel="{link}" data-platzhalter="' . e(json_encode(RM_PLATZHALTER, JSON_UNESCAPED_UNICODE)) . '"';
+    }
+    return $h;
+}
+
+/**
  * Editor-HTML bereinigen. $art 'block' oder 'inline'; $bilder: eigene
  * Text-Bilder erlauben (nur in den Texten der Webseite).
  */

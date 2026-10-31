@@ -269,7 +269,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'kuerzel' => $text('kuerzel', 12),
         'titel' => $text('titel', 160),
         'untertitel' => $text('untertitel', 200),
-        'beschreibung' => editor_bereinigen((string)($e['beschreibung'] ?? '')),
+        'beschreibung' => editor_bereinigen((string)($e['beschreibung'] ?? ''), 'block', true),
         'ort' => $text('ort', 120),
         'bring' => $text('bring', 160),
         'notiz' => $text('notiz', 300),
@@ -738,7 +738,7 @@ function dozent_pruefen(array $e): array
     $w = [
         'name' => trim(preg_replace('/\s+/u', ' ', (string)($e['name'] ?? '')) ?? ''),
         'funktion' => trim(preg_replace('/\s+/u', ' ', (string)($e['funktion'] ?? '')) ?? ''),
-        'kurzbio' => editor_bereinigen((string)($e['kurzbio'] ?? '')),
+        'kurzbio' => editor_bereinigen((string)($e['kurzbio'] ?? ''), 'block', true),
     ];
     $f = [];
     if ($w['name'] === '' || mb_strlen($w['name']) > 120) {

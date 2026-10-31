@@ -236,7 +236,7 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
         <div class="feld"><label for="betreff">Betreff</label><input id="betreff" name="betreff" type="text" maxlength="200" value="<?= e($w['betreff']) ?>"></div>
         <div class="feld">
             <label for="rm-html">Text der Mail</label>
-            <textarea id="rm-html" name="html" rows="14" class="mono" data-editor="block" data-werkzeug="fett kursiv titel | liste nliste link bild knopf | html" data-bild-url="/team/mailings/bild" data-knopf-ziel="{link}" data-platzhalter="<?= e(json_encode(RM_PLATZHALTER, JSON_UNESCAPED_UNICODE)) ?>"><?= e($w['html']) ?></textarea>
+            <textarea id="rm-html" name="html" rows="14" class="mono"<?= editor_attribute('block', true) ?>><?= e($w['html']) ?></textarea>
             <p class="hilfe"><strong>Platzhalter</strong> ersetzt die App beim Versand für jede Person: <code>{vorname}</code> und <code>{nachname}</code> aus der Anmeldung; <code>{workshops}</code> die Workshops mit festem Platz (je Zeile Titel und Uhrzeit); <code>{link}</code> ein persönlicher Link zu „Deine Anmeldung“ (48 Stunden gültig), auch als Ziel eines Knopfs. Im Newsletter bleiben <code>{nachname}</code> und <code>{workshops}</code> leer, <code>{link}</code> führt zur Abo-Verwaltung.</p>
             <p class="hilfe">Bilder (JPG/PNG, höchstens 1200 px) werden auf dieser Webseite gespeichert und in die Mail eingebettet – keine fremden Server. Klick aufs Bild schaltet zwischen voller und halber Breite. Impressum und Datenschutz hängt die App an.</p>
         </div>
