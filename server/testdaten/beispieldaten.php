@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 /** Passwort des Beispielkontos von Lea (erfunden, nur Testdaten). */
 const BEISPIEL_PASSWORT = 'beispiel-lea-2026';
+/** Passwort von Ada, Admin nur für den Fortbildungsabend (erfunden, nur Testdaten, AP-12). */
+const BEISPIEL_PASSWORT_ADMIN = 'beispiel-ada-admin-2026';
 
 /** Lädt den ganzen Datensatz. Gibt die angelegten IDs je Bereich zurück. */
 function beispieldaten_laden(): array
@@ -24,6 +26,7 @@ function beispieldaten_laden(): array
     $r['teilnahme'] = beispieldaten_teilnahme($r['anmeldungen']);
     $r['vorjahr'] = beispieldaten_vorjahr($r['anmeldungen']);
     $r['abend'] = beispieldaten_abend($r['anmeldungen']);
+    $r['admin'] = beispieldaten_admin((int)$r['abend']['id']);
     return $r;
 }
 
@@ -342,4 +345,17 @@ function beispieldaten_abend(array $anm): array
     va_abschliessen($vid, null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['id' => $vid] + $ids;
+}
+
+/**
+ * Ada Abend (AP-12, E-60): Admin nur für den Fortbildungsabend – sieht im
+ * Team-Bereich nur ihn, nicht die Wintersymposien und nicht den Betrieb.
+ * Team-Konten bleiben beim erneuten Laden; die Zuordnung wird neu gesetzt.
+ */
+function beispieldaten_admin(int $abendId): int
+{
+    $k = konto_per_email('ada.abend@example.org');
+    $id = $k !== null ? (int)$k['id'] : konto_anlegen('Ada Abend', 'ada.abend@example.org', 'admin', BEISPIEL_PASSWORT_ADMIN, null);
+    va_rechte_setzen($id, false, [$abendId], null);
+    return $id;
 }

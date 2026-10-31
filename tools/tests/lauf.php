@@ -320,6 +320,12 @@ va_zwischenspeicher_leeren();
     $ab = $bd['abend'];
     pruefe(va_zeile($ab['id'])['status'] === 'abgeschlossen' && !va_mit($ab['id'], fn() => va_an('mit_essen')) && va_von($ab['id'], 'veranstaltung_art') === 'vortrag'
         && tn_anwesend($ab['kai']) && !tn_anwesend($ab['nora']) && $vj[1]['kuerzel'] === 'fortbildungsabend-notfallmedizin', 'Beispieldaten: Fortbildungsabend ohne Essen, Kai da, Nora nicht erschienen, Lea mit drei Veranstaltungen');
+    $ada = konto_laden($bd['admin']);
+    pruefe($ada['rolle'] === 'admin' && va_erlaubte_ids($ada) === [(int)$ab['id']] && array_column(va_alle_fuer($ada), 'id') === [(int)$ab['id']] && va_darf($ada, (int)$ab['id']) && !va_darf($ada, (int)va_aktuell_id()), 'Beispieldaten: Ada (Admin) nur für den Fortbildungsabend (AP-12)');
+    $personenAda = va_mit((int)$ab['id'], fn() => team_personen($ada));
+    $kontenAda = array_filter($personenAda, fn($p) => $p['art'] === 'konto' && $p['konto']['rolle'] === 'teilnehmend');
+    pruefe(count(array_filter($personenAda, fn($p) => $p['art'] === 'anm')) === 3 && $kontenAda === [], 'Ada sieht im Abend dessen drei Anmeldungen, keine fremden Konten');
+    pruefe(va_rechte_liste($ada) === [va_von((int)$ab['id'], 'veranstaltung_name') . ' (' . tag_text(va_von((int)$ab['id'], 'veranstaltung_datum')) . ')'] && count(va_rechte_liste(['id' => 0, 'rolle' => 'betreiber'])) === 2, 'Mein Konto: Liste „zuständig für“');
     $pv = programm_veroeffentlicht()['punkte'] ?? [];
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));
