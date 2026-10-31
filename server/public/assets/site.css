@@ -330,8 +330,12 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .formular label { font-weight: 700; margin-top: 8px; }
 .formular input, .formular textarea, .formular select { font: 400 1rem var(--f-text); min-height: 46px; padding: 10px 12px; border: 1px solid var(--meta); background: var(--flaeche); color: var(--fg); border-radius: 0; width: 100%; }
 .formular button { margin-top: 14px; justify-self: start; }
-.meldung { padding: 12px 16px; margin: 0 0 16px; background: var(--flaeche); border-left: 4px solid var(--akz); }
-.meldung.fehler { border-left-color: var(--rot); }
+/* Meldungen (AP-13, Entwurf 10 B): volle Farbe, dunkle Schrift, Icon (Phosphor, assets/icons) */
+.meldung { position: relative; padding: 14px 16px 14px 52px; margin: 0 0 16px; border-radius: 10px; background: var(--lila); color: var(--nachtblau); line-height: 1.45; font-weight: 500; }
+.meldung::before { content: ""; position: absolute; left: 16px; top: 13px; width: 24px; height: 24px; background: currentColor; -webkit-mask: url(/assets/icons/info.svg) center / contain no-repeat; mask: url(/assets/icons/info.svg) center / contain no-repeat; }
+.meldung.fehler { background: var(--rot); }
+.meldung.fehler::before { -webkit-mask-image: url(/assets/icons/warning-circle.svg); mask-image: url(/assets/icons/warning-circle.svg); }
+.meldung strong { font-weight: 700; }
 .meldung ul { margin: 0; padding-left: 18px; }
 
 /* ---- Fuß ---- */
@@ -367,9 +371,24 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .schmal { max-width: 640px; }
 .formular .knopf { margin-top: 14px; justify-self: start; }
 .abbrechen { margin-top: 18px; }
-.meldung.ok { border-left-color: var(--gruen); }
-.meldung.hinweis { border-left-color: var(--meta); }
-.meldung a { color: var(--fg); }
+.meldung.ok { background: var(--gruen); }
+.meldung.ok::before { -webkit-mask-image: url(/assets/icons/check-circle.svg); mask-image: url(/assets/icons/check-circle.svg); }
+.meldung.hinweis { background: var(--lila); }
+.meldung a, .meldung a:hover { color: var(--nachtblau); text-decoration: underline; font-weight: 700; }
+.meldung .knopf.zweit, .meldung a.knopf.zweit { background: rgba(0, 30, 58, .14); color: var(--nachtblau); }
+
+/* Zeilen-Menü „Bearbeiten“ (Team-Konten, AP-13, Entwurf 9) */
+.zeilen-menue { position: relative; display: inline-block; }
+.zeilen-menue > summary { list-style: none; }
+.zeilen-menue > summary::-webkit-details-marker { display: none; }
+.zeilen-menue[open] > summary .icon { transform: rotate(180deg); }
+.zeilen-liste { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 270px; max-width: calc(100vw - 32px); padding: 6px 0; background: var(--flaeche); border: 2px solid var(--akz); border-radius: 10px; box-shadow: 6px 6px 0 var(--gruen); }
+.zeilen-liste hr { border: 0; border-top: 1px solid var(--linie); margin: 6px 0; }
+.zeilen-liste form { margin: 0; }
+.menue-punkt { display: block; width: 100%; padding: 10px 16px; border: 0; background: transparent; color: var(--fg); font: 1rem var(--f-text); text-align: left; cursor: pointer; }
+.menue-punkt:hover, .menue-punkt:focus-visible { background: var(--bg); color: var(--akz); }
+.menue-punkt.rot { color: var(--rot-300); }
+.menue-punkt.rot:hover { background: rgba(255, 90, 95, .2); color: var(--weiss); }
 .codes { list-style: none; margin: 14px 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 420px; }
 .codes li { background: var(--flaeche); border: 1px solid var(--linie); padding: 8px 12px; font-size: 1.05rem; letter-spacing: .06em; }
 .einrichtung { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 18px 0; }
@@ -833,3 +852,4 @@ select { contain: paint; max-width: 100%; }
 .zustand-liste > div { grid-template-columns: minmax(0, 1fr) auto; }
 .gefahr-kasten { border-color: var(--rot); }
 .konto-raster .va-liste { gap: 0; }
+.tabelle-wrap:has(.zeilen-menue[open]) { overflow: visible; }

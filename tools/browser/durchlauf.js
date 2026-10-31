@@ -749,6 +749,22 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.waitForLoadState('load');
       notiere(engine, 'handy', 'team-konten', 'Einladung per Mail (AP-6)', (await p.textContent('.meldung')).includes(`Einladung an mail-${engine}@example.org geschickt`) && !(await p.textContent('body')).includes('/einrichten?t='));
       notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'BetreiberIn');
+      // AP-13: Aktionen je Zeile im Menü „Bearbeiten“, jede Aktion als Dialog
+      for (const [breite, w, h] of [['handy', 390, 844], ['desktop-breit', 1440, 900]]) {
+        await p.setViewportSize({ width: w, height: h });
+        await p.goto(basis + '/team/konten');
+        const zeile = p.locator('tr', { hasText: 'ada.abend@example.org' });
+        notiere(engine, breite, 'team-konten', 'je Zeile nur ein Knopf „Bearbeiten“', await zeile.locator('.aktionen-zelle > .knopf, .aktionen-zelle > form').count() === 0 && await zeile.locator('.zeilen-menue > summary').isVisible());
+        await zeile.locator('.zeilen-menue > summary').click();
+        notiere(engine, breite, 'team-konten', 'Menü mit Veranstaltungen, Rolle, Zugang, Sperren', await zeile.locator('.zeilen-liste').isVisible() && await zeile.locator('.menue-punkt:visible').count() >= 4);
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-konten-menue.png`) });
+        await zeile.locator('.menue-punkt', { hasText: 'Veranstaltungen' }).click();
+        await p.waitForTimeout(250);
+        notiere(engine, breite, 'team-konten', 'Veranstaltungen im Dialog, Menü zu', await p.isVisible('dialog[open] input[name="umfang"][value="auswahl"]') && !(await zeile.locator('.zeilen-menue').evaluate(d => d.open)));
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-konten-dialog.png`) });
+        await p.keyboard.press('Escape');
+      }
+      await p.setViewportSize({ width: 390, height: 844 });
 
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen
       const link = php([path.join(WURZEL, 'server/cli/konto.php'), 'link', 'anna@example.org'], vor.config).trim()

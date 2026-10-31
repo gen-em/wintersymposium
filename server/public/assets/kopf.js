@@ -51,4 +51,13 @@
         }
     });
     pruefen();
+
+    // Fehlermeldung nach dem Absenden sichtbar machen (AP-13): liegt sie außerhalb, dorthin scrollen
+    var fehler = document.querySelector(".meldung.fehler");
+    if (fehler) {
+        var r = fehler.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > window.innerHeight) {
+            fehler.scrollIntoView({ block: "center" });
+        }
+    }
 })();
