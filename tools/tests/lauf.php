@@ -112,6 +112,9 @@ pruefe(editor_bereinigen('<p>a<script>alert(1)</script><img src=x onerror=alert(
 pruefe(editor_bereinigen('<p onclick="x()" style="color:red">Text</p>') === '<p>Text</p>', 'Attribute entfernt');
 pruefe(str_contains(editor_bereinigen('<p><a href="https://www.blaek.de">Kammer</a></p>'), '<a href="https://www.blaek.de" rel="noopener">Kammer</a>'), 'https-Link');
 pruefe(editor_bereinigen('<p><a class="knopf rot" href="https://example.org/a" onclick="x()">Los</a></p>') === '<p><a class="knopf" href="https://example.org/a" rel="noopener">Los</a></p>' && !str_contains(editor_bereinigen('<p><a class="knopf" href="https://example.org">x</a></p>', 'inline'), 'class='), 'Knopf in Absätzen bleibt Knopf, sonst nur Link (Admin 2026-10-31)');
+pruefe(str_contains(editor_attribute(), 'data-werkzeug="fett kursiv titel | liste nliste link bild knopf | html"') && str_contains(editor_attribute(), 'data-bild-url="/team/texte/bild"') && !str_contains(editor_attribute(), 'data-platzhalter'), 'Editor: eine Leiste für alle mehrzeiligen Felder (Admin 2026-10-31)');
+pruefe(str_contains(editor_attribute('block', true), 'data-platzhalter="') && str_contains(editor_attribute('block', true), 'data-bild-url="/team/mailings/bild"') && str_contains(editor_attribute('block', true), EDITOR_LEISTE['block']), 'Editor in Mails: dieselbe Leiste plus Platzhalter');
+pruefe(str_contains(editor_attribute('inline'), 'data-werkzeug="fett kursiv link"') && !str_contains(editor_attribute('inline'), 'data-bild-url'), 'Editor einzeilig: fett, kursiv, Link');
 pruefe(!str_contains(editor_bereinigen('<p><a href="javascript:alert(1)">x</a></p>'), '<a ') && !str_contains(editor_bereinigen('<p><a href="http://example.org">x</a></p>'), '<a '), 'javascript- und http-Link abgelehnt');
 pruefe(editor_bereinigen('<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>') === '<h2>Titel</h2><ul><li>a</li></ul><ol><li>b</li></ol>', 'Überschrift, Liste, nummerierte Liste');
 pruefe(editor_bereinigen("Zeile 1\nZeile 2\n\nAbsatz 2") === '<p>Zeile 1<br>Zeile 2</p><p>Absatz 2</p>', 'Klartext: Absätze und Zeilen');
@@ -294,6 +297,10 @@ va_zwischenspeicher_leeren();
     pruefe(isset($r['fehler']['ende']), 'Beginn ohne Ende abgelehnt');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'P']);
     pruefe($r['fehler'] === [], 'Punkt ohne Uhrzeit speicherbar (wird im Plan gezogen)');
+    $r = programm_punkt_pruefen(['typ' => 'vortrag', 'titel' => 'Bild', 'beschreibung' => '<p>Text <img src="/bild/text-0123456789abcdef.jpg" alt="x"></p><p><a class="knopf" href="https://example.org">Mehr</a></p>']);
+    pruefe(str_contains($r['werte']['beschreibung'], '<img src="/bild/text-0123456789abcdef.jpg"') && str_contains($r['werte']['beschreibung'], 'class="knopf"'), 'Programm-Beschreibung: Bild und Knopf wie in den Texten (Admin 2026-10-31)');
+    $d = dozent_pruefen(['name' => 'Bild Test', 'kurzbio' => '<p><img src="/bild/text-0123456789abcdef.png" alt=""></p>']);
+    pruefe(str_contains($d['werte']['kurzbio'] ?? '', '<img src="/bild/text-0123456789abcdef.png"'), 'Kurzbio: Bild erlaubt');
     $r = programm_punkt_pruefen(['typ' => 'fremd', 'titel' => '']);
     pruefe(isset($r['fehler']['typ'], $r['fehler']['titel']), 'Typ und Titel Pflicht');
     $r = programm_punkt_pruefen(['typ' => 'block', 'titel' => 'B', 'beginn' => '19:00', 'ende' => '21:00', 'ort' => 'X', 'bring' => 'Y', 'kuerzel' => 'Z']);
@@ -748,6 +755,15 @@ va_zwischenspeicher_leeren();
     // Bilder aufräumen: unbenutzt und älter als ein Tag
     $alt = rm_bild_aus_daten((function (): string { $g = imagecreatetruecolor(10, 10); ob_start(); imagepng($g); imagedestroy($g); return (string)ob_get_clean(); })(), null);
     pruefe($alt['typ'] === 'png' && rm_bilder_aufraeumen(time() + 2 * 86400) >= 1 && rm_bild($alt['id']) === null && !is_file(foto_ordner() . '/' . $alt['datei']) && rm_bild($bildTest['id']) !== null, 'unbenutzte Bilder entfernt, benutzte bleiben');
+    // Text-Bilder im Programm und bei Dozierenden bleiben beim Aufräumen stehen (Admin 2026-10-31)
+    $tb = foto_ordner() . '/text-aaaaaaaaaaaaaaa1.jpg';
+    $tbWeg = foto_ordner() . '/text-aaaaaaaaaaaaaaa2.jpg';
+    file_put_contents($tb, 'x'); file_put_contents($tbWeg, 'x');
+    touch($tb, time() - 3 * 86400); touch($tbWeg, time() - 3 * 86400);
+    $dz = dozent_speichern(null, dozent_pruefen(['name' => 'Bild Aufräumen', 'kurzbio' => '<p><img src="/bild/text-aaaaaaaaaaaaaaa1.jpg" alt=""></p>'])['werte'], null);
+    text_bilder_aufraeumen(time());
+    pruefe(is_file($tb) && !is_file($tbWeg), 'Aufräumen: Bild aus einer Kurzbio bleibt, unbenutztes Text-Bild geht');
+    dozent_loeschen($dz, null); @unlink($tb);
     // Team: Passwort vergessen per Mail (AP-6)
     $tkId = konto_anlegen('Tina Team', 'tina@example.org', 'admin', 'tina-ihr-passwort-1', null);
     tk_passwort_vergessen('tina@example.org');

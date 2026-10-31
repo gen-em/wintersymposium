@@ -652,6 +652,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-30 | Export als xlsx und PDF umgesetzt: E-56 neu (Antworten zu O-35, Umfang, Ergebnis, Probleme); O-35 entschieden; Hinweis in O-19. |
 | 2026-10-30 | AP-10 umgesetzt: E-57 neu (Zertifikat-Entwurf C und Antworten des Admins, Umsetzung, Probleme); AP-10 Status, Ergebnis, Probleme; O-19 entschieden, O-16 teilweise. |
 | 2026-10-31 | AP-11 Mehrere Veranstaltungen neu und umgesetzt (E-58); Antworten zu AP-9 festgehalten (E-59). |
+| 2026-10-31 | Editor überall mit derselben Leiste (zentral festgelegt), Bilder und Knöpfe auch im Programm und in Kurzbios; obere Navigationsleiste bleibt wie sie ist (Admin). |
 | 2026-10-31 | „Meine Anmeldung“ zeigt dem Team-Konto den Team-Bereich in der Leiste. |
 | 2026-10-31 | Startseite erkennt Login auch ohne Ausgabepuffer (Sitzung vor der ersten Ausgabe öffnen, Testserver ohne Puffer); O-40 (Mails im Branding) und O-41 (eigene Workshops im Programm markieren) auf Halde; Impressum und Datenschutz mit derselben Werkzeugleiste wie die Mailings (Knopf, HTML), Platzhalter unter dem Mail-Editor erklärt. |
 | 2026-10-31 | E-62 neu, R-12 gestuft (Browser-Prüfung Stufe 1/2/3). |
