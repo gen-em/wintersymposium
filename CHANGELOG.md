@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.23.1] – 2026-10-31
+
+### Geändert
+
+- **Namen in Mails** (E-67): Mails zu einer Anmeldung tragen den Namen der Veranstaltung (Absender, Kicker, Gruß); Mails für alle Veranstaltungen (Team, Konto, Passwort, Code, Newsletter, Testmail) den Namen der Reihe „Allgäu Akut“ statt „Wintersymposium“ – auch im Betreff. Der Name der Reihe ist eine Einstellung unter Betrieb → Absender und ersetzt dort das Feld „Absendername“ des System-Postfachs. Migration 19 (Absendername je Mail in der Warteschlange).
+- **Personen-Menü:** Team-Konten sehen oben den Eintrag „Team-Bereich“, grün mit Symbol (Rückmeldung 2026-10-31; ersetzt „ohne Team-Bereich“ aus E-60).
+- **Übersicht in der Mail:** Die Uhrzeit steht klein über dem Titel statt in einer eigenen Spalte; „Platz beim …“ zeigt die Uhrzeit der Veranstaltung, Zeilen ohne Uhrzeit haben keine leere Spalte mehr.
+
 ## [0.23.0] – 2026-10-31
 
 ### Neu

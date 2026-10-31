@@ -100,10 +100,13 @@ function mail_html_uebersicht(array $zeilen): string
         $zeit = '';
         if (preg_match('/^(.*?)\s·\s(\d{1,2}:\d{2}[–-]\d{1,2}:\d{2})$/u', $text, $m) === 1) {
             [$text, $zeit] = [$m[1], $m[2]];
+        } elseif (str_starts_with($text, 'Platz beim ') && va('veranstaltung_beginn') !== '') {
+            // Platz bei der Veranstaltung: deren Uhrzeit (Rückmeldung 2026-10-31: keine leere Spalte)
+            $zeit = va('veranstaltung_beginn') . (va('veranstaltung_ende') !== '' ? '–' . va('veranstaltung_ende') : '');
         }
         $h .= '<tr>'
-            . '<td style="' . $rand . 'padding:10px 0 10px 14px;width:96px;font-family:\'Courier New\',monospace;font-size:13px;color:#5B6B7C;vertical-align:top;">' . e($zeit) . '</td>'
-            . '<td style="' . $rand . 'padding:10px 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:' . MAIL_NAVY . ';vertical-align:top;">' . e($text) . '</td>'
+            . '<td style="' . $rand . 'padding:10px 8px 10px 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:' . MAIL_NAVY . ';vertical-align:top;">'
+            . ($zeit !== '' ? '<span style="display:block;font-family:\'Courier New\',monospace;font-size:13px;color:#5B6B7C;">' . e($zeit) . '</span>' : '') . e($text) . '</td>'
             . '<td style="' . $rand . 'padding:10px 14px 10px 0;text-align:right;vertical-align:top;">' . ($status !== '' ? mail_html_schild($status) : '') . '</td>'
             . '</tr>';
     }
@@ -149,7 +152,7 @@ function mail_html_aus_text(string $vorlage, string $betreff, string $text): str
         } elseif (str_starts_with($a, '    ') && count($zeilen) === 1) {
             // Code zum Einloggen
             $inhalt .= '<p style="' . $p . 'font-family:\'Courier New\',monospace;font-size:30px;font-weight:bold;letter-spacing:6px;color:' . MAIL_NAVY . ';">' . e(trim($a)) . '</p>';
-        } elseif (str_starts_with($a, 'Bis bald') && str_contains($gruss, $a)) {
+        } elseif (str_starts_with($a, 'Bis bald') && (str_contains($gruss, $a) || str_contains(mail_gruss(true), $a))) {
             // Gruß: Name und Adresse stehen im Fuß
             $inhalt .= '<p style="' . $p . '">' . mail_html_satz(implode("\n", array_slice($zeilen, 0, 2))) . '</p>';
         } else {
@@ -168,11 +171,18 @@ function mail_html_aus_text(string $vorlage, string $betreff, string $text): str
 /** Kicker über der Überschrift: Veranstaltung und Datum; Team-Mails „Team-Bereich“. */
 function mail_kicker(string $vorlage = ''): string
 {
+    // Mails für alle Veranstaltungen nennen die Reihe (E-67)
     if (str_starts_with($vorlage, 'team_') || $vorlage === 'zweitfaktor_code') {
-        return 'Team-Bereich · ' . va_kurz();
+        return 'Team-Bereich · ' . reihe_name();
+    }
+    if (str_starts_with($vorlage, 'konto_')) {
+        return 'Konto · ' . reihe_name();
     }
     if (str_starts_with($vorlage, 'newsletter')) {
-        return 'Newsletter';
+        return 'Newsletter · ' . reihe_name();
+    }
+    if ($vorlage === 'test') {
+        return reihe_name();
     }
     $datum = va('veranstaltung_datum');
     return va_kurz() . ($datum !== '' ? ' · ' . tag_text($datum) : '');

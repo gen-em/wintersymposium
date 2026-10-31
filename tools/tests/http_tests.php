@@ -251,7 +251,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     pruefe(db_wert('SELECT COUNT(*) FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$a['id'] ?? 0, $t1]) == 1, 'Workshop-Platz reserviert');
     $mail = http_mail_an($tmp, 'lena.test@example.org');
     preg_match('~(/link\?t=[0-9a-f]{48})~', $mail, $m);
-    pruefe(str_contains($mail, 'Subject: ') && str_contains($mail, 'From: Wintersymposium Notfallmedizin <anmeldung@ws.test>') && str_contains($mail, 'Sie gilt erst, wenn du sie') && isset($m[1]), 'Bestätigungsmail mit Link (nach der Antwort versendet)');
+    pruefe(str_contains($mail, 'Subject: ') && preg_match('/^From: (.*) <anmeldung@ws\.test>\r?$/m', $mail, $von) === 1 && mb_decode_mimeheader($von[1]) === va_absender_name() && str_contains($mail, 'Sie gilt erst, wenn du sie') && isset($m[1]), 'Bestätigungsmail mit Link (nach der Antwort versendet), Absender ist die Veranstaltung (E-67)');
     for ($i = 0; $i < 20 && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") === 0; $i++) {
         usleep(100_000); // Datei ist geschrieben, der Vermerk in der Datenbank folgt gleich
     }
@@ -746,6 +746,7 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
     $r = http_anfrage($basis, 'GET', '/', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'class="person-menue"') && !str_contains($r['text'], '>Einloggen</a>') && str_contains($r['text'], 'href="/team"'), 'Startseite erkennt das eingeloggte Team-Konto');
+    pruefe(str_contains($r['text'], '<a class="person-punkt team" href="/team"'), 'Personen-Menü: Team-Bereich für Team-Konten (Rückmeldung 2026-10-31)');
     foreach (['/team' => 'Zu erledigen', '/team/personen' => '+ Person anlegen', '/team/workshops' => 'Termin anklicken', '/team/statistik' => 'Anmeldungen seit Start', '/team/texte' => 'Datenschutzerklärung', '/team/protokoll' => 'Einträge', '/team/daten' => 'Hostnamen'] as $pfad => $text) {
         $r = http_anfrage($basis, 'GET', $pfad, $h, [], null, $b);
         pruefe($r['status'] === 200 && str_contains($r['text'], $text), "Seite $pfad");

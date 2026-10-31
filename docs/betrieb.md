@@ -232,6 +232,8 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 **Aussehen der Mails (E-66):** Alle Mails gehen als HTML mit Textfassung raus, im Rahmen „Plakat“: dunkler Kopf mit Logo (eingebettetes PNG `assets/logo/mail-logo.png`, 560 px für scharfe Bildschirme), Überschrift, Übersicht der Plätze als Tabelle mit Schildern, lila Knopf, Fuß mit Impressum und Datenschutz. Die automatischen Mails werden als Text geschrieben (`mail_vorlage`), die HTML-Fassung entsteht daraus (`mail_html_lib.php`): ein Link allein im Absatz wird Knopf, die Zeilen „- … : Status“ werden Tabelle. Überschrift und Knopf je Vorlage stehen in `MAIL_VORLAGE_KOPF`. Die HTML-Fassung liegt bis zum Versand in der Warteschlange und wird danach geleert wie der Text (R-02).
 
+**Namen in Mails (E-67):** Mails zu einer Anmeldung tragen als Absender, im Kicker und im Gruß den Namen der Veranstaltung (Einstellungen der Veranstaltung: Name, sonst Kurzname). Mails für alle Veranstaltungen (Team, Konto, Passwort, Code, Newsletter, Testmail) tragen den **Namen der Reihe** – Einstellung unter Betrieb → Absender, voreingestellt „Allgäu Akut“. Die Zuordnung steht in `MAIL_VORLAGEN_ALLGEMEIN`.
+
 **Team-Mails:** Neue Team-Konten bekommen die Einladung per Mail (oder der Link wird angezeigt, „Keine Mail“). „Passwort vergessen?“ beim Einloggen gilt auch für Team-Konten; der zweite Faktor bleibt.
 
 ## 13. Team-Bereich (AP-5)

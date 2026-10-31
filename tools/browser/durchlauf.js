@@ -504,10 +504,10 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await Promise.all([p.waitForNavigation(), p.click('.va-menue .va-eintrag:not([aria-current]) >> nth=0')]);
         notiere(engine, breite, 'team-wechsler', 'Eintrag wechselt die Veranstaltung', new URL(p.url()).searchParams.has('va') && await p.isVisible('.va-hinweis'));
         await p.goto(basis + '/team/personen?va=' + vor.aktuell_id);
-        // Personen-Menü (Entwurf A): ohne Team-Bereich, mit Icons
+        // Personen-Menü (Entwurf A): mit Icons; Team-Bereich grün oben (Rückmeldung 2026-10-31)
         if (w >= 760) {
           await p.click('.nav-gross .person-menue > summary');
-          notiere(engine, breite, 'person-menue', 'Personen-Menü: Kopf, Punkte mit Icons, ohne Team-Bereich', await p.isVisible('.nav-gross .person-liste .person-kopf') && await p.locator('.nav-gross .person-liste a.person-punkt svg').count() >= 2 && await p.locator('.nav-gross .person-liste a[href="/team"]').count() === 0);
+          notiere(engine, breite, 'person-menue', 'Personen-Menü: Kopf, Punkte mit Icons, Team-Bereich grün oben', await p.isVisible('.nav-gross .person-liste .person-kopf') && await p.locator('.nav-gross .person-liste a.person-punkt svg').count() >= 2 && await p.locator('.nav-gross .person-liste a.person-punkt.team[href="/team"]').count() === 1 && await p.evaluate(() => getComputedStyle(document.querySelector('.nav-gross .person-liste a.team .person-titel')).color) === 'rgb(181, 189, 0)');
           await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-person-menue-offen.png`) });
           await p.click('.nav-gross .person-menue > summary');
           notiere(engine, breite, 'person-menue', 'Team-Bereich grün in der Leiste', await p.evaluate(() => getComputedStyle(document.querySelector('.nav-gross a.nav-team')).color) === 'rgb(181, 189, 0)');

@@ -775,6 +775,9 @@ fieldset[disabled] input, fieldset[disabled] select, fieldset[disabled] textarea
 .person-wer .person-rolle { justify-self: start; font: 700 .64rem var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border: 1px solid var(--meta); color: var(--meta); }
 .person-liste a.person-punkt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--linie); color: var(--fg); text-decoration: none; }
 .person-punkt > .icon { flex: none; color: var(--akz); }
+/* Team-Bereich im Personen-Menü: grün wie in der Leiste */
+.person-liste a.person-punkt.team .icon, .person-liste a.person-punkt.team .person-titel { color: var(--gruen); }
+.person-liste a.person-punkt.team:hover .person-titel { color: var(--gruen); }
 .person-text { flex: 1; display: grid; gap: 1px; min-width: 0; }
 .person-titel { font-weight: 700; }
 .person-text small { font-weight: 400; font-size: .8rem; color: var(--meta); }

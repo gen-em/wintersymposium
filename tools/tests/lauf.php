@@ -725,13 +725,20 @@ va_zwischenspeicher_leeren();
     $ueb = "Deine Anmeldung (Nr. 0009):\n\n- WS 02 Kleine PatientInnen · 19:30–20:00: Platz bestätigt\n- WS 01 Atemweg · 20:30–21:15: Warteliste · Platz 3 von 5\n- Essen: egal";
     [$bt, $tx] = mail_vorlage('bestaetigt', ['vorname' => 'Lea', 'uebersicht' => $ueb]);
     $hb = mail_html_aus_text('bestaetigt', $bt, $tx);
-    pruefe(str_contains($hb, 'Anmeldung bestätigt') && str_contains($hb, '>Bestätigt</span>') && str_contains($hb, 'Warteliste · 3</span>') && str_contains($hb, '>19:30–20:00</td>')
+    pruefe(str_contains($hb, 'Anmeldung bestätigt') && str_contains($hb, '>Bestätigt</span>') && str_contains($hb, 'Warteliste · 3</span>') && str_contains($hb, '>19:30–20:00</span>WS 02')
         && str_contains($hb, '>Anmeldung ansehen oder ändern</a>') && !str_contains($hb, 'Ändern oder absagen') && str_contains($tx, 'Ändern oder absagen') && str_contains($hb, MAIL_LOGO_PLATZHALTER) && str_contains($hb, 'Impressum</a>') && !str_contains($tx, '<'), 'Mail-HTML: Übersicht als Tabelle mit Schildern, Knopf, Logo, Fuß; Text bleibt Text');
     [$ab, $at] = mail_vorlage('angebot', ['vorname' => 'Lea', 'was' => 'WS 01 · 20:30–21:15', 'frist' => 'Do 18:00', 'link' => 'https://example.org/link?t=abc']);
     $ha = mail_html_aus_text('angebot', $ab, $at);
     pruefe(str_starts_with($ab, 'Platzangebot:') && str_contains($ha, 'href="https://example.org/link?t=abc"') && str_contains($ha, '>Platz annehmen oder ablehnen</a>') && str_contains($ha, 'Knopf geht nicht? https://example.org/link?t=abc'), 'Mail-HTML: Link allein im Absatz wird Knopf mit Ersatzadresse');
     $rohM = mail_nachricht(mail_konfig(), 'lea@example.org', $ab, $at, ['html' => $ha]);
     pruefe(preg_match('/Content-ID: <logo@[^>]+>/', $rohM) === 1 && str_contains(quoted_printable_decode($rohM), 'src="cid:logo@') && !str_contains($rohM, MAIL_LOGO_PLATZHALTER) && is_file(mail_logo()[1]), 'Mail: Logo als eingebettetes PNG (Content-ID)');
+    // Namen (E-67): allgemeine Mails im Namen der Reihe, Mails zu einer Anmeldung im Namen der Veranstaltung
+    [$pb, $pt] = mail_vorlage('team_passwort', ['vorname' => 'Bea', 'link' => 'https://example.org/x']);
+    pruefe(reihe_name() === 'Allgäu Akut' && $pb === 'Neues Passwort für den Team-Bereich von Allgäu Akut' && str_contains($pt, 'Dein Team von Allgäu Akut') && !str_contains($pb . $pt, 'Wintersymposium')
+        && str_contains(mail_html_aus_text('team_passwort', $pb, $pt), 'Team-Bereich · Allgäu Akut') && str_contains($tx, 'Dein Team vom ' . va_kurz()), 'Mail-Namen: Team-Mail nennt die Reihe, Anmeldungs-Mail die Veranstaltung');
+    einstellung_setzen('reihe_name', 'Testreihe');
+    pruefe(mail_vorlage('konto_vorhanden', ['vorname' => 'X'])[0] === 'Du hast schon ein Konto bei Testreihe' && mail_absender_name(mail_konfig()) === 'Testreihe', 'Name der Reihe ist eine Einstellung');
+    einstellung_setzen('reihe_name', null);
     [, $ct] = mail_vorlage('zweitfaktor_code', ['vorname' => 'Bea', 'code' => '123456']);
     pruefe(str_contains(mail_html_aus_text('zweitfaktor_code', 'Code', $ct), 'letter-spacing:6px;color:#001E3A;">123456</p>'), 'Mail-HTML: Code groß und gut lesbar');
     pruefe(preg_match('#Ansehen: http\S+/link\?t=[0-9a-f]{48}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
