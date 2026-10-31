@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.23.2] – 2026-10-31
+
+### Doku
+
+- **Prüfprotokoll:** voller Browser-Lauf für 0.23.1 (7851 ok, 9 Fehler am Personen-Menü – behoben, Nachtest 590 ok, 0 Fehler) und Prüfweg für den Admin nachgetragen.
+
 ## [0.23.1] – 2026-10-31
 
 ### Geändert
