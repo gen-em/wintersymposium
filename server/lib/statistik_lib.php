@@ -212,6 +212,10 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 }
             }
             return $paket($datei('cme'), 'CME-Liste', ['Nachname', 'Vorname', 'Berufsgruppe', 'EFN'], $z);
+        case 'cme_nachweise':
+            // Betreiber (Betrieb): abgelegte CME-Nachweise aller Veranstaltungen (AP-9)
+            $z = array_map(fn($n) => [$n['veranstaltung'], date('d.m.Y', (int)strtotime($n['datum'])), $n['nachname'], $n['vorname'], $n['efn'] ?? '', $n['vnr'], $n['punkte'], $n['kammer']], ds_cme_liste());
+            return $paket('cme-nachweise-' . gmdate('Ymd') . '.csv', 'CME-Nachweise', ['Veranstaltung', 'Datum', 'Nachname', 'Vorname', 'EFN', 'VNR', 'Punkte', 'Kammer'], $z, ['quer' => true]);
         case 'newsletter':
             // AP-7: bestätigte Abonnierende (eine Liste über t=…, sonst alle)
             $par = [];

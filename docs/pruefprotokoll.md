@@ -29,7 +29,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
-| AP-9 | Abschluss und Datenschutz | offen; Sicherung vorgezogen (E-47) | lokal T-201, T-223, T-224 | T-200 bis T-204 |
+| AP-9 | Abschluss und Datenschutz (E-59) | umgesetzt, Staging offen | lokal T-200 bis T-202, T-204, T-223, T-224, T-260 bis T-263 | Staging (siehe unten); T-203 Checkliste vor dem Anmeldestart |
 
 ## 2. Geplante Prüfungen
 
@@ -40,11 +40,11 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-102, ap: AP-1, was: "CSRF-Schutz", wie: "POST ohne/mit falschem Token wird abgelehnt", status: "lokal bestanden; auf Staging mit AP-4 (Formulare) erneut"}
 - {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: "teilweise: Ablage var/sitzungen auf Staging vorhanden; Ablauf nach 30 min offen (mit AP-5-Login prüfen)"}
 - {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "11-mal /health mit falschem Token → danach auch mit richtigem Token 404 für 10 min; nach Ablauf wieder 200", status: "lokal bestanden; über HTTP auf Staging offen (optional)"}
-- {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Lima-City-Cron ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: "bestanden (Staging 2026-10-29, Cron per URL)"}
+- {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Cron des Hosters ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: "bestanden (Staging 2026-10-29, Cron per URL)"}
 - {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "Staging bestanden (2026-10-29); Produktion per Tag offen"}
 - {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET /health mit Kopfzeile X-Health-Token oder ?token= liefert 200 und JSON (status ok, Schema ist = soll); ohne Token 404", status: "bestanden (Staging 2026-10-29)"}
 - {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "var/wartung.lock per FTP anlegen → Startseite 503 mit Hinweisseite, /health meldet wartung: true, Team-Login weiter möglich (ab AP-5); Datei löschen → wieder 200", status: "bestanden ohne Login-Teil (Staging 2026-10-29); Login-Teil nach AP-5"}
-- {id: T-109, ap: AP-1, was: "Lima-City-Botschutz", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: "teilweise: curl-POST erreicht die App (kein Hoster-403); Browser-Formular mit AP-4"}
+- {id: T-109, ap: AP-1, was: "Botschutz des Hosters", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: "teilweise: curl-POST erreicht die App (kein Hoster-403); Browser-Formular mit AP-4"}
 - {id: T-110, ap: AP-1, was: "Mehrere Hostnamen (E-27)", wie: "Aufruf über nicht erlaubten Host → Ablehnung; erlaubter Host → richtige Basis-URL in Links und Mails", status: "bestanden (Staging 2026-10-29; fremder Host vom Hoster mit 404 abgewiesen)"}
 
 # AP-2 Design-Mockups und öffentliche Seiten
@@ -117,7 +117,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-159, ap: AP-5, was: "Konten der Teilnehmenden im Team-Bereich", wie: "Konto suchen, mit Anmeldung verknüpfen, Reset auslösen, sperren → Login verweigert", status: "lokal bestanden (Personen: Filter „Mit Konto“, Passwort-Link, sperren, löschen mit Wahl, Rolle vergeben mit Code und Einrichtungslink)"}
 
 # AP-6 Mailversand und Rundmails
-- {id: T-160, ap: AP-6, was: "SMTP-Versand über Lima-City", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: "offen: Testmail und Mailing auf Staging (Mailversand an sich geht, Admin 2026-10-29)"}
+- {id: T-160, ap: AP-6, was: "SMTP-Versand über den Hoster", wie: "Testmail an eigene Adresse; Verbindung innerhalb 5 s", status: "offen: Testmail und Mailing auf Staging (Mailversand an sich geht, Admin 2026-10-29)"}
 - {id: T-161, ap: AP-6, was: "Prioritäten", wie: "Rundmail an 100 Adressen einreihen, danach Anmeldung → Bestätigung geht vor der Rundmail raus", status: "lokal bestanden (Rundmail über dem Limit wartet, zwei Bestätigungen gehen sofort raus)"}
 - {id: T-162, ap: AP-6, was: "Tageslimit", wie: "Limit testweise auf 5 setzen, 8 Mails einreihen → 5 heute, 3 morgen", status: "lokal bestanden (Limit 5: Mailing über anmeldung@ 4 heute, Rest morgen; newsletter@ Limit 3 eigenes Kontingent)"}
 - {id: T-163, ap: AP-6, was: "Wiederholung bei Fehler", wie: "SMTP-Passwort kurz falsch → Mail bleibt in der Warteschlange, Versand nach Korrektur", status: "lokal bestanden seit AP-4 (Wiederholungen 5/30/120/360 min); auf Staging nicht nötig"}
@@ -191,13 +191,17 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
 # AP-9 Abschluss und Datenschutz
-- {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Symposium länger als 14 Monate her → vom Job anonymisiert (E-24); Konto bleibt; CME-Daten ohne Konto bleiben 10 Jahre", status: offen}
+- {id: T-200, ap: AP-9, was: "Automatische Anonymisierung", wie: "Anmeldung ohne Konto, Veranstaltung länger als 14 Monate her → vom Job geleert (Name, Adresse, Institution, EFN, Links, Mailing-Empfänger); Berufsgruppe und Plätze bleiben; mit Konto bleibt sie; vor 13 Monaten noch nicht (E-24, E-59)", status: "lokal bestanden"}
 - {id: T-201, ap: AP-9, was: "Backup und Wiederherstellung", wie: "Team-Bereich → Daten: Sicherung anlegen, Daten ändern, wiederherstellen → alter Stand zurück, Stand davor gesichert; unvollständige oder neuere Sicherung abgelehnt; Herunterladen nur mit Code (E-47)", status: "lokal bestanden; auf Staging offen"}
 - {id: T-223, ap: AP-9, was: "Testdaten laden (E-47)", wie: "nur Staging/Entwicklung; ersetzt Programm, Anmeldungen, Einstellungen durch den Beispieldatensatz, Team-Konten bleiben, vorher Sicherung", status: "lokal bestanden; auf Staging offen"}
 - {id: T-224, ap: AP-9, was: "Mail-Umleitung auf Staging (E-47)", wie: "mail.umleiten_an gesetzt → Mail an diese Adresse, Empfänger im Betreff", status: "lokal bestanden; auf Staging offen"}
-- {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Konto anlegen → Änderung → Stichtag → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen (eine mit, eine ohne Konto)", status: offen}
+- {id: T-202, ap: AP-9, was: "Gesamttest", wie: "Ablauf Anmeldung → Konto anlegen → Änderung → Stichtag → Storno → Nachrück-Angebot → Annahme → Rundmail → Anwesenheit → Zertifikat mit zwei Testpersonen (eine mit, eine ohne Konto)", status: "lokal bestanden (Bibliothek: lauf.php Abschnitt T-202); im Browser auf Staging offen"}
 - {id: T-203, ap: AP-9, was: "Checkliste Anmeldestart", wie: "Konzept Abschnitt 9 vollständig abgehakt", status: offen}
-- {id: T-204, ap: AP-9, was: "Repo frei von Interna (R-10)", wie: "Suche im Repo nach Kontonamen, IPs, Pfaden, Postfachnamen vor dem Umschalten auf öffentlich", status: offen}
+- {id: T-204, ap: AP-9, was: "Repo frei von Interna (R-10)", wie: "Suche im Repo nach Kontonamen, IPs, Pfaden, Postfachnamen vor dem Umschalten auf öffentlich", status: "bestanden 2026-10-31: keine IPs, Zugangsdaten oder Postfach-Logins (auch nicht in der Git-Geschichte); Name des Hosters und Bezüge auf die frühere Organisation (Konto, Kaneo-Adresse, privates Repo) entfernt (Admin 2026-10-31); Ordnerpfade in betrieb.md bleiben (Admin: „nicht schlimm“); in der Git-Geschichte stehen die alten Texte weiter"}
+- {id: T-260, ap: AP-9, was: "Sicherung 8× täglich mit Staffelung", wie: "Job alle 3 Stunden; behalten alle der letzten 3 Tage, bis 7 Tage eine je Tag, bis 14 Tage eine je 3 Tage, bis 28 Tage eine je Woche; von Hand nach 90 Tagen; zweiter Lauf löscht nichts; automatische ohne Protokolleintrag", status: "lokal bestanden; auf Staging: Cron läuft, Liste unter Daten wächst"}
+- {id: T-261, ap: AP-9, was: "CME-Nachweise", wie: "beim Leeren nur anwesende, bestätigte ÄrztInnen einer Veranstaltung mit Fortbildungspunkten abgelegt (Name, EFN, Datum, VNR, Punkte, Kammer); nach 10 Jahren gelöscht; Kasten und Export nur für Betreiber, Admin bekommt 404", status: "lokal bestanden"}
+- {id: T-262, ap: AP-9, was: "Protokoll kürzen", wie: "Einträge älter als 14 Monate gelöscht, Logins älter als 90 Tage", status: "lokal bestanden"}
+- {id: T-263, ap: AP-9, was: "Textvorschlag Datenschutzerklärung", wie: "docs/datenschutz-vorschlag.md gegen die Fristen im Code geprüft; Platzhalter füllen, Text unter Texte → Datenschutz einfügen", status: "Vorschlag liegt vor; Prüfung und Einfügen durch den Admin"}
 ```
 
 ## 3. Ergebnisse
@@ -211,7 +215,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-102 | 2026-10-29 | claude-dev | lokal bestanden | POST /install ohne Token → 403, mit falschem Token → 403 | – |
 | T-103 | 2026-10-29 | claude-dev | lokal bestanden (Teil) | Ablage unter var/sitzungen; Aufräumen löscht nur Dateien älter als 40 min | Ablauf nach 30 min Leerlauf auf Staging prüfen |
 | T-104 | 2026-10-29 | claude-dev | lokal bestanden (Bibliothek) | 9 Fehlversuche erlaubt, 10. sperrt, nach Sperrdauer frei; Merkmal ist Hash, keine IP | über HTTP auf Staging prüfen |
-| T-105 | 2026-10-29 | claude-dev | lokal bestanden | /jobs?token=… → status ok, Auslöser url; cli/jobs.php → Exitcode 0, Auslöser cli; Mindestabstand je Job eingehalten, Zeitstempel bei jedem Aufruf | Lima-City-Cron offen |
+| T-105 | 2026-10-29 | claude-dev | lokal bestanden | /jobs?token=… → status ok, Auslöser url; cli/jobs.php → Exitcode 0, Auslöser cli; Mindestabstand je Job eingehalten, Zeitstempel bei jedem Aufruf | Cron beim Hoster offen |
 | T-107 | 2026-10-29 | claude-dev | lokal bestanden | ohne/falsches Token 404; mit Token 200, JSON, Schema ist = soll | – |
 | T-108 | 2026-10-29 | claude-dev | lokal bestanden (ohne Login) | wartung.lock → 503 mit Retry-After; /health meldet wartung: true; /team nicht 503; Jobs pausieren | Team-Login erst ab AP-5 |
 | T-106 | 2026-10-29 | claude-dev | nicht bestanden (erster Lauf) | Lauf „Auslieferung“ nach Merge von 0.1.0: Prüfung grün (MySQL 8.4, 88 ok), Abgleich abgebrochen mit curl 9 vor jeder Übertragung | Zielpfad falsch (FTP-Login landet schon in wintersymposium); in 0.1.1 auf /staging/ und /produktiv/ korrigiert, erneut prüfen |
@@ -220,7 +224,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-100 | 2026-10-29 | admin | bestanden | Installation über /install abgeschlossen; var/install.lock vorhanden; /install danach „Nicht gefunden“ (404, auch per curl bestätigt) | – |
 | T-101 | 2026-10-29 | claude-dev | bestanden | `curl -sI https://test.winter-notfallsymposium.de/` → CSP mit Nonce, Strict-Transport-Security max-age=31536000, nosniff, Referrer-Policy, X-Frame-Options DENY, COOP/CORP, Permissions-Policy, kein X-Powered-By; http → https im Browser (admin) | Hoster setzt eigenes Cookie `_lcp` → in der Datenschutzerklärung (AP-2) erwähnen |
 | T-107 | 2026-10-29 | admin, claude-dev | bestanden | ohne Token 404 (curl); mit Token JSON status ok, version 0.1.1, umgebung staging, schema ist 1 = soll 1 | – |
-| T-105 | 2026-10-29 | admin | bestanden | Lima-City-Cron per URL alle 5 min; /health zeigt jobs.letzter_lauf aktuell, letzter_ausloeser url, mit_fehler leer | – |
+| T-105 | 2026-10-29 | admin | bestanden | Cron des Hosters per URL alle 5 min; /health zeigt jobs.letzter_lauf aktuell, letzter_ausloeser url, mit_fehler leer | – |
 | T-108 | 2026-10-29 | admin | bestanden (ohne Login) | var/wartung.lock angelegt → Startseite „Wartung“; gelöscht → wieder Startseite | Login-Teil nach AP-5 |
 | T-110 | 2026-10-29 | claude-dev | bestanden | `curl -H 'Host: fremd.example' https://test.winter-notfallsymposium.de/` → 404 vom Hoster (Anfrage erreicht die App nicht); erlaubter Host 200 | – |
 | T-109 | 2026-10-29 | claude-dev | teilweise | `curl -X POST https://test.winter-notfallsymposium.de/` → 200 von der App, kein 403 vom Hoster | Formular-POST im Browser mit AP-4 |
@@ -234,6 +238,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-200 bis T-202, T-260 bis T-263 | 2026-10-31 | claude-dev | lokal bestanden | `lauf.php` 792 ok, 0 Fehler (Sicherungsplan mit Zeitpunkten über 60 Tage, von Hand nach 90 Tagen, stabiler zweiter Lauf, Job legt an und räumt auf; Anmeldung ohne Konto nach 14 Monaten geleert, mit Konto und nach 13 Monaten nicht; CME-Nachweis nur für die anwesende Ärztin, nach 10 Jahren gelöscht; Protokoll und Logins gekürzt; Gesamtablauf mit zwei Personen: Anmeldung ohne und mit Konto, Warteliste, Änderung mit Angebot und Annahme, Stichtag, Storno, Rundmail, Anwesenheit, Zertifikat auch im Konto-Rückblick; HTTP: Kasten CME-Nachweise, Export nur für Betreiber); Browser-Durchlauf 6042 ok, 0 Fehler (Seite Daten mit Sicherungsplan und CME-Kasten) | Staging |
 | T-254 bis T-259 | 2026-10-31 | claude-dev | lokal bestanden | `lauf.php` 771 ok, 0 Fehler (Migration aus altem Stand mit Einstellung und Text; anlegen als Kopie, Kürzel-Prüfung, Programm kopiert und unveröffentlicht, Anmeldungen, Plätze, Einstellungen, Texte und Mailing-Empfänger getrennt, gleiche Adresse je Veranstaltung, Entwurf ohne Anmeldung, nur eine aktuelle, abschließen, neue aktuelle, Kürzel ändern, Entwurf löschen, Daten übernehmen per Link, Bausteine ohne Essen und Punkte, Konto mit zwei Veranstaltungen, Zertifikat einer abgeschlossenen; HTTP: Seite Veranstaltungen, anlegen, Kürzel „team“ abgelehnt, Auswahl im Kopf, Personen nur der gewählten, Entwurf nicht öffentlich, abschließen, Speichern abgewiesen, Rückblick ohne Anmeldung, Exporte, neue aktuelle auf der Startseite); Browser-Durchlauf 6042 ok, 0 Fehler (Rückblick /wintersymposium2026 in allen Breiten, Seite Veranstaltungen, Mein Konto mit Vorjahr und Zertifikat-Download) | Staging |
 | T-190 bis T-195, T-251 bis T-253 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 734 ok, 0 Fehler (Anwesenheit Standard, „nicht erschienen“ je Symposium und Workshop, Protokoll; freischalten erst ab dem Veranstaltungstag, alle mit je einer Mail, einzeln ohne Mail, nicht doppelt, zurücknehmen; nicht erschienen → kein Zertifikat, auch nachträglich; CME-Liste nur Anwesende; Code 128 Muster und Prüfzeichen; Zertifikat-PDF mit Name, Workshop, Punkten, Kammer, Leitung, ohne Berufsgruppe; Unterschriftenlisten; Unterschrift als Bild und in der Sicherung; Tageslimit als Zahl; HTTP: Seite, Navigation, Eintragen mit CSRF, Filter, Listen, Vorschau, nur Team, Upload und Ablehnung, Freischalten mit Mail, Download mit Sitzung, ohne Sitzung und nachträglich gesperrt); Browser-Durchlauf 5505 ok, 0 Fehler (Teilnahme in allen Breiten, auf dem Handy eintragen, Listen und Vorschau als PDF, Lea lädt ihr Zertifikat herunter); Zertifikat und Listen als Bild angesehen; Barcode mit zxing gelesen | Staging |
 | T-247 bis T-250 | 2026-10-30 | claude-dev | lokal bestanden | `lauf.php` 686 ok, 0 Fehler (xlsx: Zip mit Mappe, Blatt, Stilen; Kopf fixiert mit Filter; Text nie Formel, Steuerzeichen entfernt, Zahl und Datum als Zahl; Blattname ohne verbotene Zeichen; PDF: Teilnehmende ohne E-Mail mit Seitenzahl, je Termin eine Seite mit Belegung ohne E-Mail, leere Liste mit Hinweis, 120 Zeilen über mehrere Seiten ohne Verlust, Filter im Kopf; Newsletter ohne PDF; HTTP: Formate, Typen, Dateinamen, Protokoll); Browser-Durchlauf 5316 ok, 0 Fehler (Knöpfe in Statistik, Download von PDF und xlsx in Chromium, Firefox und WebKit; Seiten in allen Breiten); PDFs als Bild angesehen, xlsx in LibreOffice und openpyxl geöffnet | Staging |
@@ -284,6 +289,14 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-9 Abschluss und Datenschutz (nach Merge auf Staging)
+
+1. Nach dem Ausrollen einige Stunden warten, dann Team → Verwaltung → Daten: In „Vorhandene Sicherungen“ stehen Einträge mit Anlass „automatisch“ etwa alle 3 Stunden. Erwartet: keine Einträge „Sicherung angelegt“ im Protokoll für diese.
+2. Unter Daten steht der Kasten „CME-Nachweise“ (0 Nachweise). Mit einem Admin-Konto (nicht Betreiber) ist die Seite Daten nicht erreichbar.
+3. `docs/datenschutz-vorschlag.md` lesen, Platzhalter in eckigen Klammern füllen (Verantwortlicher, Hoster, Kammer, Aufsichtsbehörde), prüfen lassen und unter Kommunikation → Texte → Datenschutz einfügen.
+4. T-202 im Browser (optional, Testdaten): zwei Testpersonen nach dem Ablauf in T-202 durchspielen – eine mit, eine ohne Konto.
+5. T-203: Checkliste Anmeldestart (Konzept Abschnitt 9) vor dem 25.11. abhaken.
 
 ### Noch zu prüfen für AP-11 Mehrere Veranstaltungen (nach Merge auf Staging)
 

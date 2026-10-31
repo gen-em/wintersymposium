@@ -32,6 +32,16 @@ function jobs_katalog(): array
             'abstand_s' => 60,
             'fn' => 'job_rundmail',
         ],
+        // Fristen (AP-9, E-59): Anmeldungen leeren, CME-Nachweise, Protokoll
+        'datenschutz' => [
+            'abstand_s' => 3600,
+            'fn' => 'job_datenschutz',
+        ],
+        // Automatische Sicherung alle 3 Stunden mit gestaffelter Aufbewahrung (E-59)
+        'sicherung' => [
+            'abstand_s' => DS_SICHERUNG_ABSTAND_S,
+            'fn' => 'ds_sicherung_job',
+        ],
         // Warteschlange senden (nach anmeldung, damit dessen Mails gleich mitgehen)
         'mail' => [
             'abstand_s' => 60,
@@ -127,6 +137,11 @@ function job_anmeldung(int $jetzt): array
         }
     }
     return $erg + ['konten' => tk_aufraeumen($jetzt), 'loeschfrist' => tk_loeschfrist($jetzt)];
+}
+
+function job_datenschutz(int $jetzt): array
+{
+    return ds_anmeldungen_leeren($jetzt) + ['cme_geloescht' => ds_cme_loeschen($jetzt)] + ds_protokoll_kuerzen($jetzt);
 }
 
 function job_rundmail(int $jetzt): array

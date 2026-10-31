@@ -29,7 +29,7 @@ declare(strict_types=1);
 /** Priorität: System-Mails (Bestätigung, Links, Angebote) vor Rundmails (AP-6). */
 const MAIL_PRIO_SYSTEM = 1;
 const MAIL_PRIO_RUNDMAIL = 5;
-/** Zeitbudget je SMTP-Versand in Sekunden (Lima-City: 5 s, R-08). */
+/** Zeitbudget je SMTP-Versand in Sekunden (Hoster: 5 s, R-08). */
 const MAIL_SMTP_FRIST_S = 5;
 /** Anteil des Tageslimits, den Rundmails über das System-Postfach frei lassen (für Bestätigungen und Links). */
 const MAIL_SYSTEM_RESERVE = 0.2;

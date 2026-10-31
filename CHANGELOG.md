@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.19.0] – 2026-10-31
+
+Abschluss und Datenschutz (AP-9, E-59).
+
+### Neu
+
+- **Fristen automatisch** (Job `datenschutz`, stündlich): Anmeldungen ohne Konto werden 14 Monate nach der Veranstaltung geleert (Zahlen für die Statistik bleiben); Protokoll nach 14 Monaten, Logins nach 90 Tagen gelöscht.
+- **CME-Nachweise:** vor dem Leeren werden Name, EFN und Punkte der anwesenden ÄrztInnen getrennt abgelegt und 10 Jahre aufbewahrt; Kasten mit Export unter Betrieb (nur Betreiber).
+- **Automatische Sicherung** alle 3 Stunden mit Staffelung (alle der letzten 3 Tage, bis 7 Tage je Tag, bis 14 Tage je 3 Tage, bis 28 Tage je Woche); von Hand angelegte werden nach 90 Tagen gelöscht.
+- **Textvorschlag Datenschutzerklärung** in `docs/datenschutz-vorschlag.md` (kein Rechtsrat).
+- Tests: Gesamtablauf mit zwei Personen (T-202), Fristen, Sicherungsplan.
+
+### Geändert
+
+- Migration 16: Tabelle `cme_nachweis`, Spalte `anmeldung.anonymisiert_am`.
+- Geleerte Anmeldungen erscheinen im Team-Bereich als „(Daten geleert)“.
+- Automatische Sicherungen stehen nicht im Protokoll.
+- Repo-Prüfung (T-204): Name des Hosters und Bezüge auf die frühere Organisation aus README, Konzept, Betriebsdoku, Prüfprotokoll und Code-Kommentaren entfernt.
+
 ## [0.18.0] – 2026-10-31
 
 Mehrere Veranstaltungen (AP-11, E-58).

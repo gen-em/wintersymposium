@@ -607,6 +607,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(str_contains($r['text'], 'Zwei-Faktor-Authentifizierung') && str_contains($r['text'], 'Code per E-Mail') && str_contains($r['text'], 'Passkey'), 'Mein Konto › Zwei-Faktor');
     $r = http_anfrage($basis, 'POST', '/konto/zweitfaktor', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_aus', 'pw' => 'mia-ihr-passwort-1'], $k2);
     pruefe(str_contains($r['text'], 'Richte zuerst die Authenticator-App oder einen Passkey ein') && totp_zustand($mk)['mail'], 'Mail-Code ohne App nicht abschaltbar');
+    pruefe(http_anfrage($basis, 'GET', '/team/export?art=cme_nachweise', $h, [], null, $k2)['status'] === 404, 'CME-Nachweise: Export nur für Betreiber (AP-9)');
     // Protokoll: Admin sieht keine Sicherung, kann nicht ausblenden
     $r = http_anfrage($basis, 'GET', '/team/protokoll?art=sicherung', $h, [], null, $k2);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Keine Einträge') && !str_contains($r['text'], 'Ausblenden'), 'Admin: keine Sicherungs-Einträge, kein Ausblenden');
@@ -846,6 +847,11 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, "$tmp/kekse-niemand.txt")['status'] === 303, 'ohne Login kein Zugriff');
     $csrf = http_csrf($r['text']);
     pruefe(str_contains($r['text'], 'Mailversand') && str_contains($r['text'], 'Testmail an mich'), 'Kasten Mailversand mit Testmail');
+    pruefe(str_contains($r['text'], 'id="cme-nachweise"') && str_contains($r['text'], 'alle 3 Stunden'), 'Kasten CME-Nachweise und Sicherungsplan (AP-9)');
+    db_ausfuehren("INSERT INTO cme_nachweis (veranstaltung_id, anmeldung_id, veranstaltung, datum, nachname, vorname, efn, vnr, punkte, kammer, erstellt_am) VALUES (1, 999999, 'Test', '2025-01-15', 'Probe', 'Pia', '802760012345673', '1', '6', 'BLÄK', ?)", [db_jetzt()]);
+    $x = http_anfrage($basis, 'GET', '/team/export?art=cme_nachweise', $h, [], null, $b);
+    pruefe($x['status'] === 200 && str_contains($x['text'], '802760012345673') && str_contains(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['text'], '1 Nachweis'), 'Betreiber: CME-Nachweise sichtbar und exportierbar');
+    db_ausfuehren('DELETE FROM cme_nachweis WHERE anmeldung_id = 999999');
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testmail'], $b);
     $f = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
     pruefe($r['status'] === 303 && str_contains($f['text'], 'beim Mailserver angenommen') && http_mail_an($tmp, 'betrieb@example.org', 20, 'Diese Mail prüft den Versand') !== '', 'Testmail sofort versendet, Ergebnis angezeigt');
