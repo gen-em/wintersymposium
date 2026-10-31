@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.25.1] – 2026-10-31
+
+### Doku
+
+- **Prüfprotokoll:** voller Browser-Lauf für 0.25.0 nachgetragen (8016 ok, 0 Fehler).
+
 ## [0.25.0] – 2026-10-31
 
 ### Geändert
