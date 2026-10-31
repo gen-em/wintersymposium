@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Faktor), Konto für Teilnehmende und Einmal-Link stehen nebeneinander in
  * derselben Sitzung; Ausloggen beendet alles.
  *
- * Lima-City teilt session.save_path mit anderen Kunden und räumt nach 24 min
+ * Der Hoster teilt session.save_path mit anderen Kunden und räumt nach 24 min
  * auf (R-08). Deshalb eigene Ablage im Laufzeitordner, kein Aufräumen durch
  * PHP (gc_probability = 0); das Aufräumen übernimmt der Job 'aufraeumen'.
  * Ablauf nach 30 min ohne Anfrage wird in der Sitzung selbst geprüft.

@@ -48,7 +48,7 @@ Der FTP-Zugang der Auslieferung landet direkt im Ordner `wintersymposium` und si
 
 Erst Staging einrichten und prüfen, dann Produktion genauso.
 
-1. **Domain-Zuordnung:** im Lima-City-Konto die Subdomain `test.winter-notfallsymposium.de` auf den Ordner `/wintersymposium/staging/public` legen (Produktion: Hauptdomain auf `/wintersymposium/produktiv/public`). HTTPS-Zertifikat für die Domain aktivieren.
+1. **Domain-Zuordnung:** in der Verwaltung des Hosters die Subdomain `test.winter-notfallsymposium.de` auf den Ordner `/wintersymposium/staging/public` legen (Produktion: Hauptdomain auf `/wintersymposium/produktiv/public`). HTTPS-Zertifikat für die Domain aktivieren.
 2. **Datenbank:** eine MySQL-Datenbank mit eigenem Benutzer anlegen (je Umgebung eine eigene).
 3. **Erste Auslieferung:** Sobald der PR in `main` gemergt ist, überträgt GitHub Actions den Code automatisch nach Staging (Abschnitt 3). Für Produktion: Tag setzen (Abschnitt 3).
 4. **config.php anlegen:** `config.example.php` lokal kopieren, als `config.php` ausfüllen und per FTP in den Zielordner legen (neben `config.example.php`, **nicht** in `public/`):
@@ -57,7 +57,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
    - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
-6. **Cron einrichten:** im Lima-City-Konto einen Cronjob alle 5 Minuten anlegen, entweder
+6. **Cron einrichten:** in der Verwaltung des Hosters einen Cronjob alle 5 Minuten anlegen, entweder
    - als URL-Aufruf: `https://<domain>/jobs?token=<jobs_token>`, oder
    - auf der Kommandozeile: `php <Zielordner>/cli/jobs.php`
 7. **Prüfen:** `https://<domain>/health?token=<health_token>` zeigt JSON mit `"status": "ok"` und nach dem ersten Cron-Lauf eine Zeit unter `jobs.letzter_lauf`.
