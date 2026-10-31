@@ -552,6 +552,21 @@ function migration_katalog(): array
                 "ALTER TABLE anmeldung ADD COLUMN anonymisiert_am DATETIME NULL",
             ],
         ],
+        17 => [
+            'beschreibung' => 'Rechte je Veranstaltung (AP-12, E-60): Admins für alle oder ausgewählte Veranstaltungen, Protokolleinträge mit Veranstaltung',
+            'sql' => [
+                "ALTER TABLE konto ADD COLUMN alle_veranstaltungen TINYINT(1) NOT NULL DEFAULT 1",
+                "CREATE TABLE konto_veranstaltung (
+                    konto_id         INT UNSIGNED NOT NULL,
+                    veranstaltung_id INT UNSIGNED NOT NULL,
+                    PRIMARY KEY (konto_id, veranstaltung_id),
+                    KEY ix_konto_veranstaltung_va (veranstaltung_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "ALTER TABLE audit ADD COLUMN veranstaltung_id INT UNSIGNED NULL, ADD KEY ix_audit_va (veranstaltung_id)",
+                // Bisherige Einträge der Veranstaltungs-Arten gehören zur ersten Veranstaltung (vor AP-11 gab es nur sie)
+                "UPDATE audit SET veranstaltung_id = (SELECT MIN(id) FROM veranstaltung) WHERE art IN ('anmeldung','nachruecken','programm','einstellungen','export','mailing','teilnahme')",
+            ],
+        ],
     ];
 }
 

@@ -26,11 +26,19 @@ const TEAM_FILTER = [
  * Anmeldung. Je Eintrag: art ('anm'|'konto'), id, name, email, status,
  * konto (Zeile oder null), plaetze, essen, erstellt.
  */
-function team_personen(): array
+function team_personen(?array $sicht = null): array
 {
     $konten = [];
     foreach (db_zeilen('SELECT * FROM konto') as $k) {
         $konten[(int)$k['id']] = $k;
+    }
+    // Admins mit ausgewählten Veranstaltungen (AP-12, E-60): Konten Teilnehmender
+    // nur, wenn die Person in einer dieser Veranstaltungen angemeldet ist
+    $erlaubt = $sicht !== null ? va_erlaubte_ids($sicht) : null;
+    if ($erlaubt !== null) {
+        [$wo, $par] = va_sql_erlaubt($sicht, 'veranstaltung_id');
+        $mit = array_flip(array_map('intval', array_column(db_zeilen('SELECT DISTINCT konto_id FROM anmeldung WHERE konto_id IS NOT NULL AND ' . $wo, $par), 'konto_id')));
+        $konten = array_filter($konten, fn($k) => $k['rolle'] !== 'teilnehmend' || isset($mit[(int)$k['id']]), ARRAY_FILTER_USE_BOTH);
     }
     $liste = [];
     $mitAnmeldung = [];

@@ -8,7 +8,7 @@ declare(strict_types=1);
  * über „Mailings“ mit der Empfängerart „Newsletter-Listen“.
  */
 
-$konto = team_tor();
+$konto = team_tor(['betreiber']); // Newsletter gilt für alle Veranstaltungen: nur Betreiber (AP-12, E-60)
 $ich = (int)$konto['id'];
 $fehler = [];
 $listeForm = null;

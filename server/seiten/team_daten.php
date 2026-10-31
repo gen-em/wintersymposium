@@ -186,7 +186,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
 <?php $cme = ds_cme_liste(); ?>
 <div class="kasten abstand-oben" id="cme-nachweise">
     <h2 class="zwischen">CME-Nachweise</h2>
-    <p class="meta klein">Name, EFN und Punkte der anwesenden ÄrztInnen, abgelegt, wenn die Anmeldung 14 Monate nach der Veranstaltung geleert wird; gelöscht 10 Jahre nach der Veranstaltung (E-24, E-59). Nur für Betreiber.</p>
+    <p class="meta klein">Name, EFN und Punkte der anwesenden ÄrztInnen, abgelegt, wenn die Anmeldung 14 Monate nach der Veranstaltung geleert wird; gelöscht 10 Jahre nach der Veranstaltung (E-24, E-59). Nur für BetreiberInnen.</p>
     <p><?= count($cme) ?> <?= count($cme) === 1 ? 'Nachweis' : 'Nachweise' ?><?= $cme !== [] ? ' · älteste Veranstaltung ' . e(tag_text((string)end($cme)['datum'])) : '' ?></p>
     <?php if ($cme !== []): ?><p class="aktionen"><?= export_knoepfe(['art' => 'cme_nachweise']) ?></p><?php endif; ?>
 </div>

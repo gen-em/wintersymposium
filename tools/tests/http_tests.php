@@ -341,7 +341,7 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
     pruefe($r['status'] === 200 && str_contains($r['text'], 'mindestens 10 Zeichen'), 'Passwort unter 10 Zeichen abgelehnt');
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'passwort_setzen', 'passwort' => 'karlas-passwort', 'passwort2' => 'karlas-passwort'], $k);
     $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
-    pruefe(str_contains($r['text'], 'Dein Profil') && str_contains($r['text'], 'href="/konto" aria-current'), 'Passwort gespeichert, Profil, „Mein Konto“ in der Navigation');
+    pruefe(str_contains($r['text'], 'id="h-profil">Profil<') && str_contains($r['text'], 'Einloggen und Sicherheit') && str_contains($r['text'], 'href="/konto" aria-current'), 'Passwort gespeichert, Profil, „Mein Konto“ in der Navigation');
     $c = http_csrf($r['text']);
     $r = http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => $c, 'aktion' => 'profil', 'vorname' => 'Karla', 'nachname' => 'Konto', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA', 'efn' => '802760012345673'], $k);
     pruefe($r['status'] === 303 && konto_per_email('karla@example.org')['efn'] === '802760012345673', 'Profil ohne Anmeldung speichern (EFN)');
@@ -416,7 +416,7 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     $GLOBALS['ws_team_konto'] = null;
     team_anlegen(['vorname' => 'Rita', 'nachname' => 'Rundmail', 'email' => 'rita@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 5', 'efn' => '', 'beruf_sonstige' => '', 'essen' => 'egal'], true, false);
     $r = http_anfrage($basis, 'GET', '/team/mailings', $h, [], null, $b);
-    pruefe($r['status'] === 200 && str_contains($r['text'], 'href="/team/mailings" aria-current="page"') && str_contains($r['text'], '+ Neues Mailing'), 'Reiter Mailings mit Übersicht');
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'href="/team/mailings" class="an" aria-current="page"') && str_contains($r['text'], '+ Neues Mailing'), 'Reiter Mailings mit Übersicht');
     pruefe(str_contains($r['kopf']['content-security-policy'] ?? '', "frame-src 'self'"), 'Seite erlaubt die Vorschau im eigenen iframe');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $b);
     $c = http_csrf($r['text']);
@@ -559,7 +559,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     $g = imagecreatetruecolor(50, 30);
     imagepng($g, $png);
     imagedestroy($g);
-    $c = http_csrf(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text']);
+    $c = http_csrf(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b)['text']);
     $ch = curl_init($basis . '/team/texte/bild');
     curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Host: ' . $h, 'X-CSRF: ' . $c], CURLOPT_COOKIEFILE => $b, CURLOPT_COOKIEJAR => $b, CURLOPT_POSTFIELDS => ['bild' => new CURLFile($png, 'image/png', 'a.png')]]);
     $j = json_decode((string)curl_exec($ch), true) ?? [];
@@ -568,7 +568,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(preg_match('#^/bild/text-[0-9a-f]{16}\.png$#', $url) === 1, 'Bild für einen Text hochgeladen');
     pruefe(http_anfrage($basis, 'GET', $url, $h, [], null, "$tmp/kekse-gast.txt")['status'] === 200, 'Text-Bild öffentlich abrufbar');
     $alt = inhalt('start_cme');
-    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
+    http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" loading="lazy" src="' . $url . '" alt="Lageplan" data-breite="50">') && !str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<script>x()'), 'Bild erscheint auf der Startseite (halbe Breite), Skript entfernt');
     http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => $alt], $b);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-editor="block"'), 'Texte mit dem Editor (wie Mailings)');
@@ -627,10 +627,12 @@ function konto_alles_http_tests(string $basis, string $h, string $tmp, string $b
     $k2 = "$tmp/kekse-mia2.txt"; // Mia (Admin) ist aus dem vorigen Abschnitt eingeloggt
     $mk = (int)konto_per_email('mia@example.org')['id'];
     $r = http_anfrage($basis, 'GET', '/team/personen', $h, [], null, $k2);
-    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Anmeldungen"') && str_contains($r['text'], 'href="/team/workshops"') && str_contains($r['text'], '>Kommunikation<') && !str_contains($r['text'], '>Team-Konten<'), 'Team-Navigation: Bereiche mit Unterseiten; Team-Konten nur für Betreiber');
+    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Anmeldungen"') && str_contains($r['text'], 'href="/team/workshops"') && str_contains($r['text'], '>Mailings<') && !str_contains($r['text'], '>Kommunikation<') && !str_contains($r['text'], '>Team-Konten<') && !str_contains($r['text'], '>Betrieb<') && !str_contains($r['text'], 'Neue Veranstaltung'), 'Team-Navigation: Bereiche mit Unterseiten; Betrieb (Team-Konten, Neue Veranstaltung) nur für Betreiber (AP-12)');
     pruefe(str_contains($r['text'], 'class="person-menue"') && str_contains($r['text'], '<strong>Mia Mailcode</strong>') && str_contains($r['text'], 'href="/konto"'), 'Personen-Menü mit Name und „Mein Konto“');
     $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Verwaltung"') && str_contains($r['text'], '>Team-Konten<') && str_contains($r['text'], '>Betrieb<'), 'Betreiber: Verwaltung mit Team-Konten und Betrieb');
+    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Verwaltung"') && str_contains($r['text'], '>Startseite<') && str_contains($r['text'], 'href="/team/veranstaltungen">Betrieb<'), 'Betreiber: Verwaltung mit Startseite, Reiter Betrieb');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'aria-label="Unterseiten von Betrieb"') && str_contains($r['text'], '>Team-Konten<') && str_contains($r['text'], '>Newsletter<') && str_contains($r['text'], '>Texte<') && str_contains($r['text'], 'class="va-wechsler"') && str_contains($r['text'], 'Neue Veranstaltung'), 'Betreiber: Reiter Betrieb mit Unterseiten, Wechsler mit „Neue Veranstaltung“ (AP-12)');
     $r = http_anfrage($basis, 'GET', '/team/profil', $h, [], null, $k2);
     pruefe($r['status'] === 303 && ($r['kopf']['location'] ?? '') === '/konto', 'Alte Adresse „Mein Konto“ im Team-Bereich führt zu /konto');
     $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k2);
@@ -738,6 +740,10 @@ function passkey_http_tests(string $basis, string $tmp): void
 function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Team-Bereich (AP-5)');
+    // Rückmeldung 2026-10-31: eingeloggt zeigt auch die Startseite das Personen-Menü (nicht „Einloggen“)
+    http_anfrage($basis, 'GET', '/team', $h, [], null, $b);
+    $r = http_anfrage($basis, 'GET', '/', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'class="person-menue"') && !str_contains($r['text'], '>Einloggen</a>') && str_contains($r['text'], 'href="/team"'), 'Startseite erkennt das eingeloggte Team-Konto');
     foreach (['/team' => 'Zu erledigen', '/team/personen' => '+ Person anlegen', '/team/workshops' => 'Termin anklicken', '/team/statistik' => 'Anmeldungen seit Start', '/team/texte' => 'Datenschutzerklärung', '/team/protokoll' => 'Einträge', '/team/daten' => 'Hostnamen'] as $pfad => $text) {
         $r = http_anfrage($basis, 'GET', $pfad, $h, [], null, $b);
         pruefe($r['status'] === 200 && str_contains($r['text'], $text), "Seite $pfad");
@@ -830,7 +836,8 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     einstellung_setzen('veranstaltung_datum', $datumAlt);
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'teilnahme'") >= 4, 'Teilnahme im Protokoll');
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export'") >= 1, 'Export im Protokoll');
-    $r = http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => "## Verantwortlich\nTest Impressum"], $b);
+    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => 'nicht hier'], $b);
+    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'impressum' => "## Verantwortlich\nTest Impressum", 'start_sticker' => 'nicht hier'], $b);
     pruefe($r['status'] === 303 && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Gratis!') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert');
     $r = http_anfrage($basis, 'GET', '/team/protokoll?art=texte', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'start_sticker'), 'Protokoll mit Filter');
@@ -869,7 +876,7 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
     $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'")];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
-    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE veranstaltung_id = 1') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = 1') == 3 && db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'") == 2 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") === $vorher['konten'], 'Testdaten geladen, Team-Konten unverändert');
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE veranstaltung_id = 1') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = 1') == 3 && db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'") == 2 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") >= $vorher['konten'] && db_wert("SELECT COUNT(*) FROM konto WHERE email = 'ada.abend@example.org' AND rolle = 'admin'") == 1, 'Testdaten geladen, Team-Konten bleiben, Ada (Admin) dazu');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
     $vorTest = '';
     foreach (sicherung_liste() as $s) {
@@ -1032,6 +1039,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     passkey_http_tests($basis, $tmp);
     newsletter_http_tests($basis, $h, $tmp, $b);
     veranstaltung_http_tests($basis, $h, $tmp, $b);
+    rechte_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -1063,13 +1071,88 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     pruefe($code === 0 && str_contains(implode('', $aus), '/einrichten?t='), 'neuen Link erzeugt');
 }
 
+/** Admin mit Mail-Code einloggen (Einrichtung beim ersten Mal); gibt die Keks-Datei zurück. */
+function http_admin_einloggen(string $basis, string $h, string $tmp, string $email, string $pw): string
+{
+    $k = "$tmp/kekse-" . md5($email) . '.txt';
+    @unlink($k);
+    db_ausfuehren('DELETE FROM rate_limit');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => $email, 'passwort' => $pw], $k);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_waehlen'], $k);
+    $mail = http_mail_an($tmp, $email, 20, 'Er gilt 10 Minuten');
+    $code = preg_match('/^\s+(\d{6})\s*$/m', $mail, $m) === 1 ? $m[1] : '';
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_einrichten', 'totp' => $code], $k);
+    return $k;
+}
+
+/** Rechte je Veranstaltung (AP-12, E-60): Admin nur für eine Veranstaltung, Betrieb nur für BetreiberInnen. */
+function rechte_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Rechte je Veranstaltung (AP-12, E-60)');
+    $aktuell = (int)va_aktuell_id();
+    $GLOBALS['ws_team_konto'] = null;
+    $erlaubt = (int)va_anlegen('rechte-test', 'Rechte-Test', null, null)['id']; // zweite Veranstaltung (Entwurf)
+    $fremdAnm = (int)db_wert('SELECT id FROM anmeldung WHERE veranstaltung_id = ? ORDER BY id LIMIT 1', [$aktuell]);
+    $GLOBALS['ws_team_konto'] = null;
+    $kid = konto_anlegen('Rosa Rechte', 'rosa.rechte@example.org', 'admin', 'rosas-passwort-12', null);
+    // BetreiberIn schaltet Rosa nur für eine Veranstaltung frei (Team-Konten)
+    $c = http_csrf(http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b)['text']);
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $c, 'aktion' => 'veranstaltungen', 'id' => $kid, 'umfang' => 'auswahl', 'va' => [$erlaubt]], $b);
+    pruefe($r['status'] === 303 && va_erlaubte_ids(konto_laden($kid)) === [$erlaubt], 'Team-Konten: Admin nur für eine Veranstaltung freigeschaltet');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'value="auswahl" checked') && str_contains($r['text'], 'Darf diese Veranstaltungen bearbeiten'), 'Team-Konten zeigen die Auswahl');
+    $k = http_admin_einloggen($basis, $h, $tmp, 'rosa.rechte@example.org', 'rosas-passwort-12');
+    $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $k);
+    $kuerzel = (string)db_wert('SELECT kuerzel FROM veranstaltung WHERE id = ?', [$erlaubt]);
+    $fremd = (string)db_wert('SELECT kuerzel FROM veranstaltung WHERE id = ?', [$aktuell]);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'class="va-wechsler"') && str_contains($r['text'], '?va=' . $erlaubt . '"') && !str_contains($r['text'], '?va=' . $aktuell . '"'), 'Wechsler zeigt nur die freigeschaltete Veranstaltung');
+    pruefe(!str_contains($r['text'], 'Neue Veranstaltung') && !str_contains($r['text'], 'href="/team/veranstaltungen"') && !str_contains($r['text'], '>Betrieb<'), 'Admin: kein Reiter Betrieb, keine neue Veranstaltung');
+    pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $aktuell, $h, [], null, $k)['status'] === 403, 'fremde Veranstaltung per ?va= abgewiesen (403)');
+    pruefe(http_anfrage($basis, 'GET', '/team/personen?a=' . $fremdAnm, $h, [], null, $k)['status'] === 404, 'Anmeldung einer fremden Veranstaltung: 404');
+    $nur = [];
+    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten'] as $pfad) {
+        $nur[] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
+    }
+    pruefe($nur === [403, 403, 403, 403, 403], 'Betrieb-Seiten nur für BetreiberInnen');
+    pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k)['status'] === 200 && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja, Newsletter-Export nein');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
+    pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
+    // Protokoll: nur Einträge der freigeschalteten Veranstaltung
+    audit_schreiben('programm', 'Fremder Eintrag Rechte-Test', null, $aktuell);
+    audit_schreiben('programm', 'Eigener Eintrag Rechte-Test', null, $erlaubt);
+    $r = http_anfrage($basis, 'GET', '/team/protokoll?v=alle', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Eigener Eintrag Rechte-Test') && !str_contains($r['text'], 'Fremder Eintrag Rechte-Test') && !str_contains($r['text'], 'Ohne Veranstaltung'), 'Protokoll: nur die eigene Veranstaltung');
+    $r = http_anfrage($basis, 'GET', '/team/protokoll?v=ohne', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Ohne Veranstaltung') && str_contains($r['text'], 'aria-current="true">Ohne Veranstaltung'), 'BetreiberIn: Filter „Ohne Veranstaltung“');
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(str_contains($r['text'], 'Admin für:') && str_contains($r['text'], 'class="rechte-liste"') && str_contains($r['text'], 'Pflicht für Team-Konten'), 'Mein Konto: Rolle mit den Veranstaltungen, Hinweis zweiter Schritt');
+    // Ohne Freischaltung: Hinweis statt Seite
+    va_rechte_setzen($kid, false, [], null);
+    pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $k)['status'] === 403, 'ohne Veranstaltung: Hinweis statt Team-Bereich');
+    va_rechte_setzen($kid, true, [], null);
+    pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $aktuell, $h, [], null, $k)['status'] === 200, '„Alle, auch künftige“: wieder alle');
+    // Veranstaltung löschen: nur mit Kürzel, vorher Sicherung
+    $c = http_csrf(http_anfrage($basis, 'GET', '/team/veranstaltungen', $h, [], null, $b)['text']);
+    $vorher = count(sicherung_liste());
+    http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'loeschen', 'id' => $erlaubt, 'kuerzel' => 'falsch'], $b);
+    pruefe(va_zeile($erlaubt) !== null && count(sicherung_liste()) === $vorher, 'Löschen mit falschem Kürzel abgewiesen');
+    http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'loeschen', 'id' => $aktuell, 'kuerzel' => $fremd], $b);
+    pruefe(va_zeile($aktuell) !== null, 'aktuelle Veranstaltung nicht löschbar');
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'loeschen', 'id' => $erlaubt, 'kuerzel' => $kuerzel], $b);
+    pruefe($r['status'] === 303 && va_zeile($erlaubt) === null && count(sicherung_liste()) === $vorher + 1 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ?', [$erlaubt]) == 0, 'Löschen mit Kürzel: weg, vorher gesichert');
+    pruefe(http_anfrage($basis, 'GET', '/team/veranstaltungen', $h, [], null, $k)['status'] === 403, 'Seite Veranstaltungen für Admins gesperrt');
+}
+
 function veranstaltung_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Mehrere Veranstaltungen (E-58)');
     $v1 = (int)va_aktuell_id();
     $k1 = (string)va_zeile($v1)['kuerzel'];
     $r = http_anfrage($basis, 'GET', '/team/veranstaltungen', $h, [], null, $b);
-    pruefe($r['status'] === 200 && str_contains($r['text'], '/' . $k1) && str_contains($r['text'], 'Neue Veranstaltung') && str_contains($r['text'], 'id="va-wahl"'), 'Team: Seite Veranstaltungen mit Auswahl im Kopf');
+    pruefe($r['status'] === 200 && str_contains($r['text'], '/' . $k1) && str_contains($r['text'], 'Neue Veranstaltung') && str_contains($r['text'], 'class="va-wechsler"'), 'Team: Seite Veranstaltungen mit Wechsler im Kopf');
     $c = http_csrf($r['text']);
     $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'name' => 'Sommerabend', 'kuerzel' => 'team', 'vorlage' => $v1], $b);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'schon eine Adresse'), 'Kürzel „team“ abgelehnt');

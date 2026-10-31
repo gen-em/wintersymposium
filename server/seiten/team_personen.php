@@ -110,7 +110,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/team/personen');
         case 'rolle':
             if (!$betreiber) {
-                seite_meldung(403, 'Kein Zugriff', 'Rollen vergibt nur ein Betreiber.');
+                seite_meldung(403, 'Kein Zugriff', 'Rollen vergibt nur eine BetreiberIn.');
             }
             $kennung = rate_merkmal('konto:' . $ich);
             if (!rate_erlaubt('zweitfaktor', $kennung)) {
@@ -128,7 +128,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-$alle = team_personen();
+$alle = team_personen($konto);
 $zahlen = [];
 foreach (TEAM_FILTER as $f => $_) {
     $zahlen[$f] = count(array_filter($alle, fn($p) => team_filter_passt($p, $f)));
@@ -314,7 +314,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
 <?php if ($k !== null): ?>
             <p class="unterkopf">Konto</p>
             <?php if ($k['rolle'] !== 'teilnehmend'): ?>
-                <p><span class="rolle-tag"><?= e(ROLLEN[$k['rolle']]) ?></span> Team-Konto – verwalten unter <?= $betreiber ? '<a href="/team/konten">Team-Konten</a>' : '„Team-Konten“ (Betreiber)' ?>.</p>
+                <p><span class="rolle-tag"><?= e(ROLLEN[$k['rolle']]) ?></span> Team-Konto – verwalten unter <?= $betreiber ? '<a href="/team/konten">Team-Konten</a>' : '„Team-Konten“ (BetreiberIn)' ?>.</p>
             <?php else: ?>
                 <p><?= (int)$k['aktiv'] === 1 ? 'Konto aktiv' : '<span class="chip gesperrt">Konto gesperrt</span>' ?> · <?= $k['email_bestaetigt_am'] !== null ? 'Adresse bestätigt' : 'Adresse noch nicht bestätigt' ?> · <?= $k['passwort_hash'] !== null ? 'Passwort gesetzt' : 'noch ohne Passwort' ?></p>
                 <div class="zellen-aktionen">
@@ -324,7 +324,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <?php if ($betreiber): ?>
                 <details class="bestaetigen" data-art="gruen"><summary class="knopf zweit klein-knopf">Rolle ändern</summary>
                     <form method="post" action="<?= e($ziel()) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="rolle"><input type="hidden" name="k" value="<?= (int)$k['id'] ?>">
-                        <div class="feld"><label for="rolle">Neue Rolle</label><select id="rolle" name="rolle"><option value="admin">Admin (Team)</option><option value="betreiber">Betreiber</option></select></div>
+                        <div class="feld"><label for="rolle">Neue Rolle</label><select id="rolle" name="rolle"><option value="admin">Admin (Team)</option><option value="betreiber">BetreiberIn</option></select></div>
                         <p><?= e($auswahl['name']) ?> sieht dann alle Anmeldungen mit E-Mail, Institution und EFN. Beim nächsten Login wird ein zweiter Faktor eingerichtet; die Person bekommt eine Mail. Die Änderung steht im Protokoll.</p>
                         <div class="feld"><label for="totp-rolle">Dein Code aus der App</label><input id="totp-rolle" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>
                         <button type="submit" class="knopf">Rolle vergeben</button></form>

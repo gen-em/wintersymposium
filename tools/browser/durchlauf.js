@@ -115,6 +115,8 @@ async function pruefeBedienung(p, engine, breite, name) {
     const sum = d.locator(':scope > summary');
     if (!await sum.isVisible()) continue;
     const label = ((await sum.textContent()) || '').trim().slice(0, 30);
+    // Schon offen (z. B. für das Bildschirmfoto aufgeklappt): erst schließen, am Ende wieder öffnen
+    const warOffen = await d.evaluate(e => e.open);
     await sum.click();
     const offen = await d.evaluate(e => e.open);
     const inhaltSichtbar = await d.evaluate(e => [...e.children].some(c => c.tagName !== 'SUMMARY' && c.getBoundingClientRect().height > 0));
@@ -124,6 +126,7 @@ async function pruefeBedienung(p, engine, breite, name) {
     await sum.click();
     const zu = await d.evaluate(e => !e.open);
     notiere(engine, breite, name, `Aufklappen „${label}“`, offen && inhaltSichtbar && zu);
+    if (warOffen) await sum.click();
   }
   // Popups: Auslöser mit aria-haspopup="dialog" oder data-dialog öffnen dialog[open]
   const ausloeser = p.locator('[aria-haspopup="dialog"], [data-dialog]');
@@ -215,6 +218,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       console.log(`== ${engine}`);
       // Jede Engine richtet den zweiten Faktor frisch ein.
       php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
+      php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.ada.email], vor.config);
       // Deutsche Oberfläche wie bei den Nutzenden: Datums- und Zeitfelder zeigen dann TT.MM.JJJJ und 24 h.
       // Die Sprache allein reicht nicht: Chromium und Firefox formatieren die Felder nach der Umgebung
       // des Browserprozesses (LANG), Firefox nur, wenn er die Systemeinstellung übernehmen darf.
@@ -399,6 +403,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.fill('#email', vor.lea.email); await p.fill('#passwort', vor.lea.passwort);
         await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=passwort]) button')]);
         await p.goto(lokal + '/konto');
+        await p.click('[data-passkey-anlage] > summary');
         await p.fill('#pk-bez', 'Browser-Test'); await p.fill('#pk-pw', vor.lea.passwort);
         await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-anlegen] button[type=submit]')]);
         await p.waitForLoadState('load');
@@ -440,16 +445,51 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         // Team-Navigation (Variante A): Bereiche und angehängte Unterseiten
         for (const [wahl, ziel, name] of [['.team-nav a:has-text("Anmeldungen")', '/team/personen', 'team-personen'], ['.team-unter a:has-text("Workshops")', '/team/workshops', 'team-workshops'], ['.team-unter a:has-text("Teilnahme")', '/team/teilnahme', 'team-teilnahme'],
           ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
-          ['.team-nav a:has-text("Kommunikation")', '/team/mailings', 'team-mailings'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'],
+          ['.team-nav a:has-text("Mailings")', '/team/mailings', 'team-mailings'],
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
-          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Startseite")', '/team/startseite', 'team-startseite'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
+          // AP-12: Reiter Betrieb (nur BetreiberInnen)
+          ['.team-nav a:has-text("Betrieb")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
           await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
+        // AP-12: Wechsler der Veranstaltung aufklappen
+        await pruefeSeite(p, fehler, engine, breite, 'team-wechsler', basis + '/team/personen');
+        await p.click('.va-wechsler > summary');
+        notiere(engine, breite, 'team-wechsler', 'Wechsler klappt auf, mit „Neue Veranstaltung“', await p.isVisible('.va-menue') && await p.locator('.va-menue .va-eintrag').count() >= 3 && await p.isVisible('.va-aktionen a[href="/team/veranstaltungen#neu"]'));
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-wechsler-offen.png`) });
+        await Promise.all([p.waitForNavigation(), p.click('.va-menue .va-eintrag:not([aria-current]) >> nth=0')]);
+        notiere(engine, breite, 'team-wechsler', 'Eintrag wechselt die Veranstaltung', new URL(p.url()).searchParams.has('va') && await p.isVisible('.va-hinweis'));
+        await p.goto(basis + '/team/personen?va=' + vor.aktuell_id);
+        // Personen-Menü (Entwurf A): ohne Team-Bereich, mit Icons
+        if (w >= 760) {
+          await p.click('.nav-gross .person-menue > summary');
+          notiere(engine, breite, 'person-menue', 'Personen-Menü: Kopf, Punkte mit Icons, ohne Team-Bereich', await p.isVisible('.nav-gross .person-liste .person-kopf') && await p.locator('.nav-gross .person-liste a.person-punkt svg').count() >= 2 && await p.locator('.nav-gross .person-liste a[href="/team"]').count() === 0);
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-person-menue-offen.png`) });
+          await p.click('.nav-gross .person-menue > summary');
+          notiere(engine, breite, 'person-menue', 'Team-Bereich grün in der Leiste', await p.evaluate(() => getComputedStyle(document.querySelector('.nav-gross a.nav-team')).color) === 'rgb(181, 189, 0)');
+        }
+        // Stehende Kopfleiste: Desktop bleibt oben, Handy blendet aus und zeigt „Menü“
+        await p.goto(basis + '/');
+        await p.evaluate(() => window.scrollTo(0, 900));
+        await p.waitForTimeout(450);
+        if (w >= 760) {
+          notiere(engine, breite, 'kopf-scroll', 'Kopfleiste bleibt beim Scrollen sichtbar', await p.evaluate(() => Math.round(document.querySelector('header.kopf').getBoundingClientRect().top) === 0) && await p.isVisible('.nav-gross'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll.png`) });
+        } else {
+          notiere(engine, breite, 'kopf-scroll', 'Handy: Leiste weg, „Menü“-Knopf da', await p.evaluate(() => document.querySelector('header.kopf').getBoundingClientRect().bottom <= 1) && await p.isVisible('.kopf-menue-knopf'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll.png`) });
+          await p.click('.kopf-menue-knopf');
+          await p.waitForTimeout(300);
+          notiere(engine, breite, 'kopf-scroll', '„Menü“-Knopf öffnet das Menü', await p.evaluate(() => document.querySelector('details.menue').open) && await p.isVisible('.menue .nav-liste'));
+          await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-kopf-scroll-menue.png`) });
+          await p.evaluate(() => { document.querySelector('details.menue').open = false; });
+        }
         // Mein Konto des Team-Kontos (ein Konto für alles, E-54) und Zwei-Faktor
         await pruefeSeite(p, fehler, engine, breite, 'team-mein-konto', basis + '/konto');
+        notiere(engine, breite, 'team-mein-konto', 'Mein Konto nach Entwurf 7: Rolle, Einloggen und Sicherheit', await p.isVisible('.rechte-liste') && await p.isVisible('.pflicht-balken') && await p.isVisible('.sicherheit'));
         notiere(engine, breite, 'team-mein-konto', 'Team-Konto mit Zwei-Faktor, ohne Löschen', (await p.textContent('body')).includes('Team-Konto') && await p.locator('a[href="/konto/zweitfaktor"]').count() >= 1);
         await pruefeSeite(p, fehler, engine, breite, 'team-zweitfaktor', basis + '/konto/zweitfaktor');
       }
@@ -657,8 +697,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.keyboard.press('Escape');
       await p.setViewportSize({ width: 1440, height: 900 });
 
-      // Texte: Werkzeugleiste schreibt Markdown
-      await p.goto(basis + '/team/texte');
+      // Startseiten-Texte (Verwaltung → Startseite, AP-12): Werkzeugleiste
+      await p.goto(basis + '/team/startseite');
       // Texte: derselbe Editor; Fett schaltet an und aus, nummerierte Liste (Rückmeldung 2026-10-30 (2))
       const cme = p.locator('#t-start_cme-feld');
       const cmeLeiste = p.locator('.feld:has(#t-start_cme) .werkzeug');
@@ -708,7 +748,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.click('form:has(input[value=anlegen]) button');
       await p.waitForLoadState('load');
       notiere(engine, 'handy', 'team-konten', 'Einladung per Mail (AP-6)', (await p.textContent('.meldung')).includes(`Einladung an mail-${engine}@example.org geschickt`) && !(await p.textContent('body')).includes('/einrichten?t='));
-      notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'Betreiber');
+      notiere(engine, 'handy', 'team-konten', 'gewählte Rolle gespeichert', await p.locator('tr', { hasText: `neu-${engine}@example.org` }).locator('td').nth(1).textContent() === 'BetreiberIn');
 
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen
       const link = php([path.join(WURZEL, 'server/cli/konto.php'), 'link', 'anna@example.org'], vor.config).trim()
@@ -737,6 +777,32 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.click('form:has(input[value=code]) button');
       await p.waitForLoadState('load');
       notiere(engine, 'desktop-breit', 'code-login', 'Login mit Wiederherstellungscode', new URL(p.url()).pathname === '/team');
+
+      // AP-12: Ada ist Admin nur für den Fortbildungsabend
+      await ausloggen(p);
+      for (const [breite, w, h] of [['handy', 390, 844], ['desktop-breit', 1440, 900]]) {
+        await p.setViewportSize({ width: w, height: h });
+        if (breite === 'handy') {
+          await p.goto(basis + '/einloggen');
+          await p.fill('#email', vor.ada.email); await p.fill('#passwort', vor.ada.passwort);
+          await p.click('form:has(input[value=passwort]) button');
+          await p.waitForSelector('svg.qr:not([hidden]) path', { timeout: 5000 }).catch(() => {});
+          const uriA = await p.getAttribute('svg.qr', 'data-qr');
+          const keyA = b32(new URL(uriA.replace('otpauth://', 'http://')).searchParams.get('secret'));
+          await p.fill('#totp', totp(keyA, Date.now() / 1000));
+          await p.click('form:has(input[value=einrichten]) button');
+          await p.waitForLoadState('load');
+          await p.click('a.knopf');
+          await p.waitForLoadState('load');
+        }
+        await pruefeSeite(p, fehler, engine, breite, 'admin-team', basis + '/team');
+        await p.click('.va-wechsler > summary');
+        notiere(engine, breite, 'admin-team', 'Admin: nur der Fortbildungsabend, kein Betrieb', await p.locator('.va-menue .va-eintrag').count() === 1 && (await p.textContent('.va-menue')).includes('Fortbildungsabend') && await p.locator('.team-nav a:has-text("Betrieb")').count() === 0 && await p.locator('.va-aktionen').count() === 0);
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-admin-wechsler-offen.png`) });
+        await p.click('.va-wechsler > summary');
+        await pruefeSeite(p, fehler, engine, breite, 'admin-konto', basis + '/konto');
+        notiere(engine, breite, 'admin-konto', 'Mein Konto: „Admin für“ den Abend', (await p.textContent('.rechte-liste')).includes('Fortbildungsabend'));
+      }
 
       notiere(engine, '-', '-', 'Engine ' + version, true);
       await browser.close();

@@ -11,7 +11,7 @@ declare(strict_types=1);
  * sein SHA-256 (R-02).
  */
 
-const ROLLEN = ['teilnehmend' => 'Teilnehmend', 'admin' => 'Admin', 'betreiber' => 'Betreiber'];
+const ROLLEN = ['teilnehmend' => 'Teilnehmend', 'admin' => 'Admin', 'betreiber' => 'BetreiberIn'];
 const TEAM_ROLLEN = ['admin', 'betreiber'];
 /** Gültigkeit eines Einrichtungs- oder Passwortlinks (technische Grenze, keine Veranstaltungseinstellung). */
 const KONTO_LINK_GUELTIG_S = 72 * 3600;

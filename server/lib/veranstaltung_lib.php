@@ -103,7 +103,7 @@ function va_tabellen_da(): bool
 /** Nach Migrationen oder geleerter Datenbank neu nachsehen. */
 function va_zwischenspeicher_leeren(): void
 {
-    unset($GLOBALS['ws_va_tab'], $GLOBALS['ws_va_aktuell'], $GLOBALS['ws_inhalt_cache']);
+    unset($GLOBALS['ws_va_tab'], $GLOBALS['ws_va_aktuell'], $GLOBALS['ws_inhalt_cache'], $GLOBALS['ws_va_rechte']);
 }
 
 function va_kontext(int $id): void
@@ -293,25 +293,45 @@ function va_abschliessen(int $id, ?int $kontoId): ?string
 }
 
 /** Entwurf ohne Anmeldungen löschen (z. B. versehentlich angelegt). */
-function va_loeschen(int $id, ?int $kontoId): ?string
+function va_loeschen(int $id, ?int $kontoId, string $bestaetigung = ''): ?string
 {
+    // Löschen (AP-12, E-60): nur Betreiber (prüft die Seite), jede Veranstaltung
+    // außer der aktuellen; zur Bestätigung das Kürzel eintippen; vorher eine
+    // Sicherung. CME-Nachweise bleiben (E-59), das Protokoll auch.
     $v = va_zeile($id);
-    if ($v === null || $v['status'] !== 'entwurf') {
-        return 'Löschen geht nur bei Entwürfen.';
+    if ($v === null) {
+        return 'Diese Veranstaltung gibt es nicht.';
     }
-    if ((int)db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ?', [$id]) > 0) {
-        return 'Diese Veranstaltung hat schon Anmeldungen.';
+    if ($v['status'] === 'aktuell') {
+        return 'Die aktuelle Veranstaltung lässt sich nicht löschen. Mach zuerst eine andere zur aktuellen oder schließ sie ab.';
     }
-    db_transaktion(function () use ($id): void {
-        foreach (db_zeilen('SELECT id FROM programmpunkt WHERE veranstaltung_id = ?', [$id]) as $p) {
-            db_ausfuehren('DELETE FROM programmpunkt WHERE id = ?', [$p['id']]);
-        }
+    if (trim($bestaetigung) !== $v['kuerzel']) {
+        return 'Zur Bestätigung bitte das Kürzel genau eintippen: ' . $v['kuerzel'];
+    }
+    $sicherung = sicherung_anlegen('vor dem Löschen von ' . $v['kuerzel'], $kontoId);
+    $anm = array_map('intval', array_column(db_zeilen('SELECT id FROM anmeldung WHERE veranstaltung_id = ?', [$id]), 'id'));
+    $rm = array_map('intval', array_column(db_zeilen('SELECT id FROM rundmail WHERE veranstaltung_id = ?', [$id]), 'id'));
+    db_transaktion(function () use ($id, $anm, $rm): void {
+        $liste = fn(array $ids) => implode(',', $ids ?: [0]);
+        // offene Mails dieser Veranstaltung nicht mehr verschicken
+        db_ausfuehren("DELETE FROM mail_ausgang WHERE status IN ('offen', 'sendet') AND (anmeldung_id IN (" . $liste($anm) . ') OR rundmail_id IN (' . $liste($rm) . '))');
+        db_ausfuehren('DELETE FROM anmeldung WHERE veranstaltung_id = ?', [$id]); // Plätze und Links per Fremdschlüssel
+        db_ausfuehren('DELETE FROM platz WHERE veranstaltung_id = ?', [$id]);
+        db_ausfuehren('DELETE FROM rundmail WHERE veranstaltung_id = ?', [$id]); // Empfängerlisten per Fremdschlüssel
+        db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [$id]); // Termine und Dozierenden-Zuordnung per Fremdschlüssel
         db_ausfuehren('DELETE FROM programm_stand WHERE id = ?', [$id]);
         db_ausfuehren('DELETE FROM inhalt WHERE veranstaltung_id = ?', [$id]);
-        db_ausfuehren('DELETE FROM rundmail WHERE veranstaltung_id = ?', [$id]);
-        db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$id]);
+        db_ausfuehren('DELETE FROM konto_veranstaltung WHERE veranstaltung_id = ?', [$id]);
+        db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$id]); // Einstellungen per Fremdschlüssel
     });
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (Entwurf) gelöscht', $kontoId);
+    $unterschrift = laufzeit_pfad('zertifikat/' . $id) . '/unterschrift.png';
+    if (is_file($unterschrift)) {
+        @unlink($unterschrift);
+    }
+    if (($GLOBALS['ws_va_id'] ?? null) === $id) {
+        unset($GLOBALS['ws_va_id']);
+    }
+    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ', ' . VA_STATUS[$v['status']] . ') gelöscht: ' . count($anm) . ' Anmeldungen; vorher gesichert: ' . $sicherung, $kontoId, 0);
     return null;
 }
 
@@ -485,4 +505,116 @@ function va_eckdaten(): array
         $eck[] = ['Freie Plätze', max(0, $kap - anm_belegt(0)) . ' / ' . $kap];
     }
     return $eck;
+}
+
+/* ---- Rechte je Veranstaltung (AP-12, E-60) -------------------------------- */
+
+/*
+ * Betreiber sehen und bearbeiten alles. Admins sind für alle Veranstaltungen
+ * (auch künftige) oder nur für ausgewählte freigeschaltet und sehen nur diese:
+ * Seiten, Personen, Exporte, Mailings und Protokoll. Neue Veranstaltungen
+ * legen nur Betreiber an.
+ */
+
+/** Rechte-Spalten da? (vor Migration 17 gelten alle Team-Konten für alle Veranstaltungen) */
+function va_rechte_da(): bool
+{
+    if (empty($GLOBALS['ws_va_rechte'])) {
+        $GLOBALS['ws_va_rechte'] = db_tabelle_da('konto_veranstaltung');
+    }
+    return $GLOBALS['ws_va_rechte'];
+}
+
+/** IDs der Veranstaltungen, die dieses Team-Konto sehen darf; null = alle. */
+function va_erlaubte_ids(array $konto): ?array
+{
+    if (($konto['rolle'] ?? '') === 'betreiber' || !va_rechte_da()) {
+        return null;
+    }
+    $k = db_zeile('SELECT alle_veranstaltungen FROM konto WHERE id = ?', [(int)$konto['id']]);
+    if ($k === null || (int)$k['alle_veranstaltungen'] === 1) {
+        return null;
+    }
+    return array_map('intval', array_column(db_zeilen('SELECT veranstaltung_id FROM konto_veranstaltung WHERE konto_id = ?', [(int)$konto['id']]), 'veranstaltung_id'));
+}
+
+/** Darf dieses Team-Konto die Veranstaltung sehen und bearbeiten? */
+function va_darf(array $konto, int $vaId): bool
+{
+    $ids = va_erlaubte_ids($konto);
+    return $ids === null || in_array($vaId, $ids, true);
+}
+
+/** Veranstaltungen, die dieses Team-Konto sieht (neueste zuerst). */
+function va_alle_fuer(array $konto): array
+{
+    $ids = va_erlaubte_ids($konto);
+    return $ids === null ? va_alle() : array_values(array_filter(va_alle(), fn($v) => in_array($v['id'], $ids, true)));
+}
+
+/** SQL-Bedingung „Veranstaltung erlaubt“ für eine Spalte (mit Parametern). */
+function va_sql_erlaubt(array $konto, string $spalte): array
+{
+    $ids = va_erlaubte_ids($konto);
+    if ($ids === null) {
+        return ['1 = 1', []];
+    }
+    if ($ids === []) {
+        return ['1 = 0', []];
+    }
+    return [$spalte . ' IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids];
+}
+
+/** Rechte eines Admins setzen: alle (auch künftige) oder die Auswahl. */
+function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch): void
+{
+    $gueltig = array_column(va_alle(), 'id');
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => in_array($i, $gueltig, true))));
+    db_transaktion(function () use ($kontoId, $alle, $ids): void {
+        db_ausfuehren('UPDATE konto SET alle_veranstaltungen = ? WHERE id = ?', [$alle ? 1 : 0, $kontoId]);
+        db_ausfuehren('DELETE FROM konto_veranstaltung WHERE konto_id = ?', [$kontoId]);
+        foreach ($alle ? [] : $ids as $id) {
+            db_ausfuehren('INSERT INTO konto_veranstaltung (konto_id, veranstaltung_id) VALUES (?, ?)', [$kontoId, $id]);
+        }
+    });
+    $namen = $alle ? 'alle, auch künftige' : (implode(', ', array_map(fn($i) => va_zeile($i)['kuerzel'] ?? (string)$i, $ids)) ?: 'keine');
+    audit_schreiben('konto', 'Veranstaltungen von Konto ' . $kontoId . ': ' . $namen, $durch);
+}
+
+/** Kurzbeschreibung der Rechte für Listen („alle“, „Kürzel, Kürzel“, „keine“). */
+function va_rechte_text(array $konto): string
+{
+    if ($konto['rolle'] === 'betreiber') {
+        return 'alle (BetreiberIn)';
+    }
+    $ids = va_erlaubte_ids($konto);
+    if ($ids === null) {
+        return 'alle, auch künftige';
+    }
+    $namen = [];
+    foreach (va_alle() as $v) {
+        if (in_array($v['id'], $ids, true)) {
+            $namen[] = $v['kurz'] . ' (' . $v['kuerzel'] . ')';
+        }
+    }
+    return $namen === [] ? 'keine' : implode(', ', $namen);
+}
+
+/** Für „Mein Konto“: wofür ein Team-Konto zuständig ist, als Liste (AP-12, E-60). */
+function va_rechte_liste(array $konto): array
+{
+    if ($konto['rolle'] === 'betreiber') {
+        return ['alle Veranstaltungen', 'Betrieb (Veranstaltungen, Team-Konten, Newsletter, Texte)'];
+    }
+    $ids = va_erlaubte_ids($konto);
+    if ($ids === null) {
+        return ['alle Veranstaltungen, auch künftige'];
+    }
+    $namen = [];
+    foreach (va_alle() as $v) {
+        if (in_array($v['id'], $ids, true)) {
+            $namen[] = $v['name'] . ($v['datum'] !== '' ? ' (' . tag_text($v['datum']) . ')' : '');
+        }
+    }
+    return $namen === [] ? ['noch keine – eine BetreiberIn schaltet dich frei'] : $namen;
 }
