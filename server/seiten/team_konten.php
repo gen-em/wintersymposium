@@ -120,35 +120,54 @@ if (is_array($link)): ?>
             <td data-label="Status"><span class="chip <?= (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen') ?>"><?= e($status) ?></span></td>
             <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
-            <?php if (!$eigen): ?>
-                <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="link"><button class="knopf zweit klein" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link mailen' : 'Einladung neu mailen' ?></button></form>
-                <?php if (zweitfaktor_da($k)): ?>
-                <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="zweitfaktor"><button class="knopf zweit klein" type="submit">2. Faktor zurücksetzen</button></form>
-                <?php endif; ?>
-                <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="sperren"><button class="knopf zweit klein" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></button></form>
-                <?php if ($k['rolle'] === 'admin'): $erlaubt = va_erlaubte_ids($k); ?>
-                <details class="rolle-wechsel"><summary>Veranstaltungen</summary>
+            <?php if (!$eigen): $kid = (int)$k['id']; $erlaubt = va_erlaubte_ids($k); ?>
+                <?php /* Ein Knopf je Zeile (AP-13, Entwurf 9): Menü, jede Aktion als Dialog */ ?>
+                <details class="zeilen-menue"><summary class="knopf zweit klein">Bearbeiten <?= icon('caret-down', 14) ?></summary>
+                    <div class="zeilen-liste" role="menu">
+                        <?php if ($k['rolle'] === 'admin'): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-va-<?= $kid ?>">Veranstaltungen …</button><?php endif; ?>
+                        <button type="button" hidden class="menue-punkt" role="menuitem" id="m-rolle-<?= $kid ?>">Rolle ändern …</button>
+                        <hr>
+                        <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="link"><button class="menue-punkt" role="menuitem" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link mailen' : 'Einladung neu mailen' ?></button></form>
+                        <?php if (zweitfaktor_da($k)): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-zf-<?= $kid ?>">Zweiten Schritt zurücksetzen …</button><?php endif; ?>
+                        <hr>
+                        <button type="button" hidden class="menue-punkt<?= (int)$k['aktiv'] === 1 ? ' rot' : '' ?>" role="menuitem" id="m-sperren-<?= $kid ?>"><?= (int)$k['aktiv'] === 1 ? 'Konto sperren …' : 'Konto entsperren …' ?></button>
+                    </div>
+                </details>
+                <?php if ($k['rolle'] === 'admin'): ?>
+                <details class="bestaetigen" data-art="lila" data-ausloeser="m-va-<?= $kid ?>" data-titel="<?= e($k['name']) ?> · Veranstaltungen"><summary class="klein-link">Veranstaltungen</summary>
                     <form method="post" action="/team/konten" class="formular">
-                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="veranstaltungen">
+                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="veranstaltungen">
                         <fieldset class="feld"><legend>Darf diese Veranstaltungen bearbeiten</legend>
                             <label class="haken"><input type="radio" name="umfang" value="alle"<?= $erlaubt === null ? ' checked' : '' ?>><span><strong>Alle</strong>, auch künftige</span></label>
                             <label class="haken"><input type="radio" name="umfang" value="auswahl"<?= $erlaubt !== null ? ' checked' : '' ?>><span><strong>Nur ausgewählte:</strong></span></label>
                             <?php foreach (va_alle() as $v): ?><label class="haken einrueck"><input type="checkbox" name="va[]" value="<?= $v['id'] ?>"<?= $erlaubt !== null && in_array($v['id'], $erlaubt, true) ? ' checked' : '' ?>><span><?= e($v['name']) ?> <span class="meta klein">· <?= e($v['kuerzel']) ?> · <?= e(VA_STATUS[$v['status']]) ?></span></span></label><?php endforeach; ?>
                         </fieldset>
-                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen. Neue Veranstaltungen legen nur BetreiberInnen an.</p>
-                        <button class="knopf klein" type="submit">Speichern</button>
+                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen.</p>
+                        <button class="knopf" type="submit">Speichern</button>
                     </form>
                 </details>
                 <?php endif; ?>
-                <details class="rolle-wechsel"><summary>Rolle ändern</summary>
+                <details class="bestaetigen" data-art="lila" data-ausloeser="m-rolle-<?= $kid ?>" data-titel="<?= e($k['name']) ?> · Rolle ändern"><summary class="klein-link">Rolle ändern</summary>
                     <form method="post" action="/team/konten" class="formular">
-                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= (int)$k['id'] ?>"><input type="hidden" name="aktion" value="rolle">
-                        <label for="rolle-<?= (int)$k['id'] ?>">Neue Rolle</label>
-                        <select id="rolle-<?= (int)$k['id'] ?>" name="rolle"><?php foreach (TEAM_ROLLEN as $r): if ($r !== $k['rolle']): ?><option value="<?= e($r) ?>"><?= e(ROLLEN[$r]) ?></option><?php endif; endforeach; ?></select>
-                        <label for="totp-<?= (int)$k['id'] ?>">Bestätigen mit dem Code aus deiner App</label>
-                        <input id="totp-<?= (int)$k['id'] ?>" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
-                        <button class="knopf klein" type="submit">Rolle ändern</button>
+                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="rolle">
+                        <label for="rolle-<?= $kid ?>">Neue Rolle</label>
+                        <select id="rolle-<?= $kid ?>" name="rolle"><?php foreach (TEAM_ROLLEN as $r): if ($r !== $k['rolle']): ?><option value="<?= e($r) ?>"><?= e(ROLLEN[$r]) ?></option><?php endif; endforeach; ?></select>
+                        <label for="totp-<?= $kid ?>">Bestätigen mit dem Code aus deiner App</label>
+                        <input id="totp-<?= $kid ?>" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+                        <button class="knopf" type="submit">Rolle ändern</button>
                     </form>
+                </details>
+                <?php if (zweitfaktor_da($k)): ?>
+                <details class="bestaetigen" data-ausloeser="m-zf-<?= $kid ?>" data-titel="Zweiten Schritt zurücksetzen?"><summary class="klein-link">Zweiten Schritt zurücksetzen</summary>
+                    <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="zweitfaktor">
+                        <p><?= e($k['name']) ?> richtet App, Code per E-Mail oder Passkey beim nächsten Einloggen neu ein. Passkeys werden entfernt.</p>
+                        <button class="knopf gefahr" type="submit">Ja, zurücksetzen</button></form>
+                </details>
+                <?php endif; ?>
+                <details class="bestaetigen" data-ausloeser="m-sperren-<?= $kid ?>" data-titel="<?= (int)$k['aktiv'] === 1 ? 'Konto sperren?' : 'Konto entsperren?' ?>"<?= (int)$k['aktiv'] === 1 ? '' : ' data-art="gruen"' ?>><summary class="klein-link"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></summary>
+                    <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="sperren">
+                        <p><?= (int)$k['aktiv'] === 1 ? e($k['name']) . ' kann sich danach nicht mehr einloggen; eine laufende Sitzung endet.' : e($k['name']) . ' kann sich wieder einloggen.' ?></p>
+                        <button class="knopf<?= (int)$k['aktiv'] === 1 ? ' gefahr' : '' ?>" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Ja, sperren' : 'Ja, entsperren' ?></button></form>
                 </details>
             <?php endif; ?>
             </div></td>

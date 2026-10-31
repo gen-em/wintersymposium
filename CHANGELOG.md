@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.0] – 2026-10-31
+
+Team-Konten aufgeräumt, Meldungen auffälliger (AP-13, E-61).
+
+### Geändert
+
+- **Team-Konten:** je Zeile nur noch ein Knopf „Bearbeiten“ mit Menü (Veranstaltungen, Rolle ändern, Passwort-Link, zweiten Schritt zurücksetzen, Konto sperren); jede Aktion läuft im Dialog. Zurücksetzen und Sperren fragen jetzt nach.
+- **Meldungen** (Fehler, Hinweis, Erfolg): volle Farbe mit dunkler Schrift und Icon statt eines schmalen Strichs; liegt eine Fehlermeldung außerhalb des Bildschirms, scrollt die Seite dorthin.
+
 ## [0.20.0] – 2026-10-31
 
 Team-Navigation und Rechte je Veranstaltung (AP-12, E-60).

@@ -111,4 +111,14 @@
         alle();
     }
     window.wsDialoge = alle;
+
+    // Zeilen-Menüs (Team-Konten, AP-13): nach der Wahl eines Punkts und bei Klick daneben schließen
+    document.addEventListener("click", function (ev) {
+        var punkt = ev.target.closest ? ev.target.closest(".zeilen-menue .menue-punkt") : null;
+        Array.prototype.forEach.call(document.querySelectorAll("details.zeilen-menue[open]"), function (m) {
+            if (punkt ? m.contains(punkt) : !m.contains(ev.target)) {
+                m.open = false;
+            }
+        });
+    });
 }());

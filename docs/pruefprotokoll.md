@@ -29,6 +29,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
+| AP-13 | Team-Konten und Meldungen (E-61) | umgesetzt, Staging offen | lokal T-273, T-274 | Staging (siehe unten) |
 | AP-12 | Team-Navigation und Rechte je Veranstaltung (E-60) | umgesetzt, Staging offen | lokal T-264 bis T-272 | Staging (siehe unten) |
 | AP-9 | Abschluss und Datenschutz (E-59) | umgesetzt, Staging offen | lokal T-200 bis T-202, T-204, T-223, T-224, T-260 bis T-263 | Staging (siehe unten); T-203 Checkliste vor dem Anmeldestart |
 
@@ -191,6 +192,10 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-259, ap: AP-11, was: "Wiederkehrende und Bausteine", wie: "ohne Konto: „Link per Mail“ schickt „Daten übernehmen“, Formular vorausgefüllt; Veranstaltung ohne Essen bzw. ohne Fortbildungspunkte fragt nicht danach", status: "lokal bestanden"}
 - {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
+# AP-13 Team-Konten und Meldungen (E-61)
+- {id: T-273, ap: AP-13, was: "Team-Konten: Menü je Zeile", wie: "je Zeile nur „Bearbeiten“; Menü mit Veranstaltungen, Rolle, Passwort-Link, zweiten Schritt zurücksetzen, Sperren; Veranstaltungen im Dialog, Menü schließt; Handy und Desktop", status: "lokal bestanden (Browser)"}
+- {id: T-274, ap: AP-13, was: "Meldungen auffällig", wie: "Fehler rot, Hinweis lila, Erfolg grün, volle Fläche mit Icon; Fehlermeldung außerhalb des Bildschirms wird angescrollt", status: "lokal bestanden (Bildschirmfotos)"}
+
 # AP-12 Team-Navigation und Rechte je Veranstaltung (E-60)
 - {id: T-264, ap: AP-12, was: "Admin nur für ausgewählte Veranstaltungen", wie: "Team-Konten → Veranstaltungen: „Nur ausgewählte“; Wechsler zeigt nur diese; ?va= einer fremden → 403; Anmeldung einer fremden per Nummer → 404; ohne Freischaltung Hinweis statt Team-Bereich; „Alle, auch künftige“ gibt alles frei", status: "lokal bestanden"}
 - {id: T-265, ap: AP-12, was: "Betrieb nur für BetreiberInnen", wie: "Admin: Veranstaltungen, Team-Konten, Newsletter, Texte, Betrieb → 403; kein Reiter Betrieb, keine „Neue Veranstaltung“; Mailings ohne Newsletter-Listen; Newsletter-Export 404; Startseiten-Texte ja", status: "lokal bestanden"}
@@ -250,6 +255,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 | T-112, T-116 | 2026-10-29 | admin | bestanden | Staging nach Auslieferung von 0.2.0: Seite wird korrekt angezeigt | – |
 | T-127 bis T-129, T-216 bis T-220 | 2026-10-29 | claude-dev | lokal bestanden | `lauf.php` 194 ok, 0 Fehler; Browser-Durchlauf (R-12) 750 ok, 0 Fehler in Chromium 153, Firefox 155, WebKit 26.6 × 4 Breiten; Gegenproben: absichtlich zu breites Element → 27 Fehler, Konten-Tabelle ohne Kartenansicht → Fehler auf Handy und Tablet in allen Engines | Staging-Prüfung nach dem Merge; echtes iPhone als Stichprobe |
 | T-150, T-151, T-153 | 2026-10-29 | claude-dev | lokal bestanden | RFC-6238-Prüfwerte; Einrichtung per QR; derselbe Code kein zweites Mal; Wiederherstellungscode genau einmal | Passkey (T-152) mit AP-5 |
+| T-273, T-274 | 2026-10-31 | claude-dev | lokal bestanden | `lauf.php` 817 ok, 0 Fehler; Browser-Durchlauf 6936 ok, 0 Fehler (Chromium 2308, Firefox und WebKit 4628; Team-Konten: ein Knopf je Zeile, Menü, Veranstaltungen im Dialog, Menü schließt – Handy und Desktop; Meldungen auf allen Seiten); Bildschirmfotos angesehen | Staging |
 | T-264 bis T-272 | 2026-10-31 | claude-dev | lokal bestanden | `lauf.php` 817 ok, 0 Fehler (Bibliothek: Ada nur für den Abend, Personen ohne fremde Konten, Liste „zuständig für“, Löschen nur mit Kürzel und Sicherung, Protokoll-Sichtbarkeit; HTTP: Startseite erkennt Login, Team-Konten → Veranstaltungen, Wechsler nur erlaubte, ?va= fremd 403, fremde Anmeldung 404, Betrieb-Seiten 403, Newsletter-Listen und -Export nur BetreiberInnen, Protokoll nur eigene Veranstaltung, Filter „ohne Veranstaltung“, Mein Konto mit Rolle, ohne Freischaltung Hinweis, Löschen mit falschem Kürzel und der aktuellen abgewiesen); Browser-Durchlauf 7006 ok, 0 Fehler (Chromium 2326, Firefox und WebKit 4680; Reiter, Wechsler, Personen-Menü, Team-Bereich grün, stehende Kopfleiste und Handy-„Menü“, Mein Konto, Adas Sicht); Bildschirmfotos angesehen | Staging; echte Geräte für die Kopfleiste |
 | T-192 | 2026-10-31 | claude-dev | lokal bestanden | Fußzeile der Teilnahmebescheinigung: Beispiel-PDF als Bild angesehen – „Teilnahme vom Team erfasst · Nr.“ links, Adresse rechtsbündig in derselben Zeile, beides grün; langer Kammer-Hinweis eine Zeile darüber; `lauf.php` 793 ok, 0 Fehler (mit Beispieldatensatz aus drei Veranstaltungen); Browser-Durchlauf 6168 ok, 0 Fehler (Rückblick /fortbildungsabend-notfallmedizin in allen Breiten, Lea mit drei Zertifikaten) | Staging: Vorschau unter Teilnahme ansehen; Testdaten laden → drei Veranstaltungen |
 | T-200 bis T-202, T-260 bis T-263 | 2026-10-31 | claude-dev | lokal bestanden | `lauf.php` 792 ok, 0 Fehler (Sicherungsplan mit Zeitpunkten über 60 Tage, von Hand nach 90 Tagen, stabiler zweiter Lauf, Job legt an und räumt auf; Anmeldung ohne Konto nach 14 Monaten geleert, mit Konto und nach 13 Monaten nicht; CME-Nachweis nur für die anwesende Ärztin, nach 10 Jahren gelöscht; Protokoll und Logins gekürzt; Gesamtablauf mit zwei Personen: Anmeldung ohne und mit Konto, Warteliste, Änderung mit Angebot und Annahme, Stichtag, Storno, Rundmail, Anwesenheit, Zertifikat auch im Konto-Rückblick; HTTP: Kasten CME-Nachweise, Export nur für Betreiber); Browser-Durchlauf 6042 ok, 0 Fehler (Seite Daten mit Sicherungsplan und CME-Kasten) | Staging |
@@ -303,6 +309,11 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-13 Team-Konten und Meldungen (nach Merge auf Staging)
+
+1. Betrieb → Team-Konten: bei einem Konto „Bearbeiten“ öffnen, „Veranstaltungen …“ wählen. Erwartet: Dialog, Menü zu.
+2. Eine Fehlermeldung auslösen (z. B. in einer abgeschlossenen Veranstaltung speichern). Erwartet: rote Fläche mit Icon, gut sichtbar.
 
 ### Noch zu prüfen für AP-12 Team-Navigation und Rechte (nach Merge auf Staging)
 
