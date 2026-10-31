@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 $konto = team_tor();
 $rm = rm_laden((int)($_GET['id'] ?? 0));
-if ($rm === null) {
+if ($rm === null || !rm_sichtbar($rm)) {
     nicht_gefunden();
 }
 $m = rm_vorschau($rm, $konto);

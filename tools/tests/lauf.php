@@ -1502,6 +1502,36 @@ va_zwischenspeicher_leeren();
     pruefe((int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'konto' AND text = ?", ['Konto ' . $tId . ': Adresse vom Team geändert']) === $au0 + 1 && !str_contains($au['text'], '@'), 'Protokoll „Konto N: Adresse vom Team geändert“ ohne Adressen');
     db_ausfuehren('DELETE FROM mail_ausgang');
 
+    // Unterpunkt 2 (B-1, T-276): Newsletter-Mails überleben den Versand nach einer Admin-Aktion
+    $nlListe = nl_liste_speichern(null, nl_liste_pruefen(['name' => 'Review-Test', 'sichtbar' => '1'])['werte'], null);
+    foreach (['nl.eins', 'nl.zwei', 'nl.drei'] as $nlN) {
+        nl_anfragen($nlN . '@example.org', 'NL', [$nlListe], 'formular');
+        $nlTok = preg_match('#/newsletter/bestaetigen\?t=([0-9a-f]{48})#', (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$nlN . '@example.org']), $m) === 1 ? $m[1] : '';
+        nl_bestaetigen($nlTok);
+    }
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    $nlRm = rm_speichern(null, rm_pruefen(['art' => 'newsletter', 'listen' => [$nlListe], 'betreff' => 'Review', 'html' => '<p>Hallo {vorname}</p>', 'postfach' => 'newsletter'])['werte'], null);
+    $nlAnz = rm_einreihen($nlRm, null);
+    $GLOBALS['ws_team_rolle'] = 'admin';
+    $nlE = mail_senden_faellige(5, 20.0);
+    pruefe($nlAnz === 3 && $nlE['gesendet'] === 3 && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE rundmail_id = ? AND status = 'gesendet'", [$nlRm]) === 3, 'Newsletter mit 3 Empfängern, Team-Rolle admin: alle 3 gesendet, keine gelöscht');
+    $vaFremd = (int)db_wert('SELECT id FROM veranstaltung WHERE id <> ? ORDER BY id LIMIT 1', [va_id()]);
+    $rmFremd = rm_speichern(null, rm_pruefen(['betreff' => 'Fremd', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system'])['werte'], null);
+    db_ausfuehren('UPDATE rundmail SET veranstaltung_id = ? WHERE id = ?', [$vaFremd, $rmFremd]);
+    $rmF = rm_laden($rmFremd);
+    pruefe($vaFremd > 0 && $rmF !== null && function_exists('rm_sichtbar') && !rm_sichtbar($rmF) && !rm_sichtbar(rm_laden($nlRm)), 'Admin: Mailing einer fremden Veranstaltung und Newsletter nicht sichtbar, rm_laden liefert die Zeile');
+    $GLOBALS['ws_team_rolle'] = 'betreiber';
+    pruefe(function_exists('rm_sichtbar') && rm_sichtbar(rm_laden($nlRm)), 'Betreiber: Newsletter-Mailing sichtbar');
+    unset($GLOBALS['ws_team_rolle']);
+    db_ausfuehren("INSERT INTO mail_ausgang (an, betreff, text, prio, status, postfach, rundmail_id, anmeldung_id, erstellt_am, naechster_versuch) VALUES ('weg@example.org', '', '', 5, 'offen', 'system', 999999, 1, ?, ?)", [db_jetzt(), db_jetzt()]);
+    mail_senden_faellige(5, 20.0);
+    $weg = db_zeile("SELECT status, versuche, fehler FROM mail_ausgang WHERE an = 'weg@example.org'");
+    pruefe($weg !== null && $weg['status'] === 'offen' && (int)$weg['versuche'] === 1 && str_contains((string)$weg['fehler'], 'nicht gefunden'), 'Mailing fehlt: Fehler mit Wiederholung statt Löschen');
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    db_ausfuehren('DELETE FROM rundmail WHERE id IN (?, ?)', [$nlRm, $rmFremd]);
+    db_ausfuehren('DELETE FROM newsletter_abo WHERE liste_id = ?', [$nlListe]);
+    db_ausfuehren('DELETE FROM newsletter_liste WHERE id = ?', [$nlListe]);
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');
