@@ -4,7 +4,8 @@ declare(strict_types=1);
 /*
  * Team-Bereich, Übersicht (Mockup „Übersicht“, AP-5, E-49): Kennzahlen,
  * Workshop-Termine, Essen und „Zu erledigen“ (Plätze nach der Grenze,
- * Mail-Fehler, ablaufende Angebote, unveröffentlichtes Programm).
+ * Mail-Fehler, ablaufende Angebote, unveröffentlichtes Programm; für
+ * BetreiberInnen rote Zeilen der Status-Seite, AP-15).
  */
 
 $konto = team_tor();
@@ -40,7 +41,7 @@ if ($zf['codes_offen'] <= 2) {
         <?php if ($aufgaben === []): ?><p class="hinweis-leer">Nichts offen.</p><?php else: ?>
         <ul class="aufgaben">
             <?php foreach ($aufgaben as $af): ?>
-            <li><span class="chip <?= $af['art'] === 'Manuell' ? 'wl' : 'offen' ?>"><?= e($af['art']) ?></span> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein-knopf" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
+            <li><span class="chip <?= in_array($af['art'], ['Manuell', 'Betrieb'], true) ? 'wl' : 'offen' ?>"><?= e($af['art']) ?></span> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein-knopf" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
             <?php endforeach; ?>
         </ul>
         <?php endif; ?>

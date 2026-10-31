@@ -316,10 +316,15 @@ function team_termin_personen(int $terminId): array
     return ['fest' => $fest, 'warte' => array_values(array_filter($z, fn($p) => $p['status'] === 'warte'))];
 }
 
-/** „Zu erledigen“ auf der Übersicht (Mockup). Liste von ['art','text','link','knopf']. */
-function team_aufgaben(?int $jetzt = null): array
+/**
+ * „Zu erledigen“ auf der Übersicht (Mockup). Liste von ['art','text','link','knopf'].
+ * BetreiberInnen sehen dazu je rote Zeile der Status-Seite eine Aufgabe (AP-15, E-65 (4));
+ * Rolle ohne Angabe aus team_tor().
+ */
+function team_aufgaben(?int $jetzt = null, ?string $rolle = null): array
 {
     $jetzt ??= time();
+    $rolle ??= (string)($GLOBALS['ws_team_rolle'] ?? '');
     $auf = [];
     $grenzeVorbei = $jetzt + va_zahl('nachrueck_frist_h') * 3600 > anm_grenze_ts();
     foreach (team_termine() as $t) {
@@ -329,7 +334,8 @@ function team_aufgaben(?int $jetzt = null): array
                 . ($grenzeVorbei ? ' – automatische Angebote sind vorbei.' : ' – das Nachrücken läuft beim nächsten Job.'), 'link' => '/team/workshops?t=' . $t['id'], 'knopf' => 'Vergeben'];
         }
     }
-    $ms = mail_stand();
+    // Mail-Aufgaben für Admins; BetreiberInnen sehen sie als Status-Zeile (unten)
+    $ms = $rolle === 'betreiber' ? ['eingerichtet' => true, 'fehler' => 0] : mail_stand();
     if (!$ms['eingerichtet']) {
         $auf[] = ['art' => 'Mail', 'text' => 'Der Mailversand ist nicht eingerichtet; ' . $ms['offen'] . ' Mails warten.', 'link' => '/team/daten', 'knopf' => 'Ansehen'];
     } elseif ($ms['fehler'] > 0) {
@@ -348,6 +354,9 @@ function team_aufgaben(?int $jetzt = null): array
     }
     if (programm_status()['offen'] ?? false) {
         $auf[] = ['art' => 'Programm', 'text' => 'Es gibt gespeicherte, noch nicht veröffentlichte Änderungen am Programm.', 'link' => '/team/programm', 'knopf' => 'Ansehen'];
+    }
+    if ($rolle === 'betreiber') {
+        $auf = array_merge(betrieb_aufgaben($jetzt), $auf);
     }
     return $auf;
 }
