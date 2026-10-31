@@ -22,6 +22,20 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 - Konzept: AP-14 umgesetzt (status, ergebnis, probleme), Test zu Unterpunkt 4 korrigiert, O-48 (Adresse eines Team-Kontos ändern) neu; betrieb.md, Prüfprotokoll T-275 bis T-281, Review-Dokument Abschnitt 5.
 
+## [0.23.2] – 2026-10-31
+
+### Doku
+
+- **Prüfprotokoll:** voller Browser-Lauf für 0.23.1 (7851 ok, 9 Fehler am Personen-Menü – behoben, Nachtest 590 ok, 0 Fehler) und Prüfweg für den Admin nachgetragen.
+
+## [0.23.1] – 2026-10-31
+
+### Geändert
+
+- **Namen in Mails** (E-67): Mails zu einer Anmeldung tragen den Namen der Veranstaltung (Absender, Kicker, Gruß); Mails für alle Veranstaltungen (Team, Konto, Passwort, Code, Newsletter, Testmail) den Namen der Reihe „Allgäu Akut“ statt „Wintersymposium“ – auch im Betreff. Der Name der Reihe ist eine Einstellung unter Betrieb → Absender und ersetzt dort das Feld „Absendername“ des System-Postfachs. Migration 19 (Absendername je Mail in der Warteschlange).
+- **Personen-Menü:** Team-Konten sehen oben den Eintrag „Team-Bereich“, grün mit Symbol (Rückmeldung 2026-10-31; ersetzt „ohne Team-Bereich“ aus E-60).
+- **Übersicht in der Mail nach Variante B** (Admin 2026-10-31): jede Zeile mit farbigem Streifen links und Kennung über dem Titel – „ABEND · 18:00–22:00“ lila, „WORKSHOP · 20:00–20:30“ rot wie im Programm, „ESSEN“ grau; Schilder rechts senkrecht mittig; keine leere Zeitspalte mehr.
+
 ## [0.23.0] – 2026-10-31
 
 ### Neu

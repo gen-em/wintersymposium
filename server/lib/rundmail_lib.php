@@ -360,7 +360,7 @@ function rm_zusammensetzen(array $rm, array $werte, string $bildArt, string $dom
     $text .= "\n\n-- \n" . $fuss . ($nl !== null ? "\nAbmelden oder Listen ändern: " . $nl['url'] : '') . "\nImpressum: " . url('/impressum') . "\nDatenschutz: " . url('/datenschutz') . "\n";
     // Rahmen wie alle Mails (O-40, Variante A); Fuß mit Grund, Abmelden, Impressum und Datenschutz
     $fussHtml = mail_fuss_html(e($fuss) . ($nl !== null ? '<br><a href="' . e($nl['url']) . '" style="color:#B9C6D3;text-decoration:underline;">Abmelden oder Listen ändern</a>' : ''));
-    $html = mail_rahmen($betreff, $nl === null ? mail_kicker() : 'Newsletter', $betreff, $inhalt, $fussHtml);
+    $html = mail_rahmen($betreff, $nl === null ? mail_kicker() : mail_kicker('newsletter'), $betreff, $inhalt, $fussHtml);
     if ($bildArt === 'url') {
         $html = mail_logo_einsetzen($html, '/' . MAIL_LOGO_DATEI);
     }
@@ -427,7 +427,8 @@ function rm_mail_fuer(int $rmId, int $anmId): ?array
         return null;
     }
     $absender = mail_absender(mail_konfig($rm['postfach']));
-    return rm_zusammensetzen($rm, rm_werte($a, true), 'cid', substr(strrchr($absender, '@') ?: '@localhost', 1));
+    // Mailing an Angemeldete: Absender ist die Veranstaltung (E-67)
+    return rm_zusammensetzen($rm, rm_werte($a, true), 'cid', substr(strrchr($absender, '@') ?: '@localhost', 1)) + ['absender_name' => va_absender_name()];
 }
 
 /** Vorschau: mit der ersten Person der Auswahl, sonst mit Beispielwerten. */

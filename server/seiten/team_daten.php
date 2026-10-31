@@ -53,7 +53,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 flash_setzen('fehler', 'Die Absenderadresse ist keine gültige Adresse.');
             } else {
                 einstellung_setzen('mail_absender' . $nl, $adr === '' ? null : mail_adresse($adr));
-                einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
+                if ($nl !== '') {
+                    einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
+                } else {
+                    // System-Postfach: Name der Reihe (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
+                    $reihe = trim(preg_replace('/\s+/u', ' ', (string)($_POST['reihe_name'] ?? '')) ?? '');
+                    einstellung_setzen('reihe_name', $reihe === '' ? null : mb_substr($reihe, 0, 60));
+                    einstellung_setzen('mail_absender_name', null);
+                }
                 audit_schreiben('mail', 'Absender ' . ($nl !== '' ? 'Newsletter' : 'System') . ' geändert: ' . ($adr ?: 'aus config.php'), $ich);
                 flash_setzen('ok', 'Absender gespeichert. Prüf ihn mit „Testmail an mich“.');
             }
@@ -171,7 +178,12 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten');
         <form method="post" action="/team/daten" class="form abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="absender"><input type="hidden" name="postfach" value="<?= e($pf) ?>">
             <p class="unterkopf"><?= e($titel) ?></p>
             <div class="feld"><label for="mail_absender<?= $suf ?>">Absenderadresse</label><input id="mail_absender<?= $suf ?>" name="mail_absender" type="email" value="<?= e((string)(einstellung('mail_absender' . $suf) ?? '')) ?>" placeholder="<?= e(mail_absender(mail_konfig($pf))) ?>"></div>
-            <div class="feld"><label for="mail_absender_name<?= $suf ?>">Absendername</label><input id="mail_absender_name<?= $suf ?>" name="mail_absender_name" type="text" maxlength="80" value="<?= e((string)(einstellung('mail_absender_name' . $suf) ?? '')) ?>" placeholder="<?= e((string)mail_konfig($pf)['absender_name']) ?>"></div>
+            <?php if ($pf === 'system'): ?>
+            <div class="feld"><label for="reihe_name">Name der Reihe</label><input id="reihe_name" name="reihe_name" type="text" maxlength="60" value="<?= e((string)(einstellung('reihe_name') ?? '')) ?>" placeholder="Allgäu Akut">
+                <p class="hilfe">Absender, Betreff und Gruß der Mails, die für alle Veranstaltungen gelten (Team, Konto, Newsletter). Mails zu einer Anmeldung tragen den Namen der Veranstaltung (E-67).</p></div>
+            <?php else: ?>
+            <div class="feld"><label for="mail_absender_name<?= $suf ?>">Absendername</label><input id="mail_absender_name<?= $suf ?>" name="mail_absender_name" type="text" maxlength="80" value="<?= e((string)(einstellung('mail_absender_name' . $suf) ?? '')) ?>" placeholder="<?= e(reihe_name()) ?>"></div>
+            <?php endif; ?>
             <div><button class="knopf zweit" type="submit">Speichern</button></div></form>
         <?php endforeach; ?>
     </div>

@@ -105,8 +105,9 @@ function mail_absender(array $c): string
 function mail_absender_name(array $c): string
 {
     $nl = ($c['postfach'] ?? 'system') === 'newsletter';
-    $n = trim((string)(einstellung($nl ? 'mail_absender_name_newsletter' : 'mail_absender_name') ?? ''));
-    return $n !== '' ? $n : (string)$c['absender_name'];
+    // System-Postfach: Name der Reihe (E-67); Newsletter: eigene Einstellung, sonst die Reihe
+    $n = $nl ? trim((string)(einstellung('mail_absender_name_newsletter') ?? '')) : '';
+    return $n !== '' ? $n : reihe_name();
 }
 
 /** Ist der Versand eingerichtet? (Datei-Modus zählt als eingerichtet.) */
@@ -130,7 +131,7 @@ function mail_adresse(string $roh): ?string
 }
 
 /** Mail in die Warteschlange stellen. Gibt die ID zurück. */
-function mail_einreihen(string $an, string $betreff, string $text, int $prio = MAIL_PRIO_SYSTEM, ?string $html = null): int
+function mail_einreihen(string $an, string $betreff, string $text, int $prio = MAIL_PRIO_SYSTEM, ?string $html = null, ?string $absenderName = null): int
 {
     $adresse = mail_adresse($an);
     if ($adresse === null) {
@@ -138,8 +139,8 @@ function mail_einreihen(string $an, string $betreff, string $text, int $prio = M
     }
     $jetzt = db_jetzt();
     db_ausfuehren(
-        "INSERT INTO mail_ausgang (an, betreff, text, html, prio, status, versuche, naechster_versuch, erstellt_am) VALUES (?, ?, ?, ?, ?, 'offen', 0, ?, ?)",
-        [$adresse, $betreff, $text, $html, $prio, $jetzt, $jetzt]
+        "INSERT INTO mail_ausgang (an, betreff, text, html, absender_name, prio, status, versuche, naechster_versuch, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, 'offen', 0, ?, ?)",
+        [$adresse, $betreff, $text, $html, $absenderName, $prio, $jetzt, $jetzt]
     );
     $id = (int)db()->lastInsertId();
     mail_nach_antwort_vormerken();
@@ -161,7 +162,9 @@ function mail_vorlage_einreihen(string $an, string $vorlage, array $daten, int $
 {
     [$betreff, $text] = mail_vorlage($vorlage, $daten);
     // HTML-Fassung im Erscheinungsbild (O-40); der Text bleibt für Programme ohne HTML
-    return mail_einreihen($an, $betreff, $text, $prio, mail_html_aus_text($vorlage, $betreff, $text));
+    // Absender (E-67): Veranstaltung bei Mails zu einer Anmeldung, sonst die Reihe
+    $absender = in_array($vorlage, MAIL_VORLAGEN_ALLGEMEIN, true) ? reihe_name() : va_absender_name();
+    return mail_einreihen($an, $betreff, $text, $prio, mail_html_aus_text($vorlage, $betreff, $text), $absender);
 }
 
 /** Heute (Ortszeit) versendete Mails – für das Tageslimit (je Postfach oder alle). */
@@ -197,7 +200,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
     db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
     for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
         $z = db_zeile(
-            "SELECT id, an, betreff, text, html, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
+            "SELECT id, an, betreff, text, html, absender_name, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
              WHERE status = 'offen' AND naechster_versuch <= ?
                AND (prio = ? OR (postfach = 'system' AND ? = 1) OR (postfach = 'newsletter' AND ? = 1))
              ORDER BY prio, id LIMIT 1",
@@ -212,7 +215,7 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         if ($n !== 1) {
             continue;
         }
-        $opt = ['postfach' => $z['postfach']] + ($z['html'] !== null ? ['html' => $z['html']] : []);
+        $opt = ['postfach' => $z['postfach']] + ($z['html'] !== null ? ['html' => $z['html']] : []) + ($z['absender_name'] !== null ? ['absender_name' => $z['absender_name']] : []);
         $betreff = $z['betreff'];
         $text = $z['text'];
         $fehler = null;
@@ -229,13 +232,13 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
                     continue;
                 }
                 [$betreff, $text] = [$m['betreff'], $m['text']];
-                $opt += ['html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true, 'kopf' => $m['kopf'] ?? [], 'absender_name' => $m['absender_name'] ?? null];
+                $opt = ['postfach' => $z['postfach'], 'html' => $m['html'], 'bilder' => $m['bilder'], 'rundmail' => true, 'kopf' => $m['kopf'] ?? [], 'absender_name' => $m['absender_name'] ?? null];
             }
         }
         $fehler ??= mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
             // R-02: Inhalt und Empfänger nach dem Versand leeren
-            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
+            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, absender_name = NULL, fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
             $erg['gesendet']++;
         } else {
             $versuche = (int)$z['versuche'] + 1;
@@ -525,16 +528,47 @@ function mail_testen(string $an): ?string
 
 /* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */
 
-function mail_gruss(): string
+function mail_gruss(bool $allgemein = false): string
 {
-    return "\n\nBis bald\nDein Team vom " . va_kurz() . "\nALLGÄU AKUT – Fortbildung Notfallmedizin\n" . url('/');
+    return "\n\nBis bald\nDein Team " . ($allgemein ? 'von ' . reihe_name() : 'vom ' . va_kurz()) . "\nALLGÄU AKUT – Fortbildung Notfallmedizin\n" . url('/');
+}
+
+/**
+ * Name der Reihe (E-67): steht in Mails, die für alle Veranstaltungen gelten
+ * (Team, Konto, Newsletter), als Absender, im Betreff und im Gruß. Einstellung
+ * unter Betrieb → Absender.
+ */
+function reihe_name(): string
+{
+    $n = trim((string)(einstellung('reihe_name') ?? ''));
+    return $n !== '' ? $n : 'Allgäu Akut';
+}
+
+/** Name der Veranstaltung als Absender (E-67): voller Name, sonst Kurzname. */
+function va_absender_name(): string
+{
+    return va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz();
+}
+
+/** Vorlagen, die für alle Veranstaltungen gelten (E-67): Absender, Betreff, Kicker und Gruß mit dem Namen der Reihe. */
+const MAIL_VORLAGEN_ALLGEMEIN = ['konto_loeschen_bald', 'konto_bestaetigen', 'konto_vorhanden', 'konto_passwort', 'team_rolle', 'team_einladung',
+    'newsletter_bestaetigen', 'newsletter_schon', 'zweitfaktor_code', 'team_passwort', 'test'];
+
+/** Betreff und Text einer Vorlage; allgemeine Vorlagen grüßen im Namen der Reihe. */
+function mail_vorlage(string $name, array $d): array
+{
+    [$betreff, $text] = mail_vorlage_roh($name, $d);
+    if (in_array($name, MAIL_VORLAGEN_ALLGEMEIN, true)) {
+        $text = str_replace(mail_gruss(), mail_gruss(true), $text);
+    }
+    return [$betreff, $text];
 }
 
 /**
  * Betreff und Text einer Vorlage. $d enthält je Vorlage: vorname, link,
  * gueltig (Text), uebersicht (Text), frist (Text), was (Text) …
  */
-function mail_vorlage(string $name, array $d): array
+function mail_vorlage_roh(string $name, array $d): array
 {
     $hallo = 'Hallo ' . ($d['vorname'] ?? '') . ",\n\n";
     $u = isset($d['uebersicht']) ? "\n\n" . $d['uebersicht'] : '';
@@ -560,8 +594,8 @@ function mail_vorlage(string $name, array $d): array
                 . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'konto_loeschen_bald':
             // Löschfrist (E-54): 14 Monate ohne Login, Erinnerung 30 Tage vorher
-            return ['Dein Konto beim Wintersymposium wird bald gelöscht',
-                $hallo . 'du hast dich seit längerer Zeit nicht in deinem Konto beim Wintersymposium eingeloggt. Wir löschen Konten nach ' . KONTO_LOESCHEN_MONATE . ' Monaten ohne Login – deins am '
+            return ['Dein Konto bei ' . reihe_name() . ' wird bald gelöscht',
+                $hallo . 'du hast dich seit längerer Zeit nicht in deinem Konto bei ' . reihe_name() . ' eingeloggt. Wir löschen Konten nach ' . KONTO_LOESCHEN_MONATE . ' Monaten ohne Login – deins am '
                 . $d['datum'] . ".\n\nWillst du es behalten? Dann logg dich einfach bis dahin einmal ein:\n\n" . $d['link']
                 . "\n\nWillst du es nicht mehr? Dann musst du nichts tun. Eine Anmeldung zum Symposium bleibt bestehen; du erreichst sie weiter über einen Link per Mail." . mail_gruss()];
         case 'geaendert':
@@ -593,25 +627,25 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'das Team hat die Adresse deiner Anmeldung und deines Kontos geändert. Mails zum '
                 . va_kurz() . " und der Login laufen ab jetzt über die neue Adresse, diese hier gilt nicht mehr.\n\nDas war nicht mit dir abgesprochen? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'konto_bestaetigen':
-            return ['Bitte bestätige dein Konto beim Wintersymposium',
+            return ['Bitte bestätige dein Konto bei ' . reihe_name(),
                 $hallo . "danke für dein Konto. Bestätige deine Adresse über diesen Link, danach legst du dein Passwort fest:\n\n" . $d['link']
                 . "\n\nDer Link gilt bis " . $d['gueltig'] . ".\n\nDu hast kein Konto angelegt? Dann ignoriere diese Mail; ohne Bestätigung wird es gelöscht." . mail_gruss()];
         case 'konto_vorhanden':
-            return ['Du hast schon ein Konto beim Wintersymposium',
+            return ['Du hast schon ein Konto bei ' . reihe_name(),
                 $hallo . "für diese Adresse gibt es schon ein Konto. Einloggen kannst du dich unter " . url('/einloggen')
                 . ". Passwort vergessen? Unter " . url('/konto/passwort-vergessen') . " schicken wir dir einen Link.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'konto_passwort':
-            return ['Neues Passwort für dein Konto beim Wintersymposium',
+            return ['Neues Passwort für dein Konto bei ' . reihe_name(),
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link'] . "\n\nEr gilt bis " . $d['gueltig']
                 . " und nur einmal.\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
         case 'team_rolle':
-            return ['Du bist jetzt im Team des Wintersymposiums',
+            return ['Du bist jetzt im Team von ' . reihe_name(),
                 $hallo . 'du hast jetzt die Rolle „' . $d['rolle'] . '“ im Team-Bereich. Einloggen kannst du dich unter ' . url('/einloggen')
                 . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : ". Lege vorher über diesen Link dein Passwort fest (gilt 72 Stunden):\n\n" . $d['link'] . "\n\n")
                 . " Beim ersten Login richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy).\n\nDas warst nicht du? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'team_einladung':
-            return ['Einladung in den Team-Bereich des Wintersymposiums',
-                $hallo . 'du bist jetzt im Team des Wintersymposiums (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
+            return ['Einladung in den Team-Bereich von ' . reihe_name(),
+                $hallo . 'du bist jetzt im Team von ' . reihe_name() . ' (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
                 . "\n\nDer Link gilt 72 Stunden und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter " . url('/einloggen') . '.'
                 . "\n\nDu erwartest diese Mail nicht? Dann ignoriere sie und sag dem Team Bescheid." . mail_gruss()];
         case 'newsletter_bestaetigen':
@@ -622,7 +656,7 @@ function mail_vorlage(string $name, array $d): array
                 . "\n\nMit der Bestätigung willigst du ein: „" . $d['einwilligung'] . '“'
                 . "\n\nDu hast dich nicht eingetragen? Dann ignoriere diese Mail." . mail_gruss()];
         case 'newsletter_schon':
-            return ['Dein Newsletter beim Wintersymposium',
+            return ['Dein Newsletter bei ' . reihe_name(),
                 'Hallo' . (($d['vorname'] ?? '') !== '' ? ' ' . $d['vorname'] : '') . ",\n\n"
                 . "für diese Adresse sind die gewählten Newsletter schon eingetragen. Hier kannst du deine Listen ansehen und ändern oder dich abmelden:\n\n" . $d['link']
                 . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
@@ -631,7 +665,7 @@ function mail_vorlage(string $name, array $d): array
                 $hallo . 'dein Code zum Einloggen in den Team-Bereich:' . "\n\n    " . $d['code'] . "\n\nEr gilt 10 Minuten und nur einmal."
                 . "\n\nDu loggst dich gerade nicht ein? Dann hat jemand dein Passwort. Ändere es unter " . url('/konto/passwort-vergessen') . ' und sag dem Team Bescheid.' . mail_gruss()];
         case 'team_passwort':
-            return ['Neues Passwort für den Team-Bereich des Wintersymposiums',
+            return ['Neues Passwort für den Team-Bereich von ' . reihe_name(),
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']
                 . "\n\nEr gilt 72 Stunden und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App."
                 . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
@@ -648,7 +682,7 @@ function mail_vorlage(string $name, array $d): array
                 . $d['link'] . "\n\nDer Link gilt bis " . $d['gueltig'] . ' und einmal. Danach kannst du dir unter ' . url('/deine-anmeldung')
                 . ' jederzeit einen neuen schicken lassen – oder du loggst dich mit deinem Konto ein.' . mail_gruss()];
         case 'test':
-            return ['Testmail vom Wintersymposium', "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
+            return ['Testmail von ' . reihe_name(), "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }
     throw new InvalidArgumentException('Unbekannte Mail-Vorlage: ' . $name);
 }

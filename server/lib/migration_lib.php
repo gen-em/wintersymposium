@@ -573,6 +573,12 @@ function migration_katalog(): array
                 "ALTER TABLE mail_ausgang ADD COLUMN html MEDIUMTEXT NULL AFTER text",
             ],
         ],
+        19 => [
+            'beschreibung' => 'Absendername je Mail (E-67): Veranstaltung oder Reihe',
+            'sql' => [
+                "ALTER TABLE mail_ausgang ADD COLUMN absender_name VARCHAR(120) NULL AFTER html",
+            ],
+        ],
     ];
 }
 

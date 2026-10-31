@@ -84,6 +84,10 @@ function seite_kopf(string $titel, array $opt = []): void
             $unter = is_array($ich) ? (konto_ist_team($ich) ? (ROLLEN[$ich['rolle']] ?? '') . ' · ' : '') . $ich['email'] : 'über den Link aus der Mail';
             // Personen-Menü (AP-12, E-60, Entwurf A): Kopf zum Lesen, darunter Punkte mit Icons; der Team-Bereich steht in der Leiste
             $eintraege = [['/deine-anmeldung', 'Meine Anmeldung', 'Workshops, Essen, absagen', 'ticket']];
+            if (is_array($team)) {
+                // Team-Bereich auch im Personen-Menü, grün wie in der Leiste (Rückmeldung 2026-10-31)
+                array_unshift($eintraege, ['/team', 'Team-Bereich', 'Anmeldungen, Programm, Mailings', 'shield-check', ' team']);
+            }
             if (is_array($ich)) {
                 $eintraege[] = ['/konto', 'Mein Konto', konto_ist_team($ich) ? 'Profil, Passwort, Zwei-Faktor, Newsletter' : 'Profil, Passwort, Newsletter', 'user-circle'];
             }
@@ -92,7 +96,7 @@ function seite_kopf(string $titel, array $opt = []): void
             $adresse = is_array($ich) ? (string)$ich['email'] : 'über den Link aus der Mail';
             $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
                 . '<div class="person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
-                . implode('', array_map(fn($x) => '<a class="person-punkt" href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . icon($x[3], 22) . '<span class="person-text"><span class="person-titel">' . e($x[1]) . '</span><small>' . e($x[2]) . '</small></span>' . icon('caret-right', 16, 'icon person-weiter') . '</a>', $eintraege))
+                . implode('', array_map(fn($x) => '<a class="person-punkt' . ($x[4] ?? '') . '" href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . icon($x[3], 22) . '<span class="person-text"><span class="person-titel">' . e($x[1]) . '</span><small>' . e($x[2]) . '</small></span>' . icon('caret-right', 16, 'icon person-weiter') . '</a>', $eintraege))
                 . $ab . '</div></details>';
             $flach = '<li class="person-flach"><p class="person-flach-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
                 . (is_array($ich) ? $a('/konto', 'Mein Konto', '/konto') : '') . '<li>' . $ab . '</li>';
