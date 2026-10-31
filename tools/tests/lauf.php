@@ -1178,7 +1178,7 @@ va_zwischenspeicher_leeren();
     }
     $ein = anm_link_einloesen($tok);
     pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $mailVor + 1 && ($ein['zweck'] ?? '') === 'uebernehmen' && $ein['anm'] === (int)$fr2['id'], 'Link „Daten übernehmen“ per Mail, einlösbar');
-    $_SESSION['anm_vorlage'] = (int)$fr2['id'];
+    $_SESSION['anm_vorlage'] = ['id' => (int)$fr2['id'], 'zeit' => time()];
     pruefe((anm_vorlage()['email'] ?? '') === $fr2['email'] && (anm_vorlage()['institution'] ?? '') === $fr2['institution'], 'Vorlage fürs Formular aus der früheren Anmeldung');
     unset($_SESSION['anm_vorlage']);
     // Bausteine: ohne Essen und ohne Fortbildungspunkte
@@ -1613,6 +1613,17 @@ va_zwischenspeicher_leeren();
     pruefe(str_starts_with($raM, "Hallo,\n") && !str_contains($raM, 'Rita'), 'Mail an die neue Adresse ohne Vornamen („Hallo,“)');
     db_ausfuehren('DELETE FROM rate_limit');
     db_ausfuehren('DELETE FROM mail_ausgang');
+
+    // Unterpunkt 6 (B-13, T-280): Vorlage „Daten übernehmen“ läuft ab
+    $voP = team_anlegen(['vorname' => 'Vera', 'email' => 'vera.vorlage@example.org'] + $rd, true, false)['id'];
+    $_SESSION['anm_vorlage'] = ['id' => $voP, 'zeit' => time() - 29 * 60];
+    $voFrisch = anm_vorlage();
+    $_SESSION['anm_vorlage'] = ['id' => $voP, 'zeit' => time() - 31 * 60];
+    $voAlt = anm_vorlage();
+    pruefe(($voFrisch['email'] ?? '') === 'vera.vorlage@example.org' && $voAlt === null && !isset($_SESSION['anm_vorlage']), 'Vorlage nach 29 min da, nach 31 min weg (Zeitstempel im Sitzungseintrag)');
+    $_SESSION['anm_vorlage'] = $voP;
+    pruefe(anm_vorlage() === null, 'alter Sitzungseintrag ohne Zeitstempel gilt nicht');
+    unset($_SESSION['anm_vorlage']);
 
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);

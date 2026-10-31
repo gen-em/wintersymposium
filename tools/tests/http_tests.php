@@ -1090,6 +1090,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     newsletter_http_tests($basis, $h, $tmp, $b);
     veranstaltung_http_tests($basis, $h, $tmp, $b);
     rechte_http_tests($basis, $h, $tmp, $b);
+    ap14_http_tests($basis, $h, $tmp);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -1234,6 +1235,24 @@ function veranstaltung_http_tests(string $basis, string $h, string $tmp, string 
     db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = ?", [$v1]);
     va_zwischenspeicher_leeren();
     http_anfrage($basis, 'GET', '/team?va=' . $v1, $h, [], null, $b);
+}
+
+/** Review-Behebung 1 (AP-14): Vorlage „Daten übernehmen“ nach dem Absenden weg (B-13, T-280). */
+function ap14_http_tests(string $basis, string $h, string $tmp): void
+{
+    abschnitt('HTTP: Review-Behebung 1 (AP-14)');
+    einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 60));
+    $alt = team_anlegen(['vorname' => 'Vera', 'nachname' => 'Vorlage', 'email' => 'vera.vorlage@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 9', 'efn' => '', 'essen' => 'egal'], true, false)['id'];
+    $tok = anm_link_erzeugen($alt, 'uebernehmen', time() + 3600);
+    $k = "$tmp/kekse-vorlage.txt";
+    $r = http_anfrage($basis, 'GET', '/link?t=' . $tok, $h, [], null, $k);
+    $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => $tok], $k);
+    $vorher = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k);
+    http_anmelden($basis, $h, $k, ['vorname' => 'Vera', 'nachname' => 'Neu', 'email' => 'vera.neu@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 9', 'efn' => '', 'essen' => 'egal']);
+    $neu = db_zeile("SELECT id FROM anmeldung WHERE email = 'vera.neu@example.org'");
+    $nachher = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k);
+    pruefe(($r['kopf']['location'] ?? '') === '/anmelden' && str_contains($vorher['text'], 'value="vera.vorlage@example.org"') && $neu !== null && !str_contains($nachher['text'], 'vera.vorlage@example.org') && !str_contains($nachher['text'], 'Station 9'), 'Vorlage füllt das Formular, nach dem Absenden ist sie weg');
+    db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
 }
 
 function http_tests(string $wurzel, string $tmp): void

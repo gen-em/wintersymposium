@@ -22,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
     if ($r['zweck'] === 'uebernehmen') {
         // Daten einer früheren Anmeldung ins Formular der aktuellen Veranstaltung (E-58)
-        $_SESSION['anm_vorlage'] = (int)$r['anm'];
+        $_SESSION['anm_vorlage'] = ['id' => (int)$r['anm'], 'zeit' => time()]; // gilt 30 Minuten (Review B-13)
         flash_setzen('ok', 'Deine Angaben vom letzten Mal sind eingetragen. Prüf sie, wähl Workshops und schick die Anmeldung ab.');
         umleiten('/anmelden');
     }

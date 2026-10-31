@@ -493,11 +493,22 @@ function anm_uebernehmen_senden(int $alteAnmId, ?int $jetzt = null): void
     mail_vorlage_einreihen($a['email'], 'uebernehmen', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis))]);
 }
 
-/** Vorlage fürs Anmeldeformular aus einer früheren Anmeldung (nach dem Link „Daten übernehmen“) oder null. */
-function anm_vorlage(): ?array
+/** Wie lange die Vorlage „Daten übernehmen“ in der Sitzung gilt (Minuten, Review B-13). */
+const ANM_VORLAGE_MIN = 30;
+
+/**
+ * Vorlage fürs Anmeldeformular aus einer früheren Anmeldung (nach dem Link
+ * „Daten übernehmen“) oder null. Der Sitzungseintrag gilt 30 Minuten; danach
+ * und nach dem Absenden (anmelden.php) ist er weg.
+ */
+function anm_vorlage(?int $jetzt = null): ?array
 {
-    $id = (int)($_SESSION['anm_vorlage'] ?? 0);
-    $a = $id > 0 ? anm_laden($id) : null;
+    $s = $_SESSION['anm_vorlage'] ?? null;
+    if (!is_array($s) || !isset($s['id'], $s['zeit']) || (int)$s['zeit'] < ($jetzt ?? time()) - ANM_VORLAGE_MIN * 60) {
+        unset($_SESSION['anm_vorlage']);
+        return null;
+    }
+    $a = anm_laden((int)$s['id']);
     if ($a === null) {
         return null;
     }
