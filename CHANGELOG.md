@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.2] – 2026-10-31
+
+### Doku
+
+- **Code-Review** mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`: 14 Bugs, 12 Sicherheitspunkte, 53 Vereinheitlichungspunkte, Vorschlag für Arbeitspakete AP-R1 bis AP-R9 und offene Entscheidungen O-R1 bis O-R5. Noch keine Behebung; die folgt in eigenen Arbeitspaketen.
+
 ## [0.21.1] – 2026-10-31
 
 ### Geändert
