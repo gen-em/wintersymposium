@@ -38,7 +38,8 @@ const { spawn, execFileSync } = require('child_process');
 
 const WURZEL = path.resolve(__dirname, '..', '..');
 const AUS = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'ws-browser-' + Date.now()));
-const ENGINES = ['chromium', 'firefox', 'webkit'];
+// WS_ENGINES=webkit (kommagetrennt) prüft nur diese Engines, z. B. zur Fehlersuche
+const ENGINES = (process.env.WS_ENGINES || 'chromium,firefox,webkit').split(',');
 const BREITEN = [
   ['handy', 390, 844],
   ['tablet', 768, 1024],
@@ -164,8 +165,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   const antwort = url ? await p.goto(url, { waitUntil: 'load' }) : null;
   await p.waitForTimeout(150);
   if (antwort) notiere(engine, breite, name, 'Status', antwort.status() < 400, String(antwort.status()));
-  const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
-  notiere(engine, breite, name, 'kein seitliches Scrollen', m.sw <= m.iw, `${m.sw} > ${m.iw}`);
+  const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth,
+    // Zur Fehlersuche: was rechts übersteht, auch unsichtbare Elemente
+    raus: [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1).slice(-3)
+      .map(e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.className ? '.' + String(e.className).split(' ').join('.') : '') + ' ' + Math.round(e.getBoundingClientRect().right)) }));
+  notiere(engine, breite, name, 'kein seitliches Scrollen', m.sw <= m.iw, `${m.sw} > ${m.iw} (${m.raus.join(', ')})`);
+  if (m.sw > m.iw && process.env.WS_HTML) fs.writeFileSync(path.join(AUS, `${engine}-${breite}-${name}.html`), await p.content());
   // Elemente, die rechts aus dem Fenster ragen (außer in scrollbaren Tabellen)
   const raus = await p.evaluate(ueberstand);
   notiere(engine, breite, name, 'alles innerhalb der Fensterbreite', raus.length === 0, raus.join(', '));
