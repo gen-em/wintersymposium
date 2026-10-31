@@ -26,6 +26,8 @@ declare(strict_types=1);
 /** Einmal-Links gelten 48 Stunden und einmal (Admin 2026-10-29). */
 const ANM_LINK_GUELTIG_H = 48;
 /** Hinweis, wenn die Adresse eines Team-Kontos über eine Anmeldung geändert werden soll (E-63 (2)). */
+/** Sperre nach zu vielen Adressänderungen (Review S-2). */
+const ANM_ADRESSE_RATE_TEXT = 'Zu viele Adressänderungen. Bitte warte eine Stunde.';
 const ANM_TEAM_ADRESSE_TEXT = 'Die Adresse eines Team-Kontos ändert eine BetreiberIn unter Betrieb → Team-Konten.';
 
 const ANM_ESSEN = [
@@ -736,22 +738,23 @@ function anm_essen_setzen(int $anmId, string $essen, bool $team = false, bool $m
 
 /**
  * Persönliche Angaben ändern. Eine neue Adresse gilt erst nach Bestätigung
- * (Link an die neue Adresse). Gibt ['fehler' => [...], 'email_link' => bool] zurück.
+ * (Link an die neue Adresse). Gibt ['fehler' => [...], 'email_link' => bool, 'email_gesperrt' => bool] zurück
+ * (gesperrt: zu viele Adressänderungen, übrige Daten sind gespeichert).
  */
 function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
 {
     $a = anm_laden($anmId);
     if ($a === null) {
-        return ['fehler' => ['Die Anmeldung gibt es nicht mehr.'], 'email_link' => false];
+        return ['fehler' => ['Die Anmeldung gibt es nicht mehr.'], 'email_link' => false, 'email_gesperrt' => false];
     }
     $r = anm_daten_pruefen($e + ['essen' => $a['essen']]);
     if ($r['fehler'] !== []) {
-        return ['fehler' => $r['fehler'], 'email_link' => false];
+        return ['fehler' => $r['fehler'], 'email_link' => false, 'email_gesperrt' => false];
     }
     $w = $r['werte'];
     // Login-Adresse eines Team-Kontos nicht über die Anmeldung (E-63 (2), Review S-1)
     if ($w['email'] !== $a['email'] && anm_hat_team_konto($a)) {
-        return ['fehler' => ['email' => ANM_TEAM_ADRESSE_TEXT], 'email_link' => false];
+        return ['fehler' => ['email' => ANM_TEAM_ADRESSE_TEXT], 'email_link' => false, 'email_gesperrt' => false];
     }
     db_ausfuehren(
         'UPDATE anmeldung SET vorname = ?, nachname = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
@@ -760,13 +763,36 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
     audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ': Daten geändert');
     $link = false;
     if ($w['email'] !== $a['email']) {
+        if (!adresse_aendern_erlaubt($w['email'])) {
+            // Daten ohne Adresse sind gespeichert, die Adresse bleibt (Review S-2)
+            return ['fehler' => [], 'email_link' => false, 'email_gesperrt' => true];
+        }
         // Gleiche Antwort, ob die Adresse schon vergeben ist oder nicht; geprüft wird beim Bestätigen.
+        // Nur ein offener Link je Anmeldung: ältere verfallen.
         $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_H * 3600;
+        db_ausfuehren("DELETE FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$anmId]);
         $token = anm_link_erzeugen($anmId, 'email', $bis, $w['email']);
-        mail_vorlage_einreihen($w['email'], 'email_bestaetigen', ['vorname' => $w['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis))]);
+        mail_vorlage_einreihen($w['email'], 'email_bestaetigen', ['link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis))]);
         $link = true;
     }
-    return ['fehler' => [], 'email_link' => $link];
+    return ['fehler' => [], 'email_link' => $link, 'email_gesperrt' => false];
+}
+
+/**
+ * Ratenschutz für Mails an eine neue Adresse (Anmeldung und Konto, Review S-2):
+ * wie „Link per Mail“ je IP und je Zieladresse; jeder Versand zählt. Gibt
+ * false zurück, wenn gesperrt (dann keine Mail).
+ */
+function adresse_aendern_erlaubt(string $ziel): bool
+{
+    $ip = rate_merkmal_ip();
+    $zielM = rate_merkmal_kennung('link:' . $ziel);
+    if (!rate_erlaubt('link_ip', $ip) || !rate_erlaubt('link_ziel', $zielM)) {
+        return false;
+    }
+    rate_misserfolg('link_ip', $ip);
+    rate_misserfolg('link_ziel', $zielM);
+    return true;
 }
 
 /** Ist die Anmeldung mit einem Team-Konto (admin, betreiber …) verknüpft? */

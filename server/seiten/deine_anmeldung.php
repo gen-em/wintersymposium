@@ -106,6 +106,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 umleiten('/deine-anmeldung');
             case 'daten':
                 $r = anm_daten_setzen($id, $_POST);
+                if ($r['fehler'] === [] && $r['email_gesperrt']) {
+                    flash_setzen('fehler', 'Deine übrigen Daten sind gespeichert, die Adresse nicht: ' . ANM_ADRESSE_RATE_TEXT);
+                    umleiten('/deine-anmeldung');
+                }
                 if ($r['fehler'] === []) {
                     flash_setzen('ok', $r['email_link'] ? 'Gespeichert. An die neue Adresse ist ein Link unterwegs; erst damit gilt sie. Bis dahin bleibt die bisherige.' : 'Deine Daten sind gespeichert.');
                     umleiten('/deine-anmeldung');

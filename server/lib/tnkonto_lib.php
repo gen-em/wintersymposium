@@ -332,8 +332,12 @@ function tk_email_aendern(int $kontoId, string $neu): ?string
     if ($neu === $k['email']) {
         return null;
     }
+    if (!adresse_aendern_erlaubt($neu)) {
+        return ANM_ADRESSE_RATE_TEXT;
+    }
+    // tk_link löscht ältere Links desselben Zwecks; Anrede ohne Namen (Review S-2)
     $l = tk_link($kontoId, 'email', $neu);
-    mail_vorlage_einreihen($neu, 'email_bestaetigen', ['vorname' => tk_namen($k)['vorname'], 'link' => $l['url'], 'gueltig' => $l['gueltig']]);
+    mail_vorlage_einreihen($neu, 'email_bestaetigen', ['link' => $l['url'], 'gueltig' => $l['gueltig']]);
     return null;
 }
 

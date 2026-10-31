@@ -583,8 +583,9 @@ function mail_vorlage(string $name, array $d): array
             return ['Du hast den Platz: ' . $d['was'],
                 $hallo . 'du hast den Platz angenommen: ' . $d['was'] . '.' . $u . mail_gruss()];
         case 'email_bestaetigen':
+            // Anrede ohne Vornamen: Wer die Mail bekommt, kennt die Person vielleicht nicht (Review S-2)
             return ['Bitte bestätige deine neue Adresse',
-                $hallo . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
+                "Hallo,\n\n" . 'du willst deine Anmeldung zum ' . va_kurz() . " auf diese Adresse umstellen. Bestätige das über diesen Link:\n\n" . $d['link']
                 . "\n\nEr gilt bis " . $d['gueltig'] . ". Bis dahin bleibt die bisherige Adresse gültig.\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'adresse_vom_team':
             // an die alte Adresse, wenn das Team die Adresse geändert hat (E-63 (2))

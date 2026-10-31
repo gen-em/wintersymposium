@@ -1584,6 +1584,36 @@ va_zwischenspeicher_leeren();
     $f = anm_workshops_setzen($wlP, ['fest' => $fw['wahl']['fest'], 'warte' => []], null, false, false, false);
     pruefe($f === [] && $wlSeitNoch() === null, '(c) Kästchen abgewählt: Eintrag weg');
 
+    // Unterpunkt 4 (S-2, T-278): Ratenschutz für Adressänderungen
+    db_ausfuehren('DELETE FROM rate_limit');
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    $raP = team_anlegen(['vorname' => 'Rita', 'email' => 'rita.rate@example.org'] + $rd, true, false)['id'];
+    $raErg = [];
+    for ($i = 1; $i <= 11; $i++) {
+        $raErg[$i] = anm_daten_setzen($raP, ['vorname' => 'Rita', 'email' => 'ziel' . $i . '@example.org'] + $rd);
+    }
+    pruefe($raErg[10]['email_link'] && !$raErg[11]['email_link'] && !empty($raErg[11]['email_gesperrt']) && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'ziel11@example.org'") === 0, '11 Adressänderungen auf 11 Zieladressen von einer IP: die 11. gesperrt (link_ip 10/h)');
+    pruefe((int)db_wert("SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$raP]) === 1 && db_wert("SELECT neue_email FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$raP]) === 'ziel10@example.org', 'nur ein offener E-Mail-Link je Anmeldung (der neueste)');
+    $raN = anm_daten_setzen($raP, ['vorname' => 'Ritaneu', 'email' => 'ziel12@example.org'] + $rd);
+    pruefe(!empty($raN['email_gesperrt']) && $raN['fehler'] === [] && anm_laden($raP)['vorname'] === 'Ritaneu', 'gesperrt: übrige Daten trotzdem gespeichert');
+    $raErg = [];
+    db_ausfuehren('DELETE FROM rate_limit');
+    for ($i = 1; $i <= 4; $i++) {
+        $raErg[$i] = anm_daten_setzen($raP, ['vorname' => 'Rita', 'email' => 'gleich@example.org'] + $rd);
+    }
+    pruefe($raErg[3]['email_link'] && !$raErg[4]['email_link'] && !empty($raErg[4]['email_gesperrt']), '4 Änderungen auf dieselbe Zieladresse: die 4. gesperrt (link_ziel 3/h)');
+    db_ausfuehren('DELETE FROM rate_limit');
+    $raK = konto_anlegen('Kai Konto', 'kai.konto@example.org', 'teilnehmend');
+    $raKf = [];
+    for ($i = 1; $i <= 4; $i++) {
+        $raKf[$i] = tk_email_aendern($raK, 'kai.neu@example.org');
+    }
+    pruefe($raKf[3] === null && $raKf[4] === ANM_ADRESSE_RATE_TEXT && (int)db_wert("SELECT COUNT(*) FROM konto_link WHERE konto_id = ? AND zweck = 'email'", [$raK]) === 1, 'Konto: Adressänderung mit Ratenschutz, ein offener Link');
+    $raM = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'gleich@example.org' ORDER BY id DESC LIMIT 1");
+    pruefe(str_starts_with($raM, "Hallo,\n") && !str_contains($raM, 'Rita'), 'Mail an die neue Adresse ohne Vornamen („Hallo,“)');
+    db_ausfuehren('DELETE FROM rate_limit');
+    db_ausfuehren('DELETE FROM mail_ausgang');
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');
