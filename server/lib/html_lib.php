@@ -28,6 +28,18 @@ function seite_kopf(string $titel, array $opt = []): void
     $akzent = ($opt['akzent'] ?? 'lila') === 'rot' ? 'rot' : 'lila';
     $nav = $opt['nav'] ?? true;
     $aktiv = (string)($opt['aktiv'] ?? '');
+    if ($nav) {
+        // Ein Konto für alles (E-54): Team-Login, Konto und Einmal-Link in einer Sitzung.
+        // Vor der ersten Ausgabe: Ohne Ausgabepuffer (wie beim Hoster) lässt sich die
+        // Sitzung danach nicht mehr öffnen, die Startseite sah dann ausgeloggt aus
+        // (Rückmeldung 2026-10-31).
+        $konto = $opt['konto'] ?? null;
+        $team = is_array($konto) ? $konto : (!isset($opt['teilnehmer']) ? team_gesehen() : null);
+        $tn = $opt['teilnehmer'] ?? anm_aus_keks();
+        $tk = session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
+        $ich = $tk ?? $team; // eingeloggtes Konto
+        $erkannt = is_array($tn) || is_array($ich);
+    }
     echo '<!doctype html><html lang="de"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         // Bis zum Anmeldestart nicht in Suchmaschinen (Konzept AP-2, Checkliste Abschnitt 9)
@@ -50,13 +62,6 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
         . '</a>';
     if ($nav) {
-        // Ein Konto für alles (E-54): Team-Login, Konto und Einmal-Link in einer Sitzung
-        $konto = $opt['konto'] ?? null;
-        $team = is_array($konto) ? $konto : (!isset($opt['teilnehmer']) ? team_gesehen() : null);
-        $tn = $opt['teilnehmer'] ?? anm_aus_keks();
-        $tk = session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
-        $ich = $tk ?? $team; // eingeloggtes Konto
-        $erkannt = is_array($tn) || is_array($ich);
         $a = fn(string $href, string $text, string $pfad, string $klasse = '') => '<li><a' . ($klasse !== '' ? ' class="' . $klasse . '"' : '') . ' href="' . e($href) . '"'
             . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
         $liste = $a('/#programm', 'Programm', '/');

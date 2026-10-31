@@ -1190,7 +1190,7 @@ function http_tests(string $wurzel, string $tmp): void
 {
     $port = 18000 + random_int(0, 999);
     $basis = "http://127.0.0.1:$port";
-    $befehl = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', "$wurzel/server/public", "$wurzel/server/public/index.php"];
+    $befehl = [PHP_BINARY, '-d', 'output_buffering=0', '-S', "127.0.0.1:$port", '-t', "$wurzel/server/public", "$wurzel/server/public/index.php"];
     $env = array_merge(getenv(), ['WS_CONFIG' => "$tmp/config.php"]);
     $proc = proc_open($befehl, [0 => ['pipe', 'r'], 1 => ['file', "$tmp/server.log", 'a'], 2 => ['file', "$tmp/server.log", 'a']], $pipes, null, $env);
     if (!is_resource($proc)) {

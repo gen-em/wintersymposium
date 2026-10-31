@@ -110,6 +110,8 @@ Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testd
 
 Einzeln überschreibbar: `WS_ENGINES=webkit`, `WS_BREITEN=handy,tablet`.
 
+Beide Testserver (`lauf.php` und Browser-Durchlauf) laufen mit `output_buffering=0` wie beim Hoster: Eine Seite, die nach der ersten Ausgabe noch eine Sitzung öffnen will, fällt so schon im Test auf.
+
 **Browser-Durchlauf (R-12)** in Chromium, Firefox und WebKit, je auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px): alle Seiten, Klickwege (Menü, Team-Reiter, Login mit zweitem Faktor, Konto anlegen, Einrichtungslink, Ausloggen), jedes Auswahlfeld, jedes Aufklapp-Element, jedes Popup; dazu seitliches Scrollen, Überstand und Konsolenfehler.
 
 ```bash

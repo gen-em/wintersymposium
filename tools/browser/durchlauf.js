@@ -228,7 +228,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
   const vor = JSON.parse(php([path.join(WURZEL, 'tools/browser/vorbereiten.php'), tmp], ''));
   const port = 19000 + Math.floor(Math.random() * 900);
   const basis = `http://127.0.0.1:${port}`;
-  const server = spawn('php', ['-S', `127.0.0.1:${port}`, '-t', path.join(WURZEL, 'server/public'), path.join(WURZEL, 'server/public/index.php')],
+  const server = spawn('php', ['-d', 'output_buffering=0', '-S', `127.0.0.1:${port}`, '-t', path.join(WURZEL, 'server/public'), path.join(WURZEL, 'server/public/index.php')],
     { env: { ...process.env, WS_CONFIG: vor.config }, stdio: ['ignore', fs.openSync(path.join(tmp, 'server.log'), 'a'), fs.openSync(path.join(tmp, 'server.log'), 'a')] });
   await new Promise(r => setTimeout(r, 700));
 
@@ -456,6 +456,14 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.click('a.knopf');
       await p.waitForLoadState('load');
       notiere(engine, 'handy', 'team', 'eingeloggt mit Name', (await p.textContent('body')).includes('Bea Betreiberin'));
+      // Rückmeldung 2026-10-31: Startseite zeigt eingeloggt das Personen-Menü – direkt und über das Logo
+      await p.goto(basis + '/');
+      notiere(engine, 'handy', 'start-eingeloggt', 'Startseite direkt: eingeloggt', await p.locator('.person-menue').count() > 0 && await p.locator('a.person-knopf[href="/einloggen"]').count() === 0);
+      await p.goto(basis + '/team');
+      await Promise.all([p.waitForNavigation(), p.click('header.kopf a[aria-label="Zur Startseite"]')]);
+      notiere(engine, 'handy', 'start-eingeloggt', 'Startseite über Logo: eingeloggt', await p.locator('.person-menue').count() > 0 && await p.locator('a.person-knopf[href="/einloggen"]').count() === 0);
+      await p.goBack(); await p.goForward();
+      notiere(engine, 'handy', 'start-eingeloggt', 'Startseite nach Zurück/Vor: eingeloggt', await p.locator('.person-menue').count() > 0 && await p.locator('a.person-knopf[href="/einloggen"]').count() === 0);
 
       // Team-Seiten in allen Breiten, Reiter anklicken
       for (const [breite, w, h] of BREITEN) {
