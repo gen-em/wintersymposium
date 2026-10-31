@@ -734,7 +734,9 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 /* Mehrere Veranstaltungen (E-58) */
 .va-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; font-size: .9rem; }
 .va-leiste label { font-family: var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; font-size: .8rem; color: var(--meta); }
-.va-leiste select { max-width: 100%; min-width: 0; flex: 1 1 220px; }
+.va-leiste select { flex: 1 1 200px; width: 100%; min-width: 0; max-width: 100%; }
+/* WebKit nimmt sonst die Breite der längsten Option */
+.formular select, .einstellungen select { max-width: 100%; }
 .va-hinweis { margin-top: -4px; }
 .va-archiv { border-left: 4px solid var(--meta); padding: 10px 14px; background: var(--flaeche); margin: 0 0 16px; }
 .va-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
