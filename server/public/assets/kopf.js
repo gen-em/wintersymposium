@@ -1,7 +1,8 @@
 /*
  * Stehende Kopfleiste (AP-12, E-60; Rückmeldung 2026-10-31).
- * Desktop: Die Leiste bleibt oben (CSS sticky) und wird nach den ersten
- * Zeilen flacher. Handy: Beim Scrollen nach unten verschwindet sie, rechts
+ * Desktop: Die Leiste bleibt oben (CSS sticky), mit Schatten beim Scrollen.
+ * Ihre Höhe ändert sich nie – sonst springt die Scroll-Position am Seitenende
+ * hin und her. Handy: Beim Scrollen nach unten verschwindet sie, rechts
  * oben bleibt ein kleiner „Menü“-Knopf; beim Scrollen nach oben kommt sie
  * zurück. Ohne JavaScript bleibt die Leiste einfach stehen.
  */

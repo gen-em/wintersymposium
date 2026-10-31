@@ -88,19 +88,14 @@ body.akzent-rot .kopf .logo-lila { display: none; }
 /* Stehende Kopfleiste (AP-12, E-60): immer sichtbar; Handy blendet sie beim Scrollen nach unten aus (kopf.js) */
 .kopf { position: sticky; top: 0; z-index: 30; background: var(--bg); transition: transform .2s ease, box-shadow .2s ease; }
 .kopf.gescrollt { box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
-.kopf .innen, .kopf .logo { transition: padding .2s ease, height .2s ease; }
 html { scroll-padding-top: 88px; }
-@media (min-width: 760px) {
-    .kopf.gescrollt .innen { padding-top: 6px; padding-bottom: 6px; }
-    .kopf.gescrollt .logo { height: 36px; }
-}
 @media (max-width: 759px) {
     .kopf.versteckt { transform: translateY(-100%); box-shadow: none; }
 }
 .kopf-menue-knopf { position: fixed; top: 10px; right: 16px; z-index: 31; display: none; align-items: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--flaeche2); color: var(--fg); font: 700 .9rem var(--f-zwischen); text-transform: uppercase; letter-spacing: .06em; box-shadow: 0 0 0 2px var(--akz), 0 6px 18px rgba(0, 0, 0, .4); cursor: pointer; }
 .kopf-menue-knopf:focus-visible { outline: 2px solid var(--weiss); outline-offset: 3px; }
 @media (max-width: 759px) { body.kopf-weg .kopf-menue-knopf { display: inline-flex; } }
-@media (prefers-reduced-motion: reduce) { .kopf, .kopf .innen, .kopf .logo { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .kopf { transition: none; } }
 /* Handy: aufklappbares Menü; Desktop: Liste daneben */
 .nav-gross { display: none; }
 .menue > summary { list-style: none; cursor: pointer; font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--linie); padding: 10px 14px; min-height: 44px; }
