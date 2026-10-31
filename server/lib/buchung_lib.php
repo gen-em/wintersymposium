@@ -28,7 +28,7 @@ const ANM_LINK_GUELTIG_H = 48;
 /** Hinweis, wenn die Adresse eines Team-Kontos über eine Anmeldung geändert werden soll (E-63 (2)). */
 /** Sperre nach zu vielen Adressänderungen (Review S-2). */
 const ANM_ADRESSE_RATE_TEXT = 'Zu viele Adressänderungen. Bitte warte eine Stunde.';
-const ANM_TEAM_ADRESSE_TEXT = 'Die Adresse eines Team-Kontos ändert eine BetreiberIn unter Betrieb → Team-Konten.';
+const ANM_TEAM_ADRESSE_TEXT = 'Die Adresse eines Team-Kontos lässt sich hier nicht ändern. Bitte wende dich an eine BetreiberIn.';
 
 const ANM_ESSEN = [
     'egal' => 'Keine speziellen Wünsche',

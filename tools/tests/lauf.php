@@ -1478,7 +1478,7 @@ va_zwischenspeicher_leeren();
     $GLOBALS['ws_team_konto'] = null;
     db_ausfuehren('DELETE FROM mail_ausgang');
     $rd = ['nachname' => 'Review', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'];
-    // Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nur unter Team-Konten
+    // Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nicht über eine Anmeldung
     $bId = konto_anlegen('Bea Betrieb', 'bea.betrieb@example.org', 'betreiber');
     $bAnm = team_anlegen(['vorname' => 'Bea', 'email' => 'bea.betrieb@example.org'] + $rd, true, false)['id'];
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$bId, $bAnm]);
@@ -1489,7 +1489,7 @@ va_zwischenspeicher_leeren();
     pruefe(($r['fehler']['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && !$r['email_link'] && (int)db_wert("SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$bAnm]) === 0 && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === 0, '(b) Team-Mitglied ändert eigene Adresse über Meine Anmeldung: abgelehnt, kein Link, keine Mail');
     $tok = anm_link_erzeugen($bAnm, 'email', time() + 3600, 'bea.privat@example.org');
     $e = anm_link_einloesen($tok);
-    pruefe($e !== null && str_contains((string)$e['meldung'], 'Team-Konten') && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', 'zweite Sperre: alter E-Mail-Link schreibt nicht ins Team-Konto');
+    pruefe($e !== null && str_contains((string)$e['meldung'], 'Team-Kontos') && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', 'zweite Sperre: alter E-Mail-Link schreibt nicht ins Team-Konto');
     $tId = konto_anlegen('Tom Teil', 'tom.teil@example.org', 'teilnehmend');
     $tAnm = team_anlegen(['vorname' => 'Tom', 'email' => 'tom.teil@example.org'] + $rd, true, false)['id'];
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$tId, $tAnm]);
@@ -1559,21 +1559,14 @@ va_zwischenspeicher_leeren();
         }
         return ['html' => $html, 'wahl' => anm_wahl_lesen($post)];
     };
-    $wlP = team_anlegen(['vorname' => 'Wally', 'email' => 'wally.warte@example.org'] + $rd, true, false)['id'];
-    $wlT = 0;
-    foreach (anm_workshops() as $wsW) {
-        foreach ($wsW['termine'] as $wsT) {
-            if ($wlT === 0 && anm_frei((int)$wsT['id']) > 0) {
-                [$wlT, $wlW] = [(int)$wsT['id'], (int)$wsW['id']];
-            }
-        }
-    }
-    $wlSeit = gmdate('Y-m-d H:i:s', time() - 5 * 86400);
-    db_ausfuehren("INSERT INTO platz (anmeldung_id, veranstaltung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, ?, 'warte', ?)", [$wlP, va_id(), $wlT, $wlW, $wlSeit]);
+    // Beispieldatensatz (AP-14): Wanda auf der Warteliste von WS 01 19:30, der Termin hat freie Plätze
+    $bw = beispieldaten_warteliste();
+    [$wlP, $wlT] = [$bw['wanda'], $bw['termin']];
+    $wlSeit = (string)db_wert("SELECT seit FROM platz WHERE anmeldung_id = ? AND termin_id = ? AND status = 'warte'", [$wlP, $wlT]);
     $wlSeitNoch = fn(): ?string => db_wert("SELECT seit FROM platz WHERE anmeldung_id = ? AND termin_id = ? AND status = 'warte'", [$wlP, $wlT]);
     $fw = $formWahl($wlP, true);
     pruefe(str_contains($fw['html'], 'name="wl[]" value="' . $wlT . '" checked'), 'Team-Modus: bestehender Warte-Eintrag als vorangekreuztes Kästchen');
-    team_anm_daten($wlP, ['vorname' => 'Walter', 'email' => 'wally.warte@example.org'] + $rd, false);
+    team_anm_daten($wlP, ['vorname' => 'Wanda-Maria', 'email' => 'wanda.warte@example.org'] + $rd, false);
     $f = anm_workshops_setzen($wlP, $fw['wahl'], null, true, false, false);
     pruefe($f === [] && $wlSeitNoch() === $wlSeit, '(a) Team speichert nur den Namen: Warte-Eintrag mit altem „seit“ bleibt');
     $fw = $formWahl($wlP, false);

@@ -56,11 +56,27 @@ $admin = konto_anlegen('Anna Admin', 'anna@example.org', 'admin');
 // Test-Beispieldatensatz (wächst mit jedem Arbeitspaket)
 require dirname(__DIR__, 2) . '/server/testdaten/beispieldaten.php';
 $bd = beispieldaten_laden();
+$bd['warteliste'] = beispieldaten_warteliste(); // AP-14: nicht in beispieldaten_laden(), siehe dort
 // Je Engine ein Zugangslink für Paula (offenes Nachrück-Angebot mit Tausch)
 $paula = [];
 for ($i = 0; $i < 3; $i++) {
     $paula[] = '/link?t=' . anm_link_erzeugen($bd['anmeldungen']['paula'], 'zugang', time() + 86400);
 }
+
+// AP-14: je Engine ein Zugangslink für Wanda (Warteliste mit freien Plätzen)
+// und ein Konto mit Anmeldung zum Stornieren (Storno lässt eingeloggt, E-63 (3))
+$wanda = [];
+$storno = [];
+for ($i = 0; $i < 3; $i++) {
+    $wanda[] = '/link?t=' . anm_link_erzeugen($bd['warteliste']['wanda'], 'zugang', time() + 86400);
+    $se = 'storno' . ($i + 1) . '@example.org';
+    $sk = konto_anlegen('Sina Storno', $se, 'teilnehmend', $pw);
+    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $sk]);
+    $sa = team_anlegen(['vorname' => 'Sina', 'nachname' => 'Storno', 'email' => $se, 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station Storno', 'efn' => '', 'essen' => 'egal'], true, false)['id'];
+    db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$sk, $sa]);
+    $storno[] = $se;
+}
+db_ausfuehren('DELETE FROM mail_ausgang');
 
 // Eine Sicherung, damit die Seite „Daten“ eine Tabelle mit Aktionen zeigt
 sicherung_anlegen('Browser-Durchlauf');
@@ -72,6 +88,10 @@ echo json_encode([
     'admin_id' => $admin,
     'installations_schluessel' => $konfig['installations_schluessel'],
     'paula_links' => $paula,
+    'wanda_links' => $wanda,
+    'wanda_id' => $bd['warteliste']['wanda'],
+    'wanda_termin' => $bd['warteliste']['termin'],
+    'storno' => $storno,
     'lea' => ['email' => 'lea@example.org', 'passwort' => BEISPIEL_PASSWORT],
     'ada' => ['email' => 'ada.abend@example.org', 'passwort' => BEISPIEL_PASSWORT_ADMIN],
     'aktuell_id' => (int)va_aktuell_id(),

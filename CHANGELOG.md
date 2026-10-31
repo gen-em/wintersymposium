@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.24.0] – 2026-10-31
+
+### Behoben (AP-14, Review-Behebung 1)
+
+- **S-1 / B-9:** Die Login-Adresse eines Team-Kontos lässt sich nicht mehr über eine Anmeldung ändern – weder vom Team unter „Personen“ noch von der Person unter „Meine Anmeldung → Daten“ oder über einen alten Bestätigungslink. Das Feld ist dort schreibgeschützt mit Hinweis. Ändert das Team die Adresse einer Anmeldung mit Teilnehmenden-Konto, bekommt die alte Adresse eine Hinweis-Mail; das Protokoll vermerkt „Konto N: Adresse vom Team geändert“.
+- **B-1:** Newsletter-Mails in der Warteschlange gingen verloren, wenn eine Admin-Aktion den Versand anstieß. Mailings laden jetzt ohne Rechteprüfung (die Team-Seiten prüfen mit `rm_sichtbar()`); fehlt ein Mailing, ist das ein Fehler mit Wiederholung statt Löschen.
+- **B-2 / B-3:** Wartelisten-Einträge gingen beim „Speichern“ verloren (Team-Modus; Termin inzwischen frei). Bestehende Einträge stehen jetzt immer als angekreuztes Kästchen im Formular.
+- **S-2:** Adressänderungen (Meine Anmeldung, Mein Konto) haben einen Ratenschutz wie „Link per Mail“ (10 je Stunde und Herkunft, 3 je Zieladresse); nur ein offener Bestätigungslink; die Bestätigungsmail beginnt mit „Hallo,“ ohne Vornamen.
+- **B-5:** Ein Storno auf „Meine Anmeldung“ loggt nicht mehr aus; Konto- und Team-Login bleiben (E-63).
+- **B-13:** Die Vorlage „Daten übernehmen“ gilt 30 Minuten und ist nach dem Absenden der Anmeldung weg.
+
+### Geändert
+
+- Neue Mail-Vorlage „Adresse geändert“ (an die alte Adresse); neue CSS-Regel für schreibgeschützte Felder (`.feld input[readonly]`).
+- Test-Beispieldatensatz: `beispieldaten_warteliste()`; Browser-Durchlauf prüft Warte-Kästchen (Team und Teilnehmende) und Storno mit Konto.
+
+### Doku
+
+- Konzept: AP-14 umgesetzt (status, ergebnis, probleme), Test zu Unterpunkt 4 korrigiert, O-48 (Adresse eines Team-Kontos ändern) neu; betrieb.md, Prüfprotokoll T-275 bis T-281, Review-Dokument Abschnitt 5.
+
 ## [0.23.0] – 2026-10-31
 
 ### Neu
