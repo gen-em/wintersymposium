@@ -64,7 +64,7 @@ img { max-width: 100%; }
 .sprung:focus { left: 8px; }
 
 /* ---- Typografie ---- */
-.titel { font-family: var(--f-titel); font-weight: 400; text-transform: uppercase; line-height: 1.05; letter-spacing: .005em; text-wrap: balance; margin: 0; }
+.titel { font-family: var(--f-titel); font-weight: 400; text-transform: uppercase; line-height: 1.05; letter-spacing: .005em; text-wrap: balance; margin: 0; hyphens: auto; overflow-wrap: break-word; }
 .titel em { font-style: normal; color: var(--akz); }
 .kicker { font-family: var(--f-zwischen); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .82rem; color: var(--akz); margin: 0; }
 /* Ü, Ä, Ö im großen Titel ragen über die Zeile: Abstand zum Kicker darüber (Rückmeldung 2026-10-30) */

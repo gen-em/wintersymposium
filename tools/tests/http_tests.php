@@ -559,7 +559,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     $g = imagecreatetruecolor(50, 30);
     imagepng($g, $png);
     imagedestroy($g);
-    $c = http_csrf(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b)['text']);
+    $c = http_csrf(http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $b)['text']);
     $ch = curl_init($basis . '/team/texte/bild');
     curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Host: ' . $h, 'X-CSRF: ' . $c], CURLOPT_COOKIEFILE => $b, CURLOPT_COOKIEJAR => $b, CURLOPT_POSTFIELDS => ['bild' => new CURLFile($png, 'image/png', 'a.png')]]);
     $j = json_decode((string)curl_exec($ch), true) ?? [];
@@ -568,9 +568,9 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(preg_match('#^/bild/text-[0-9a-f]{16}\.png$#', $url) === 1, 'Bild für einen Text hochgeladen');
     pruefe(http_anfrage($basis, 'GET', $url, $h, [], null, "$tmp/kekse-gast.txt")['status'] === 200, 'Text-Bild öffentlich abrufbar');
     $alt = inhalt('start_cme');
-    http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
+    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + ['start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" loading="lazy" src="' . $url . '" alt="Lageplan" data-breite="50">') && !str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<script>x()'), 'Bild erscheint auf der Startseite (halbe Breite), Skript entfernt');
-    http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => $alt], $b);
+    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + ['start_cme' => $alt], $b);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-editor="block"'), 'Texte mit dem Editor (wie Mailings)');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-werkzeug="fett kursiv titel | liste nliste link bild knopf | html"'), 'Impressum und Datenschutz: Werkzeugleiste wie bei den Mailings (Knopf, HTML)');
     // Login mit Code per E-Mail
@@ -862,9 +862,15 @@ function team_ap5_http_tests(string $basis, string $h, string $tmp, string $b): 
     einstellung_setzen('veranstaltung_datum', $datumAlt);
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'teilnahme'") >= 4, 'Teilnahme im Protokoll');
     pruefe(db_wert("SELECT COUNT(*) FROM audit WHERE art = 'export'") >= 1, 'Export im Protokoll');
-    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => 'nicht hier'], $b);
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + ['start_sticker' => 'Gratis!', 'impressum' => 'nicht hier'], $b);
     http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'impressum' => "## Verantwortlich\nTest Impressum", 'start_sticker' => 'nicht hier'], $b);
     pruefe($r['status'] === 303 && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Gratis!') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert');
+    // Drei Kacheln bei den Einstellungen (Admin 2026-10-31); das frühere Feld „Infokästen“ wird danach geleert
+    $kach = ['start_kachel_1_titel' => 'Für alle', 'start_kachel_1_text' => '<p>Kachel eins</p>', 'start_kachel_2_titel' => 'Ablauf', 'start_kachel_2_text' => '<p>Kachel zwei</p>', 'start_kachel_3_titel' => 'Kosten', 'start_kachel_3_text' => '<p>Kachel drei</p>'];
+    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + $kach, $b);
+    $start = http_anfrage($basis, 'GET', '/', $h)['text'];
+    pruefe(str_contains($start, '<strong>Für alle</strong>') && str_contains($start, 'Kachel drei') && !str_contains($start, 'Für wen') && inhalt('start_infos') === '', 'Startseite: drei Kacheln aus den Einstellungen, alte Infokästen ersetzt');
+    pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b)['status'] === 303, 'Alte Seite „Startseite“ leitet zu den Einstellungen');
     $r = http_anfrage($basis, 'GET', '/team/protokoll?art=texte', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'start_sticker'), 'Protokoll mit Filter');
     $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $pid, $h, [], ['csrf' => $c, 'aktion' => 'storno', 'a' => $pid, 'ohne_mail' => '1'], $b);
@@ -1169,7 +1175,7 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
         $nur[] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
     }
     pruefe($nur === [403, 403, 403, 403, 403, 403], 'Betrieb-Seiten (auch Status, AP-15) nur für BetreiberInnen');
-    pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k)['status'] === 200 && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja, Newsletter-Export nein');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $k)['text'], 'name="start_kachel_1_titel"') && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja (bei den Einstellungen), Newsletter-Export nein');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
     // Protokoll: nur Einträge der freigeschalteten Veranstaltung
@@ -1254,6 +1260,16 @@ function ap14_http_tests(string $basis, string $h, string $tmp): void
     $nachher = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $k);
     pruefe(($r['kopf']['location'] ?? '') === '/anmelden' && str_contains($vorher['text'], 'value="vera.vorlage@example.org"') && $neu !== null && !str_contains($nachher['text'], 'vera.vorlage@example.org') && !str_contains($nachher['text'], 'Station 9'), 'Vorlage füllt das Formular, nach dem Absenden ist sie weg');
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'anmeldung_start'");
+}
+
+/** Vollständiges Formular der Einstellungen (Werte wie gespeichert) – Startseiten-Texte stehen dort mit drin (2026-10-31). */
+function test_va_form(string $csrf): array
+{
+    $form = ['csrf' => $csrf];
+    foreach (VA_KATALOG as $k => $_) {
+        $form[$k] = va_formularwert($k);
+    }
+    return $form;
 }
 
 function http_tests(string $wurzel, string $tmp): void
@@ -1396,7 +1412,7 @@ function http_tests(string $wurzel, string $tmp): void
         $r = http_anfrage($basis, 'GET', '/', $h);
         $html = $r['text'];
         pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
-        pruefe(str_contains($html, '<em>Notfallmedizin</em>'), 'Titel aus pflegbarem Text (mit Akzent)');
+        pruefe(str_contains($html, '<h1 class="titel">Allgäuer <em>Winter-Notfallsymposium</em></h1>') && str_contains($html, '<p class="kicker">Allgäu Akut · Wintersymposium</p>'), 'Titel und Zeile aus der Veranstaltung (erstes Wort weiß, Rest lila)');
         pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
         pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten aus den Einstellungen (Startwerte)');
         pruefe(str_contains($html, 'Das Programm erscheint hier, sobald es veröffentlicht ist') && !str_contains($html, 'Tigerente'), 'ohne veröffentlichtes Programm: Hinweis, kein Beispielprogramm');
