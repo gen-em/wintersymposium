@@ -19,7 +19,7 @@ Abschluss und Datenschutz (AP-9, E-59).
 - Migration 16: Tabelle `cme_nachweis`, Spalte `anmeldung.anonymisiert_am`.
 - Geleerte Anmeldungen erscheinen im Team-Bereich als „(Daten geleert)“.
 - Automatische Sicherungen stehen nicht im Protokoll.
-- Repo-Prüfung (T-204): Name des Hosters und Bezüge auf Gen-EM aus README, Konzept, Betriebsdoku, Prüfprotokoll und Code-Kommentaren entfernt.
+- Repo-Prüfung (T-204): Name des Hosters und Bezüge auf die frühere Organisation aus README, Konzept, Betriebsdoku, Prüfprotokoll und Code-Kommentaren entfernt.
 
 ## [0.18.0] – 2026-10-31
 
