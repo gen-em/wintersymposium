@@ -138,7 +138,7 @@ function editor_knoten(DOMNode $n, string $art, bool $bilder): string
         case 'em':
             return trim(strip_tags($innen)) === '' ? $innen : "<$tag>$innen</$tag>";
         case 'a':
-            return editor_link($n, $innen);
+            return editor_link($n, $innen, true);
         case 'img':
             $src = trim($n->getAttribute('src'));
             if (!$bilder || preg_match(TEXT_BILD_MUSTER, $src) !== 1) {
@@ -151,14 +151,18 @@ function editor_knoten(DOMNode $n, string $art, bool $bilder): string
     }
 }
 
-/** Link nur mit https oder mailto, sonst bleibt der Text. */
-function editor_link(DOMElement $n, string $innen): string
+/**
+ * Link nur mit https oder mailto, sonst bleibt der Text. $knopf: in Absätzen
+ * bleibt die Klasse „knopf“ erhalten (Knopf wie in den Mailings, Admin 2026-10-31).
+ */
+function editor_link(DOMElement $n, string $innen, bool $knopf = false): string
 {
     $href = trim($n->getAttribute('href'));
     if (preg_match('#^(https://[^\s<>"]+|mailto:[^\s<>"@]+@[^\s<>"]+)$#i', $href) !== 1 || trim(strip_tags($innen)) === '') {
         return $innen;
     }
-    return '<a href="' . e($href) . '"' . (str_starts_with(strtolower($href), 'https://') ? ' rel="noopener"' : '') . '>' . $innen . '</a>';
+    $klasse = $knopf && in_array('knopf', preg_split('/\s+/', $n->getAttribute('class')) ?: [], true) ? ' class="knopf"' : '';
+    return '<a' . $klasse . ' href="' . e($href) . '"' . (str_starts_with(strtolower($href), 'https://') ? ' rel="noopener"' : '') . '>' . $innen . '</a>';
 }
 
 /** Gespeicherten Inhalt anzeigen (noch einmal bereinigt; Bilder mit Klasse für die Breite). */

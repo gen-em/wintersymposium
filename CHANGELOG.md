@@ -12,6 +12,9 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 - Testserver (`lauf.php` und Browser-Durchlauf) laufen wie der Hoster ohne Ausgabepuffer (`output_buffering=0`), damit solche Fehler im Test auffallen. Der Browser-Durchlauf prüft die Startseite nach dem Team-Login direkt, über das Logo und nach Zurück/Vor.
 
+- **Impressum und Datenschutz** haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Knöpfe bleiben auf der Webseite Knöpfe.
+- **Mailings:** Der Hilfetext unter dem Editor ist kürzer und erklärt die Platzhalter `{vorname}`, `{nachname}`, `{workshops}` und `{link}`.
+
 ### Auf Halde (offene Punkte im Konzept)
 
 - O-40: Mails im Erscheinungsbild Allgäu Akut.
