@@ -2,35 +2,36 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
-## [0.21.6] – 2026-10-31
-
-### Doku
-
-- **AP-16 geplant** (Review-Behebung 2: B-4, B-6, B-7, B-8, B-10 bis B-12, B-14, S-3 bis S-6, S-9, S-11, S-12; Helfer für die Bestätigung des zweiten Faktors) mit neun Unterpunkten; O-45 neu; Prüfprotokoll reserviert T-288 bis T-296.
-
-## [0.21.5] – 2026-10-31
-
-### Doku
-
-- **AP-15 geplant** (E-64): Status-Seite unter Betrieb mit Ampel-Zeilen (Cron, Jobs, Mail, Datenbank, Sicherung, Fehlerprotokoll, Umgebung), Cron-Anleitung mit Kopieren und Token nach Klick, `/health` aus derselben Quelle; Prüfprotokoll reserviert T-282 bis T-287.
-
 ## [0.21.4] – 2026-10-31
 
 ### Doku
 
-- E-63: site.css ist die alleinige Design-Vorlage (Mockups Archiv, CLAUDE.md angepasst), Shell-Cronjob als Standard (betrieb.md Schritt 6), technische Grenzen bleiben Konstanten (R-11 ergänzt); O-42 bis O-44 entschieden.
+- **Code-Review** mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`: 14 Bugs, 12 Sicherheitspunkte, 53 Vereinheitlichungspunkte, Vorschlag für Arbeitspakete. Noch keine Behebung.
+- **Konzept:** E-63 (Review-Behebung: Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket), E-64 (site.css als alleinige Design-Vorlage, Mockups Archiv, CLAUDE.md angepasst; Shell-Cronjob als Standard, betrieb.md Schritt 6; technische Grenzen bleiben Konstanten, R-11 ergänzt), E-65 (Status-Seite unter Betrieb). **AP-14** Review-Behebung 1, **AP-15** Status-Seite, **AP-16** Review-Behebung 2 geplant mit Unterpunkten und Tests; O-42 bis O-46 entschieden, O-47 offen; Prüfprotokoll reserviert T-275 bis T-296.
 
 ## [0.21.3] – 2026-10-31
 
-### Doku
+### Behoben
 
-- **AP-14 geplant** (Review-Behebung 1: S-1, B-1, B-2/B-3, S-2, B-5, B-13) mit sieben Unterpunkten im Konzept; E-62 mit den Entscheidungen des Admins (Adresse von Team-Konten nur über Team-Konten, Storno ohne Ausloggen, ein PR je Paket); O-40 und O-41 entschieden, O-42 bis O-44 offen; Prüfprotokoll reserviert T-275 bis T-281.
+- **Startseite zeigte eingeloggt den ausgeloggten Kopf** (Rückmeldung 2026-10-31, Staging, alle Browser): Der Seitenkopf schickte den Anfang der Seite, bevor er die Sitzung öffnete. Beim Hoster ist der Ausgabepuffer aus, danach lässt sich keine Sitzung mehr starten. Die Erkennung von Login, Konto und Einmal-Link läuft jetzt vor der ersten Ausgabe.
+
+### Geändert
+
+- Testserver (`lauf.php` und Browser-Durchlauf) laufen wie der Hoster ohne Ausgabepuffer (`output_buffering=0`), damit solche Fehler im Test auffallen. Der Browser-Durchlauf prüft die Startseite nach dem Team-Login direkt, über das Logo und nach Zurück/Vor.
+
+- **Impressum und Datenschutz** haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Knöpfe bleiben auf der Webseite Knöpfe.
+- **Mailings:** Der Hilfetext unter dem Editor ist kürzer und erklärt die Platzhalter `{vorname}`, `{nachname}`, `{workshops}` und `{link}`.
+
+### Auf Halde (offene Punkte im Konzept)
+
+- O-40: Mails im Erscheinungsbild Allgäu Akut.
+- O-41: Eigene Workshops (angemeldet, Warteliste) im Programm der Startseite markieren – Mockup mit 2–3 Varianten.
 
 ## [0.21.2] – 2026-10-31
 
-### Doku
+### Geändert
 
-- **Code-Review** mit drei Zielstellungen (Bugs, Sicherheit, Vereinheitlichung) in `docs/review-2026-10-31.md`: 14 Bugs, 12 Sicherheitspunkte, 53 Vereinheitlichungspunkte, Vorschlag für Arbeitspakete AP-R1 bis AP-R9 und offene Entscheidungen O-R1 bis O-R5. Noch keine Behebung; die folgt in eigenen Arbeitspaketen.
+- **Browser-Prüfung gestuft** (R-12, E-62): Stufe 1 `lauf.php` immer, Stufe 2 gezielt (`WS_STUFE=2 WS_SEITEN=…`, Chromium, Handy und breiter Desktop, ca. 1 Minute), Stufe 3 der volle Lauf bei Arbeitspaket-Ende, gemeinsamen Teilen, vor Produktion und spätestens nach 5 PRs. Der Durchlauf kennt dafür `WS_STUFE`, `WS_SEITEN` und `WS_BREITEN`.
 
 ## [0.21.1] – 2026-10-31
 

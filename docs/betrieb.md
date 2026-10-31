@@ -57,7 +57,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
    - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
-6. **Cron einrichten:** in der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten anlegen mit dem Kommando `php <Zielordner>/cli/jobs.php` (E-63). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>` – der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
+6. **Cron einrichten:** in der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten anlegen mit dem Kommando `php <Zielordner>/cli/jobs.php` (E-64). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>` – der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
 7. **Prüfen:** `https://<domain>/health?token=<health_token>` zeigt JSON mit `"status": "ok"` und nach dem ersten Cron-Lauf eine Zeit unter `jobs.letzter_lauf`.
 8. **Einloggen:** `https://<domain>/einloggen` mit dem BetreiberIn aus Schritt 5; beim ersten Mal den zweiten Faktor mit einer Authenticator-App einrichten und die Wiederherstellungscodes sichern (Abschnitt 8).
 
@@ -98,6 +98,18 @@ php tools/tests/lauf.php
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
 
+**Stufen** (R-12, E-62):
+
+| Stufe | Wann | Was |
+|---|---|---|
+| 1 | jede Änderung | `php tools/tests/lauf.php` |
+| 2 | Oberfläche einzelner Seiten | `WS_STUFE=2 WS_SEITEN=team-konten,team-statistik node tools/browser/durchlauf.js <ordner>` – nur Chromium, Handy und breiter Desktop; volle Prüfung und Fotos nur für Seiten, deren Name (wie in `bericht.txt`) mit einem Eintrag beginnt; ca. 1 Minute |
+| 3 | Arbeitspaket fertig, gemeinsame Teile (Kopfleiste, Navigation, Knöpfe, Meldungen, Formulare, CSS-Grundlagen, JavaScript, Login/Sitzung), vor Produktion, spätestens nach 5 PRs ohne vollen Lauf | voller Durchlauf, 30–40 Minuten |
+
+Einzeln überschreibbar: `WS_ENGINES=webkit`, `WS_BREITEN=handy,tablet`.
+
+Beide Testserver (`lauf.php` und Browser-Durchlauf) laufen mit `output_buffering=0` wie beim Hoster: Eine Seite, die nach der ersten Ausgabe noch eine Sitzung öffnen will, fällt so schon im Test auf.
+
 **Browser-Durchlauf (R-12)** in Chromium, Firefox und WebKit, je auf Handy (390 px), Tablet (768 px), schmalem (1024 px) und breitem Desktop (1440 px): alle Seiten, Klickwege (Menü, Team-Reiter, Login mit zweitem Faktor, Konto anlegen, Einrichtungslink, Ausloggen), jedes Auswahlfeld, jedes Aufklapp-Element, jedes Popup; dazu seitliches Scrollen, Überstand und Konsolenfehler.
 
 ```bash
@@ -120,7 +132,7 @@ Texte der Startseite, Impressum und Datenschutz stehen in der Tabelle `inhalt` (
 
 **Ein Editor überall** (Admin 2026-10-30, E-54): Texte, Programm-Beschreibungen, Kurzbios der Dozierenden, Beschreibungen der Newsletter-Listen und Mailings nutzen denselben Editor (`assets/editor.js`). Man sieht den Text gleich formatiert. Knöpfe: fett, kursiv, Zwischenüberschrift (H), Liste, nummerierte Liste, Link, in Texten und Mailings auch Bild (in Mailings zusätzlich Knopf, Platzhalter, HTML). Die Knöpfe zeigen, was an der Schreibmarke gilt, und schalten es an und aus. Einzeilige Felder (Titel, Untertitel, Zeile über dem Titel, Listen-Beschreibung) kennen nur fett, kursiv und Link; kursiv erscheint im Titel der Startseite in Lila. Infokästen der Startseite: ein Kasten je Zwischenüberschrift.
 
-Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenüberschrift, Listen, fett, kursiv, Link nur https und mailto, eigene Bilder). Alles andere entfernt der Server beim Speichern und noch einmal beim Anzeigen. Bilder (JPG/PNG) werden auf höchstens 1200 px verkleinert und in `var/bilder/` abgelegt, mit gesichert; unbenutzte löscht der Job nach einem Tag. Klick aufs Bild im Editor: halbe oder volle Breite. Ohne JavaScript bleibt ein Textfeld; Klartext wird dann als Absätze übernommen.
+Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenüberschrift, Listen, fett, kursiv, Link nur https und mailto, eigene Bilder). Alles andere entfernt der Server beim Speichern und noch einmal beim Anzeigen. Bilder (JPG/PNG) werden auf höchstens 1200 px verkleinert und in `var/bilder/` abgelegt, mit gesichert; unbenutzte löscht der Job nach einem Tag. Klick aufs Bild im Editor: halbe oder volle Breite. Impressum und Datenschutz haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Ohne JavaScript bleibt ein Textfeld; Klartext wird dann als Absätze übernommen.
 
 ## 8. Team-Login und Konten
 

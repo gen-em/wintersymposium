@@ -59,7 +59,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 team_seite_kopf($konto, $startseite ? 'Startseite' : 'Texte', $textSeite);
 ?>
 <?= fehler_html($fehler) ?>
-<p class="meta">Derselbe Editor wie bei den Mailings: Knöpfe für fett, kursiv, Zwischenüberschrift, Listen, Link und Bild; sie zeigen an, was an der Schreibmarke gilt, und schalten es an und aus. Ohne JavaScript bleibt ein einfaches Textfeld.</p>
+<p class="meta">Derselbe Editor wie bei den Mailings: Knöpfe für fett, kursiv, Zwischenüberschrift, Listen, Link und Bild<?= $startseite ? '' : ', Knopf und HTML-Quelltext' ?>; sie zeigen an, was an der Schreibmarke gilt, und schalten es an und aus. Ohne JavaScript bleibt ein einfaches Textfeld.</p>
 <p class="meta klein"><?= $startseite ? 'Texte der Startseite dieser Veranstaltung.' : 'Impressum und Datenschutz gelten für alle Veranstaltungen.' ?></p>
 <form class="form breit-form" method="post" action="<?= e($textSeite) ?>">
     <?= csrf_feld() ?>
@@ -67,7 +67,7 @@ team_seite_kopf($konto, $startseite ? 'Startseite' : 'Texte', $textSeite);
     <div class="feld"><label for="t-<?= e($k) ?>"><?= e($titel) ?></label>
         <?php if ($art === 'text'): ?><input id="t-<?= e($k) ?>" name="<?= e($k) ?>" type="text" maxlength="300" value="<?= e(inhalt($k)) ?>">
         <?php elseif ($art === 'inline'): ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="2" data-editor="inline"><?= e(inhalt($k)) ?></textarea>
-        <?php else: ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="10" data-editor="block" data-werkzeug="fett kursiv titel | liste nliste link bild" data-bild-url="/team/texte/bild"><?= e(inhalt($k)) ?></textarea><?php endif; ?>
+        <?php else: ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="10" data-editor="block" data-werkzeug="<?= $startseite ? 'fett kursiv titel | liste nliste link bild' : 'fett kursiv titel | liste nliste link bild knopf | html' ?>" data-bild-url="/team/texte/bild"><?= e(inhalt($k)) ?></textarea><?php endif; ?>
         <?php if ($k === 'datenschutz'): ?><p class="hilfe">Muss Anmeldung, Konten, Mails und Löschfristen beschreiben (betrieb.md, Abschnitt Anmeldung).</p><?php endif; ?>
     </div>
     <?php endforeach; ?>

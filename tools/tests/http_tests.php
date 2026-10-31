@@ -572,6 +572,7 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<img class="text-bild" loading="lazy" src="' . $url . '" alt="Lageplan" data-breite="50">') && !str_contains(http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt")['text'], '<script>x()'), 'Bild erscheint auf der Startseite (halbe Breite), Skript entfernt');
     http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'start_cme' => $alt], $b);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-editor="block"'), 'Texte mit dem Editor (wie Mailings)');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b)['text'], 'data-werkzeug="fett kursiv titel | liste nliste link bild knopf | html"'), 'Impressum und Datenschutz: Werkzeugleiste wie bei den Mailings (Knopf, HTML)');
     // Login mit Code per E-Mail
     db_ausfuehren('DELETE FROM rate_limit');
     $mk = konto_anlegen('Mia Mailcode', 'mia@example.org', 'admin', 'mia-ihr-passwort-1', null);
@@ -1190,7 +1191,7 @@ function http_tests(string $wurzel, string $tmp): void
 {
     $port = 18000 + random_int(0, 999);
     $basis = "http://127.0.0.1:$port";
-    $befehl = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', "$wurzel/server/public", "$wurzel/server/public/index.php"];
+    $befehl = [PHP_BINARY, '-d', 'output_buffering=0', '-S', "127.0.0.1:$port", '-t', "$wurzel/server/public", "$wurzel/server/public/index.php"];
     $env = array_merge(getenv(), ['WS_CONFIG' => "$tmp/config.php"]);
     $proc = proc_open($befehl, [0 => ['pipe', 'r'], 1 => ['file', "$tmp/server.log", 'a'], 2 => ['file', "$tmp/server.log", 'a']], $pipes, null, $env);
     if (!is_resource($proc)) {
