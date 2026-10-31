@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.21.5] – 2026-10-31
+
+### Doku
+
+- **AP-15 geplant** (E-64): Status-Seite unter Betrieb mit Ampel-Zeilen (Cron, Jobs, Mail, Datenbank, Sicherung, Fehlerprotokoll, Umgebung), Cron-Anleitung mit Kopieren und Token nach Klick, `/health` aus derselben Quelle; Prüfprotokoll reserviert T-282 bis T-287.
+
 ## [0.21.4] – 2026-10-31
 
 ### Doku
