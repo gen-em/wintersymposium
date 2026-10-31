@@ -1532,6 +1532,58 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM newsletter_abo WHERE liste_id = ?', [$nlListe]);
     db_ausfuehren('DELETE FROM newsletter_liste WHERE id = ?', [$nlListe]);
 
+    // Unterpunkt 3 (B-2, B-3, T-277): Warte-Einträge überleben „Speichern“
+    $formWahl = function (int $anmId, bool $team) use ($wurzel): array {
+        $wahl = ['fest' => [], 'warte' => []];
+        $bisher = array_values(array_filter(anm_plaetze($anmId), fn($p) => (int)$p['termin_id'] !== 0));
+        foreach ($bisher as $p) {
+            if ($p['status'] === 'fest') {
+                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
+            } elseif ($p['status'] === 'warte') {
+                $wahl['warte'][] = (int)$p['termin_id'];
+            }
+        }
+        $teamModus = $team;
+        ob_start();
+        require $wurzel . '/server/seiten/teil_workshopwahl.php';
+        $html = (string)ob_get_clean();
+        // was der Browser sendet: angekreuzte Felder
+        $post = ['ws' => [], 'wl' => []];
+        preg_match_all('/<input[^>]*name="(ws\[(\d+)\]|wl\[\])" value="(\d*)"[^>]* checked/', $html, $mm, PREG_SET_ORDER);
+        foreach ($mm as $x) {
+            if ($x[1] === 'wl[]') {
+                $post['wl'][] = $x[3];
+            } else {
+                $post['ws'][$x[2]] = $x[3];
+            }
+        }
+        return ['html' => $html, 'wahl' => anm_wahl_lesen($post)];
+    };
+    $wlP = team_anlegen(['vorname' => 'Wally', 'email' => 'wally.warte@example.org'] + $rd, true, false)['id'];
+    $wlT = 0;
+    foreach (anm_workshops() as $wsW) {
+        foreach ($wsW['termine'] as $wsT) {
+            if ($wlT === 0 && anm_frei((int)$wsT['id']) > 0) {
+                [$wlT, $wlW] = [(int)$wsT['id'], (int)$wsW['id']];
+            }
+        }
+    }
+    $wlSeit = gmdate('Y-m-d H:i:s', time() - 5 * 86400);
+    db_ausfuehren("INSERT INTO platz (anmeldung_id, veranstaltung_id, termin_id, workshop_id, status, seit) VALUES (?, ?, ?, ?, 'warte', ?)", [$wlP, va_id(), $wlT, $wlW, $wlSeit]);
+    $wlSeitNoch = fn(): ?string => db_wert("SELECT seit FROM platz WHERE anmeldung_id = ? AND termin_id = ? AND status = 'warte'", [$wlP, $wlT]);
+    $fw = $formWahl($wlP, true);
+    pruefe(str_contains($fw['html'], 'name="wl[]" value="' . $wlT . '" checked'), 'Team-Modus: bestehender Warte-Eintrag als vorangekreuztes Kästchen');
+    team_anm_daten($wlP, ['vorname' => 'Walter', 'email' => 'wally.warte@example.org'] + $rd, false);
+    $f = anm_workshops_setzen($wlP, $fw['wahl'], null, true, false, false);
+    pruefe($f === [] && $wlSeitNoch() === $wlSeit, '(a) Team speichert nur den Namen: Warte-Eintrag mit altem „seit“ bleibt');
+    $fw = $formWahl($wlP, false);
+    pruefe(anm_frei($wlT) > 0 && str_contains($fw['html'], 'fest wählen oder auf der Warteliste bleiben') && str_contains($fw['html'], 'name="wl[]" value="' . $wlT . '" checked'), 'Termin mit freien Plätzen: Warte-Eintrag sichtbar mit Hinweis');
+    $f = anm_workshops_setzen($wlP, $fw['wahl'], null, false, false, false);
+    pruefe($f === [] && $wlSeitNoch() === $wlSeit, '(b) Teilnehmende speichert ohne Änderung: Eintrag bleibt');
+    pruefe(anm_wahl_pruefen(['fest' => [], 'warte' => [$wlT]], []) !== [], 'neue Warteliste für einen freien Termin bleibt verboten');
+    $f = anm_workshops_setzen($wlP, ['fest' => $fw['wahl']['fest'], 'warte' => []], null, false, false, false);
+    pruefe($f === [] && $wlSeitNoch() === null, '(c) Kästchen abgewählt: Eintrag weg');
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');
