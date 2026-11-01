@@ -26,6 +26,9 @@ const RATE_TOEPFE = [
     'login_ip'     => [30, 900, 900],
     'login'        => [5, 900, 900],
     'zweitfaktor'  => [5, 900, 900],
+    // Mail-Codes je Konto (Review S-9): jeder Versand zählt
+    'mailcode_minute' => [1, 60, 60],
+    'mailcode'     => [10, 3600, 3600],
     'einrichten'   => [10, 900, 900],
     'notzugang'    => [3, 3600, 3600],
     // Anmeldung und Link per Mail (AP-4): jede Absendung zählt

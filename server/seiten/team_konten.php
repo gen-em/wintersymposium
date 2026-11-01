@@ -4,8 +4,9 @@ declare(strict_types=1);
 /*
  * Team-Konten (nur Betreiber, E-11): anlegen, Einrichtungs-/Passwortlink
  * (per Mail oder angezeigt, AP-6),
- * zweiten Faktor zurücksetzen, sperren, Rolle ändern. Ein Rollenwechsel
- * verlangt den eigenen zweiten Faktor (E-41). Das eigene Konto lässt sich
+ * zweiten Faktor zurücksetzen, sperren, Rolle ändern. Rolle ändern, zweiten
+ * Faktor zurücksetzen und Sperren verlangen den eigenen zweiten Faktor (E-41,
+ * Review B-7: Code aus App oder Mail, Wiederherstellungscode oder Passkey). Das eigene Konto lässt sich
  * hier nicht sperren oder herabstufen, und es bleibt immer mindestens ein
  * aktiver Betreiber. Admins sind für alle Veranstaltungen (auch künftige) oder
  * nur für ausgewählte freigeschaltet (AP-12, E-60).
@@ -18,6 +19,7 @@ $werte = ['name' => '', 'email' => '', 'rolle' => 'admin'];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
+    zweitfaktor_mailcode_aktion($konto, '/team/konten');
     $aktion = (string)($_POST['aktion'] ?? '');
     $ziel = isset($_POST['id']) ? konto_laden((int)$_POST['id']) : null;
     if ($aktion !== 'anlegen' && (!konto_ist_team($ziel))) {
@@ -39,12 +41,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 team_link_weitergeben($ziel, $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort', empty($_POST['nur_anzeigen']), $ich);
                 umleiten('/team/konten');
             case 'zweitfaktor':
+                if (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                    $fehler[] = $f . ' Nichts zurückgesetzt.';
+                    break;
+                }
                 totp_zuruecksetzen((int)$ziel['id'], 'durch BetreiberIn', $ich);
                 flash_setzen('ok', 'Zweiter Faktor von ' . $ziel['name'] . ' zurückgesetzt. Beim nächsten Einloggen richtet ' . $ziel['name'] . ' ihn neu ein.');
                 umleiten('/team/konten');
             case 'sperren':
                 if ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
                     $fehler[] = 'Es muss mindestens eine aktive BetreiberIn bleiben.';
+                    break;
+                }
+                if (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                    $fehler[] = $f . ' Nichts geändert.';
                     break;
                 }
                 konto_aktiv_setzen((int)$ziel['id'], (int)$ziel['aktiv'] !== 1, $ich);
@@ -61,18 +71,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 umleiten('/team/konten');
             case 'rolle':
                 $rolle = (string)($_POST['rolle'] ?? '');
-                $kennung = rate_merkmal('konto:' . $ich);
                 if (!in_array($rolle, TEAM_ROLLEN, true) || $rolle === $ziel['rolle']) {
                     $fehler[] = 'Bitte eine andere Rolle wählen.';
                 } elseif ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
                     $fehler[] = 'Es muss mindestens eine aktive BetreiberIn bleiben.';
-                } elseif (!rate_erlaubt('zweitfaktor', $kennung)) {
-                    $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-                } elseif (!totp_anmeldung_pruefen($ich, (string)($_POST['totp'] ?? ''))['ok']) {
-                    rate_misserfolg('zweitfaktor', $kennung);
-                    $fehler[] = 'Der Code aus deiner App stimmt nicht. Die Rolle wurde nicht geändert.';
+                } elseif (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                    $fehler[] = $f . ' Die Rolle wurde nicht geändert.';
                 } else {
-                    rate_erfolg('zweitfaktor', $kennung);
                     konto_rolle_setzen((int)$ziel['id'], $rolle, $ich);
                     flash_setzen('ok', $ziel['name'] . ' ist jetzt ' . ROLLEN[$rolle] . '.');
                     umleiten('/team/konten');
@@ -99,7 +104,7 @@ function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich)
 $link = $_SESSION['neuer_link'] ?? null;
 unset($_SESSION['neuer_link']);
 
-team_seite_kopf($konto, 'Team-Konten', '/team/konten');
+team_seite_kopf($konto, 'Team-Konten', '/team/konten', ['skripte' => ['zweitfaktor.js']]);
 echo fehler_html($fehler);
 if (is_array($link)): ?>
 <div class="kasten link-kasten">
@@ -152,8 +157,7 @@ if (is_array($link)): ?>
                         <?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="rolle">
                         <label for="rolle-<?= $kid ?>">Neue Rolle</label>
                         <select id="rolle-<?= $kid ?>" name="rolle"><?php foreach (TEAM_ROLLEN as $r): if ($r !== $k['rolle']): ?><option value="<?= e($r) ?>"><?= e(ROLLEN[$r]) ?></option><?php endif; endforeach; ?></select>
-                        <label for="totp-<?= $kid ?>">Bestätigen mit dem Code aus deiner App</label>
-                        <input id="totp-<?= $kid ?>" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+                        <?= zweitfaktor_feld_html($konto, 'totp-' . $kid) ?>
                         <button class="knopf" type="submit">Rolle ändern</button>
                     </form>
                 </details>
@@ -161,12 +165,14 @@ if (is_array($link)): ?>
                 <details class="bestaetigen" data-ausloeser="m-zf-<?= $kid ?>" data-titel="Zweiten Schritt zurücksetzen?"><summary class="klein-link">Zweiten Schritt zurücksetzen</summary>
                     <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="zweitfaktor">
                         <p><?= e($k['name']) ?> richtet App, Code per E-Mail oder Passkey beim nächsten Einloggen neu ein. Passkeys werden entfernt.</p>
+                        <?= zweitfaktor_feld_html($konto, 'totp-zf-' . $kid) ?>
                         <button class="knopf gefahr" type="submit">Ja, zurücksetzen</button></form>
                 </details>
                 <?php endif; ?>
                 <details class="bestaetigen" data-ausloeser="m-sperren-<?= $kid ?>" data-titel="<?= (int)$k['aktiv'] === 1 ? 'Konto sperren?' : 'Konto entsperren?' ?>"<?= (int)$k['aktiv'] === 1 ? '' : ' data-art="gruen"' ?>><summary class="klein-link"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></summary>
                     <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="sperren">
                         <p><?= (int)$k['aktiv'] === 1 ? e($k['name']) . ' kann sich danach nicht mehr einloggen; eine laufende Sitzung endet.' : e($k['name']) . ' kann sich wieder einloggen.' ?></p>
+                        <?= zweitfaktor_feld_html($konto, 'totp-sp-' . $kid) ?>
                         <button class="knopf<?= (int)$k['aktiv'] === 1 ? ' gefahr' : '' ?>" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Ja, sperren' : 'Ja, entsperren' ?></button></form>
                 </details>
             <?php endif; ?>

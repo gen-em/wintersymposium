@@ -842,13 +842,23 @@ function foto_aufraeumen(): int
     if (!db_tabelle_da('dozent')) {
         return 0;
     }
+    // Genutzt: Dozierende und alle veröffentlichten Stände aller Veranstaltungen, auch
+    // die Dozierenden an Terminen – Archivseiten zeigen sie weiter (Review B-8)
     $genutzt = array_filter(array_column(db_zeilen('SELECT foto FROM dozent'), 'foto'));
-    foreach (programm_veroeffentlicht()['punkte'] ?? [] as $p) {
-        foreach ($p['dozenten'] as $d) {
-            if (!empty($d['foto'])) {
-                $genutzt[] = $d['foto'];
+    $sammeln = function (mixed $knoten) use (&$sammeln, &$genutzt): void {
+        if (!is_array($knoten)) {
+            return;
+        }
+        foreach ($knoten as $schluessel => $wert) {
+            if ($schluessel === 'foto' && is_string($wert) && $wert !== '') {
+                $genutzt[] = $wert;
+            } else {
+                $sammeln($wert);
             }
         }
+    };
+    foreach (db_zeilen('SELECT daten FROM programm_stand') as $z) {
+        $sammeln(json_decode((string)$z['daten'], true));
     }
     $n = 0;
     foreach (glob(foto_ordner() . '/dozent-*.jpg') ?: [] as $datei) {

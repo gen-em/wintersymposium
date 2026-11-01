@@ -171,7 +171,7 @@ if ($a === null) {
     $kap = anm_kapazitaet(0);
     ?>
 <div class="innen form-kopf">
-    <p class="kicker"><?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
+    <p class="kicker"><?= $zr === 'geschlossen' ? 'Derzeit keine Veranstaltung' : e(va_kurz()) . ' · ' . e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Wie willst du rein?</h1>
     <p class="text">Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.</p>
 </div>
@@ -188,7 +188,7 @@ if ($a === null) {
             <a class="knopf gruen" href="/anmelden">Jetzt anmelden</a>
             <p class="meta klein"><?= $kap !== null ? 'Noch ' . anm_frei(0) . ' von ' . $kap . ' Plätzen frei · ' : '' ?>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></p>
         <?php else: ?>
-            <p class="meta">Die Anmeldung ist geschlossen.</p>
+            <p class="meta"><?= $zr === 'geschlossen' ? 'Derzeit gibt es keine Veranstaltung.' : 'Die Anmeldung ist geschlossen.' ?></p>
         <?php endif; ?>
     </div>
 </div>
@@ -212,7 +212,7 @@ endif; ?>
                 <a class="knopf gruen" href="/anmelden">Zur Anmeldung</a>
                 <p class="meta klein"><?= $kap !== null ? 'Noch ' . anm_frei(0) . ' von ' . $kap . ' Plätzen frei · ' : '' ?>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></p>
             <?php else: ?>
-                <p class="meta">Die Anmeldung ist geschlossen.</p>
+                <p class="meta"><?= $zr === 'geschlossen' ? 'Derzeit gibt es keine Veranstaltung.' : 'Die Anmeldung ist geschlossen.' ?></p>
             <?php endif; ?>
         </div>
         <div class="kasten zg">

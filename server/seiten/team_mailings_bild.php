@@ -5,6 +5,8 @@ declare(strict_types=1);
  * Bilder der Mailings (AP-6, E-41): GET liefert ein Bild an das Team aus
  * (Editor und Vorschau), POST lädt ein neues hoch (Editor, JSON-Antwort).
  * In der Mail selbst stecken die Bilder als Anhang mit Content-ID.
+ * Ausgeliefert wird nur, was das Konto sehen darf: selbst hochgeladen oder in
+ * einem sichtbaren Mailing (Review S-5); sonst 404.
  */
 
 $konto = team_tor();
@@ -21,7 +23,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 $b = rm_bild((int)($_GET['id'] ?? 0));
 $pfad = $b !== null ? foto_ordner() . '/' . basename($b['datei']) : '';
-if ($b === null || !is_file($pfad)) {
+if ($b === null || !is_file($pfad) || !rm_bild_sichtbar($b, (int)$konto['id'])) {
     nicht_gefunden();
 }
 kopf_gemeinsam();

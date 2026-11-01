@@ -51,18 +51,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         unset($_SESSION['zf_mail']);
         umleiten('/einloggen');
     } elseif ($aktion === 'mail_waehlen' || $aktion === 'mailcode') {
-        // E-Mail-Code wählen (erstes Einloggen) bzw. neuen Code anfordern – höchstens einer je Minute
+        // E-Mail-Code wählen (erstes Einloggen) bzw. neuen Code anfordern – Grenze je Konto in mailcode_senden (Review S-9)
         $k = anmeldung_halb();
         if ($k === null) {
             umleiten('/einloggen');
         }
-        if (time() - (int)($_SESSION['zf_mail_zeit'] ?? 0) >= 60) {
-            mailcode_senden($k);
-            $_SESSION['zf_mail_zeit'] = time();
-            flash_setzen('ok', 'Code ist unterwegs an ' . $k['email'] . '. Er gilt 10 Minuten.');
-        } else {
-            flash_setzen('hinweis', 'Ein Code ist gerade erst unterwegs. Warte eine Minute, bevor du einen neuen anforderst.');
-        }
+        $f = mailcode_senden($k);
+        flash_setzen($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt 10 Minuten.');
         if ($aktion === 'mail_waehlen') {
             $_SESSION['zf_mail'] = (int)$k['id'];
         }
@@ -137,9 +132,11 @@ $zs = $halb !== null ? totp_zustand((int)$halb['id']) : null;
 $mailWahl = $halb !== null && !$zs['eingerichtet'] && ($_SESSION['zf_mail'] ?? 0) === (int)$halb['id'];
 // E-Mail-Code eingeschaltet: beim ersten Aufruf nach dem Passwort einen Code schicken
 if ($halb !== null && $zs['mail'] && ($_SESSION['zf_mail_halb'] ?? '') !== ($_SESSION['halb']['zeit'] ?? '')) {
-    mailcode_senden($halb);
+    // An der Grenze (Review S-9) kein neuer Code; ein Code aus den letzten 10 Minuten gilt weiter
+    if (($f = mailcode_senden($halb)) !== null) {
+        flash_setzen('hinweis', $f);
+    }
     $_SESSION['zf_mail_halb'] = $_SESSION['halb']['zeit'] ?? '';
-    $_SESSION['zf_mail_zeit'] = time();
 }
 if ($halb !== null && !$zs['eingerichtet'] && !$mailWahl) {
     $roh = totp_zustand((int)$halb['id'])['angefangen'] ? totp_geheimnis((int)$halb['id']) : null;

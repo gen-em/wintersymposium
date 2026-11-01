@@ -4,8 +4,9 @@ declare(strict_types=1);
 /*
  * Daten: Sicherungen und Testdaten (nur Betreiber; E-47). Zahlen zum
  * Mailversand stehen seit AP-15 auf der Status-Seite (E-65).
- * Herunterladen und Wiederherstellen verlangen den eigenen Code aus der
- * Authenticator-App (wie der Rollenwechsel, E-41). Testdaten laden gibt es nur
+ * Herunterladen und Wiederherstellen verlangen den eigenen zweiten Faktor
+ * (Code aus App oder Mail, Wiederherstellungscode oder Passkey; wie der
+ * Rollenwechsel, E-41, Review B-7). Testdaten laden gibt es nur
  * auf Staging und in der Entwicklung, nie auf Produktion.
  */
 
@@ -13,22 +14,9 @@ $konto = team_tor(['betreiber']);
 $ich = (int)$konto['id'];
 $fehler = [];
 
-/** Eigenen Code prüfen, mit Ratenschutz. Gibt eine Fehlermeldung oder null zurück. */
-$codePruefen = function () use ($ich): ?string {
-    $kennung = rate_merkmal('konto:' . $ich);
-    if (!rate_erlaubt('zweitfaktor', $kennung)) {
-        return 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-    }
-    if (!totp_anmeldung_pruefen($ich, (string)($_POST['totp'] ?? ''))['ok']) {
-        rate_misserfolg('zweitfaktor', $kennung);
-        return 'Der Code aus deiner App stimmt nicht.';
-    }
-    rate_erfolg('zweitfaktor', $kennung);
-    return null;
-};
-
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
+    zweitfaktor_mailcode_aktion($konto, '/team/daten');
     $name = (string)($_POST['name'] ?? '');
     switch ((string)($_POST['aktion'] ?? '')) {
         case 'host_neu':
@@ -80,7 +68,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $p = sicherung_pfad($name);
             if ($p === null) {
                 $fehler[] = 'Diese Sicherung gibt es nicht.';
-            } elseif (($f = $codePruefen()) !== null) {
+            } elseif (($f = zweitfaktor_aus_formular($ich)) !== null) {
                 $fehler[] = $f;
             } else {
                 audit_schreiben('sicherung', 'Sicherung heruntergeladen: ' . $name, $ich);
@@ -93,7 +81,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             }
             break;
         case 'wiederherstellen':
-            if (($f = $codePruefen()) !== null) {
+            if (($f = zweitfaktor_aus_formular($ich)) !== null) {
                 $fehler[] = $f;
             } elseif (($f = sicherung_wiederherstellen($name, $ich)) !== null) {
                 $fehler[] = 'Nicht wiederhergestellt: ' . $f;
@@ -120,9 +108,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 $liste = sicherung_liste();
 $ms = mail_stand();
-$codeFeld = fn(string $id) => '<div class="feld"><label for="' . $id . '">Code aus deiner App</label><input id="' . $id . '" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>';
+$codeFeld = fn(string $id) => zweitfaktor_feld_html($konto, $id);
 $groesse = fn(int $b) => $b >= 1048576 ? zahl_text($b / 1048576, 1) . ' MB' : zahl_text(max(1, (int)round($b / 1024))) . ' KB';
-team_seite_kopf($konto, 'Betrieb', '/team/daten');
+team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js']]);
 ?>
 <?= fehler_html($fehler) ?>
 <div class="team-raster">

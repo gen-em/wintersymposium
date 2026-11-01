@@ -25,6 +25,7 @@ $ziel = fn(): string => '/team/personen?' . http_build_query(array_filter(['f' =
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
+    zweitfaktor_mailcode_aktion($konto, $ziel());
     $mail = empty($_POST['ohne_mail']);
     switch ((string)($_POST['aktion'] ?? '')) {
         case 'speichern':
@@ -112,14 +113,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$betreiber) {
                 seite_meldung(403, 'Kein Zugriff', 'Rollen vergibt nur eine BetreiberIn.');
             }
-            $kennung = rate_merkmal('konto:' . $ich);
-            if (!rate_erlaubt('zweitfaktor', $kennung)) {
-                $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
-            } elseif (!totp_anmeldung_pruefen($ich, (string)($_POST['totp'] ?? ''))['ok']) {
-                rate_misserfolg('zweitfaktor', $kennung);
-                $fehler[] = 'Der Code aus deiner App stimmt nicht. Die Rolle wurde nicht geändert.';
+            if (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                $fehler[] = $f . ' Die Rolle wurde nicht geändert.';
             } else {
-                rate_erfolg('zweitfaktor', $kennung);
                 $rolle = (string)($_POST['rolle'] ?? '');
                 flash_setzen(team_rolle_vergeben($kId, $rolle) ? 'ok' : 'fehler', 'Rolle vergeben: ' . (ROLLEN[$rolle] ?? '') . '. Die Person bekommt eine Mail und richtet beim nächsten Login den zweiten Faktor ein.');
                 umleiten($ziel());
@@ -163,7 +159,7 @@ $wsKurz = function (array $a): string {
     return ($fest !== [] ? implode(', ', $fest) : '–') . ($wl > 0 ? " +$wl WL" : '');
 };
 
-team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.js']]);
+team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.js', 'zweitfaktor.js']]);
 ?>
 <?= in_array((string)($_POST['aktion'] ?? ''), ['platz', 'rolle'], true) ? fehler_html(array_values($fehler)) : '' ?>
 <p class="legende meta klein"><strong>Angemeldet</strong> = Mail bestätigt, Platz beim Symposium · <strong>Mail nicht bestätigt</strong> = Link noch nicht geklickt, Platz nur vorgemerkt · <strong>Warteliste</strong> = bestätigt, wartet auf einen Platz beim Symposium</p>
@@ -327,7 +323,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                     <form method="post" action="<?= e($ziel()) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="rolle"><input type="hidden" name="k" value="<?= (int)$k['id'] ?>">
                         <div class="feld"><label for="rolle">Neue Rolle</label><select id="rolle" name="rolle"><option value="admin">Admin (Team)</option><option value="betreiber">BetreiberIn</option></select></div>
                         <p><?= e($auswahl['name']) ?> sieht dann alle Anmeldungen mit E-Mail, Institution und EFN. Beim nächsten Login wird ein zweiter Faktor eingerichtet; die Person bekommt eine Mail. Die Änderung steht im Protokoll.</p>
-                        <div class="feld"><label for="totp-rolle">Dein Code aus der App</label><input id="totp-rolle" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>
+                        <?= zweitfaktor_feld_html($konto, 'totp-rolle') ?>
                         <button type="submit" class="knopf">Rolle vergeben</button></form>
                 </details>
                 <?php endif; ?>
