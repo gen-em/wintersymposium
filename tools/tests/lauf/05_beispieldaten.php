@@ -8,20 +8,20 @@ function test_beispieldaten(): void
     abschnitt('Test-Beispieldatensatz (server/testdaten)');
     $bd = test_frisch()['bd'];
     $vj = tk_veranstaltungen($bd['anmeldungen']['lea_konto']);
-    pruefe(va_zeile($bd['vorjahr']['id'])['status'] === 'abgeschlossen' && count($vj) === 3 && $vj[1]['zertifikat'] && $vj[1]['stand'] === 'teilgenommen' && $vj[2]['zertifikat'], 'Beispieldaten: abgeschlossenes Vorjahr, Lea mit Zertifikat im Rückblick');
+    pruefe(va_zeile($bd['vorjahr']['id'])['status'] === 'abgeschlossen' && count($vj) === 3 && $vj[1]['zertifikat'] && $vj[1]['stand'] === 'teilgenommen' && $vj[2]['zertifikat'], 'Beispieldaten: abgeschlossenes Vorjahr, Lea mit drei Veranstaltungen und Zertifikat im Rückblick');
     $ab = $bd['abend'];
     pruefe(va_zeile($ab['id'])['status'] === 'abgeschlossen' && !va_mit($ab['id'], fn() => va_an('mit_essen')) && va_von($ab['id'], 'veranstaltung_art') === 'vortrag'
-        && tn_anwesend($ab['kai']) && !tn_anwesend($ab['nora']) && $vj[1]['kuerzel'] === 'fortbildungsabend-notfallmedizin', 'Beispieldaten: Fortbildungsabend ohne Essen, Kai da, Nora nicht erschienen, Lea mit drei Veranstaltungen');
+        && tn_anwesend($ab['kai']) && !tn_anwesend($ab['nora']) && $vj[1]['kuerzel'] === 'fortbildungsabend-notfallmedizin', 'Beispieldaten: Fortbildungsabend ohne Essen, Kai da, Nora nicht erschienen');
     $ada = konto_laden($bd['admin']);
     pruefe($ada['rolle'] === 'admin' && va_erlaubte_ids($ada) === [(int)$ab['id']] && array_column(va_alle_fuer($ada), 'id') === [(int)$ab['id']] && va_darf($ada, (int)$ab['id']) && !va_darf($ada, (int)va_aktuell_id()), 'Beispieldaten: Ada (Admin) nur für den Fortbildungsabend (AP-12)');
     $r2 = $bd['review2'];
     $leaNl = nl_person_per_email('lea@example.org');
-    pruefe(anm_laden($r2['fremd_ada'])['status'] === 'unbestaetigt' && anm_laden($r2['fremd_ada'])['email'] === 'ada.abend@example.org' && (!function_exists('anm_eigene_team') || anm_eigene_team($ada) === null)
+    pruefe(anm_laden($r2['fremd_ada'])['status'] === 'unbestaetigt' && anm_laden($r2['fremd_ada'])['email'] === 'ada.abend@example.org' && anm_eigene_team($ada) === null
         && (int)nl_liste($r2['liste_intern'])['sichtbar'] === 0 && $leaNl !== null && (nl_abos((int)$leaNl['id'])[$r2['liste_intern']] ?? '') === 'bestaetigt', 'Beispieldaten (AP-16): unbestätigte Anmeldung mit Adas Adresse, Lea auf ausgeblendeter Liste');
     $personenAda = va_mit((int)$ab['id'], fn() => team_personen($ada));
     $kontenAda = array_filter($personenAda, fn($p) => $p['art'] === 'konto' && $p['konto']['rolle'] === 'teilnehmend');
     pruefe(count(array_filter($personenAda, fn($p) => $p['art'] === 'anm')) === 3 && $kontenAda === [], 'Ada sieht im Abend dessen drei Anmeldungen, keine fremden Konten');
-    pruefe(va_rechte_liste($ada) === [va_von((int)$ab['id'], 'veranstaltung_name') . ' (' . tag_text(va_von((int)$ab['id'], 'veranstaltung_datum')) . ')'] && count(va_rechte_liste(['id' => 0, 'rolle' => 'betreiber'])) === 2, 'Mein Konto: Liste „zuständig für“');
+    pruefe(va_rechte_liste($ada) === [va_von((int)$ab['id'], 'veranstaltung_name') . ' (' . tag_text(va_von((int)$ab['id'], 'veranstaltung_datum')) . ')'] && va_rechte_liste(['id' => 0, 'rolle' => 'betreiber']) === ['alle Veranstaltungen', 'Betrieb (Veranstaltungen, Team-Konten, Newsletter, Texte)'], 'Mein Konto: Liste „zuständig für“');
     $pv = programm_veroeffentlicht()['punkte'] ?? [];
     pruefe(count($pv) === count($bd['programm']['punkte']) && !programm_status(programm_arbeitsstand(), programm_veroeffentlicht())['offen'], 'Programm geladen und vollständig veröffentlicht');
     $bl = array_values(array_filter(programm_gliederung($pv), fn($x) => $x['art'] === 'block'));

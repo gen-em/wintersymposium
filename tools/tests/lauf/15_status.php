@@ -1,11 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Status-Seite (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Ampeln der Status-Seite (Cron, Jobs, Mail, Datenbank, Sicherung, Fehlerprotokoll, Umgebung), health-Daten und Cron-Anleitung (AP-15). */
 
 function test_status(): void
 {
     abschnitt('Status-Seite (AP-15, T-282 bis T-286)');
+    test_frisch();
     $amp = function (string $id, ?int $jetzt = null): string {
         foreach (betrieb_status($jetzt) as $z) {
             if ($z['id'] === $id) {
@@ -32,17 +33,12 @@ function test_status(): void
     $aufA = array_column(team_aufgaben($t0, 'admin'), 'art');
     pruefe(in_array('Betrieb', $aufB, true) && !in_array('Betrieb', $aufA, true), 'Cron rot → Aufgabe „Betrieb“ für Betreiber, nicht für Admin (T-286)');
     $lauf(60);
-    $jobsVorher = db_zeilen('SELECT * FROM job');
     foreach (array_keys(jobs_katalog()) as $jn) {
         db_ausfuehren('INSERT INTO job (name, letzter_lauf, letzte_dauer_ms, letzter_fehler, laeufe) VALUES (?, ?, 5, NULL, 1) ON DUPLICATE KEY UPDATE letzter_lauf = VALUES(letzter_lauf), letzter_fehler = NULL', [$jn, db_jetzt()]);
     }
     $jOk = $amp('jobs');
     db_ausfuehren("UPDATE job SET letzter_fehler = 'Test kaputt' WHERE name = 'aufraeumen'");
     pruefe($jOk === 'ok' && $amp('jobs') === 'fehler', 'Jobs: ohne Fehler ok, mit letzter_fehler → fehler');
-    db_ausfuehren('DELETE FROM job');
-    foreach ($jobsVorher as $jz) {
-        db_ausfuehren('INSERT INTO job (' . implode(',', array_keys($jz)) . ') VALUES (' . implode(',', array_fill(0, count($jz), '?')) . ')', array_values($jz));
-    }
     $sAuto = sicherung_anlegen(DS_SICHERUNG_AUTOMATISCH);
     pruefe($amp('sicherung', $t0 + 3600) === 'ok' && $amp('sicherung', $t0 + 7 * 3600) === 'warnung' && $amp('sicherung', $t0 + 25 * 3600) === 'fehler', 'Sicherung: 1 h ok, 7 h warnung, 25 h fehler');
     sicherung_loeschen($sAuto, null, false);
@@ -54,6 +50,7 @@ function test_status(): void
     wartung_einschalten('test');
     pruefe($amp('datenbank') === 'warnung', 'Datenbank: Wartungsmodus → warnung');
     wartung_ausschalten();
+    pruefe($amp('datenbank') === 'ok' && $amp('mail') === 'ok', 'Datenbank nach der Wartung ok; Mail mit leerer Warteschlange ok');
     db_ausfuehren("INSERT INTO mail_ausgang (an, betreff, text, prio, status, postfach, erstellt_am, naechster_versuch) VALUES ('x@example.org', 'b', 't', 1, 'fehler', 'system', ?, ?)", [db_jetzt(), db_jetzt()]);
     pruefe($amp('mail') === 'fehler', 'Mail: fehlgeschlagene Mail → fehler');
     db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'x@example.org'");
@@ -62,7 +59,9 @@ function test_status(): void
     db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'x@example.org'");
     pruefe($amp('umgebung') === 'ok', 'Umgebung: Laufzeitordner beschreibbar');
     $json = betrieb_status_json(betrieb_status());
-    pruefe(array_keys($json) === array_column(betrieb_status(), 'id') && !str_contains(json_encode($json), (string)konfig('jobs_token')) && !str_contains(json_encode($json), dirname(__DIR__, 2)), 'health-Daten: alle Zeilen, ohne Token und ohne Pfad');
+    $jsonText = (string)json_encode($json, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    pruefe(array_keys($json) === array_column(betrieb_status(), 'id') && !str_contains($jsonText, (string)konfig('jobs_token'))
+        && !str_contains($jsonText, dirname(__DIR__, 3)) && !str_contains($jsonText, (string)konfig('laufzeit_ordner')), 'health-Daten: alle Zeilen, ohne Token und ohne Pfad');
     $anl = betrieb_cron_anleitung();
     pruefe(str_contains($anl['url'], '<jobs_token>') && !str_contains($anl['url'], (string)konfig('jobs_token')) && str_contains(betrieb_cron_anleitung(true)['url'], 'token=' . konfig('jobs_token')) && str_ends_with($anl['kommando'], '/cli/jobs.php') && $anl['zeitplan'] === '*/5 * * * *', 'Cron-Anleitung: Kommando, URL mit Platzhalter, Token nur auf Wunsch');
     // Fehlerprotokoll (Unterpunkt 4)

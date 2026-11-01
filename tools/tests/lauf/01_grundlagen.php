@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Grundlagen: Transaktionen, Ratenschutz, Jobs, Sitzungsablage (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Grundlagen – Transaktionen, Ratenschutz, Jobs und Sitzungsablage (ohne Beispieldaten). */
 
 function test_grundlagen(): void
 {
+    test_frisch(['beispiel' => false]);
+
     abschnitt('Transaktionen (R-04)');
     try {
         db_transaktion(function (): void {
@@ -34,7 +36,7 @@ function test_grundlagen(): void
     rate_erfolg('health', $m);
     pruefe(db_wert('SELECT COUNT(*) FROM rate_limit WHERE merkmal = ?', [$m]) == 0, 'Erfolg setzt zurück');
     rate_misserfolg('health', $m, $t0);
-    pruefe(rate_aufraeumen($t0 + 100000) >= 1, 'Aufräumen entfernt alte Einträge');
+    pruefe(rate_aufraeumen($t0 + 100000) === 1 && db_wert('SELECT COUNT(*) FROM rate_limit WHERE merkmal = ?', [$m]) == 0, 'Aufräumen entfernt alte Einträge');
     pruefe(strlen(rate_merkmal_ip()) === 64 && !str_contains(rate_merkmal_ip(), '.'), 'Merkmal ist Hash, keine IP');
 
     abschnitt('Jobs (T-105)');
@@ -55,5 +57,6 @@ function test_grundlagen(): void
     touch($alt, time() - 7200);
     file_put_contents($frisch, 'x');
     pruefe(sitzung_aufraeumen() === 1 && !is_file($alt) && is_file($frisch), 'nur abgelaufene Sitzungsdateien gelöscht');
+    @unlink($frisch);
     pruefe(str_starts_with(sitzung_ablage_pfad(), laufzeit_ordner()), 'Ablage im eigenen Laufzeitordner');
 }

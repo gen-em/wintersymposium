@@ -1,11 +1,13 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Gesamtablauf mit zwei Personen (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Ablauf einer eigenen Veranstaltung mit zwei neuen Personen von der Anmeldung über Nachrücken, Stichtag, Storno und Rundmail bis zum Zertifikat (T-202). */
 
 function test_gesamtablauf(): void
 {
     abschnitt('Gesamtablauf mit zwei Personen (T-202)');
+    // Anlegen von Veranstaltung, Programm und Anmeldungen ist hier Teil der Prüfung
+    test_frisch();
     $vG = (int)va_anlegen('gesamttest', 'Gesamttest', null, null)['id'];
     $gesamt = va_mit($vG, function (): array {
         $e = [];
@@ -19,7 +21,7 @@ function test_gesamtablauf(): void
         $ws = anm_workshops(true)[0];
         $tid = (int)$ws['termine'][0]['id'];
         $daten = fn(string $v, string $m) => anm_daten_pruefen(['vorname' => $v, 'nachname' => 'Gesamt', 'email' => $m, 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik', 'efn' => '802760012345673', 'beruf_sonstige' => '', 'essen' => 'egal'])['werte'];
-        $mailVon = fn(string $an) => (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$an]);
+        $mailVon = fn(string $an) => (string)(test_mail_an($an)['text'] ?? '');
         $token = fn(string $text) => preg_match('#/link\?t=([A-Za-z0-9_-]{43})#', $text, $m) === 1 ? $m[1] : '';
         // 1. Ohne Konto: anmelden mit dem einzigen Workshop-Platz, über den Link bestätigen
         $p1 = anm_anlegen($daten('Ohne', 'ohne.konto@example.org'), ['fest' => [$ws['id'] => $tid], 'warte' => []], false);
@@ -56,14 +58,8 @@ function test_gesamtablauf(): void
         return $e;
     });
     pruefe($gesamt['pub'] === [] && $gesamt['p1_bestaetigt'] === 'bestaetigen' && $gesamt['p2_konto'] !== null && $gesamt['p2_warte'] === 'warte', 'Anmelden: ohne Konto bestätigt, mit Konto angelegt, volle Workshops auf die Warteliste');
-    pruefe($gesamt['aendern'] === [] && $gesamt['angebot'] && ($gesamt['annahme'] === [] || isset($gesamt['annahme']['ok'])) && $gesamt['p2_fest'] === 'fest', 'Änderung macht den Platz frei, Angebot, Annahme');
+    pruefe($gesamt['aendern'] === [] && $gesamt['angebot'] && $gesamt['annahme'] === ['ok' => true] && $gesamt['p2_fest'] === 'fest', 'Änderung macht den Platz frei, Angebot, Annahme');
     pruefe($gesamt['stichtag'] === false && $gesamt['storno'] === true, 'Stichtag sperrt Änderungen; Storno löscht die Anmeldung');
     pruefe($gesamt['rundmail'] === 2, 'Rundmail an die beiden Angemeldeten');
     pruefe($gesamt['frei'] === 1 && !$gesamt['z1'] && $gesamt['z2'] && $gesamt['pdf'] && $gesamt['konto_rueckblick'], 'Anwesenheit und Zertifikat: nur die anwesende Person, auch im Konto-Rückblick');
-    db_ausfuehren('DELETE FROM konto WHERE id = ?', [(int)$gesamt['p2_konto']]);
-    db_ausfuehren('DELETE FROM anmeldung WHERE veranstaltung_id = ?', [$vG]);
-    db_ausfuehren('DELETE FROM rundmail WHERE veranstaltung_id = ?', [$vG]);
-    db_ausfuehren('DELETE FROM programmpunkt WHERE veranstaltung_id = ?', [$vG]);
-    db_ausfuehren('DELETE FROM veranstaltung WHERE id = ?', [$vG]);
-    db_ausfuehren('DELETE FROM mail_ausgang');
 }

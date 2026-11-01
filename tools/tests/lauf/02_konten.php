@@ -1,14 +1,19 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Konten, Links, Löschfrist, Passkeys (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Konten – Anlegen, Einmal-Links, zweiter Faktor, Löschfrist teilnehmender Konten und Passkeys. */
 
 function test_konten(): void
 {
+    $f = test_frisch();
+    $lea = $f['bd']['anmeldungen']['lea_konto'];
+    $anna = $f['admin'];
+
     abschnitt('Konten und Links');
+    // Anlegen selbst wird geprüft (Normierung der Adresse)
     $kid = konto_anlegen('Test Admin', ' Admin@Example.org ', 'admin');
     pruefe(konto_per_email('admin@example.org')['id'] == $kid, 'E-Mail normiert gespeichert');
-    pruefe(konto_eingabe_fehler('X', 'admin@example.org', 'admin') !== [], 'doppelte E-Mail abgelehnt');
+    pruefe(konto_eingabe_fehler('X', ' ADMIN@example.org', 'admin') === ['Für diese E-Mail-Adresse gibt es schon ein Konto.'], 'doppelte E-Mail abgelehnt (auch anders geschrieben)');
     $t0 = 1_900_000_000;
     $tok = konto_link_erzeugen($kid, 'einrichten', null, $t0);
     pruefe(db_wert('SELECT token_hash FROM link WHERE art = "konto" AND konto_id = ?', [$kid]) === hash('sha256', $tok), 'nur Hash des Links gespeichert');
@@ -19,10 +24,12 @@ function test_konten(): void
     pruefe(konto_link_aufraeumen($t0 + KONTO_LINK_GUELTIG_S + 1) === 1, 'abgelaufene Links aufgeräumt');
     $roh = totp_einrichtung_beginnen($kid);
     pruefe(!totp_an($kid) && totp_zustand($kid)['angefangen'], 'Einrichtung begonnen, noch nicht an');
-    pruefe(totp_einrichtung_abschliessen($kid, '000000', $t0) === null || totp_code($roh, $t0) === '000000', 'falscher Code richtet nicht ein');
-    $codes = totp_einrichtung_abschliessen($kid, totp_code($roh, $t0), $t0);
+    $richtig = totp_code($roh, $t0);
+    $falsch = substr($richtig, 0, 5) . (((int)$richtig[5] + 1) % 10);
+    pruefe(totp_einrichtung_abschliessen($kid, $falsch, $t0) === null && !totp_an($kid), 'falscher Code richtet nicht ein');
+    $codes = totp_einrichtung_abschliessen($kid, $richtig, $t0);
     pruefe(is_array($codes) && totp_an($kid) && totp_zustand($kid)['codes_offen'] === 10, 'eingerichtet, zehn Codes');
-    pruefe(!totp_anmeldung_pruefen($kid, totp_code($roh, $t0), $t0)['ok'], 'Einrichtungscode gilt nicht noch einmal');
+    pruefe(!totp_anmeldung_pruefen($kid, $richtig, $t0)['ok'], 'Einrichtungscode gilt nicht noch einmal');
     pruefe(totp_anmeldung_pruefen($kid, totp_code($roh, $t0 + 30), $t0 + 30)['ok'], 'nächster Code gilt');
     $r = totp_anmeldung_pruefen($kid, $codes[3], $t0 + 60);
     pruefe($r['ok'] && $r['art'] === 'code' && $r['codes_offen'] === 9, 'Wiederherstellungscode gilt einmal');
@@ -30,38 +37,37 @@ function test_konten(): void
     $v = (int)konto_laden($kid)['sitzung_version'];
     totp_zuruecksetzen($kid, 'test');
     pruefe(!totp_an($kid) && totp_zustand($kid)['codes_offen'] === 0 && (int)konto_laden($kid)['sitzung_version'] === $v + 1, 'Zurücksetzen: Faktor aus, Codes weg, Sitzungen beendet');
-    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$kid]);
 
     abschnitt('Löschfrist für Konten (E-54)');
+    // Lea (teilnehmend, Konto aus den Beispieldaten) und Anna (Team) seit knapp 14 Monaten ohne Login
     $jetzt = time();
     $alt = gmdate('Y-m-d H:i:s', $jetzt - (14 * 30 - 20) * 86400); // in knapp 20 Tagen 14 Monate ohne Login
-    $kl = konto_anlegen('Lotte Lange', 'lotte@example.org', 'teilnehmend', 'lottes-passwort', null);
-    $kt = konto_anlegen('Tara Team', 'tara@example.org', 'admin', 'taras-passwort-12', null);
-    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id IN (?, ?)', [$alt, $alt, $alt, $kl, $kt]);
-    db_ausfuehren("INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, institution, essen, status, einwilligung_am, erstellt_am, geaendert_am)
-        VALUES (?, ?, 'Lotte', 'Lange', 'lotte@example.org', 'Pflege/MFA', '', 'egal', 'bestaetigt', ?, ?, ?)", [va_id(), $kl, $alt, $alt, $alt]);
-    $anmL = (int)db()->lastInsertId();
+    $altern = fn() => db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id IN (?, ?)', [$alt, $alt, $alt, $lea, $anna]);
+    $erinnert = fn(int $id) => db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$id]) !== null;
+    $altern();
     $r = tk_loeschfrist($jetzt);
-    $mailL = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'lotte@example.org' ORDER BY id DESC LIMIT 1");
-    pruefe($r['erinnert'] >= 1 && str_contains($mailL, 'einmal ein') && db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kl]) !== null, 'Erinnerung 30 Tage vor der Löschung, per Mail');
-    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$kt]) === null, 'Team-Konten ausgenommen');
+    pruefe($r === ['erinnert' => 1, 'geloescht' => 0] && str_contains((string)(test_mail_an('lea@example.org')['text'] ?? ''), 'einmal ein') && $erinnert($lea), 'Erinnerung 30 Tage vor der Löschung, per Mail');
+    pruefe(!$erinnert($anna), 'Team-Konten ausgenommen');
     pruefe(tk_loeschfrist($jetzt)['erinnert'] === 0, 'Keine zweite Erinnerung');
-    pruefe(tk_loeschfrist($jetzt + 25 * 86400)['geloescht'] === 0 && konto_laden($kl) !== null, 'Nicht vor Ablauf von 30 Tagen nach der Erinnerung gelöscht');
-    $r = tk_loeschfrist($jetzt + 31 * 86400);
-    pruefe($r['geloescht'] >= 1 && konto_laden($kl) === null && konto_laden($kt) !== null, 'Nach der Frist gelöscht, Team-Konto bleibt');
-    pruefe(db_wert('SELECT konto_id FROM anmeldung WHERE id = ?', [$anmL]) === null && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$anmL]) === 'bestaetigt', 'Anmeldung bleibt (ohne Konto)');
-    $km = konto_anlegen('Mo Login', 'mo@example.org', 'teilnehmend', 'mos-passwort-1', null);
-    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ?, letzte_anmeldung = ?, erstellt_am = ? WHERE id = ?', [$alt, $alt, $alt, $km]);
+    pruefe(tk_loeschfrist($jetzt + 25 * 86400)['geloescht'] === 0 && konto_laden($lea) !== null, 'Nicht vor Ablauf von 30 Tagen nach der Erinnerung gelöscht');
+    $_SESSION = [];
+    tk_einloggen(konto_laden($lea));
+    pruefe(!$erinnert($lea) && tk_loeschfrist($jetzt + 31 * 86400)['geloescht'] === 0 && konto_laden($lea) !== null, 'Login setzt die Frist neu');
+    $_SESSION = [];
+    ctx_weg('ich', 'anmeldung_konto');
+    $altern();
     tk_loeschfrist($jetzt);
-    $_SESSION = [];
-    tk_einloggen(konto_laden($km));
-    pruefe(db_wert('SELECT loesch_erinnert_am FROM konto WHERE id = ?', [$km]) === null && tk_loeschfrist($jetzt + 31 * 86400)['geloescht'] === 0 && konto_laden($km) !== null, 'Login setzt die Frist neu');
-    $_SESSION = [];
-    db_ausfuehren("DELETE FROM konto WHERE id IN (?, ?)", [$kt, $km]);
-    db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmL]);
+    $r = tk_loeschfrist($jetzt + 31 * 86400);
+    pruefe($r['geloescht'] === 1 && konto_laden($lea) === null && konto_laden($anna) !== null, 'Nach der Frist gelöscht, Team-Konto bleibt');
+    $leaAnm = db_zeilen("SELECT konto_id, status FROM anmeldung WHERE email = 'lea@example.org'");
+    pruefe(count($leaAnm) === 3 && array_unique(array_column($leaAnm, 'konto_id')) === [null] && anm_laden($f['bd']['anmeldungen']['lea'])['status'] === 'bestaetigt', 'Anmeldungen bleiben (ohne Konto), in allen drei Veranstaltungen');
 
     abschnitt('Passkeys (O-14, E-55)');
-    require_once __DIR__ . '/passkey_hilfe.php';
+    // eigener Ausgangsstand: Lea ist oben gelöscht
+    $f = test_frisch();
+    $kp = $f['bd']['anmeldungen']['lea_konto'];
+    $kt = $f['admin'];
+    require_once dirname(__DIR__) . '/passkey_hilfe.php';
     $hostAlt = ctx('host') ?? null;
     ctx_setzen('host', 'localhost');
     $u = pk_ursprung();
@@ -69,11 +75,9 @@ function test_konten(): void
     ctx_setzen('host', '127.0.0.1');
     pruefe(pk_ursprung() === null, 'Keine Passkeys unter einer IP-Adresse');
     ctx_setzen('host', 'localhost');
-    $kp = konto_anlegen('Paul Passkey', 'paul@example.org', 'teilnehmend', 'pauls-passwort-1', null);
-    db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $kp]);
-    $pkFehlt = function (callable $f): bool {
+    $pkFehlt = function (callable $fn): bool {
         try {
-            $f();
+            $fn();
             return false;
         } catch (PkFehler) {
             return true;
@@ -82,8 +86,8 @@ function test_konten(): void
     $g = test_pk_geraet();
     $o = pk_anlage_optionen(konto_laden($kp));
     pruefe($o['authenticatorSelection']['userVerification'] === 'required' && $o['attestation'] === 'none' && strlen(pk_b64u_lesen($o['user']['id'])) === 16, 'Anlage-Optionen: UV verlangt, keine Herstellerdaten, Nutzerkennung ohne Kontonummer');
-    $pid = pk_anlegen($kp, test_pk_anlage($g, $o['challenge'], 'localhost', 'http://localhost'), "Handy\u{0007}  von Paul");
-    pruefe($pid > 0 && pk_zahl($kp) === 1 && pk_liste($kp)[0]['bezeichnung'] === 'Handy von Paul', 'Passkey angelegt (ES256), Name bereinigt');
+    $pid = pk_anlegen($kp, test_pk_anlage($g, $o['challenge'], 'localhost', 'http://localhost'), "Handy\u{0007}  von Lea");
+    pruefe($pid > 0 && pk_zahl($kp) === 1 && pk_liste($kp)[0]['bezeichnung'] === 'Handy von Lea', 'Passkey angelegt (ES256), Name bereinigt');
     pruefe($pkFehlt(fn() => pk_anlegen($kp, test_pk_anlage($g, $o['challenge'], 'localhost', 'http://localhost'), '')), 'Herausforderung gilt nur einmal');
     $o = pk_login_optionen();
     pruefe(pk_anmelden(test_pk_login($g, $o['challenge'], 'localhost', 'http://localhost')) === $kp && (int)db_wert('SELECT zaehler FROM passkey WHERE id = ?', [$pid]) === 1, 'Einloggen mit Passkey, Zähler gespeichert');
@@ -109,7 +113,6 @@ function test_konten(): void
     $o = pk_login_optionen();
     pruefe(pk_anmelden(test_pk_login($gr, $o['challenge'], 'localhost', 'http://localhost')) === $kp && pk_zahl($kp) === 2, 'RS256 (2048 Bit): anlegen und einloggen');
     // Team: Passkey als einziger zweiter Faktor
-    $kt = konto_anlegen('Tina Team', 'tina@example.org', 'admin', 'tinas-passwort-12', null);
     pruefe(!zweitfaktor_da(konto_laden($kt)), 'Team ohne zweiten Faktor');
     $gt = test_pk_geraet();
     $o = pk_anlage_optionen(konto_laden($kt));

@@ -1,26 +1,22 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Programm (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Programm – Prüfung der Punkte, Gliederung, Status, Raumhinweise und Titel der Startseite (ohne Beispieldaten). */
 
 function test_programm(): void
 {
     abschnitt('Programm (AP-3 Schritt 3)');
+    test_frisch(['beispiel' => false]);
     $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => 'WS', 't_beginn' => ['20:00', '', '21:00'], 't_ende' => ['20:45', '', '20:30'], 't_plaetze' => ['10', '', '5']]);
     pruefe(isset($r['fehler']['termine']) && str_contains($r['fehler']['termine'], 'Termin 2'), 'Termin mit Ende vor Beginn abgelehnt (leere Zeile übersprungen)');
     $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => 'WS', 't_beginn' => ['20:00'], 't_ende' => ['20:45'], 't_plaetze' => ['0']]);
     pruefe(isset($r['fehler']['termine']), 'Termin mit 0 Plätzen abgelehnt');
     $r = programm_punkt_pruefen(['typ' => 'vortrag', 'titel' => 'X', 'beginn' => '18:00']);
     pruefe(isset($r['fehler']['ende']), 'Beginn ohne Ende abgelehnt');
-    [$t1, $t3] = va_mit(va_aktuell_id() ?? 1, function (): array {
-        $nameAlt = va('veranstaltung_name');
-        einstellung_setzen('veranstaltung_name', 'Abend');
-        $a = va_titel_html();
-        einstellung_setzen('veranstaltung_name', 'Fortbildungsabend klinische Notfallmedizin');
-        $b = va_titel_html();
-        einstellung_setzen('veranstaltung_name', $nameAlt === '' ? null : $nameAlt);
-        return [$a, $b];
-    });
+    einstellung_setzen('veranstaltung_name', 'Abend');
+    $t1 = va_titel_html();
+    einstellung_setzen('veranstaltung_name', 'Fortbildungsabend klinische Notfallmedizin');
+    $t3 = va_titel_html();
     pruefe($t1 === '<em>Abend</em>' && $t3 === 'Fortbildungsabend <em>klinische Notfallmedizin</em>', 'Titel der Startseite: ein Wort lila, sonst erstes Wort weiß und Rest lila');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'P']);
     pruefe($r['fehler'] === [], 'Punkt ohne Uhrzeit speicherbar (wird im Plan gezogen)');
@@ -44,6 +40,6 @@ function test_programm(): void
     pruefe(count($g[2]['kinder']) === 2 && $g[2]['kinder'][0]['art'] === 'termin' && $g[2]['kinder'][1]['art'] === 'punkt', 'Block sammelt Termin und Station');
     $st = programm_status([$mk(1, 'vortrag', '18:00', '18:30'), $mk(2, 'pause', '19:00', '19:15')], ['punkte' => [$mk(1, 'vortrag', '18:00', '18:30'), $mk(3, 'pause', '20:00', '20:15')], 'am' => '']);
     pruefe($st['status'] === [1 => 'veroeffentlicht', 2 => 'neu'] && count($st['geloescht']) === 1 && $st['offen'], 'Status: veröffentlicht, neu, gelöscht');
-    pruefe(programm_hinweise([array_merge($mk(1, 'vortrag', '18:00', '18:30'), ['ort' => 'A']), array_merge($mk(2, 'station', '18:15', '19:00'), ['ort' => 'a'])]) !== [], 'Raum doppelt belegt (Groß-/Kleinschreibung egal)');
+    pruefe(programm_hinweise([array_merge($mk(1, 'vortrag', '18:00', '18:30'), ['ort' => 'A']), array_merge($mk(2, 'station', '18:15', '19:00'), ['ort' => 'a'])]) === ['A ist 18:15–18:30 doppelt belegt: T1 und T2.'], 'Raum doppelt belegt (Groß-/Kleinschreibung egal)');
     pruefe(hm_aus_minuten(minuten('23:30') + 90) === '23:59', 'Uhrzeit bleibt am selben Tag');
 }

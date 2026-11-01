@@ -1,11 +1,12 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Sicherung und Wiederherstellung (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Sicherung anlegen, prüfen, wiederherstellen und löschen, Testdaten-Schalter und Mail-Umleitung auf Staging (E-47). */
 
 function test_sicherung(): void
 {
     abschnitt('Sicherung und Wiederherstellung (E-47)');
+    $lea = (int)test_frisch()['bd']['anmeldungen']['lea'];
     $zahl = fn(string $t) => (int)db_wert("SELECT COUNT(*) FROM `$t`");
     $vorher = ['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')];
     $ub = imagecreatetruecolor(40, 20);
@@ -19,7 +20,8 @@ function test_sicherung(): void
     db_ausfuehren('DELETE FROM anmeldung');
     db_ausfuehren("UPDATE programmpunkt SET titel = 'Geändert'");
     pruefe(sicherung_wiederherstellen($s1, null) === null, 'Wiederherstellen ohne Fehler');
-    pruefe(['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')] === $vorher && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE titel = 'Geändert'") == 0, 'alle Daten zurück');
+    pruefe(['anmeldung' => $zahl('anmeldung'), 'programmpunkt' => $zahl('programmpunkt'), 'platz' => $zahl('platz'), 'konto' => $zahl('konto')] === $vorher
+        && (anm_laden($lea)['email'] ?? '') === 'lea@example.org' && db_wert("SELECT COUNT(*) FROM programmpunkt WHERE titel = 'Geändert'") == 0, 'alle Daten zurück');
     pruefe(count(sicherung_liste()) === $sAnz + 2, 'Stand davor automatisch gesichert');
     pruefe(unterschrift_da(), 'Unterschrift des Zertifikats in der Sicherung');
     unterschrift_entfernen(null);
@@ -32,7 +34,7 @@ function test_sicherung(): void
     file_put_contents(sicherung_ordner() . '/' . $neuer, gzencode(preg_replace('/"migration":\d+/', '"migration":999', $roh, 1)));
     pruefe(str_contains((string)sicherung_pruefen($neuer), 'neueren Stand'), 'Sicherung aus neuerem Stand abgelehnt');
     pruefe(sicherung_loeschen($kaputt, null) && sicherung_loeschen($neuer, null) && count(sicherung_liste()) === $sAnz + 2, 'Sicherung löschen');
-    pruefe(testdaten_moeglich() && $zahl('konto') > 0, 'Testdaten in der Entwicklung erlaubt');
+    pruefe(testdaten_moeglich(), 'Testdaten in der Entwicklung erlaubt');
     // Mail-Umleitung (Staging): config kurz um mail.umleiten_an ergänzen
     $cfgDatei = konfig_datei();
     $cfgAlt = (string)file_get_contents($cfgDatei);

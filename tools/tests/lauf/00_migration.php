@@ -1,20 +1,14 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Migration vom alten Stand (vor AP-3) auf den aktuellen (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Migration vom alten Stand (vor AP-3) auf den aktuellen – ohne test_frisch(), der alte Stand wird nachgebaut. */
 
 function test_migration(): void
 {
-    abschnitt('Datenbank leeren');
-    db()->exec('SET FOREIGN_KEY_CHECKS = 0');
-    foreach (db_zeilen('SELECT table_name AS t FROM information_schema.tables WHERE table_schema = DATABASE()') as $z) {
-        db()->exec('DROP TABLE `' . $z['t'] . '`');
-    }
-    db()->exec('SET FOREIGN_KEY_CHECKS = 1');
-va_zwischenspeicher_leeren();
-    pruefe(migration_ist() === 0, 'leere Datenbank');
-
     abschnitt('Migrationen');
+    test_db_leeren();
+    pruefe(migration_ist() === 0, 'leere Datenbank: Stand 0');
+
     // Stand vor AP-3 nachbauen (Schritte 1–3) mit einem Team-Konto, dann den Rest anwenden.
     migration_tabelle_anlegen();
     foreach ([1, 2, 3] as $nr) {
