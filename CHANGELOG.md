@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.26.3] – 2026-11-01
+
+### Doku
+
+- **Konzept:** E-70 (Startseite mit Vorschau für Desktop, Handy und Tablet, Titel mit „Lila“ und „Trennstelle“, Größe vor Trennung; Einstellungen als Übersicht mit Kacheln) und E-71 (Veranstaltungsreihen, Newsletter je Reihe, Allgäu Akut mit Klinik/Präklinik, Zielgruppe je Veranstaltung, Admin-Rechte je Reihe); AP-18 und AP-19 geplant (nach AP-17); Punkte O-49 bis O-54 (wie vorgeschlagen entschieden). Prüfprotokoll: T-309 bis T-325 reserviert.
+
 ## [0.26.2] – 2026-11-01
 
 ### Doku

@@ -29,6 +29,8 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
+| AP-19 | Veranstaltungsreihen und Newsletter (E-71) | geplant | – | T-317 bis T-325 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
+| AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | geplant | – | T-309 bis T-316 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
 | AP-17 | Vereinheitlichung (E-69) | geplant | – | T-297 bis T-308 (ein Test je Unterpunkt, bei der Umsetzung anlegen; Bildschirmfoto-Vergleich vorher/nachher) |
 | AP-16 | Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (E-63) | umgesetzt, Staging offen | lokal T-288 bis T-296 | Staging (siehe unten); T-296 Proxy-Prüfung durch den Admin |
 | AP-15 | Status-Seite unter Betrieb (E-65) | auf Staging abgenommen | lokal und Staging T-282 bis T-287 | – |
