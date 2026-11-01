@@ -2,6 +2,67 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.28.0] – 2026-11-01
+
+AP-17 Vereinheitlichung, zweiter Teil und Abschluss (Unterpunkte 7 bis 12, E-69): reiner Umbau; Seiten und Abläufe bleiben gleich. Sichtbar anders sind nur die Protokolltexte (einheitliches Muster).
+
+### Neu
+
+- **JS-Basis `assets/basis.js`** (V-42 bis V-45), auf jeder Seite zuerst geladen: `window.ws` mit `csrf`, `post`, `get` (eine Antwortform `{ok, fehler, …}`), `melden`, `dialog`, `oeffnen`, Uhrzeiten und Base64url; enthält die Bestätigungsdialoge und die stehende Kopfleiste.
+- **Link-Lib `server/lib/link_lib.php`** (V-1): ein System für alle Einmal-Links (Konto, Anmeldung, Newsletter) in einer Tabelle `link` (Migration 20, Altdaten übernommen). Token 32 Byte Base64url, ältere Links aus verschickten Mails gelten weiter.
+- **Protokoll mit Objektbezug** (V-8, Migration 21): `audit.objekt_art`/`objekt_id`, Altdaten per Muster zugeordnet. Der Filter `?o=anmeldung-12` und „Letzte Änderung“ unter Personen arbeiten über den Bezug.
+- **Neue Libs:** `kontext_lib` (`ctx()` statt `$GLOBALS`), `bild_lib` (ein Upload- und Auslieferungsweg für Fotos, Bilder und Dateien), `zweitfaktor_lib`, `zertifikat_lib`; `server/routen.php` mit den Routen.
+- **Tests (V-50 bis V-53):**
+  - Ein Bereich je Datei in `tools/tests/lauf/`, jeder beginnt mit `test_frisch()` (`tools/tests/basis.php`: frische DB, Installation, Beispieldatensatz). Auswahl mit `WS_TESTS=…`, im HTTP-Teil mit `WS_HTTP=…`.
+  - Der HTTP-Teil hat 17 Bereiche mit frischem Stand.
+  - Neue Fabrik-Funktionen im Beispieldatensatz (u. a. Warteliste, Fristen, Team-Anmeldung, Entwurf, CME-Nachweis, Sicherung).
+  - Grep-Tests: Tests legen nur an, wo das Anlegen geprüft wird (Ausnahmen mit Grund); Ausnahmelisten ohne veraltete Einträge.
+  - `tools/tests/totp_code.php` und `tools/tests/seiten.php` (Seitenliste aus den Routen) für HTTP-Tests und Browser-Durchlauf; `einloggenAls()` und eine Abdeckungsprüfung im Browser-Durchlauf.
+
+### Geändert
+
+- **Libs nach Präfix** (V-6, V-12, Konzept 5a K-h, maschinell geprüft):
+  - `anmeldung_lib` heißt `login_lib`, `buchung_lib` heißt `anmeldung_lib`.
+  - `efn_*` liegen in `format_lib`, die Export-Funktionen in `export_lib`.
+  - Seiten-Logik in Libs: `team_link_weitergeben`, `zweitfaktor_codes_seite` und weitere.
+  - `ich()` cacht das eingeloggte Konto je Anfrage; die Sitzungsschlüssel sind Konstanten `SITZUNG_SCHLUESSEL_*`.
+- **Ein HTML-Bereiniger** `html_bereinigen($html, $profil)` mit den Profilen inline, block und mail (V-13).
+- **Alle Skripte** nutzen `window.ws` und haben einen Codestil.
+- **Protokolltexte** nach einem Muster („Anmeldung 12: storniert“), ohne Namen, Adressen oder Passkey-Bezeichnungen (R-02); `audit_schreiben` nur noch in Libs.
+- **Tests:**
+  - Viele Prüfungen sind schärfer: genaue Werte statt `>= 1` oder `!== []`, Schlupflöcher mit `||` entfernt, Zähler relativ zum Stand davor.
+  - `lauf.php` hat 1047 Prüfungen (vorher 1038) und braucht etwa 2,5 Minuten.
+- **Prüf-Workflow** installiert `poppler-utils`. Fehlt `pdftotext`, schlägt eine Prüfung fehl, statt die PDF-Prüfungen still zu überspringen.
+- **Auslieferung:** Die FTP-Zielordner kommen aus den Repository-Variablen `FTP_ZIEL_STAGING` und `FTP_ZIEL_PRODUKTION` statt aus dem Workflow (R-10).
+
+### Behoben
+
+- **Der Klassen-Test aus 0.27.0 erkannte `class="…"` nicht** (Escape-Fehler im Muster) und prüfte nur 30 statt 329 Klassen; jetzt alle, ohne Funde.
+- **Testprüfungen, die nichts bewiesen:**
+  - „ohne Pfad“ in den Health-Daten konnte nie anschlagen (`json_encode` maskiert `/`).
+  - Ein Zweig hing vom Zufall ab, daher lief eine Prüfung nie.
+  - Drei Platzhalter `pruefe(false, …)` standen hinter `function_exists`-Wächtern.
+  - Mehrere `||`-Bedingungen waren immer wahr.
+  - Programm-Abfragen fanden das richtige Kürzel nur über die Reihenfolge der IDs.
+
+### Entfernt
+
+- Tabellen `konto_link`, `anmeldung_link` und `newsletter_link` (in `link` übernommen, E-69 (7)).
+- `assets/dialog.js` und `assets/kopf.js` (in `basis.js`).
+- Alle `$GLOBALS['ws_*']` und `$GLOBALS['programm_nachgerueckt']`.
+
+### Doku
+
+- Prüfprotokoll mit einem Abschnitt je Arbeitspaket (geplant, Ergebnisse, Noch zu prüfen); T-303 bis T-308.
+- betrieb.md:
+  - durchnummeriert (1 bis 20);
+  - Aufbau mit `routen.php`, `basis.js` und den neuen Libs;
+  - Aufbau der Tests;
+  - Zielordner als Platzhalter (R-10, Admin 2026-11-01).
+- CHANGELOG nur mit den Abschnitten Neu, Geändert, Behoben, Entfernt und Doku; E-18 nennt die Ziel-Dateien der übernommenen Bausteine.
+- CLAUDE.md zu JavaScript, `ctx()` und dem Testaufbau.
+- Konzept: AP-17 abgeschlossen (Ergebnis, Probleme); Review-Dokument mit den Zahlen nach AP-17.
+
 ## [0.27.0] – 2026-11-01
 
 AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umbau; Seiten und Abläufe bleiben für Teilnehmende und Team gleich. Ausnahmen stehen unter „Geändert (sichtbar)“.

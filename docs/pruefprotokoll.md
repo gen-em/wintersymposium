@@ -37,7 +37,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-14 | Review-Behebung 1: Sicherheit und schwere Bugs (E-63) | umgesetzt, Staging offen | lokal T-275 bis T-281 | Staging (siehe unten) |
 | AP-15 | Status-Seite unter Betrieb (E-65) | auf Staging abgenommen | lokal und Staging T-282 bis T-287 | – |
 | AP-16 | Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (E-63) | umgesetzt, Staging offen | lokal T-288 bis T-296 | Staging (siehe unten); T-296 Proxy-Prüfung durch den Admin |
-| AP-17 | Vereinheitlichung (E-69) | Teil 1 (Unterpunkte 1 bis 6) umgesetzt, Staging offen; Teil 2 in Arbeit | lokal T-297 bis T-302 | Staging Teil 1 (siehe unten); T-303 bis T-308 mit Teil 2 |
+| AP-17 | Vereinheitlichung (E-69) | umgesetzt (Teil 1 in 0.27.0, Teil 2 in 0.28.0), Staging offen | lokal T-297 bis T-308 | Staging Teil 1 und Teil 2 (siehe unten) |
 | AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | geplant | – | T-309 bis T-316 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | geplant | – | T-317 bis T-325 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
 
@@ -787,15 +787,34 @@ Entfallen (E-15); T-180 bis T-184 gestrichen.
 - {id: T-300, ap: AP-17, was: "Unterpunkt 4: alle Seiten auf die Helfer", wie: "lauf.php und http_tests.php unverändert grün (Regressionstest); Grep-Tests: keine db_* in Seiten, keine Feld-Closures, keine Einknopf-Formulare von Hand; Bildvergleich je Seite gegen den Ausgangsstand (Chromium Handy und Desktop breit); Browser-Durchlauf Stufe 3 nach Unterpunkt 4", status: "lokal bestanden"}
 - {id: T-301, ap: AP-17, was: "Unterpunkt 5: CSS ein System", wie: "lauf.php: Grep-Test jede Klasse in site.css im Markup und umgekehrt (Ausnahmen mit Grund); Regelmenge vor/nach dem Umsortieren gleich (705), Paare gleicher Spezifität mit getauschter Reihenfolge maschinell gesucht; Bildvergleich Chromium in vier Breiten; Messung der Schriftlage in Knöpfen in drei Engines", status: "lokal bestanden"}
 - {id: T-302, ap: AP-17, was: "Unterpunkt 6: Komponentenblatt", wie: "http_tests: Admin → 403, BetreiberIn → 200 mit allen 11 Abschnitten und Aufrufen, Beispiel-POST ändert nichts; Browser-Durchlauf fotografiert /team/komponenten in allen Engines und Breiten (Dialoge, Menü, Aufklapper)", status: "lokal bestanden"}
+- {id: T-303, ap: AP-17, was: "Unterpunkt 7: JS-Basis", wie: "Browser-Durchlauf: Dialoge, Kopfleiste (Handy weg/Knopf, sonst stehend), Passkey, Zwei-Faktor, Mailings-Empfängerzahl, Programm-Popups, Editor; Konsolenfehler 0; http_tests: basis.js auf jeder Seite, dialog.js weg; Umformung mit Syntaxbaum vorher/nachher geprüft", status: "lokal bestanden"}
+- {id: T-304, ap: AP-17, was: "Unterpunkt 8: Link-Lib", wie: "lauf.php: alle Link-Tests grün; alter Hex-Token aus Migration 20 gefunden und verbraucht; Zweck-Trennung (Team-Link nicht über /konto/link); Aufräumen genau der abgelaufenen; alte Tabellen weg", status: "lokal bestanden"}
+- {id: T-305, ap: AP-17, was: "Unterpunkt 9: Protokoll mit Objektbezug", wie: "lauf.php: Eintrag über objekt_id gefunden; Migration 21 ordnet Alt-Text „Anmeldung 12 storniert“ zu; Filter ?o=; Grep-Test kein audit_schreiben in Seiten", status: "lokal bestanden"}
+- {id: T-306, ap: AP-17, was: "Unterpunkt 10: Lib-Aufteilung und Anfrage-Zustand", wie: "lauf.php: Präfix-Tabelle maschinell (beide Richtungen); ctx setzen/lesen/leeren; drei Upload-Wege mit demselben Bild (zu groß, kein Upload); html_bereinigen je Profil", status: "lokal bestanden"}
+- {id: T-307, ap: AP-17, was: "Unterpunkt 11: Tests auf dem Beispieldatensatz, Werkzeuge, Doku-Struktur", wie: "lauf.php: jeder Bereich allein lauffähig (WS_TESTS), Zahl der Prüfungen vorher/nachher, Laufzeit; Grep-Test eigenes Anlegen nur mit Grund; totp_code.php und seiten.php in http_tests und Browser-Durchlauf", status: "lokal bestanden"}
+- {id: T-308, ap: AP-17, was: "Unterpunkt 12: Abschluss", wie: "lauf.php ohne Fehler; Browser-Durchlauf Stufe 3 (3 Engines × 4 Breiten), Fotos angesehen und gegen Teil 1 verglichen; Zahlen aus dem Review nachgemessen", status: "lokal bestanden"}
 ```
 
 ### Ergebnisse
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
+| T-303 bis T-308 | 2026-11-01 | claude-dev | lokal bestanden | 0.28.0 AP-17 Teil 2 (Unterpunkte 7 bis 12): `lauf.php` 1047 ok, 0 Fehler in 2:38 min (vorher 1038 ok); davon DB-Bereiche 595 ok in 50 s (19 Bereiche, je ein frischer Stand ≈ 2 s), HTTP-Teil 451 ok in 101 s (vorher 449 in 45 s); Browser-Durchlauf Stufe 3 (E-69 (9), einmal am Ende von AP-17): 8570 ok, 0 Fehler in Chromium, Firefox und WebKit × 4 Breiten, Abdeckung aller Seiten ok, keine Konsolenfehler; Bildvergleich Chromium (4 Breiten) gegen den Stand von Teil 1: alle Abweichungen ≤ 2,3 % und erklärt (Uhrzeiten, zufällige QR-Codes, Protokolltexte nach dem neuen Muster, Kopfleiste im Moment der Aufnahme noch in der Animation), Stichproben WebKit und Firefox (Dialoge, Popups) angesehen | Klassen-Test aus Teil 1 hatte einen Escape-Fehler (30 statt 329 Klassen geprüft), behoben, keine Funde; beim Umstellen der Tests viele schwache Prüfungen geschärft, keine App-Fehler gefunden; PDF-Prüfungen liefen ohne pdftotext still nicht, jetzt Fehler und im Workflow installiert |
 | T-297 bis T-302 | 2026-11-01 | claude-dev | lokal bestanden | 0.27.0 AP-17 Teil 1 (Unterpunkte 1 bis 6): `lauf.php` 1003 ok, 0 Fehler (vorher 950; neu: Konventionen, kleine Helfer, Formular-Helfer, Komponentenblatt). Browser: Stufe 3 nach Unterpunkt 4 (Seiten umgestellt) 8351 ok, 0 Fehler (3 Engines × 4 Breiten); nach dem CSS-Umbau und dem Komponentenblatt Chromium in vier Breiten 2837 ok, 0 Fehler. Bildvergleich gegen den Ausgangsstand 0.26.2 je Seite angesehen: außer den gewollten Änderungen (CHANGELOG 0.27.0) nur Uhrzeiten, Scrollposition und Fokus | Ausgangslauf 0.26.2 brach am Ende in WebKit/breiter Desktop ab (Sandbox); beim CSS-Umsortieren drei Reihenfolge-Fehler gefunden und behoben (Gefahrenzone, Popup-Abstände, Sticker); Schriftmetrik von Tajawal korrigiert (Text in Knöpfen mittig, in drei Engines gemessen). Kein voller Lauf vor dem Zwischen-PR (E-69 (9)): der kommt am Ende von AP-17 |
 
 ### Noch zu prüfen
+
+#### Teil 2 (nach Merge auf Staging)
+
+Ziel: Alles funktioniert wie vorher; neu sieht nur das Protokoll aus („Anmeldung 12: storniert“).
+
+1. **Auslieferung:** GitHub → Actions → Lauf „Auslieferung“ nach dem Merge. Erwartet: „Ziel: Staging“ und die Übertragung läuft durch (Repository-Variablen `FTP_ZIEL_*`, Admin 2026-11-01 angelegt).
+2. **Migrationen 20 und 21:** Team-Bereich → Betrieb → Status. Erwartet: Datenbank „Schema = Soll“, alles grün.
+3. **Einmal-Links:** „Passwort vergessen?“ für ein Testkonto und eine Test-Anmeldung über /anmelden. Erwartet: Die Links aus beiden Mails funktionieren einmal und dann nicht mehr. Ein Link aus einer Mail von vor dem Update (falls noch einer gültig ist) funktioniert weiter.
+4. **Protokoll:** Verwaltung → Protokoll. Erwartet: neue Einträge im Muster „Anmeldung 12: storniert“, alte Einträge unverändert; unter Personen bei einer Person „Letzte Änderung“ anklicken → das Protokoll zeigt nur deren Einträge.
+5. **Dialoge und Kopfleiste (basis.js):** eine Bestätigung öffnen und abbrechen (z. B. Person → Stornieren …); am Handy nach unten scrollen (Leiste weg, „Menü“-Knopf da) und nach oben (Leiste zurück); ein Programm-Popup öffnen und schließen.
+6. **Bilder und Dateien (bild_lib):** ein Dozierenden-Foto, ein Bild im Text-Editor und eine Unterschrift unter Teilnahme hochladen; ein Zertifikat-PDF und einen Export (Excel) herunterladen. Erwartet: alles kommt an und öffnet sich.
+7. **Passkey:** Mit einem Passkey einloggen (falls eingerichtet). Erwartet: wie vorher.
 
 #### Teil 1 (nach Merge auf Staging)
 
