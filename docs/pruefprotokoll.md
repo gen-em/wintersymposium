@@ -40,6 +40,8 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-17 | Vereinheitlichung (E-69) | umgesetzt (Teil 1 in 0.27.0, Teil 2 in 0.28.0), Staging offen | lokal T-297 bis T-308 | Staging Teil 1 und Teil 2 (siehe unten) |
 | AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | umgesetzt, Staging offen | lokal T-309 bis T-316 | Staging (siehe unten) |
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | umgesetzt, Staging offen | lokal T-317 bis T-325 | Staging (siehe unten) |
+| E-72 | Rückmeldungen nach AP-18/AP-19 | umgesetzt, Staging offen | lokal T-326 bis T-330 | Staging (siehe unten) |
+| E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
 
 ## Wie geprüft wird
 
@@ -891,3 +893,35 @@ Nach dem Merge auf Staging. Ziel: Reihen und Newsletter so, wie in E-71 beschrie
 5. **Rechte je Reihe:** Team-Konten → bei einem Admin „Veranstaltungen …“. Erwartet: Reihen und Veranstaltungen zum Ankreuzen.
 6. **Mailing an Allgäu Akut:** Mailings → Neu → Newsletter-Listen → Allgäu Akut. Erwartet: Feld „Zielgruppe“, Empfängerzahl ändert sich mit der Auswahl (nicht senden).
 7. Vom Admin bestätigt (2026-11-01, E-71 (12), (13)): Die Reihe einer Veranstaltung ändern nur BetreiberInnen; „Allgäu Akut“ ohne gewähltes Interesse übernimmt die Vorauswahl der Berufsgruppe.
+
+## Rückmeldungen nach AP-18/AP-19 (E-72)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-326, ap: E-72, was: "Überschrift Merke als Feld", wie: "lauf.php (20_reihen): Startwert aus Migration 24, änderbar, leer ohne Überschrift; http_tests: Feld auf der Seite „Startseite“", status: "ok"}
+- {id: T-327, ap: E-72, was: "Abbrechen schließt die Kachel", wie: "http_tests: Abbrechen leitet ohne Speichern um, Speichern zuerst im Markup; Browser: Kachel zu, Eingabe verworfen; Reihe „einzeln“ und zurück (Rückmeldung Staging)", status: "ok"}
+- {id: T-328, ap: E-72, was: "Seite Startseite: schwebendes Speichern, Zoom, Groß ansehen, Hinweise", wie: "Browser: Knopfleiste am unteren Rand beim Scrollen; Zoom 100 % scrollt seitlich; Groß ansehen füllt das Fenster, Esc schließt; keine Größenangabe mehr, Kachel 3 leer bleibt", status: "ok"}
+- {id: T-329, ap: E-72, was: "Dozierende: Suche", wie: "http_tests: Suche nach Funktion und Name, kein Treffer", status: "ok"}
+- {id: T-331, ap: E-73, was: "Abbruch je Engine und Teilwiederholung", wie: "Stufe 2 (Seite archiv) mit WS_TEST_ABBRUCH=firefox: Firefox abgebrochen, Chromium läuft weiter; WS_WIEDERHOLEN zweimal: zuerst beide Engines neu (beide waren abgebrochen), dann nur Firefox, Chromium samt Fotos übernommen, gemeinsamer Bericht grün", status: "ok"}
+- {id: T-330, ap: E-72, was: "Allgäu Akut zuerst, newsletter@ vorausgewählt, Testkonten, Komponentenblatt", wie: "lauf.php: Reihenfolge der Listen, Hervorhebung, Testkonten aus der config (Passwort, zweiter Faktor, Rollen, ungültige abgelehnt, erneut zurückgesetzt); http_tests: Mailings mit Allgäu Akut zuerst und Postfach-Hinweis, Komponentenblatt nicht in der Navigation", status: "ok"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-326 bis T-330 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1165 ok, 0 Fehler; Browser **Stufe 3** (Arbeitspaket-Abschluss der Rückmeldungen, gemeinsame Teile: CSS, JavaScript, Navigation) `node tools/browser/durchlauf.js` → 9356 ok, 0 Fehler (3 Engines × 4 Breiten, 15 Min.); Fotos angesehen (Startseite groß, Handy mit schwebender Leiste) | Firefox brach zweimal bei „Vorschau folgt dem Tippen“ ab: zwei Formular-Sendungen kurz nacheinander in den iframe, Firefox verwarf eine → startseite.js schickt die zweite erst nach dem Laden der ersten (Sicherung 8 s). Reihe-Fehler von Staging (LibreWolf) lokal nicht nachstellbar; Diagnose eingebaut |
+| T-331 | 2026-11-01 | claude-dev | bestanden | Stufe 2 (Seite archiv, Chromium und Firefox) mit `WS_TEST_ABBRUCH=firefox`: Abbruch erfasst mit Seite und Zeile, nächste Engine lief weiter; `WS_WIEDERHOLEN` zweimal, am Ende nur Firefox neu, Chromium samt Fotos übernommen → 498 ok, 0 Fehler, `ergebnis.json` mit Code-Stand | Beim ersten Versuch brach Chromium an einem eigenen Ersetzungsfehler ab (`ALLE_satz`) – der Abbruch wurde wie vorgesehen erfasst und Firefox lief trotzdem; behoben. Der volle Lauf oben lief noch mit dem Durchlauf vor E-73 (nur das Prüfwerkzeug geändert, App-Code gleich) |
+
+### Noch zu prüfen
+
+Nach dem Merge auf Staging.
+
+1. **Reihe (E-72 (11)):** Einstellungen → Reihe & Zielgruppe → Reihe wechseln → Speichern. Erwartet: Meldung „… Reihe: <Name>.“ Springt sie zurück: Betrieb → Fehlerprotokoll, Zeile „Einstellungen: Reihe nicht übernommen (…)“ – den Text bitte an Claude geben.
+2. **Testkonten:** In der `config.php` von Staging `testkonten` eintragen (Vorlage in `config.example.php`), dann Betrieb → Betrieb → „Testkonten anlegen“. Erwartet: „3 Testkonten gesetzt.“ Zugangsdaten bei Bedarf an Claude im Chat geben, nicht ins Repo.
+3. **Startseite bearbeiten:** scrollen (Speichern bleibt unten sichtbar), speichern (Seite bleibt an der Stelle), Zoom 100 % und „Groß ansehen“ ausprobieren, Überschrift „Merke“ ändern.
+4. **Einstellungen:** eine Kachel öffnen, etwas ändern, „Abbrechen“ → Kachel zu, nichts geändert.
+5. **Mailings → Neu → Newsletter-Listen:** „Allgäu Akut“ oben und hervorgehoben, Absender newsletter@ (oder Hinweis).
+6. **Dozierende:** Suche nach einem Teil von Name oder Funktion.
+

@@ -892,13 +892,13 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 .st-raster { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 .st-gruppe { border: 0; padding: 0; margin: 0; min-width: 0; }
 .st-fest { margin: 0; }
-.st-knoepfe { justify-content: flex-end; }
+/* Speichern schwebt am unteren Fensterrand, solange die Formularspalte sichtbar ist (Rückmeldung nach AP-19) */
+.st-knoepfe { position: sticky; bottom: 0; z-index: 5; justify-content: flex-end; padding: 12px 0; background: var(--bg); border-top: 1px solid var(--linie); }
 .st-vorschau > summary { display: flex; align-items: center; min-height: var(--h-knopf); padding: 0 16px; background: var(--akz); color: var(--auf-akz); font: 700 1rem var(--f-zwischen); text-transform: uppercase; letter-spacing: var(--etikett-abstand); cursor: pointer; }
 .st-vorschau[open] > summary { margin-bottom: 12px; }
 @media (min-width: 1000px) {
-    .st-raster { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "felder vorschau" "knoepfe vorschau"; align-items: start; }
+    .st-raster { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "felder vorschau"; align-items: start; }
     .st-felder { grid-area: felder; }
-    .st-knoepfe { grid-area: knoepfe; }
     .st-vorschau, .st-ohne-js { grid-area: vorschau; }
     .st-vorschau { position: sticky; top: 84px; }
     .st-vorschau > summary { display: none; }
@@ -912,6 +912,15 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 .vorschau-rahmen { position: relative; overflow: hidden; height: 70vh; min-height: 420px; background: color-mix(in srgb, var(--nachtblau) 55%, var(--schwarz)); border: 1px solid var(--linie); }
 @media (min-width: 1000px) { .vorschau-rahmen { height: calc(100vh - 290px); } }
 .vorschau-frame { position: absolute; top: 0; left: 0; border: 0; background: var(--bg); transform-origin: 0 0; }
+/* Zoom (Rückmeldung nach AP-19): die Fläche hat die verkleinerte Größe, der Rahmen scrollt seitlich */
+.vorschau-rahmen.zoom { overflow-x: auto; overflow-y: hidden; }
+.vorschau-flaeche { position: relative; }
+.vorschau-steuer { justify-content: space-between; }
+.vorschau-steuer .geraet-wahl { flex: 1 1 260px; }
+/* Groß ansehen: die Vorschau füllt das Fenster */
+.st-vorschau.vorschau-gross { position: fixed; inset: 0; z-index: 60; margin: 0; padding: 16px; overflow: auto; background: var(--bg); }
+.st-vorschau.vorschau-gross > summary { display: none; }
+.st-vorschau.vorschau-gross .vorschau-rahmen { height: calc(100vh - 190px); }
 /* Einstellungen als Übersicht (AP-18, E-70 (8), Variante B): Kacheln, die offene über zwei Spalten */
 .einst-raster { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; grid-auto-flow: row dense; }
 @media (min-width: 760px) { .einst-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .einst-kachel:has(> .einst-auf[open]) { grid-column: 1 / -1; } }
@@ -931,7 +940,7 @@ summary.einst-kopf::-webkit-details-marker { display: none; }
 .einst-form { margin-top: 12px; }
 .einst-form .felder { display: grid; gap: 14px; }
 @media (min-width: 760px) { .einst-form .felder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.einst-knoepfe { justify-content: flex-end; }
+.einst-knoepfe { flex-direction: row-reverse; justify-content: flex-start; }
 .einst-mini { margin: 14px 0 10px; padding: 14px; background: var(--bg); border: 1px solid var(--linie); }
 .einst-mini p { margin: 0; }
 .einst-mini .titel { font-size: 1.5rem; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: anywhere; }

@@ -78,9 +78,16 @@ team_seite_kopf($konto, 'Startseite', '/team/startseite', ['skripte' => ['starts
         <section class="kasten stapel">
             <h2 class="zwischen klein-titel">Merke · Fortbildungspunkte</h2>
             <fieldset class="st-gruppe stapel"<?= $nurLesen ? ' disabled' : '' ?>>
+            <?= $startFeld('start_cme_titel') ?>
             <?= $startFeld('start_cme') ?>
         </fieldset></section>
         <p class="meta klein st-fest">Fest, nicht hier zu ändern: <strong>Eckdaten</strong> (aus den <a href="/team/einstellungen">Einstellungen</a>) und <strong>Newsletter-Hinweis</strong>.</p>
+        <?php if (!$nurLesen): // Schwebende Leiste (Rückmeldung nach AP-19): Speichern ohne Herunterscrollen ?>
+        <div class="aktionen st-knoepfe">
+            <a class="knopf zweit" href="/team/startseite">Verwerfen</a>
+            <button class="knopf" type="submit">Speichern</button>
+        </div>
+        <?php endif; ?>
     </div>
 
     <details class="st-vorschau" id="st-vorschau" open hidden>
@@ -93,17 +100,20 @@ team_seite_kopf($konto, 'Startseite', '/team/startseite', ['skripte' => ['starts
                 <button type="button" data-geraet="tablet" data-breite="768" aria-pressed="false">Tablet</button>
             </div>
             <div class="vorschau-hinweise" id="st-hinweise" aria-live="polite"></div>
-            <div class="vorschau-rahmen"><iframe name="st-vorschau-frame" class="vorschau-frame" title="Vorschau der Startseite" src="about:blank" tabindex="-1"></iframe></div>
+            <div class="aktionen vorschau-steuer">
+                <div class="geraet-wahl" role="group" aria-label="Zoom der Vorschau">
+                    <button type="button" data-zoom="0" aria-pressed="true">Einpassen</button>
+                    <button type="button" data-zoom="0.5" aria-pressed="false">50 %</button>
+                    <button type="button" data-zoom="0.75" aria-pressed="false">75 %</button>
+                    <button type="button" data-zoom="1" aria-pressed="false">100 %</button>
+                </div>
+                <button type="button" class="knopf zweit klein" id="st-gross" aria-pressed="false">Groß ansehen</button>
+            </div>
+            <div class="vorschau-rahmen"><div class="vorschau-flaeche"><iframe name="st-vorschau-frame" class="vorschau-frame" title="Vorschau der Startseite" src="about:blank" tabindex="-1"></iframe></div></div>
         </div>
     </details>
     <p class="meta klein st-ohne-js" id="st-ohne-js">Die Vorschau braucht JavaScript. Speichern geht auch ohne; danach zeigt die <a href="/<?= e(va_zeile()['kuerzel'] ?? '') ?>" target="_blank" rel="noopener">Startseite</a> den neuen Stand.</p>
 
-    <?php if (!$nurLesen): ?>
-    <div class="aktionen st-knoepfe">
-        <a class="knopf zweit" href="/team/startseite">Verwerfen</a>
-        <button class="knopf" type="submit">Speichern</button>
-    </div>
-    <?php endif; ?>
 </form>
 <?php
 team_seite_fuss();

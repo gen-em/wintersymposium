@@ -206,6 +206,15 @@ function totp_geheimnis(int $kontoId): ?string
     return oeffnen($paket, 'totp|' . $kontoId);
 }
 
+/**
+ * Festes Geheimnis setzen und gleich einschalten – nur für die Testkonten aus
+ * der config.php auf Staging (testdaten_konten, Rückmeldung nach AP-19).
+ */
+function totp_fest_setzen(int $kontoId, string $roh): void
+{
+    db_ausfuehren('UPDATE konto SET totp_geheimnis = ?, totp_seit = ?, totp_schritt = NULL WHERE id = ?', [versiegeln($roh, 'totp|' . $kontoId), db_jetzt(), $kontoId]);
+}
+
 /** Einrichtung mit einem passenden Code abschließen. Gibt die Codes zurück oder null. */
 function totp_einrichtung_abschliessen(int $kontoId, string $eingabe, ?int $zeit = null): ?array
 {

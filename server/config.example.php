@@ -63,4 +63,15 @@ return [
             'tageslimit' => 450,
         ],
     ],
+
+    // Nur Staging/Entwicklung: feste Testkonten (Rückmeldung nach AP-19), damit Prüfungen
+    // im Browser ohne Einrichtung möglich sind. „Testdaten laden“ bzw. „Testkonten anlegen“
+    // unter Betrieb legt sie an oder setzt Passwort und zweiten Faktor zurück. Werte stehen
+    // NUR hier, nie im Repo (R-10). totp = Geheimnis der Authenticator-App (Base32).
+    // In Produktion wirkungslos.
+    // 'testkonten' => [
+    //     'betreiber'   => ['email' => '…@example.org', 'passwort' => '…', 'totp' => '…'],
+    //     'admin'       => ['email' => '…@example.org', 'passwort' => '…', 'totp' => '…'],
+    //     'teilnehmend' => ['email' => '…@example.org', 'passwort' => '…'],
+    // ],
 ];

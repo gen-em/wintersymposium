@@ -2,6 +2,37 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.2] – 2026-11-01
+
+Rückmeldungen vom Admin nach AP-18 und AP-19 (Staging).
+
+### Neu
+
+- **Startseite bearbeiten:**
+  - „Verwerfen · Speichern“ schwebt am unteren Fensterrand; nach dem Speichern bleibt die Seite an der Stelle.
+  - Vorschau mit Zoom (Einpassen, 50 %, 75 %, 100 %) und „Groß ansehen“ (füllt das Fenster, Esc schließt).
+- **Überschrift „Merke · Fortbildungspunkte“** als Feld der Startseite (Migration 24 setzt den bisherigen Text; leer: Kasten ohne Überschrift).
+- **Dozierende:** Suche nach Name und Funktion.
+- **Newsletter-Mailing:** Postfach newsletter@ vorausgewählt, wenn eingerichtet, sonst Hinweis.
+- **Feste Testkonten auf Staging:** BetreiberIn, Admin, Teilnehmende mit Passwort und zweitem Faktor aus der `config.php` (`testkonten`, nie im Repo); „Testdaten laden“ legt sie mit an, „Testkonten anlegen“ setzt sie einzeln zurück.
+- **Browser-Durchlauf: Abbruch und Teilwiederholung (E-73):** Bricht eine Engine ab, zählt das als Fehler mit Seite und Zeile, und die übrigen Engines laufen weiter. `ergebnis.json` hält je Engine Status, Zahlen, Version und Code-Stand fest. `WS_WIEDERHOLEN=<ordner>` fährt nur die roten oder abgebrochenen Engines neu und übernimmt die grünen samt Fotos in einen gemeinsamen Bericht; geänderte Dateien seit dem alten Stand stehen im Bericht.
+- **Diagnose:** Speichern der Kachel „Reihe & Zielgruppe“ nennt die gespeicherte Reihe; wird die Reihe nicht übernommen, steht der Grund im Fehlerprotokoll.
+
+### Geändert
+
+- Über der Vorschau stehen nur noch die Warnung „Wort ohne Trennstelle getrennt“ und der Hinweis auf leere Kacheln; Größenstufe und gewollte Trennung entfallen.
+- „Allgäu Akut“ steht in allen Newsletter-Listen zuerst und ist hervorgehoben (Bestellen, Verwalten, Mein Konto, Mailings, Team → Newsletter).
+- Das Komponentenblatt ist nicht mehr in der Navigation (Betrieb); es bleibt unter `/team/komponenten` für BetreiberInnen.
+
+### Behoben
+
+- Vorschau der Startseite in Firefox: Kamen zwei Aktualisierungen kurz nacheinander, ging eine verloren, und die Vorschau blieb leer. Jetzt wartet die zweite, bis die erste geladen ist.
+- „Abbrechen“ in den Einstellungen schloss die Kachel nicht, wenn die Adresse schon auf die Kachel zeigte (`#anmeldung`): jetzt ein Knopf, der neu lädt. Enter speichert weiter.
+
+### Doku
+
+- betrieb.md (Startseite, Einstellungen, Newsletter, Dozierende, Testkonten, Komponentenblatt, Teilwiederholung des Browser-Durchlaufs), CLAUDE.md (Komponentenblatt-Adresse, Teilwiederholung), Konzept (E-72, E-73), Prüfprotokoll T-326 bis T-331.
+
 ## [0.30.1] – 2026-11-01
 
 ### Doku

@@ -695,6 +695,12 @@ function migration_katalog(): array
                 "ALTER TABLE rundmail MODIFY auswahl VARCHAR(120) NOT NULL DEFAULT 'angemeldet'",
             ],
         ],
+        24 => [
+            'beschreibung' => 'Überschrift des Kastens „Merke · Fortbildungspunkte“ als Feld der Startseite (Rückmeldung nach AP-19)',
+            'sql' => [
+                "INSERT IGNORE INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_cme_titel', 'Merke · Fortbildungspunkte', UTC_TIMESTAMP() FROM veranstaltung",
+            ],
+        ],
     ];
 }
 

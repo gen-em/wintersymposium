@@ -731,9 +731,13 @@ function programm_kopieren(int $von, int $nach): void
 
 /* ---- Dozierende ---------------------------------------------------------- */
 
-function dozent_liste(): array
+/** Dozierende nach Name; $q sucht in Name und Funktion (Rückmeldung nach AP-19). */
+function dozent_liste(string $q = ''): array
 {
-    return db_zeilen('SELECT d.*, (SELECT COUNT(*) FROM punkt_dozent pd WHERE pd.dozent_id = d.id) AS punkte FROM dozent d ORDER BY d.name');
+    $q = trim($q);
+    $wo = $q === '' ? '' : ' WHERE d.name LIKE ? OR d.funktion LIKE ?';
+    $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+    return db_zeilen('SELECT d.*, (SELECT COUNT(*) FROM punkt_dozent pd WHERE pd.dozent_id = d.id) AS punkte FROM dozent d' . $wo . ' ORDER BY d.name', $q === '' ? [] : [$like, $like]);
 }
 
 function dozent_pruefen(array $e): array

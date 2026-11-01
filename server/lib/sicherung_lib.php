@@ -312,8 +312,54 @@ function testdaten_laden(?int $kontoId): string
     ctx_weg('va_id');
     anm_workshops(true);
     beispieldaten_laden();
+    testdaten_konten($kontoId);
     audit_schreiben('sicherung', 'Testdaten geladen (Sicherung davor: ' . $sicherung . ')', $kontoId);
     return $sicherung;
+}
+
+/** Rollen der Testkonten aus der config.php (Schlüssel testkonten). */
+const TESTDATEN_KONTO_ROLLEN = ['betreiber' => 'Test BetreiberIn', 'admin' => 'Test Admin', 'teilnehmend' => 'Test Teilnehmerin'];
+
+/**
+ * Feste Testkonten auf Staging (Rückmeldung nach AP-19): aus config.php
+ * (testkonten => [rolle => [email, passwort, totp]]) anlegen oder Passwort,
+ * Rolle und zweiten Faktor zurücksetzen. Zugangsdaten stehen nur in der
+ * config.php (R-10). Gibt die Zahl der Konten oder den Fehler je Rolle zurück.
+ */
+function testdaten_konten(?int $durch): array
+{
+    $erg = ['konten' => 0, 'fehler' => []];
+    if (!testdaten_moeglich()) {
+        return $erg;
+    }
+    foreach ((array)konfig('testkonten', []) as $rolle => $d) {
+        $d = (array)$d;
+        $email = mail_adresse((string)($d['email'] ?? ''));
+        $pw = (string)($d['passwort'] ?? '');
+        $roh = (string)($d['totp'] ?? '') !== '' ? totp_base32_dekodieren(strtoupper(str_replace(' ', '', (string)$d['totp']))) : '';
+        if (!isset(TESTDATEN_KONTO_ROLLEN[$rolle]) || $email === null || mb_strlen($pw) < ($rolle === 'teilnehmend' ? PASSWORT_MIN_TN : PASSWORT_MIN_LAENGE)) {
+            $erg['fehler'][] = $rolle . ': Rolle, Adresse oder Passwort (Mindestlänge) ungültig';
+            continue;
+        }
+        $k = konto_per_email($email);
+        $id = $k !== null ? (int)$k['id'] : konto_anlegen(TESTDATEN_KONTO_ROLLEN[$rolle], $email, $rolle, $pw, $durch);
+        if ($k !== null) {
+            konto_passwort_setzen($id, $pw);
+            db_ausfuehren('UPDATE konto SET rolle = ?, aktiv = 1 WHERE id = ?', [$rolle, $id]);
+        }
+        db_ausfuehren('UPDATE konto SET email_bestaetigt_am = COALESCE(email_bestaetigt_am, ?) WHERE id = ?', [db_jetzt(), $id]);
+        if ($rolle !== 'teilnehmend' && strlen($roh) >= 10) {
+            totp_fest_setzen($id, $roh);
+        }
+        if ($rolle === 'admin') {
+            va_rechte_setzen($id, true, [], $durch);
+        }
+        $erg['konten']++;
+    }
+    if ($erg['konten'] > 0) {
+        audit_schreiben('sicherung', 'Testkonten aus der Konfiguration gesetzt: ' . $erg['konten'], $durch);
+    }
+    return $erg;
 }
 
 /** Herunterladen einer Sicherung protokollieren (vor der Auslieferung). */

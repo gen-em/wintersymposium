@@ -34,7 +34,8 @@ const NL_INTERESSEN = ['klinik' => 'Klinik', 'praeklinik' => 'Präklinik'];
 
 function nl_listen(bool $nurSichtbar = false): array
 {
-    return db_zeilen('SELECT * FROM newsletter_liste' . ($nurSichtbar ? ' WHERE sichtbar = 1' : '') . ' ORDER BY pos, id');
+    // Allgäu Akut (Dachmarke) zuerst: der große Newsletter (Rückmeldung nach AP-19)
+    return db_zeilen('SELECT * FROM newsletter_liste' . ($nurSichtbar ? ' WHERE sichtbar = 1' : '') . " ORDER BY art = 'dachmarke' DESC, pos, id");
 }
 
 function nl_liste(int $id): ?array
@@ -146,15 +147,17 @@ function nl_listen_html(array $gewaehlt, string $interessen, array $abos = []): 
     $h = '';
     foreach (nl_listen(true) as $l) {
         $lid = (int)$l['id'];
-        $h .= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => $lid, 'wert' => in_array($lid, $gewaehlt, true),
-            'label_html' => '<strong>' . e($l['name']) . '</strong>' . (($abos[$lid] ?? '') === 'offen' ? ' ' . chip('offen', 'wartet auf Bestätigung') : '')
+        $dm = $l['art'] === 'dachmarke';
+        // Allgäu Akut hervorgehoben in einem Akzent-Kasten (Rückmeldung nach AP-19)
+        $h .= ($dm ? '<div class="kasten akzent-kasten stapel">' : '') . feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => $lid, 'wert' => in_array($lid, $gewaehlt, true),
+            'label_html' => '<strong>' . e($l['name']) . '</strong>' . ($dm ? ' ' . chip('rolle', 'alle Fortbildungen') : '') . (($abos[$lid] ?? '') === 'offen' ? ' ' . chip('offen', 'wartet auf Bestätigung') : '')
                 . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]);
-        if ($l['art'] === 'dachmarke') {
+        if ($dm) {
             $h .= '<fieldset class="feld nl-interessen"><legend>Interessiert an <span class="meta">(mindestens eins)</span></legend><div class="wahl wahl-reihe">';
             foreach (NL_INTERESSEN as $ik => $it) {
                 $h .= '<label><input type="checkbox" name="nl_interesse[]" value="' . e($ik) . '"' . (in_array($ik, $iw, true) ? ' checked' : '') . '><span>' . e($it) . '</span></label>';
             }
-            $h .= '</div></fieldset>';
+            $h .= '</div></fieldset></div>';
         }
     }
     return $h;

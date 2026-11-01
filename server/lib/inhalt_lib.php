@@ -297,6 +297,7 @@ const START_TEXTE = [
     'start_kachel_3_text' => ['Kachel 3 – Text', 'block', '', 'infos'],
     'start_programm_kicker' => ['Zeile darüber', 'text', '', 'programm'],
     'start_programm_titel' => ['Überschrift', 'inline', '', 'programm'],
+    'start_cme_titel' => ['Überschrift', 'text', 'Leer: Kasten ohne Überschrift.', 'merke'],
     'start_cme' => ['Text', 'block', 'Leer: kein Kasten.', 'merke'],
 ];
 
@@ -304,7 +305,7 @@ const START_TEXTE = [
 const START_ABSCHNITTE = ['kopf' => 'Kopf', 'infos' => 'Worum es geht', 'programm' => 'Programm', 'merke' => 'Merke · Fortbildungspunkte'];
 
 /** Startwerte für eine neue Veranstaltung ohne Vorlage und beim Update (Migration 22): die bisher festen Texte. */
-const START_STANDARD = ['start_infos_kicker' => 'Worum es geht', 'start_programm_kicker' => 'Programm', 'start_programm_titel' => 'Der Abend im Überblick'];
+const START_STANDARD = ['start_infos_kicker' => 'Worum es geht', 'start_programm_kicker' => 'Programm', 'start_programm_titel' => 'Der Abend im Überblick', 'start_cme_titel' => 'Merke · Fortbildungspunkte'];
 
 /** Längste Zeile einfacher Textfelder (Sticker, Zeilen über Überschriften). */
 const START_TEXT_MAX = 120;
@@ -541,7 +542,7 @@ function start_html(array $w): string
             . programm_html(programm_veroeffentlicht()['punkte'] ?? []) . '</div></section>';
     }
     if ($w['start_cme'] !== '') {
-        $h .= '<section class="abschnitt"><div class="innen"><div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p>' . editor_html($w['start_cme']) . '</div></div></section>';
+        $h .= '<section class="abschnitt"><div class="innen"><div class="merke">' . ($w['start_cme_titel'] !== '' ? '<p class="kicker">' . e($w['start_cme_titel']) . '</p>' : '') . editor_html($w['start_cme']) . '</div></div></section>';
     }
     return $h . '<section class="abschnitt"><div class="innen">'
         . '<p class="nl-hinweis"><span class="kicker">Newsletter</span> Termine und Neuigkeiten per Mail – kostenlos, jederzeit abbestellbar. <a href="/newsletter">Newsletter bestellen</a></p>'

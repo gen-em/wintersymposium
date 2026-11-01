@@ -110,6 +110,39 @@ function test_reihen(): void
     pruefe(va_interesse('ÄrztIn') === 'klinik' && va_interesse('NotfallsanitäterIn') === 'praeklinik', 'gespeicherte Vorauswahl gilt, sonst die Regel');
     pruefe(va_gruppe_pruefen([VA_BG_INTERESSE => ['ÄrztIn' => 'irgendwas']], 'listen')['fehler'] !== [], 'ungültige Zuordnung abgelehnt');
 
+    abschnitt('Rückmeldung nach AP-19: Allgäu Akut zuerst, Überschrift Merke (T-326, T-330)');
+    pruefe(nl_listen()[0]['art'] === 'dachmarke' && nl_listen(true)[0]['art'] === 'dachmarke' && array_key_first(nl_zahlen()) === $dm, 'Allgäu Akut steht in allen Listen zuerst');
+    pruefe(str_contains(nl_listen_html([], 'klinik'), '<div class="kasten akzent-kasten stapel">') && strpos(nl_listen_html([], 'klinik'), 'Allgäu Akut') < strpos(nl_listen_html([], 'klinik'), 'Wintersymposium'), 'Formular: Allgäu Akut zuerst, hervorgehoben');
+    $w = start_werte();
+    pruefe($w['start_cme_titel'] === 'Merke · Fortbildungspunkte' && str_contains(start_html($w), '<div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p>'), 'Überschrift Merke: Startwert (Migration 24)');
+    $h = start_html(array_merge($w, ['start_cme_titel' => 'Gut zu wissen']));
+    $h0 = start_html(array_merge($w, ['start_cme_titel' => '']));
+    pruefe(str_contains($h, '<p class="kicker">Gut zu wissen</p>') && str_contains($h0, '<div class="merke"><p>') && !str_contains($h0, 'Merke · Fortbildungspunkte'), 'Überschrift änderbar, leer: Kasten ohne Überschrift');
+    db_ausfuehren("DELETE FROM inhalt WHERE schluessel = 'start_cme_titel'");
+    db()->exec(migration_katalog()[24]['sql'][0]);
+    ctx_weg('inhalt_cache');
+    pruefe(inhalt('start_cme_titel') === 'Merke · Fortbildungspunkte', 'Migration 24 setzt den Startwert je Veranstaltung');
+
+    abschnitt('Feste Testkonten aus der config.php (Rückmeldung nach AP-19, T-330)');
+    $cfgDatei = konfig_datei();
+    $cfgAlt = (string)file_get_contents($cfgDatei);
+    $cfg = require $cfgDatei;
+    $geheim = totp_base32(random_bytes(20));
+    $cfg['testkonten'] = ['betreiber' => ['email' => 'tb@example.org', 'passwort' => 'test-betreiber-pw', 'totp' => $geheim], 'admin' => ['email' => 'ta@example.org', 'passwort' => 'test-admin-pw-1', 'totp' => $geheim],
+        'teilnehmend' => ['email' => 'tt@example.org', 'passwort' => 'test-tn-pw'], 'unsinn' => ['email' => 'x@example.org', 'passwort' => 'xxxxxxxxxxxx']];
+    file_put_contents($cfgDatei, '<?php return ' . var_export($cfg, true) . ";\n");
+    konfig_verwerfen();
+    $tk = testdaten_konten(null);
+    $tb = konto_per_email('tb@example.org');
+    $tt = konto_per_email('tt@example.org');
+    pruefe($tk['konten'] === 3 && count($tk['fehler']) === 1 && $tb['rolle'] === 'betreiber' && password_verify('test-betreiber-pw', $tb['passwort_hash']) && totp_an((int)$tb['id'])
+        && totp_code_passt((string)totp_geheimnis((int)$tb['id']), totp_code(totp_base32_dekodieren($geheim), time()), time(), null) !== null && $tt['rolle'] === 'teilnehmend' && $tt['email_bestaetigt_am'] !== null, 'Testkonten angelegt: Passwort, zweiter Faktor mit dem Geheimnis aus der Config, Teilnehmerin bestätigt; unbekannte Rolle abgelehnt');
+    konto_passwort_setzen((int)$tb['id'], 'anderes-passwort-1');
+    testdaten_konten(null);
+    pruefe(password_verify('test-betreiber-pw', konto_per_email('tb@example.org')['passwort_hash']) && va_erlaubte_ids(konto_per_email('ta@example.org')) === null, 'erneut: Passwort zurückgesetzt, Admin für alle Veranstaltungen');
+    file_put_contents($cfgDatei, $cfgAlt);
+    konfig_verwerfen();
+
     abschnitt('Beispieldaten (AP-19 Unterpunkt 8, T-324)');
     $rita = beispieldaten_admin_reihe();
     $rk = konto_laden($rita);
