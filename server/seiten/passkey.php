@@ -22,8 +22,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 if (!csrf_ok()) {
     json_antwort(403, ['ok' => false, 'fehler' => 'Die Seite war zu alt. Bitte neu laden.']);
 }
-$aktion = (string)($_POST['aktion'] ?? '');
-$antwort = json_decode((string)($_POST['antwort'] ?? ''), true);
+$aktion = aktion();
+$antwort = json_decode(post_text('antwort'), true);
 $nein = fn(string $t) => json_antwort(400, ['ok' => false, 'fehler' => $t]);
 
 /** Für wen wird angelegt? Eingeloggt (tk) oder halber Team-Login ohne zweiten Faktor (Einrichtung). */
@@ -67,7 +67,7 @@ try {
             if ($z['konto'] === null) {
                 $nein('Bitte logge dich zuerst ein.');
             }
-            if (!$z['einrichtung'] && ($f = passwort_bestaetigen($z['konto'], (string)($_POST['pw'] ?? ''))) !== null) {
+            if (!$z['einrichtung'] && ($f = passwort_bestaetigen($z['konto'], post_text('pw'))) !== null) {
                 $nein($f);
             }
             json_antwort(200, ['ok' => true, 'optionen' => pk_anlage_optionen($z['konto'])]);
@@ -78,7 +78,7 @@ try {
             }
             $kid = (int)$z['konto']['id'];
             try {
-                pk_anlegen($kid, is_array($antwort) ? $antwort : [], (string)($_POST['bezeichnung'] ?? ''));
+                pk_anlegen($kid, is_array($antwort) ? $antwort : [], post_text('bezeichnung'));
             } catch (PkFehler $f) {
                 $nein(str_contains($f->getMessage(), 'Höchstens') || str_contains($f->getMessage(), 'schon') ? $f->getMessage() . '.' : 'Der Passkey wurde nicht angenommen. Prüfe, ob dein Gerät mit Fingerabdruck, Gesicht oder PIN entsperrt wird, und versuch es noch einmal.');
             }

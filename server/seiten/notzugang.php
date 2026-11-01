@@ -16,15 +16,14 @@ team_sitzung();
 $fehler = [];
 $link = null;
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     $ip = rate_merkmal_ip();
     if (!rate_erlaubt('notzugang', $ip)) {
         $fehler[] = rate_text('notzugang');
     } else {
         $beginn = microtime(true);
-        $schluesselOk = hash_equals((string)konfig('installations_schluessel'), (string)($_POST['schluessel'] ?? ''));
-        $k = konto_per_email((string)($_POST['email'] ?? ''));
+        $schluesselOk = hash_equals((string)konfig('installations_schluessel'), post_text('schluessel'));
+        $k = konto_per_email(post_text('email'));
         rate_gleiche_dauer($beginn);
         if ($schluesselOk && $k !== null && $k['rolle'] === 'betreiber') {
             rate_erfolg('notzugang', $ip);
@@ -43,7 +42,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 seite_kopf('Notzugang', ['nav' => false]);
-echo '<div class="innen seitenkopf"><p class="kicker">Team-Bereich</p><h1 class="titel">Notzugang</h1></div><div class="innen schmal">';
+echo seiten_kopfzeile('Notzugang', 'Team-Bereich') . '<div class="innen schmal">';
 echo fehler_html($fehler);
 if ($link !== null): ?>
 <div class="kasten link-kasten">
@@ -55,10 +54,8 @@ if ($link !== null): ?>
 <p>Nur für BetreiberInnen, die Handy und Wiederherstellungscodes verloren haben. Du brauchst den Installationsschlüssel aus der <span class="mono">config.php</span> auf dem Webspace.</p>
 <form method="post" action="/notzugang" class="formular">
     <?= csrf_feld() ?>
-    <label for="schluessel">Installationsschlüssel</label>
-    <input id="schluessel" name="schluessel" type="password" required autocomplete="off">
-    <label for="email">E-Mail-Adresse des BetreiberIn-Kontos</label>
-    <input id="email" name="email" type="email" required maxlength="254" autocomplete="username">
+    <?= feld('schluessel', 'Installationsschlüssel', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['autocomplete' => 'off']]) ?>
+    <?= feld('email', 'E-Mail-Adresse des BetreiberIn-Kontos', ['typ' => 'email', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'username']]) ?>
     <button type="submit" class="knopf">Zweiten Faktor zurücksetzen</button>
 </form>
 <?php endif;

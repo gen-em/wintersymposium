@@ -22,10 +22,9 @@ $k = $fund['konto'];
 $neu = $fund['link']['zweck'] === 'einrichten';
 $fehler = [];
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
-    $pw = (string)($_POST['passwort'] ?? '');
-    $f = passwort_regel_fehler($pw, (string)($_POST['passwort2'] ?? ''));
+if (ist_post()) {
+    $pw = post_text('passwort');
+    $f = passwort_regel_fehler($pw, post_text('passwort2'));
     if ($f !== null) {
         $fehler[] = $f;
     } elseif (konto_link_verbrauchen((int)$fund['link']['id'])) {
@@ -39,7 +38,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 seite_kopf($neu ? 'Konto einrichten' : 'Neues Passwort', ['nav' => false]);
-echo '<div class="innen seitenkopf"><p class="kicker">Team-Bereich</p><h1 class="titel">' . ($neu ? 'Konto einrichten' : 'Neues Passwort') . '</h1></div><div class="innen schmal">';
+echo seiten_kopfzeile($neu ? 'Konto einrichten' : 'Neues Passwort', 'Team-Bereich') . '<div class="innen schmal">';
 echo fehler_html($fehler);
 ?>
 <p>Hallo <?= e($k['name']) ?> (<?= e($k['email']) ?>). Lege dein Passwort fest<?= $neu ? '; danach richtest du den zweiten Faktor ein' : '' ?>.</p>
@@ -47,10 +46,8 @@ echo fehler_html($fehler);
     <?= csrf_feld() ?>
     <input type="hidden" name="t" value="<?= e($token) ?>">
     <input type="text" name="email" value="<?= e($k['email']) ?>" autocomplete="username" hidden>
-    <label for="passwort">Passwort (mindestens <?= PASSWORT_MIN_LAENGE ?> Zeichen)</label>
-    <input id="passwort" name="passwort" type="password" required minlength="<?= PASSWORT_MIN_LAENGE ?>" autocomplete="new-password">
-    <label for="passwort2">Passwort wiederholen</label>
-    <input id="passwort2" name="passwort2" type="password" required minlength="<?= PASSWORT_MIN_LAENGE ?>" autocomplete="new-password">
+    <?= feld('passwort', 'Passwort (mindestens ' . PASSWORT_MIN_LAENGE . ' Zeichen)', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['minlength' => PASSWORT_MIN_LAENGE, 'autocomplete' => 'new-password']]) ?>
+    <?= feld('passwort2', 'Passwort wiederholen', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['minlength' => PASSWORT_MIN_LAENGE, 'autocomplete' => 'new-password']]) ?>
     <button type="submit" class="knopf">Passwort speichern</button>
 </form>
 <?php

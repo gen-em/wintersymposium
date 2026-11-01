@@ -335,6 +335,7 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .text p, .text ul { margin: 0 0 12px; }
 .seitenkopf { padding-top: 40px; padding-bottom: 10px; }
 .seitenkopf .titel { font-size: clamp(2.3rem, 8vw, 4.6rem); }
+.seitenkopf .text { margin: 10px 0 0; }
 .hinweis-leer { color: var(--meta); font-style: italic; }
 
 /* ---- Formulare (Installer; später Anmeldung) ---- */

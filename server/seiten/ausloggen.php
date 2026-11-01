@@ -8,12 +8,10 @@ declare(strict_types=1);
  */
 
 team_sitzung();
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+if (!ist_post()) {
     umleiten(anmeldung_konto() !== null ? '/team' : '/einloggen');
 }
-csrf_pruefen();
 $warTeam = anmeldung_konto() !== null;
 anmeldung_beenden();
 team_sitzung();
-flash_setzen('ok', 'Du bist ausgeloggt.');
-umleiten($warTeam ? '/einloggen' : '/deine-anmeldung');
+fertig('ok', 'Du bist ausgeloggt.', $warTeam ? '/einloggen' : '/deine-anmeldung');
