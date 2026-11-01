@@ -29,7 +29,7 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 | AP-8 | Kaneo-Instanz | entfallen (E-15) | – | – |
 | AP-11 | Mehrere Veranstaltungen (E-58) | umgesetzt, Staging offen | lokal T-254 bis T-259 | Staging: Migration der echten Daten, neue Veranstaltung anlegen, abschließen (siehe unten) |
 | AP-10 | Teilnahme und Zertifikate (E-57) | umgesetzt, Staging offen | lokal T-190 bis T-195, T-251 bis T-253 | Staging: Zertifikat drucken, Barcode scannen, Ablauf am Veranstaltungstag (siehe unten) |
-| AP-17 | Vereinheitlichung (E-69) | geplant | – | T-297 bis T-308 (ein Test je Unterpunkt, bei der Umsetzung anlegen; Bildschirmfoto-Vergleich vorher/nachher) |
+| AP-17 | Vereinheitlichung (E-69) | Teil 1 (Unterpunkte 1 bis 6) umgesetzt, Staging offen; Teil 2 in Arbeit | lokal T-297 bis T-302 | Staging Teil 1 (siehe unten); T-303 bis T-308 mit Teil 2 |
 | AP-16 | Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (E-63) | umgesetzt, Staging offen | lokal T-288 bis T-296 | Staging (siehe unten); T-296 Proxy-Prüfung durch den Admin |
 | AP-15 | Status-Seite unter Betrieb (E-65) | auf Staging abgenommen | lokal und Staging T-282 bis T-287 | – |
 | AP-14 | Review-Behebung 1: Sicherheit und schwere Bugs (E-63) | umgesetzt, Staging offen | lokal T-275 bis T-281 | Staging (siehe unten) |
@@ -196,6 +196,14 @@ Zu jedem Arbeitspaket aus `docs/konzept.md` Abschnitt 6 steht hier, was geprüft
 - {id: T-259, ap: AP-11, was: "Wiederkehrende und Bausteine", wie: "ohne Konto: „Link per Mail“ schickt „Daten übernehmen“, Formular vorausgefüllt; Veranstaltung ohne Essen bzw. ohne Fortbildungspunkte fragt nicht danach", status: "lokal bestanden"}
 - {id: T-253, ap: AP-6, was: "Tageslimit als Zahl (Fehler aus AP-6)", wie: "4 Mails am Tag verschickt, Grenze 360 → Rundmail geht trotzdem raus (vorher als Text verglichen: blieb liegen)", status: "lokal bestanden (Regressionstest)"}
 
+# AP-17 Vereinheitlichung, Teil 1 (E-69)
+- {id: T-297, ap: AP-17, was: "Unterpunkt 1: Code-Konventionen", wie: "Konzept 5a; lauf.php: Grep-Tests in tools/tests/konventionen.php (Typografie „…“, „ – “, „“ in PHP- und JS-Texten; Wortliste ohne Ausnahmen)", status: "lokal bestanden"}
+- {id: T-298, ap: AP-17, was: "Unterpunkt 2: kleine Helfer", wie: "lauf.php: 15 Unit-Tests (dauer_text 0/1/59 s, eine Minute, 90 Minuten, 72 Stunden, 4 Tage, negativ; bytes_text 0 B, 1 B, 4 MB, 1,5 MB; person_name mit Leerzeichen und fehlenden Teilen; db_zeit/db_ts/db_tag; rate_text; anm_nummer); Grep-Test gmdate außerhalb db_lib ≤ 5 (4)", status: "lokal bestanden"}
+- {id: T-299, ap: AP-17, was: "Unterpunkt 3: formular_lib", wie: "tools/tests/formular_helfer.php (aus lauf.php, eigener Prozess): 23 Tests auf Markup, Escaping (Name mit <, Wert mit \"), aria-describedby auf Hilfe und Fehler, required, Auswahl, Haken, Radio-Reihe, Passwort ohne Wert, aktion_knopf mit CSRF, bestaetigung_html (rot, grün, im umgebenden Formular), kachel, chip, filter_chips, filter_leiste, leer_hinweis, seiten_kopfzeile, meldung_html, post_*", status: "lokal bestanden"}
+- {id: T-300, ap: AP-17, was: "Unterpunkt 4: alle Seiten auf die Helfer", wie: "lauf.php und http_tests.php unverändert grün (Regressionstest); Grep-Tests: keine db_* in Seiten, keine Feld-Closures, keine Einknopf-Formulare von Hand; Bildvergleich je Seite gegen den Ausgangsstand (Chromium Handy und Desktop breit); Browser-Durchlauf Stufe 3 nach Unterpunkt 4", status: "lokal bestanden"}
+- {id: T-301, ap: AP-17, was: "Unterpunkt 5: CSS ein System", wie: "lauf.php: Grep-Test jede Klasse in site.css im Markup und umgekehrt (Ausnahmen mit Grund); Regelmenge vor/nach dem Umsortieren gleich (705), Paare gleicher Spezifität mit getauschter Reihenfolge maschinell gesucht; Bildvergleich Chromium in vier Breiten; Messung der Schriftlage in Knöpfen in drei Engines", status: "lokal bestanden"}
+- {id: T-302, ap: AP-17, was: "Unterpunkt 6: Komponentenblatt", wie: "http_tests: Admin → 403, BetreiberIn → 200 mit allen 11 Abschnitten und Aufrufen, Beispiel-POST ändert nichts; Browser-Durchlauf fotografiert /team/komponenten in allen Engines und Breiten (Dialoge, Menü, Aufklapper)", status: "lokal bestanden"}
+
 # AP-16 Review-Behebung 2 (E-63)
 - {id: T-288, ap: AP-16, was: "B-4: Sitzungseintrag an die Veranstaltung gebunden", wie: "lauf.php: Konto mit Anmeldung nur in der abgeschlossenen Veranstaltung → im Kontext der aktuellen null; abgeleiteter Eintrag mit va der alten im Kontext der aktuellen verworfen; Eintrag aus Einmal-Link bleibt (E-58); mit gesetztem Kontext keine Ableitung; öffentlich verknüpfte Anmeldung mit va; http_tests: Team-Mitglied öffnet Personen der alten Veranstaltung, danach /deine-anmeldung → aktuelle; Archivseite ändert nichts", status: "lokal bestanden"}
 - {id: T-289, ap: AP-16, was: "B-6: ausgeblendete Newsletter-Listen bleiben", wie: "lauf.php: Abo auf sichtbarer A und ausgeblendeter B; nur A gespeichert → B bleibt; nichts angekreuzt → A weg, B bleibt", status: "lokal bestanden"}
@@ -351,6 +359,15 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 1. Team-Bereich → „Einstellungen“: Seite ansehen (es gibt kein Mockup dafür) und sagen, ob Aufbau und Texte passen.
 2. Eine Kleinigkeit ändern (z. B. Kapazität), speichern → Startseite zeigt den neuen Wert.
 3. Datums- und Zeitfelder in deinem Browser: Format TT.MM.JJJJ und 24-Stunden-Uhrzeit (in der Sandbox seit 0.5.0 in Chromium, Firefox und WebKit mit deutschem Format geprüft; WebKit unter Linux zusätzlich mit Sekunden, siehe betrieb.md 6).
+
+### Noch zu prüfen für AP-17 Vereinheitlichung, Teil 1 (nach Merge auf Staging)
+
+Ziel: Alles sieht aus und funktioniert wie vorher, bis auf die Punkte im CHANGELOG 0.27.0 unter „Geändert (sichtbar, gewollt)“.
+
+1. **Komponentenblatt:** Team-Bereich → Betrieb → Komponenten. Erwartet: alle Abschnitte (Typografie bis Menüs) mit Beispielen; die Dialog-Knöpfe öffnen den bekannten Dialog; „Speichern“ oder ein Beispiel-Knopf meldet nur „Beispiel – es wurde nichts geändert.“
+2. **Knöpfe auf deinem Gerät (Mac/iPhone):** Startseite, ein Workshop-Popup („Zur Anmeldung“, „Schon angemeldet?“) und Einloggen. Erwartet: Text in Knöpfen und Chips sitzt mittig, nicht mehr zu hoch.
+3. **Drei Seiten, auf denen viel umgebaut wurde:** Personen (eine Person öffnen, Daten ändern, Rolle ändern …, Stornieren …), Meine Anmeldung → Daten ändern, Einstellungen (Schloss-Symbol). Erwartet: gleiche Felder und Abläufe wie vorher.
+4. **Tablet hochkant (ca. 768 px) und schmaler Laptop (ca. 1000 px):** Team-Übersicht und Personen. Erwartet: Bei 900 bis 999 px sind die zweispaltigen Raster einspaltig, und Tabellen zeigen Karten. Das ist gewollt (E-69 (6)); sag Bescheid, wenn dir eine Breite unangenehm auffällt.
 
 ### Noch zu prüfen für AP-16 Review-Behebung 2 (nach Merge auf Staging)
 
