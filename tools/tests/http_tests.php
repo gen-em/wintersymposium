@@ -921,6 +921,22 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe($r['status'] === 303 && (int)db_wert('SELECT COUNT(*) FROM programmpunkt') === $vorher['punkte'] && (int)db_wert('SELECT COUNT(*) FROM anmeldung') === $vorher['anm'], 'Wiederherstellen: Stand vor den Testdaten zurück');
     pruefe(count(sicherung_liste()) === count($alt) + 3 && http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 200, 'davor automatisch gesichert, Team bleibt eingeloggt');
     status_http_tests($basis, $h, $b);
+    komponenten_http_tests($basis, $h, $b);
+}
+
+/** Betrieb → Komponenten (AP-17 Unterpunkt 6, E-64 (1)): alle Abschnitte, Beispiele ändern nichts. */
+function komponenten_http_tests(string $basis, string $h, string $b): void
+{
+    abschnitt('HTTP: Komponentenblatt (AP-17 Unterpunkt 6)');
+    $r = http_anfrage($basis, 'GET', '/team/komponenten', $h, [], null, $b);
+    $abschnitte = ['typografie', 'knoepfe', 'felder', 'kaesten', 'chips', 'meldungen', 'kacheln', 'filter', 'tabellen', 'dialoge', 'menues'];
+    $da = array_filter($abschnitte, fn($a) => str_contains($r['text'], 'id="' . $a . '"'));
+    pruefe($r['status'] === 200 && count($da) === count($abschnitte), 'Betreiber: Komponentenblatt mit allen ' . count($abschnitte) . ' Abschnitten');
+    pruefe(substr_count($r['text'], 'class="kb-code"') >= count($abschnitte) && str_contains($r['text'], 'class="bestaetigen"') && str_contains($r['text'], 'class="kachel"'), 'je Abschnitt der Aufruf als Text, Helfer erzeugen das Markup');
+    pruefe(str_contains($r['text'], 'href="/team/komponenten" aria-current="page"'), 'Unterseite „Komponenten“ unter Betrieb aktiv');
+    $a0 = (int)db_wert('SELECT COUNT(*) FROM audit');
+    $r = http_anfrage($basis, 'POST', '/team/komponenten', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'beispiel'], $b);
+    pruefe($r['status'] === 303 && (int)db_wert('SELECT COUNT(*) FROM audit') === $a0, 'Beispiel-Aktion ändert nichts (nur Hinweis)');
 }
 
 /** Betrieb → Status (AP-15, E-65): Seite, Cron-Anleitung, Token nach Klick, Fehlerprotokoll. */
@@ -1178,10 +1194,10 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
     pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $aktuell, $h, [], null, $k)['status'] === 403, 'fremde Veranstaltung per ?va= abgewiesen (403)');
     pruefe(http_anfrage($basis, 'GET', '/team/personen?a=' . $fremdAnm, $h, [], null, $k)['status'] === 404, 'Anmeldung einer fremden Veranstaltung: 404');
     $nur = [];
-    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten', '/team/status'] as $pfad) {
+    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten', '/team/status', '/team/komponenten'] as $pfad) {
         $nur[] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
     }
-    pruefe($nur === [403, 403, 403, 403, 403, 403], 'Betrieb-Seiten (auch Status, AP-15) nur für BetreiberInnen');
+    pruefe($nur === [403, 403, 403, 403, 403, 403, 403], 'Betrieb-Seiten (auch Status, AP-15, und Komponenten, AP-17) nur für BetreiberInnen');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $k)['text'], 'name="start_kachel_1_titel"') && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja (bei den Einstellungen), Newsletter-Export nein');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');

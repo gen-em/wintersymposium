@@ -89,7 +89,7 @@ function betrieb_alter_text(int $sekunden): string
 
 function betrieb_zeit_ts(?string $utc): ?int
 {
-    return $utc === null || $utc === '' ? null : (int)strtotime($utc . ' UTC');
+    return $utc === null || $utc === '' ? null : db_ts($utc);
 }
 
 function betrieb_zeile_cron(int $jetzt): array
@@ -103,7 +103,7 @@ function betrieb_zeile_cron(int $jetzt): array
     $ampel = $alter >= BETRIEB_CRON_ROT_S ? 'fehler' : ($alter >= BETRIEB_CRON_GELB_S ? 'warnung' : 'ok');
     $text = 'Letzter Lauf ' . betrieb_alter_text($alter) . ($ampel === 'ok' ? '.' : ' – er sollte alle 5 Minuten laufen.');
     return ['ampel' => $ampel, 'text' => $text, 'details' => [
-        ['Letzter Lauf', datum_zeit_text(gmdate('Y-m-d H:i:s', $ts))],
+        ['Letzter Lauf', datum_zeit_text(db_zeit($ts))],
         ['Ausgelöst über', $ausloeser === 'cli' ? 'Shell-Cronjob' : ($ausloeser === 'url' ? 'URL-Aufruf' : $ausloeser)],
     ]];
 }
@@ -215,9 +215,9 @@ function betrieb_zeile_sicherung(int $jetzt): array
         }
     }
     $details = [
-        ['Vorhanden', count($liste) . ' (' . betrieb_groesse_text($groesse) . ')'],
-        ['Letzte automatische', $auto !== null ? datum_zeit_text(gmdate('Y-m-d H:i:s', $auto)) : 'keine'],
-        ['Letzte von Hand', $hand !== null ? datum_zeit_text(gmdate('Y-m-d H:i:s', $hand)) : 'keine'],
+        ['Vorhanden', count($liste) . ' (' . bytes_text($groesse) . ')'],
+        ['Letzte automatische', $auto !== null ? datum_zeit_text(db_zeit($auto)) : 'keine'],
+        ['Letzte von Hand', $hand !== null ? datum_zeit_text(db_zeit($hand)) : 'keine'],
     ];
     if ($auto === null) {
         return ['ampel' => 'fehler', 'text' => 'Es gibt keine automatische Sicherung. Sie entsteht über den Cron alle 3 Stunden.', 'details' => $details, 'link' => '/team/daten'];
@@ -303,23 +303,15 @@ function betrieb_fehlerlog_leeren(?int $kontoId): bool
     return true;
 }
 
-function betrieb_groesse_text(int $b): string
-{
-    if ($b === 0) {
-        return '0 KB';
-    }
-    return $b >= 1048576 ? zahl_text($b / 1048576, 1) . ' MB' : zahl_text(max(1, (int)round($b / 1024))) . ' KB';
-}
-
 function betrieb_zeile_fehlerlog(int $jetzt): array
 {
     $st = betrieb_fehlerlog_stand();
-    $details = [['Größe', betrieb_groesse_text($st['groesse'])], ['Einträge', (string)$st['zeilen']], ['Zuletzt geleert', $st['geleert'] !== null ? datum_zeit_text($st['geleert']) : 'noch nie']];
+    $details = [['Größe', bytes_text($st['groesse'])], ['Einträge', (string)$st['zeilen']], ['Zuletzt geleert', $st['geleert'] !== null ? datum_zeit_text($st['geleert']) : 'noch nie']];
     $seit = $st['geleert'] !== null ? ' seit dem Leeren am ' . datum_zeit_text($st['geleert']) : '';
     if ($st['zeilen'] === 0) {
         return ['ampel' => 'ok', 'text' => 'Keine Einträge' . $seit . '.', 'details' => $details];
     }
-    return ['ampel' => 'warnung', 'text' => $st['zeilen'] . ($st['zeilen'] === 1 ? ' Eintrag' : ' Einträge') . $seit . ' (' . betrieb_groesse_text($st['groesse']) . ').', 'details' => $details];
+    return ['ampel' => 'warnung', 'text' => $st['zeilen'] . ($st['zeilen'] === 1 ? ' Eintrag' : ' Einträge') . $seit . ' (' . bytes_text($st['groesse']) . ').', 'details' => $details];
 }
 
 /* ---- Umgebung ------------------------------------------------------------- */

@@ -28,7 +28,7 @@ json_antwort(200, [
     'ampel' => betrieb_gesamt($zeilen),
     'version' => app_version(),
     'umgebung' => umgebung(),
-    'zeit' => iso_utc(db_jetzt()),
+    'zeit' => jetzt_iso(),
     'schema' => ['ist' => migration_ist(), 'soll' => migration_soll()],
     'wartung' => wartung_aktiv(),
     'zeilen' => betrieb_status_json($zeilen),

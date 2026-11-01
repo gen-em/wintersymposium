@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Ohne oder mit falschem Token 404. Die Antwort ist eine kurze JSON-Übersicht.
  */
 
-$token = (string)($_GET['token'] ?? ($_POST['token'] ?? ''));
+$token = (string)($_GET['token'] ?? post_text('token'));
 $merkmal = rate_merkmal_ip();
 if (!rate_erlaubt('jobs', $merkmal)) {
     nicht_gefunden();

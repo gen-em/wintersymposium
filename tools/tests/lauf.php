@@ -86,6 +86,30 @@ pruefe(lokal_nach_utc('2027-01-20 09:00') === '2027-01-20 08:00:00', 'Ortszeit �
 pruefe(zahl_text(1234.5, 1) === '1.234,5', 'zahl_text');
 pruefe(iso_utc('2026-10-29 12:00:00') === '2026-10-29T12:00:00Z', 'iso_utc');
 
+abschnitt('Kleine Helfer (AP-17 Unterpunkt 2)');
+pruefe(datum_zeit_text('2027-01-20 18:30:00', uhr: true) === '20.01.2027, 19:30 Uhr', 'datum_zeit_text mit „Uhr“');
+pruefe(dauer_text(0) === '0 Sekunden' && dauer_text(1) === 'eine Sekunde' && dauer_text(59) === '59 Sekunden', 'dauer_text: Sekunden');
+pruefe(dauer_text(60) === 'eine Minute' && dauer_text(119) === 'eine Minute' && dauer_text(900) === '15 Minuten' && dauer_text(5400) === '90 Minuten', 'dauer_text: Minuten (auch 90 Minuten statt 1,5 Stunden)');
+pruefe(dauer_text(3600) === 'eine Stunde' && dauer_text(48 * 3600) === '48 Stunden' && dauer_text(72 * 3600) === '72 Stunden', 'dauer_text: Stunden bis 72');
+pruefe(dauer_text(86400 * 4) === '4 Tage' && dauer_text(400 * 86400) === '400 Tage' && dauer_text(-5) === '0 Sekunden', 'dauer_text: Tage, negativ wird 0');
+pruefe(bytes_text(0) === '0 KB' && bytes_text(1) === '1 KB' && bytes_text(2048) === '2 KB', 'bytes_text: KB, mindestens 1');
+pruefe(bytes_text(4 * 1024 * 1024) === '4 MB' && bytes_text((int)(1.5 * 1048576)) === '1,5 MB', 'bytes_text: MB glatt und mit Komma');
+pruefe(person_name(['vorname' => ' Anna  ', 'nachname' => ' Muster ']) === 'Anna Muster', 'person_name: Leerzeichen');
+pruefe(person_name(['vorname' => '', 'nachname' => 'Muster']) === 'Muster' && person_name([]) === '', 'person_name: fehlende Teile');
+pruefe(hm('19:30:00') === '19:30' && minuten('19:30') === 1170 && hm_aus_minuten(1170) === '19:30' && hm_aus_minuten(-5) === '00:00', 'hm/minuten (jetzt format_lib)');
+pruefe(db_zeit(0) === '1970-01-01 00:00:00' && db_ts('1970-01-02 00:00:00') === 86400 && db_tag(86400) === '1970-01-02', 'db_zeit/db_ts/db_tag');
+pruefe(db_ts(db_zeit(1767225600)) === 1767225600, 'db_ts(db_zeit(x)) = x');
+pruefe(rate_text('login') === 'Zu viele Versuche. Bitte warte 15 Minuten und versuche es dann noch einmal.', 'rate_text aus der Sperre des Topfs');
+pruefe(rate_text('notzugang', 'falsche Codes') === 'Zu viele falsche Codes. Bitte warte eine Stunde und versuche es dann noch einmal.', 'rate_text mit eigenem Wort');
+pruefe(anm_nummer(12) === '0012' && anm_nummer(12345) === '12345', 'anm_nummer');
+
+abschnitt('Formular-Helfer (AP-17 Unterpunkt 3)');
+// Eigener Prozess: csrf_feld() braucht eine Sitzung, die nach der ersten Ausgabe nicht mehr startet
+foreach (explode("\n", trim((string)shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/formular_helfer.php') . ' 2>&1'))) as $zeile) {
+    [$ok, $was] = array_pad(explode('|', $zeile, 2), 2, $zeile);
+    pruefe($ok === 'ok', $was);
+}
+
 abschnitt('Hostnamen (E-27)');
 pruefe(host_normalisieren('Winter-Notfallsymposium.DE') === 'winter-notfallsymposium.de', 'Kleinschreibung');
 pruefe(host_normalisieren('test.winter-notfallsymposium.de:443') === 'test.winter-notfallsymposium.de', 'Port entfernt');
@@ -157,6 +181,10 @@ pruefe(oeffnen($p, 'totp|1') === 'geheim', 'öffnen mit gleichem Zweck');
 pruefe(oeffnen($p, 'totp|2') === null, 'anderer Zweck (anderes Konto) öffnet nicht');
 pruefe(oeffnen(substr($p, 0, -4) . 'AAAA', 'totp|1') === null, 'beschädigtes Paket öffnet nicht');
 pruefe(passwort_regel_fehler('kurz', 'kurz') !== null && passwort_regel_fehler(str_repeat('a', 12), str_repeat('a', 12)) === null, 'Passwortregeln');
+
+abschnitt('Code-Konventionen (Konzept 5a, AP-17)');
+require __DIR__ . '/konventionen.php';
+konventionen_pruefen($wurzel);
 
 /* ---- Mit Datenbank --------------------------------------------------------- */
 
@@ -1556,20 +1584,9 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM newsletter_liste WHERE id = ?', [$nlListe]);
 
     // Unterpunkt 3 (B-2, B-3, T-277): Warte-Einträge überleben „Speichern“
-    $formWahl = function (int $anmId, bool $team) use ($wurzel): array {
-        $wahl = ['fest' => [], 'warte' => []];
+    $formWahl = function (int $anmId, bool $team): array {
         $bisher = array_values(array_filter(anm_plaetze($anmId), fn($p) => (int)$p['termin_id'] !== 0));
-        foreach ($bisher as $p) {
-            if ($p['status'] === 'fest') {
-                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
-            } elseif ($p['status'] === 'warte') {
-                $wahl['warte'][] = (int)$p['termin_id'];
-            }
-        }
-        $teamModus = $team;
-        ob_start();
-        require $wurzel . '/server/seiten/teil_workshopwahl.php';
-        $html = (string)ob_get_clean();
+        $html = anm_workshopwahl_html(anm_wahl_aus_plaetzen($bisher), $bisher, $team);
         // was der Browser sendet: angekreuzte Felder
         $post = ['ws' => [], 'wl' => []];
         preg_match_all('/<input[^>]*name="(ws\[(\d+)\]|wl\[\])" value="(\d*)"[^>]* checked/', $html, $mm, PREG_SET_ORDER);

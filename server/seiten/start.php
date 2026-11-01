@@ -12,7 +12,7 @@ declare(strict_types=1);
 $keine = va_keine();
 $eck = $keine ? [] : va_eckdaten();
 $anmeldungAb = va('anmeldung_start');
-$anmeldungHinweis = (!$keine && $anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
+$anmeldungHinweis = (!$keine && va_anmeldung_vor_start()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
 
 seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
 $archiv = va_abgeschlossen();
@@ -59,7 +59,7 @@ $archiv = va_abgeschlossen();
 <section class="abschnitt" id="programm" aria-labelledby="programm-titel"><div class="innen">
     <p class="kicker">Programm</p>
     <h2 class="zwischen" id="programm-titel">Der Abend im Überblick</h2>
-    <?php $programm_punkte = programm_veroeffentlicht()['punkte'] ?? []; require __DIR__ . '/teil_programm.php'; ?>
+    <?= programm_html(programm_veroeffentlicht()['punkte'] ?? []) ?>
 </div></section>
 <?php endif; ?>
 

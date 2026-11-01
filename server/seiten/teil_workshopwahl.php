@@ -8,9 +8,9 @@ declare(strict_types=1);
  * Kästchen, auch im Team-Modus (AP-14). Überschneidungen sperrt assets/anmelden.js sofort; der
  * Server prüft alles noch einmal (anm_wahl_pruefen).
  *
- * Erwartet: $wahl (['fest' => [wid => tid], 'warte' => [tid]]),
- *           $bisher (eigene Plätze bei Änderungen, sonst []),
- *           optional $teamModus (Team-Bereich: volle Termine wählbar).
+ * Vorlage von anm_workshopwahl_html() (V-27): sieht nur deren Parameter
+ * $wahl (['fest' => [wid => tid], 'warte' => [tid]]), $bisher (eigene Plätze
+ * bei Änderungen, sonst []) und $team (Team-Bereich: volle Termine wählbar).
  */
 
 $eigen = [];
@@ -32,20 +32,20 @@ foreach (anm_workshops() as $w):
         $frei = anm_frei($tid);
         $zeit = '<span class="zeit-chip">' . e($t['beginn'] . '–' . $t['ende']) . '</span> <span class="meta">· ' . $dauerMin($t) . ' min</span>';
         $titel = e(trim($w['kuerzel'] . ' ' . $t['beginn'] . '–' . $t['ende']));
-        $festWaehlbar = $frei > 0 || $st === 'fest' || !empty($teamModus);
+        $festWaehlbar = $frei > 0 || $st === 'fest' || $team;
         if ($festWaehlbar) {
             $an = ($wahl['fest'][$wid] ?? 0) === $tid;
             // Team (AP-5): volle Termine wählbar, Überbuchen wird beim Speichern bestätigt
-            $rechts = $st === 'fest' ? (!empty($teamModus) ? 'fest' : 'dein Platz') : ($frei > 0 ? $frei . ' frei' : 'voll · überbuchen');
+            $rechts = $st === 'fest' ? ($team ? 'fest' : 'dein Platz') : ($frei > 0 ? $frei . ' frei' : 'voll · überbuchen');
             $festeZeilen .= '<label><input type="radio" name="ws[' . $wid . ']" value="' . $tid . '" data-von="' . minuten($t['beginn']) . '" data-bis="' . minuten($t['ende']) . '" data-titel="' . $titel . '"' . ($an ? ' checked' : '') . '>'
-                . '<span>' . $zeit . '<span class="grund" data-grund></span></span><span class="rechts status">' . e($rechts) . '</span></label>';
+                . '<span>' . $zeit . '<span class="grund" data-grund></span></span><span class="rechts">' . e($rechts) . '</span></label>';
         }
         // Ein bestehender Warte-Eintrag steht immer da und wird mitgesendet – auch im
         // Team-Modus und wenn der Termin inzwischen frei ist (Review B-2, B-3)
         if (!$festWaehlbar || $st === 'warte') {
             $an = in_array($tid, $wahl['warte'], true);
             $wartend = anm_wartend($tid) - ($st === 'warte' ? 1 : 0);
-            if ($st === 'warte' && !empty($teamModus)) {
+            if ($st === 'warte' && $team) {
                 $grund = 'Auf der Warteliste' . ($frei > 0 ? ' · ' . $frei . ' frei' : '');
             } elseif ($st === 'warte' && $frei > 0) {
                 $grund = 'Du stehst auf der Warteliste · ' . $frei . ' frei – fest wählen oder auf der Warteliste bleiben';
@@ -66,7 +66,7 @@ foreach (anm_workshops() as $w):
     <p class="unterkopf">Fester Platz <span class="meta">– wähle einen</span></p>
     <div class="wahl"><?= $festeZeilen ?></div>
     <?php if ($warteZeilen !== ''): ?>
-    <p class="unterkopf"><?= !empty($teamModus) ? 'Warteliste <span class="meta">– abwählen nimmt die Person von der Warteliste</span>' : 'Warteliste für volle Termine <span class="meta">– du kannst auch mehrere markieren</span>' ?></p>
+    <p class="unterkopf"><?= $team ? 'Warteliste <span class="meta">– abwählen nimmt die Person von der Warteliste</span>' : 'Warteliste für volle Termine <span class="meta">– du kannst auch mehrere markieren</span>' ?></p>
     <div class="wahl"><?= $warteZeilen ?></div>
     <?php endif; ?>
 </div>

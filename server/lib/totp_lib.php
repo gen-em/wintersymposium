@@ -145,7 +145,7 @@ function totp_codes_schreiben(int $kontoId, array $codes): void
 function totp_zustand(int $kontoId): array
 {
     $z = db_zeile('SELECT totp_seit, zweitfaktor_mail, totp_geheimnis IS NOT NULL AS g FROM konto WHERE id = ?', [$kontoId]);
-    $offen = (int)db_wert('SELECT COUNT(*) FROM konto_code WHERE konto_id = ? AND benutzt_am IS NULL', [$kontoId]);
+    $offen = db_zahl('SELECT COUNT(*) FROM konto_code WHERE konto_id = ? AND benutzt_am IS NULL', [$kontoId]);
     $an = $z !== null && $z['totp_seit'] !== null;
     $mail = $z !== null && (int)$z['zweitfaktor_mail'] === 1;
     $pk = pk_zahl($kontoId);
@@ -185,7 +185,7 @@ function mailcode_senden(array $k): ?string
     rate_misserfolg('mailcode_minute', $merkmal); // jeder Versand zählt
     rate_misserfolg('mailcode', $merkmal);
     $code = str_pad((string)random_int(0, 999999), TOTP_STELLEN, '0', STR_PAD_LEFT);
-    db_ausfuehren('UPDATE konto SET mailcode_hash = ?, mailcode_bis = ? WHERE id = ?', [password_hash($code, PASSWORD_DEFAULT), gmdate('Y-m-d H:i:s', time() + MAILCODE_GUELTIG_S), (int)$k['id']]);
+    db_ausfuehren('UPDATE konto SET mailcode_hash = ?, mailcode_bis = ? WHERE id = ?', [password_hash($code, PASSWORD_DEFAULT), db_zeit(time() + MAILCODE_GUELTIG_S), (int)$k['id']]);
     mail_vorlage_einreihen((string)$k['email'], 'zweitfaktor_code', ['vorname' => tk_namen($k)['vorname'], 'code' => $code]);
     return null;
 }
@@ -198,7 +198,7 @@ function mailcode_pruefen(int $kontoId, string $eingabe): bool
         return false;
     }
     $z = db_zeile('SELECT mailcode_hash, mailcode_bis FROM konto WHERE id = ?', [$kontoId]);
-    if ($z === null || $z['mailcode_hash'] === null || strtotime($z['mailcode_bis'] . ' UTC') < time() || !password_verify($ziffern, (string)$z['mailcode_hash'])) {
+    if ($z === null || $z['mailcode_hash'] === null || db_ts($z['mailcode_bis']) < time() || !password_verify($ziffern, (string)$z['mailcode_hash'])) {
         return false;
     }
     return db_ausfuehren('UPDATE konto SET mailcode_hash = NULL, mailcode_bis = NULL WHERE id = ? AND mailcode_hash = ?', [$kontoId, $z['mailcode_hash']])->rowCount() === 1;
@@ -354,7 +354,7 @@ function zweitfaktor_bestaetigen(int $kontoId, string $code): ?string
 {
     $kennung = rate_merkmal('konto:' . $kontoId);
     if (!rate_erlaubt('zweitfaktor', $kennung)) {
-        return 'Zu viele falsche Codes. Bitte warte 15 Minuten.';
+        return rate_text('zweitfaktor', 'falsche Codes');
     }
     if (!mailcode_pruefen($kontoId, $code) && !totp_anmeldung_pruefen($kontoId, $code)['ok']) {
         rate_misserfolg('zweitfaktor', $kennung);
@@ -404,7 +404,7 @@ function zweitfaktor_mailcode_aktion(array $konto, string $ziel): void
         return;
     }
     $f = mailcode_senden($konto);
-    $text = $f ?? 'Code ist unterwegs an ' . $konto['email'] . '. Er gilt 10 Minuten.';
+    $text = $f ?? 'Code ist unterwegs an ' . $konto['email'] . '. Er gilt ' . dauer_text(MAILCODE_GUELTIG_S) . '.';
     if (str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
         json_antwort(200, ['ok' => $f === null, 'text' => $text]);
     }
@@ -422,11 +422,11 @@ function zweitfaktor_mailcode_aktion(array $konto, string $ziel): void
 function zweitfaktor_feld_html(array $konto, string $id): string
 {
     $pk = pk_zahl((int)$konto['id']) > 0
-        ? ' <button type="button" class="knopf zweit klein-knopf" data-zf-passkey hidden>Mit Passkey bestätigen</button>'
+        ? ' <button type="button" class="knopf zweit klein" data-zf-passkey hidden>Mit Passkey bestätigen</button>'
         : '';
     return '<div class="feld"><label for="' . e($id) . '">' . e(ZWEITFAKTOR_FELD_TEXT) . '</label>'
         . '<input id="' . e($id) . '" name="totp" type="text" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="12"></div>'
-        . '<p class="aktionen" data-zf-wege hidden><button type="button" class="knopf zweit klein-knopf" data-zf-mailcode>Code per E-Mail schicken</button>' . $pk . '</p>'
+        . '<p class="aktionen" data-zf-wege hidden><button type="button" class="knopf zweit klein" data-zf-mailcode>Code per E-Mail schicken</button>' . $pk . '</p>'
         . '<p class="hilfe" data-zf-meldung role="status" hidden></p>';
 }
 

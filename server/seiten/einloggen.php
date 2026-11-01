@@ -29,13 +29,12 @@ if (($eingeloggt = tk_aktuell()) !== null && !konto_ist_team($eingeloggt)) {
 $fehler = [];
 $email = '';
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
-    $aktion = (string)($_POST['aktion'] ?? '');
+if (ist_post()) {
+    $aktion = aktion();
 
     if ($aktion === 'passwort') {
-        $email = trim((string)($_POST['email'] ?? ''));
-        $r = tk_login_pruefen($email, (string)($_POST['passwort'] ?? ''));
+        $email = trim(post_text('email'));
+        $r = tk_login_pruefen($email, post_text('passwort'));
         if (isset($r['konto']) && konto_ist_team($r['konto'])) {
             anmeldung_halb_setzen($r['konto']);
             umleiten('/einloggen');
@@ -57,24 +56,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/einloggen');
         }
         $f = mailcode_senden($k);
-        flash_setzen($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt 10 Minuten.');
         if ($aktion === 'mail_waehlen') {
             $_SESSION['zf_mail'] = (int)$k['id'];
         }
-        umleiten('/einloggen');
+        fertig($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt ' . dauer_text(MAILCODE_GUELTIG_S) . '.', '/einloggen');
     } elseif ($aktion === 'app_waehlen') {
         unset($_SESSION['zf_mail']);
         umleiten('/einloggen');
     } elseif ($aktion === 'code' || $aktion === 'einrichten' || $aktion === 'mail_einrichten') {
         $k = anmeldung_halb();
         if ($k === null) {
-            flash_setzen('hinweis', 'Die Anmeldung hat zu lange gedauert. Bitte gib dein Passwort noch einmal ein.');
-            umleiten('/einloggen');
+            fertig('hinweis', 'Die Anmeldung hat zu lange gedauert. Bitte gib dein Passwort noch einmal ein.', '/einloggen');
         }
         $kennung = rate_merkmal('konto:' . $k['id']);
-        $code = (string)($_POST['totp'] ?? '');
+        $code = post_text('totp');
         if (!rate_erlaubt('zweitfaktor', $kennung)) {
-            $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten und versuche es dann noch einmal.';
+            $fehler[] = rate_text('zweitfaktor', 'falsche Codes');
         } elseif ($aktion === 'mail_einrichten') {
             if (!totp_zustand((int)$k['id'])['eingerichtet'] && mailcode_pruefen((int)$k['id'], $code)) {
                 rate_erfolg('zweitfaktor', $kennung);
@@ -115,14 +112,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 function codes_seite(array $codes): never
 {
     seite_kopf('Wiederherstellungscodes', ['nav' => false]);
-    echo '<div class="innen seitenkopf"><p class="kicker">Zwei-Faktor-Authentifizierung eingerichtet</p><h1 class="titel">Deine Wiederherstellungs&shy;codes</h1></div>'
+    echo seiten_kopfzeile("Deine Wiederherstellungs\u{AD}codes", 'Zwei-Faktor-Authentifizierung eingerichtet') // \u{AD}: weiches Trennzeichen
         . '<div class="innen text">'
         . '<p>Mit einem dieser Codes kommst du rein, wenn du keinen anderen Code bekommst (Handy weg, Postfach nicht erreichbar). Jeder Code gilt einmal. '
         . '<strong>Sie werden nur jetzt angezeigt</strong>: Speichere sie in deinem Passwortmanager oder drucke sie aus.</p>'
         . '<ul class="codes">' . implode('', array_map(fn($c) => '<li class="mono">' . e(totp_code_anzeige($c)) . '</li>', $codes)) . '</ul>'
         . '<p><a class="knopf" href="/team">Codes gesichert – weiter zum Team-Bereich</a></p></div>';
-    seite_fuss();
-    exit;
+    seite_ende();
 }
 
 $halb = anmeldung_halb();
@@ -148,22 +144,20 @@ if ($halb !== null && !$zs['eingerichtet'] && !$mailWahl) {
 
 $skripte[] = 'passkey.js'; // Passkeys (E-55)
 seite_kopf('Einloggen', ['nav' => false, 'skripte' => $skripte]);
-echo '<div class="innen seitenkopf"><p class="kicker">Konto</p><h1 class="titel">Einloggen</h1></div><div class="innen schmal">';
+echo seiten_kopfzeile('Einloggen', 'Konto') . '<div class="innen schmal">';
 echo meldung_html(flash_holen()) . fehler_html($fehler);
 
 if ($halb === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="passwort">
-    <label for="email">E-Mail-Adresse</label>
-    <input id="email" name="email" type="email" required maxlength="254" autocomplete="username" value="<?= e($email) ?>">
-    <label for="passwort">Passwort</label>
-    <input id="passwort" name="passwort" type="password" required autocomplete="current-password">
+    <?= feld('email', 'E-Mail-Adresse', ['typ' => 'email', 'pflicht' => true, 'wert' => $email, 'ohne_rahmen' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'username']]) ?>
+    <?= feld('passwort', 'Passwort', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['autocomplete' => 'current-password']]) ?>
     <button type="submit" class="knopf">Weiter</button>
 </form>
 <div class="pk-login" data-passkey-login hidden>
     <p class="trenner-text"><span>oder</span></p>
-    <button type="button" class="knopf zweit pk-knopf" data-passkey-los><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M11.5 11.5 21 21m-4-4 2.5-2.5M14.5 14.5 17 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>Mit Passkey einloggen</button>
+    <button type="button" class="knopf zweit pk-knopf" data-passkey-los><?= icon('key', 18) ?>Mit Passkey einloggen</button>
     <p class="meta klein">Ohne Passwort, mit Fingerabdruck, Gesicht oder Geräte-PIN – wenn du unter „Mein Konto“ einen Passkey angelegt hast.</p>
     <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
 </div>
@@ -173,32 +167,30 @@ if ($halb === null): ?>
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="mail_einrichten">
     <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt. Gib ihn hier ein – damit ist der Code per E-Mail eingerichtet, und du bekommst ihn ab jetzt bei jedem Einloggen.</p>
-    <label for="totp">Code aus der Mail</label>
-    <input id="totp" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" autofocus>
+    <?= feld('totp', 'Code aus der Mail', ['pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['inputmode' => 'numeric', 'autocomplete' => 'one-time-code', 'maxlength' => 8, 'autofocus' => true]]) ?>
     <button type="submit" class="knopf">Einrichten</button>
 </form>
 <div class="aktionen abstand-oben-klein">
-    <form method="post" action="/einloggen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="mailcode"><button type="submit" class="knopf zweit">Neuen Code schicken</button></form>
-    <form method="post" action="/einloggen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="app_waehlen"><button type="submit" class="knopf zweit">Doch lieber mit App</button></form>
+    <?= aktion_knopf('/einloggen', 'mailcode', [], 'Neuen Code schicken', 'knopf zweit') ?>
+    <?= aktion_knopf('/einloggen', 'app_waehlen', [], 'Doch lieber mit App', 'knopf zweit') ?>
 </div>
 <?php elseif ($einrichtung === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="code">
     <?php if ($zs['mail']): ?>
-    <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt (gilt 10 Minuten). <?= $zs['an'] ? 'Der Code aus deiner Authenticator-App geht auch, ebenso' : 'Es geht auch' ?> ein Wiederherstellungscode.</p>
+    <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt (gilt <?= e(dauer_text(MAILCODE_GUELTIG_S)) ?>). <?= $zs['an'] ? 'Der Code aus deiner Authenticator-App geht auch, ebenso' : 'Es geht auch' ?> ein Wiederherstellungscode.</p>
     <?php elseif (!$zs['an']): ?>
     <p>Hallo <?= e($halb['name']) ?>. Bestätige mit deinem Passkey – oder gib einen deiner Wiederherstellungscodes ein.</p>
     <?php else: ?>
     <p>Hallo <?= e($halb['name']) ?>. Gib den sechsstelligen Code aus deiner Authenticator-App ein – oder einen deiner Wiederherstellungscodes.</p>
     <?php endif; ?>
 
-    <label for="totp">Code</label>
-    <input id="totp" name="totp" type="text" required inputmode="text" autocomplete="one-time-code" maxlength="12" autofocus>
+    <?= feld('totp', 'Code', ['pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['inputmode' => 'text', 'autocomplete' => 'one-time-code', 'maxlength' => 12, 'autofocus' => true]]) ?>
     <button type="submit" class="knopf">Einloggen</button>
 </form>
 <?php if ($zs['mail']): ?>
-<form method="post" action="/einloggen" class="abstand-oben-klein"><?= csrf_feld() ?><input type="hidden" name="aktion" value="mailcode"><button type="submit" class="knopf zweit">Neuen Code schicken</button></form>
+<?= aktion_knopf('/einloggen', 'mailcode', [], 'Neuen Code schicken', 'knopf zweit', ['form_klasse' => 'abstand-oben-klein']) ?>
 <?php endif; ?>
 <?php if ($zs['passkeys'] > 0): ?>
 <div class="pk-login" data-passkey-login hidden>
@@ -216,7 +208,7 @@ if ($halb === null): ?>
     <h2 class="zwischen">Passkey</h2>
     <p>Dein Handy oder Computer wird zum Schlüssel: Fingerabdruck, Gesicht oder Geräte-PIN genügt. Danach loggst du dich damit ganz ohne Passwort ein.</p>
     <form class="formular" data-passkey-anlegen>
-        <label for="pk-bez">Name für den Passkey (freiwillig)</label><input id="pk-bez" name="bezeichnung" type="text" maxlength="40" placeholder="z. B. Handy" autocomplete="off">
+        <?= feld('bezeichnung', 'Name für den Passkey (freiwillig)', ['id' => 'pk-bez', 'ohne_rahmen' => true, 'attr' => ['maxlength' => 40, 'placeholder' => 'z. B. Handy', 'autocomplete' => 'off']]) ?>
         <button type="submit" class="knopf">Passkey anlegen</button>
         <p class="feldfehler" data-passkey-meldung role="alert" hidden></p>
     </form>
@@ -225,7 +217,7 @@ if ($halb === null): ?>
     <p class="kicker">Möglichkeit 2</p>
     <h2 class="zwischen">Code per E-Mail</h2>
     <p>Bei jedem Einloggen schicken wir dir einen Code an <?= e($halb['email']) ?>. Einfach, aber nur so sicher wie dein Postfach.</p>
-    <form method="post" action="/einloggen"><?= csrf_feld() ?><input type="hidden" name="aktion" value="mail_waehlen"><button type="submit" class="knopf zweit">Code per E-Mail nutzen</button></form>
+    <?= aktion_knopf('/einloggen', 'mail_waehlen', [], 'Code per E-Mail nutzen', 'knopf zweit') ?>
 </div>
 <div class="text abstand-oben-klein">
     <p class="kicker">Möglichkeit 3</p>
@@ -247,17 +239,12 @@ if ($halb === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="einrichten">
-    <label for="totp">Code aus der App</label>
-    <input id="totp" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9 ]{6,8}">
+    <?= feld('totp', 'Code aus der App', ['pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['inputmode' => 'numeric', 'autocomplete' => 'one-time-code', 'maxlength' => 8, 'pattern' => '[0-9 ]{6,8}']]) ?>
     <button type="submit" class="knopf">Einrichten</button>
 </form>
 <?php endif;
 if ($halb !== null): ?>
-<form method="post" action="/einloggen" class="abbrechen">
-    <?= csrf_feld() ?>
-    <input type="hidden" name="aktion" value="abbrechen">
-    <button type="submit" class="knopf zweit">Abbrechen</button>
-</form>
+<?= aktion_knopf('/einloggen', 'abbrechen', [], 'Abbrechen', 'knopf zweit', ['form_klasse' => 'abbrechen']) ?>
 <?php endif;
 echo '</div>';
 seite_fuss();

@@ -123,10 +123,7 @@ function tk_verknuepfen(int $kontoId): void
         return;
     }
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kontoId, $a['id']]);
-    db_ausfuehren(
-        'UPDATE konto SET name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
-        [trim($a['vorname'] . ' ' . $a['nachname']), $a['berufsgruppe'], $a['beruf_sonstige'], $a['institution'], $a['efn'], db_jetzt(), $kontoId]
-    );
+    konto_profil_setzen($kontoId, $a);
     audit_schreiben('konto', 'Konto ' . $kontoId . ' mit Anmeldung ' . $a['id'] . ' verknüpft', $kontoId);
 }
 
@@ -155,7 +152,7 @@ function tk_anlegen_aus_anmeldung(int $anmId): ?int
         tk_verknuepfen((int)$k['id']);
         return (int)$k['id'];
     }
-    $id = konto_anlegen(trim($a['vorname'] . ' ' . $a['nachname']), $a['email'], 'teilnehmend');
+    $id = konto_anlegen(person_name($a), $a['email'], 'teilnehmend');
     db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $id]);
     tk_verknuepfen($id);
     return $id;
@@ -170,10 +167,10 @@ function tk_link(int $kontoId, string $zweck, ?string $neueEmail = null, ?int $j
         db_ausfuehren('DELETE FROM konto_link WHERE konto_id = ? AND zweck = ?', [$kontoId, $zweck]);
         db_ausfuehren(
             'INSERT INTO konto_link (konto_id, token_hash, zweck, neue_email, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)',
-            [$kontoId, hash('sha256', $token), $zweck, $neueEmail, gmdate('Y-m-d H:i:s', $jetzt + TK_LINK_GUELTIG_S), gmdate('Y-m-d H:i:s', $jetzt)]
+            [$kontoId, hash('sha256', $token), $zweck, $neueEmail, db_zeit($jetzt + TK_LINK_GUELTIG_S), db_zeit($jetzt)]
         );
     });
-    return ['url' => url('/konto/link?t=' . $token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $jetzt + TK_LINK_GUELTIG_S))];
+    return ['url' => url('/konto/link?t=' . $token), 'gueltig' => datum_zeit_text(db_zeit($jetzt + TK_LINK_GUELTIG_S))];
 }
 
 /**
@@ -278,7 +275,7 @@ function tk_login_pruefen(string $email, string $passwort): array
     $ip = rate_merkmal_ip();
     $kennung = rate_merkmal_kennung($email);
     if (!rate_erlaubt('login_ip', $ip) || !rate_erlaubt('login', $kennung)) {
-        return ['fehler' => 'Zu viele Versuche. Bitte warte 15 Minuten und versuche es dann noch einmal.'];
+        return ['fehler' => rate_text('login')];
     }
     $beginn = microtime(true);
     $k = konto_per_email($email);
@@ -318,8 +315,7 @@ function tk_profil_setzen(int $kontoId, array $e): array
         $r = anm_daten_setzen((int)$a['id'], ['email' => $a['email']] + $e);
         if ($r['fehler'] === []) {
             $a = anm_laden((int)$a['id']);
-            db_ausfuehren('UPDATE konto SET name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
-                [trim($a['vorname'] . ' ' . $a['nachname']), $a['berufsgruppe'], $a['beruf_sonstige'], $a['institution'], $a['efn'], db_jetzt(), $kontoId]);
+            konto_profil_setzen($kontoId, $a);
         }
         return tk_profil_fehler($r['fehler']);
     }
@@ -329,8 +325,7 @@ function tk_profil_setzen(int $kontoId, array $e): array
         return $f;
     }
     $w = $r['werte'];
-    db_ausfuehren('UPDATE konto SET name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
-        [trim($w['vorname'] . ' ' . $w['nachname']), $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, db_jetzt(), $kontoId]);
+    konto_profil_setzen($kontoId, $w);
     audit_schreiben('konto', 'Profil geändert', $kontoId);
     return [];
 }
@@ -378,7 +373,7 @@ function tk_aufraeumen(int $jetzt): int
 {
     return db_ausfuehren(
         "DELETE FROM konto WHERE rolle = 'teilnehmend' AND email_bestaetigt_am IS NULL AND erstellt_am < ?",
-        [gmdate('Y-m-d H:i:s', $jetzt - TK_LINK_GUELTIG_S)]
+        [db_zeit($jetzt - TK_LINK_GUELTIG_S)]
     )->rowCount();
 }
 
@@ -390,7 +385,7 @@ function tk_aufraeumen(int $jetzt): int
  */
 function tk_loeschfrist(int $jetzt): array
 {
-    $j = gmdate('Y-m-d H:i:s', $jetzt);
+    $j = db_zeit($jetzt);
     $basis = 'COALESCE(letzte_anmeldung, email_bestaetigt_am, erstellt_am)';
     $erinnert = 0;
     $faellig = db_zeilen(
@@ -401,8 +396,8 @@ function tk_loeschfrist(int $jetzt): array
     );
     foreach ($faellig as $k) {
         // Frühestens 30 Tage nach der Erinnerung löschen
-        $am = max(strtotime($k['loeschen_am'] . ' UTC'), $jetzt + KONTO_ERINNERN_TAGE * 86400);
-        mail_vorlage_einreihen((string)$k['email'], 'konto_loeschen_bald', ['vorname' => tk_namen($k)['vorname'], 'datum' => datum_text(gmdate('Y-m-d', $am)), 'link' => url('/einloggen')]);
+        $am = max(db_ts($k['loeschen_am']), $jetzt + KONTO_ERINNERN_TAGE * 86400);
+        mail_vorlage_einreihen((string)$k['email'], 'konto_loeschen_bald', ['vorname' => tk_namen($k)['vorname'], 'datum' => datum_text(db_tag($am)), 'link' => url('/einloggen')]);
         db_ausfuehren('UPDATE konto SET loesch_erinnert_am = ? WHERE id = ?', [$j, (int)$k['id']]);
         $erinnert++;
     }
@@ -410,7 +405,7 @@ function tk_loeschfrist(int $jetzt): array
     foreach (db_zeilen(
         "SELECT id FROM konto WHERE rolle = 'teilnehmend' AND loesch_erinnert_am IS NOT NULL AND loesch_erinnert_am <= ?
            AND DATE_ADD($basis, INTERVAL " . KONTO_LOESCHEN_MONATE . " MONTH) <= ?",
-        [gmdate('Y-m-d H:i:s', $jetzt - KONTO_ERINNERN_TAGE * 86400), $j]
+        [db_zeit($jetzt - KONTO_ERINNERN_TAGE * 86400), $j]
     ) as $k) {
         tk_loeschen((int)$k['id'], false);
         $geloescht++;
@@ -419,4 +414,10 @@ function tk_loeschfrist(int $jetzt): array
         audit_schreiben('konto', "Löschfrist: $erinnert erinnert, $geloescht Konten gelöscht (Anmeldungen bleiben)");
     }
     return ['erinnert' => $erinnert, 'geloescht' => $geloescht];
+}
+
+/** Anmeldung eines Kontos in irgendeiner Veranstaltung (Zertifikat aus „Mein Konto“, E-58) oder null. */
+function tk_eigene_anmeldung(int $kontoId, int $anmId): ?array
+{
+    return db_zeile('SELECT * FROM anmeldung WHERE id = ? AND konto_id = ?', [$anmId, $kontoId]);
 }

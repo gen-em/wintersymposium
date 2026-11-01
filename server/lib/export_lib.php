@@ -56,7 +56,7 @@ function export_knoepfe(array $param, string $vor = ''): string
             continue;
         }
         $q = http_build_query(array_filter($param + ['format' => $f === 'csv' ? null : $f], fn($v) => $v !== null && $v !== ''));
-        $h[] = '<a class="knopf zweit klein-knopf" href="/team/export?' . e($q) . '" download>' . e($vor . $name) . '</a>';
+        $h[] = '<a class="knopf zweit klein" href="/team/export?' . e($q) . '" download>' . e($vor . $name) . '</a>';
     }
     return '<span class="export-knoepfe">' . implode(' ', $h) . '</span>';
 }
@@ -155,7 +155,7 @@ function export_xlsx(array $x): string
             . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>',
         'docProps/core.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
             . '<dc:title>' . xlsx_xml('Wintersymposium – ' . $x['titel']) . '</dc:title><dc:creator>Wintersymposium</dc:creator>'
-            . '<dcterms:created xsi:type="dcterms:W3CDTF">' . gmdate('Y-m-d\TH:i:s\Z') . '</dcterms:created></cp:coreProperties>',
+            . '<dcterms:created xsi:type="dcterms:W3CDTF">' . iso_utc(db_jetzt()) . '</dcterms:created></cp:coreProperties>',
         'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             . '<sheets><sheet name="' . xlsx_xml($name) . '" sheetId="1" r:id="rId1"/></sheets>'
             . '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'' . str_replace("'", "''", xlsx_xml($name)) . '\'!$A$1:$' . preg_replace('/\d+$/', '', $letzte) . '$' . (count($zeilen) + 1) . '</definedName></definedNames></workbook>',
@@ -332,7 +332,7 @@ function export_pdf(array $x): string
         $gruppen[''] = [];
     }
     $kopfText = va_kurz() . ' · ' . tag_text(va('veranstaltung_datum'));
-    $stand = 'Stand ' . datum_zeit_text(gmdate('Y-m-d H:i:s')) . ($x['bg'] !== '' ? ' · Berufsgruppe: ' . $x['bg'] : '');
+    $stand = 'Stand ' . datum_zeit_text(db_jetzt()) . ($x['bg'] !== '' ? ' · Berufsgruppe: ' . $x['bg'] : '');
 
     $pdf = export_pdf_neu($opt['quer'], $x['titel'], 'Vertraulich – nur für die Organisation · ' . $stand);
     $breite = ($opt['quer'] ? 297 : 210) - 32;

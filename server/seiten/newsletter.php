@@ -12,10 +12,9 @@ $beginn = microtime(true);
 $listen = nl_listen(true);
 $fehler = [];
 $eingabe = [];
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     $eingabe = $_POST;
-    $email = mail_adresse(is_string($_POST['email'] ?? null) ? $_POST['email'] : '');
+    $email = mail_adresse(post_text('email'));
     $gewaehlt = array_values(array_intersect(array_map('intval', (array)($_POST['listen'] ?? [])), array_map('intval', array_column($listen, 'id'))));
     if ($email === null) {
         $fehler['email'] = 'Diese E-Mail-Adresse sieht nicht wie eine Adresse aus.';
@@ -23,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ($gewaehlt === []) {
         $fehler['listen'] = 'Bitte mindestens einen Newsletter wählen.';
     }
-    if (empty($_POST['einwilligung'])) {
+    if (!post_haken('einwilligung')) {
         $fehler['einwilligung'] = 'Ohne deine Einwilligung können wir dir keinen Newsletter schicken.';
     }
     if ($fehler === []) {
@@ -33,39 +32,33 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         rate_misserfolg('link_ip', $ip);
         rate_misserfolg('link_ziel', $ziel);
         if ($ok) {
-            nl_anfragen($email, is_string($_POST['vorname'] ?? null) ? $_POST['vorname'] : '', $gewaehlt, 'formular');
+            nl_anfragen($email, post_text('vorname'), $gewaehlt, 'formular');
         }
         rate_gleiche_dauer($beginn, 0.6);
-        flash_setzen('ok', 'Fast geschafft: Schau in dein Postfach und bestätige den Newsletter über den Link in der Mail. Ohne Bestätigung tragen wir dich nicht ein.');
-        umleiten('/newsletter');
+        fertig('ok', 'Fast geschafft: Schau in dein Postfach und bestätige den Newsletter über den Link in der Mail. Ohne Bestätigung tragen wir dich nicht ein.', '/newsletter');
     }
 }
-$fehlerFeld = fn(string $k) => isset($fehler[$k]) ? '<p class="feldfehler" id="f-' . $k . '">' . e($fehler[$k]) . '</p>' : '';
-$ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-describedby="f-' . $k . '"' : '';
 seite_kopf('Newsletter', ['aktiv' => '/newsletter', 'skripte' => ['pow.js']]);
+echo seiten_kopfzeile('Newsletter', 'Allgäu Akut · Wintersymposium', 'Termine und Neuigkeiten per Mail. Kostenlos, jederzeit abbestellbar über den Link in jeder Mail.');
 ?>
-<div class="innen form-kopf">
-    <p class="kicker">Allgäu Akut · Wintersymposium</p>
-    <h1 class="titel">Newsletter</h1>
-    <p class="text">Termine und Neuigkeiten per Mail. Kostenlos, jederzeit abbestellbar über den Link in jeder Mail.</p>
-</div>
 <div class="innen">
     <?= meldung_html(flash_holen()) ?>
-    <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert">Bitte die markierten Angaben prüfen.</div><?php endif; ?>
+    <?= $fehler !== [] ? meldung_html('Bitte die markierten Angaben prüfen.', 'fehler') : '' ?>
     <form class="form zg-form" method="post" action="/newsletter" novalidate>
         <?= csrf_feld() ?>
         <fieldset class="feld nl-listen"><legend>Welche Newsletter?</legend>
             <?php foreach ($listen as $l): ?>
-            <label class="haken"><input type="checkbox" name="listen[]" value="<?= (int)$l['id'] ?>"<?= in_array((string)$l['id'], (array)($eingabe['listen'] ?? []), true) ? ' checked' : '' ?>><span><strong><?= e($l['name']) ?></strong><?= $l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '' ?></span></label>
+            <?= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => (int)$l['id'], 'wert' => in_array((string)$l['id'], (array)($eingabe['listen'] ?? []), true),
+                'label_html' => '<strong>' . e($l['name']) . '</strong>' . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]) ?>
             <?php endforeach; ?>
-            <?= $fehlerFeld('listen') ?>
+            <?php if (isset($fehler['listen'])): // Fehler zur ganzen Gruppe, ohne eigenes Feld ?><p class="feldfehler" id="f-listen"><?= e($fehler['listen']) ?></p><?php endif; ?>
         </fieldset>
         <div class="paar">
-            <div class="feld"><label for="nl-email">E-Mail</label><input id="nl-email" name="email" type="email" autocomplete="email" required maxlength="190" value="<?= e((string)($eingabe['email'] ?? '')) ?>"<?= $ungueltig('email') ?>><?= $fehlerFeld('email') ?></div>
-            <div class="feld"><label for="nl-vorname">Vorname <span class="meta">(freiwillig, für die Anrede)</span></label><input id="nl-vorname" name="vorname" type="text" autocomplete="given-name" maxlength="80" value="<?= e((string)($eingabe['vorname'] ?? '')) ?>"></div>
+            <?= feld('email', 'E-Mail', ['typ' => 'email', 'id' => 'nl-email', 'wert' => wert($eingabe, [], 'email'), 'fehler' => $fehler['email'] ?? null, 'pflicht' => true, 'attr' => ['autocomplete' => 'email', 'maxlength' => 190]]) ?>
+            <?= feld('vorname', 'Vorname', ['id' => 'nl-vorname', 'zusatz' => '(freiwillig, für die Anrede)', 'wert' => wert($eingabe, [], 'vorname'), 'attr' => ['autocomplete' => 'given-name', 'maxlength' => 80]]) ?>
         </div>
-        <label class="haken"><input type="checkbox" name="einwilligung" value="1"<?= !empty($eingabe['einwilligung']) ? ' checked' : '' ?><?= $ungueltig('einwilligung') ?>><span><?= e(NL_EINWILLIGUNG) ?> Mehr in der <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.</span></label>
-        <?= $fehlerFeld('einwilligung') ?>
+        <?= feld('einwilligung', '', ['typ' => 'haken', 'wert' => post_haken('einwilligung'), 'fehler' => $fehler['einwilligung'] ?? null,
+            'label_html' => e(NL_EINWILLIGUNG) . ' Mehr in der <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.']) ?>
         <?= spam_felder() ?>
         <div class="aktionen"><button class="knopf" type="submit">Newsletter bestellen</button></div>
         <p class="meta klein">Schon eingetragen? Über den Link „Abmelden oder Listen ändern“ in jeder Newsletter-Mail änderst du deine Listen.</p>

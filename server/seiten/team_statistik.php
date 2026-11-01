@@ -15,21 +15,15 @@ if ($bg !== '' && !in_array($bg, va_liste('berufsgruppen'), true)) {
 $d = stat_daten($bg);
 team_seite_kopf($konto, 'Statistik', '/team/statistik');
 ?>
-<form class="filterzeile" method="get" action="/team/statistik">
-    <label for="bg" class="sr">Berufsgruppe</label>
-    <select id="bg" name="bg">
-        <option value="">Alle Berufsgruppen</option>
-        <?php foreach (va_liste('berufsgruppen') as $g): ?><option value="<?= e($g) ?>"<?= $bg === $g ? ' selected' : '' ?>><?= e($g) ?></option><?php endforeach; ?>
-    </select>
-    <button class="knopf zweit klein-knopf" type="submit">Filtern</button>
-    <a class="klein-link" href="#export">Zum Export</a>
-</form>
-<p class="meta klein">Stand <?= e(datum_zeit_text(db_jetzt())) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
+<?= filter_leiste(['ziel' => '/team/statistik', 'knopf' => 'Filtern', 'nach_html' => '<a class="klein-link" href="#export">Zum Export</a>',
+    'felder' => feld('bg', 'Berufsgruppe', ['typ' => 'auswahl', 'optionen' => va_liste('berufsgruppen'), 'leer' => 'Alle Berufsgruppen', 'wert' => $bg, 'sr' => true, 'ohne_rahmen' => true])]) ?>
+<p class="meta klein">Stand <?= e(jetzt_text()) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
 
 <div class="kacheln">
-    <div class="kachel"><div class="lbl">Angemeldet</div><div class="zahl"><?= $d['angemeldet'] ?><?= $d['kapazitaet'] !== null && $bg === '' ? ' / ' . $d['kapazitaet'] : '' ?></div><p class="meta klein"><?= $d['kapazitaet'] !== null && $bg === '' ? stat_prozent($d['angemeldet'], $d['kapazitaet']) . ' der Kapazität · ' : '' ?>+ <?= $d['unbestaetigt'] ?> Mail nicht bestätigt</p></div>
-    <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl"><?= $d['wl_eintraege'] ?></div><p class="meta klein">Einträge · <?= $d['wl_personen'] ?> Personen · <?= $d['warteliste'] ?> fürs Symposium</p></div>
-    <div class="kachel"><div class="lbl">Konten</div><div class="zahl"><?= $d['konten'] ?></div><p class="meta klein"><?= stat_prozent($d['konten'], $d['bestaetigt']) ?> der Angemeldeten · Newsletter-Wunsch <?= $d['newsletter'] ?></p></div>
+    <?php $mitKap = $d['kapazitaet'] !== null && $bg === ''; ?>
+    <?= kachel('Angemeldet', $d['angemeldet'] . ($mitKap ? ' / ' . $d['kapazitaet'] : ''), ($mitKap ? stat_prozent($d['angemeldet'], $d['kapazitaet']) . ' der Kapazität · ' : '') . '+ ' . $d['unbestaetigt'] . ' Mail nicht bestätigt') ?>
+    <?= kachel('Warteliste', $d['wl_eintraege'], 'Einträge · ' . $d['wl_personen'] . ' Personen · ' . $d['warteliste'] . ' fürs Symposium') ?>
+    <?= kachel('Konten', $d['konten'], stat_prozent($d['konten'], $d['bestaetigt']) . ' der Angemeldeten · Newsletter-Wunsch ' . $d['newsletter']) ?>
 </div>
 
 <div class="team-raster abstand-oben">
@@ -47,7 +41,7 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
     <div class="kasten">
         <h2 class="zwischen klein-zwischen">Workshop-Termine</h2>
         <p class="meta klein">belegt (Balken) von Plätzen; Warteliste in Klammern</p>
-        <?php if ($d['termine'] === []): ?><p class="hinweis-leer">Noch kein veröffentlichtes Programm mit Workshops.</p><?php else: ?>
+        <?php if ($d['termine'] === []): ?><?= leer_hinweis('Noch kein veröffentlichtes Programm mit Workshops.') ?><?php else: ?>
         <div class="balken-liste" role="list" aria-label="Workshop-Termine">
             <?php foreach ($d['termine'] as $t): ?>
             <div class="balken-zeile" role="listitem"><span class="balken-label"><?= e($t['text']) ?></span>
@@ -63,7 +57,7 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
     </div>
     <div class="kasten">
         <h2 class="zwischen klein-zwischen">Institutionen</h2>
-        <?= $d['institutionen'] === [] ? '<p class="hinweis-leer">Noch keine.</p>' : stat_balken($d['institutionen'], 'Institutionen (höchstens 15)') ?>
+        <?= $d['institutionen'] === [] ? leer_hinweis('Noch keine.') : stat_balken($d['institutionen'], 'Institutionen (höchstens 15)') ?>
     </div>
     <div class="kasten">
         <h2 class="zwischen klein-zwischen">Essen</h2>

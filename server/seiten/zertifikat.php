@@ -11,7 +11,7 @@ anm_sitzung();
 if (rtrim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/') === '/konto/zertifikat') {
     // Aus „Mein Konto“ (E-58): Bescheinigung einer eigenen Anmeldung, auch aus vergangenen Veranstaltungen
     $tk = tk_aktuell() ?? team_gesehen();
-    $a = $tk !== null ? db_zeile('SELECT * FROM anmeldung WHERE id = ? AND konto_id = ?', [(int)($_GET['a'] ?? 0), (int)$tk['id']]) : null;
+    $a = $tk !== null ? tk_eigene_anmeldung((int)$tk['id'], (int)($_GET['a'] ?? 0)) : null;
     if ($a === null) {
         nicht_gefunden();
     }
@@ -19,12 +19,10 @@ if (rtrim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PAT
     $a = anm_aktuell();
 }
 if ($a === null) {
-    flash_setzen('fehler', 'Bitte öffne zuerst deine Anmeldung – über den Link aus der Mail oder mit deinem Konto.');
-    umleiten('/deine-anmeldung');
+    fertig('fehler', 'Bitte öffne zuerst deine Anmeldung – über den Link aus der Mail oder mit deinem Konto.', '/deine-anmeldung');
 }
 if (!zertifikat_verfuegbar($a)) {
-    flash_setzen('fehler', 'Deine Teilnahmebescheinigung ist noch nicht freigeschaltet.');
-    umleiten('/deine-anmeldung');
+    fertig('fehler', 'Deine Teilnahmebescheinigung ist noch nicht freigeschaltet.', '/deine-anmeldung');
 }
 va_kontext((int)$a['veranstaltung_id']);
 $inhalt = zertifikat_pdf_fuer($a);

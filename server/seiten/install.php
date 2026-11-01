@@ -14,13 +14,12 @@ $maengel = konfig_maengel();
 if ($maengel !== []) {
     http_response_code(503);
     seite_kopf('Installation', ['nav' => false]);
-    echo '<div class="innen seitenkopf"><h1 class="titel">Installation</h1></div><div class="innen text"><p>Die Konfiguration ist noch nicht vollständig:</p><ul>';
+    echo seiten_kopfzeile('Installation') . '<div class="innen text"><p>Die Konfiguration ist noch nicht vollständig:</p><ul>';
     foreach ($maengel as $m) {
         echo '<li>' . e($m) . '</li>';
     }
     echo '</ul></div>';
-    seite_fuss();
-    exit;
+    seite_ende();
 }
 
 // Tabellen anlegen bzw. nachziehen (idempotent), damit Ratenschutz und
@@ -28,8 +27,8 @@ if ($maengel !== []) {
 migration_anwenden();
 
 // Schon installiert, nur die Sperrdatei fehlt: Sperre wiederherstellen.
-if ((int)db_wert('SELECT COUNT(*) FROM konto') > 0) {
-    @file_put_contents(install_sperrdatei(), gmdate('c') . " wiederhergestellt\n");
+if (konto_irgendeins_da()) {
+    install_sperre_wiederherstellen();
     audit_schreiben('installation', 'install.lock fehlte und wurde neu angelegt');
     seite_meldung(200, 'Bereits installiert', 'Die Installation ist schon erfolgt. Die Sperre des Installers wurde wiederhergestellt.');
 }
@@ -38,25 +37,24 @@ sitzung_starten('team');
 $fehler = [];
 $werte = ['name' => '', 'email' => '', 'weitere_hosts' => ''];
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     $merkmal = rate_merkmal_ip();
     if (!rate_erlaubt('installation', $merkmal)) {
         seite_meldung(429, 'Zu viele Versuche', 'Bitte später noch einmal versuchen.');
     }
     $werte = [
-        'name' => (string)($_POST['name'] ?? ''),
-        'email' => (string)($_POST['email'] ?? ''),
-        'weitere_hosts' => (string)($_POST['weitere_hosts'] ?? ''),
+        'name' => post_text('name'),
+        'email' => post_text('email'),
+        'weitere_hosts' => post_text('weitere_hosts'),
     ];
-    $schluessel = (string)($_POST['schluessel'] ?? '');
+    $schluessel = post_text('schluessel');
     if (!hash_equals((string)konfig('installations_schluessel'), $schluessel)) {
         rate_misserfolg('installation', $merkmal);
         $fehler[] = 'Der Installationsschlüssel ist falsch.';
     } else {
         $eingabe = $werte + [
-            'passwort' => (string)($_POST['passwort'] ?? ''),
-            'passwort2' => (string)($_POST['passwort2'] ?? ''),
+            'passwort' => post_text('passwort'),
+            'passwort2' => post_text('passwort2'),
         ];
         $fehler = install_pruefen($eingabe);
         if ($fehler === []) {
@@ -64,46 +62,33 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             rate_erfolg('installation', $merkmal);
             sitzung_erneuern();
             seite_kopf('Installation abgeschlossen', ['nav' => false]);
-            echo '<div class="innen seitenkopf"><h1 class="titel">Installation abgeschlossen</h1></div><div class="innen text">'
+            echo seiten_kopfzeile('Installation abgeschlossen') . '<div class="innen text">'
                 . '<p>Datenbank angelegt, Haupt-Host <strong>' . e($host) . '</strong> eingetragen, '
                 . 'erste BetreiberIn angelegt. Der Installer ist jetzt gesperrt.</p>'
                 . '<p>Als Nächstes <a href="/einloggen">einloggen</a> und den zweiten Faktor mit einer Authenticator-App einrichten.</p></div>';
-            seite_fuss();
-            exit;
+            seite_ende();
         }
     }
 }
 
 seite_kopf('Installation', ['nav' => false]);
-echo '<div class="innen seitenkopf"><h1 class="titel">Installation</h1></div><div class="innen">';
+echo seiten_kopfzeile('Installation') . '<div class="innen">';
 echo '<p class="text">Legt die Datenbank und die erste BetreiberIn an. Haupt-Host wird <strong>' . e($host) . '</strong>.</p>';
-if ($fehler !== []) {
-    echo '<div class="meldung fehler" role="alert"><ul>';
-    foreach ($fehler as $f) {
-        echo '<li>' . e($f) . '</li>';
-    }
-    echo '</ul></div>';
-}
+echo fehler_html($fehler);
 ?>
 <form method="post" action="/install" class="formular">
     <?= csrf_feld() ?>
-    <label for="schluessel">Installationsschlüssel (aus config.php)</label>
-    <input id="schluessel" name="schluessel" type="password" required autocomplete="off">
+    <?= feld('schluessel', 'Installationsschlüssel (aus config.php)', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['autocomplete' => 'off']]) ?>
 
-    <label for="name">Name der ersten BetreiberIn</label>
-    <input id="name" name="name" type="text" required maxlength="120" value="<?= e($werte['name']) ?>" autocomplete="name">
+    <?= feld('name', 'Name der ersten BetreiberIn', ['pflicht' => true, 'wert' => $werte['name'], 'ohne_rahmen' => true, 'attr' => ['maxlength' => 120, 'autocomplete' => 'name']]) ?>
 
-    <label for="email">E-Mail</label>
-    <input id="email" name="email" type="email" required maxlength="254" value="<?= e($werte['email']) ?>" autocomplete="email">
+    <?= feld('email', 'E-Mail', ['typ' => 'email', 'pflicht' => true, 'wert' => $werte['email'], 'ohne_rahmen' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'email']]) ?>
 
-    <label for="passwort">Passwort (mindestens <?= PASSWORT_MIN_LAENGE ?> Zeichen)</label>
-    <input id="passwort" name="passwort" type="password" required minlength="<?= PASSWORT_MIN_LAENGE ?>" autocomplete="new-password">
+    <?= feld('passwort', 'Passwort (mindestens ' . PASSWORT_MIN_LAENGE . ' Zeichen)', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['minlength' => PASSWORT_MIN_LAENGE, 'autocomplete' => 'new-password']]) ?>
 
-    <label for="passwort2">Passwort wiederholen</label>
-    <input id="passwort2" name="passwort2" type="password" required minlength="<?= PASSWORT_MIN_LAENGE ?>" autocomplete="new-password">
+    <?= feld('passwort2', 'Passwort wiederholen', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['minlength' => PASSWORT_MIN_LAENGE, 'autocomplete' => 'new-password']]) ?>
 
-    <label for="weitere_hosts">Weitere Hostnamen (optional, je Zeile einer)</label>
-    <textarea id="weitere_hosts" name="weitere_hosts" rows="3"><?= e($werte['weitere_hosts']) ?></textarea>
+    <?= feld('weitere_hosts', 'Weitere Hostnamen (optional, je Zeile einer)', ['typ' => 'textarea', 'wert' => $werte['weitere_hosts'], 'ohne_rahmen' => true, 'attr' => ['rows' => 3]]) ?>
 
     <button type="submit">Installieren</button>
 </form>

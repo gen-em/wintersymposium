@@ -65,13 +65,43 @@ function db_jetzt(): string
     return gmdate('Y-m-d H:i:s');
 }
 
+/** Unix-Zeit als UTC-Text für die Datenbank (Gegenstück zu db_ts). */
+function db_zeit(int $ts): string
+{
+    return gmdate('Y-m-d H:i:s', $ts);
+}
+
+/** UTC-Tag „Y-m-d“ einer Unix-Zeit (für DATE-Spalten und Vergleiche mit Tagen). */
+function db_tag(int $ts): string
+{
+    return gmdate('Y-m-d', $ts);
+}
+
+/** UTC-Text aus der Datenbank als Unix-Zeit (Gegenstück zu db_zeit); nicht lesbar ergibt 0. */
+function db_ts(string $utc): int
+{
+    return (int)strtotime($utc . ' UTC');
+}
+
+/** Erste Spalte der ersten Zeile als Zahl (z. B. SELECT COUNT(*)); keine Zeile ergibt 0. */
+function db_zahl(string $sql, array $param = []): int
+{
+    return (int)db_wert($sql, $param);
+}
+
+/** Ob die Abfrage eine Zahl größer 0 liefert (SELECT COUNT(*) … oder SELECT 1 … LIMIT 1). */
+function db_gibt_es(string $sql, array $param = []): bool
+{
+    return db_zahl($sql, $param) > 0;
+}
+
 /** Gibt es die Tabelle? */
 function db_tabelle_da(string $tabelle): bool
 {
-    return (int)db_wert(
+    return db_gibt_es(
         'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
         [$tabelle]
-    ) > 0;
+    );
 }
 
 /**

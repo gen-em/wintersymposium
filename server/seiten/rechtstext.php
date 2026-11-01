@@ -13,10 +13,10 @@ declare(strict_types=1);
 $text = inhalt($rechtstext['schluessel']);
 seite_kopf($rechtstext['titel']);
 ?>
-<div class="innen seitenkopf"><h1 class="titel"><?= e($rechtstext['titel']) ?></h1></div>
+<?= seiten_kopfzeile($rechtstext['titel']) ?>
 <div class="innen">
     <div class="text">
-        <?= $text !== '' ? editor_html($text) : '<p class="hinweis-leer">Dieser Text wird gerade erstellt.</p>' ?>
+        <?= $text !== '' ? editor_html($text) : leer_hinweis('Dieser Text wird gerade erstellt.') ?>
     </div>
 </div>
 <?php

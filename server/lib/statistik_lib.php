@@ -19,15 +19,15 @@ function stat_filter(string $bg, string $alias = 'a'): array
 function stat_daten(string $bg = ''): array
 {
     [$w, $p] = stat_filter($bg);
-    $zahl = fn(string $sql, array $par = []) => (int)db_wert($sql, array_merge($par, $p));
+    $zahl = fn(string $sql, array $par = []) => db_zahl($sql, array_merge($par, $p));
     $angemeldet = $zahl("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status = 'fest' WHERE a.status = 'bestaetigt'" . $w);
     $unbestaetigt = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'unbestaetigt'" . $w);
     $warteSym = $zahl("SELECT COUNT(*) FROM anmeldung a JOIN platz s ON s.anmeldung_id = a.id AND s.termin_id = 0 AND s.status <> 'fest' WHERE a.status = 'bestaetigt'" . $w);
     $wlEintraege = $zahl("SELECT COUNT(*) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.status = 'warte' AND s.termin_id <> 0" . $w);
     $wlPersonen = $zahl("SELECT COUNT(DISTINCT s.anmeldung_id) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.status = 'warte' AND s.termin_id <> 0" . $w);
     $erste = va_liste('berufsgruppen')[0] ?? '';
-    $aerzte = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $erste]);
-    $mitEfn = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ? AND efn IS NOT NULL", [va_id(), $erste]);
+    $aerzte = db_zahl("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $erste]);
+    $mitEfn = db_zahl("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ? AND efn IS NOT NULL", [va_id(), $erste]);
     $bestaetigt = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w);
     $konten = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.konto_id IS NOT NULL" . $w);
     $newsletter = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.newsletter = 1" . $w);
@@ -50,12 +50,12 @@ function stat_daten(string $bg = ''): array
         if ($t['id'] === 0) {
             continue;
         }
-        $belegt = $bg === '' ? $t['belegt'] : (int)db_wert("SELECT COUNT(*) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.termin_id = ? AND s.status IN ('fest','angebot')" . $w, array_merge([$t['id']], $p));
+        $belegt = $bg === '' ? $t['belegt'] : db_zahl("SELECT COUNT(*) FROM platz s JOIN anmeldung a ON a.id = s.anmeldung_id WHERE s.termin_id = ? AND s.status IN ('fest','angebot')" . $w, array_merge([$t['id']], $p));
         $termine[] = ['text' => $t['text'], 'kap' => (int)$t['kap'], 'belegt' => $belegt, 'frei' => max(0, (int)$t['kap'] - $t['belegt']), 'warte' => $t['warte']];
     }
     $gruppen = [];
     foreach (va_liste('berufsgruppen') as $g) {
-        $gruppen[$g] = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $g]);
+        $gruppen[$g] = db_zahl("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ?", [va_id(), $g]);
     }
     $inst = [];
     foreach (db_zeilen("SELECT a.institution, COUNT(*) AS n FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w . ' GROUP BY a.institution ORDER BY n DESC, a.institution LIMIT 15', $p) as $r) {
@@ -147,9 +147,10 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             'kopf' => $kopf, 'zeilen' => $zeilen, 'bg' => $bg, 'pdf' => $pdf === null ? null : $pdf + ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]];
     };
     [$w, $p] = stat_filter($bg);
+    $heute = gmdate('Ymd');
     $anm = db_zeilen("SELECT a.* FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w . ' ORDER BY a.nachname, a.vorname', $p);
     $kurz = fn(string $s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(strtr($s, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', 'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue']))) ?? '', '-');
-    $datei = fn(string $n) => (va_zeile()['kuerzel'] ?? 'wintersymposium') . '-' . $n . ($bg !== '' ? '-' . $kurz($bg) : '') . '-' . gmdate('Ymd') . '.csv';
+    $datei = fn(string $n) => (va_zeile()['kuerzel'] ?? 'wintersymposium') . '-' . $n . ($bg !== '' ? '-' . $kurz($bg) : '') . '-' . $heute . '.csv';
     switch ($art) {
         case 'teilnehmende':
             $z = [];
@@ -214,8 +215,8 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             return $paket($datei('cme'), 'CME-Liste', ['Nachname', 'Vorname', 'Berufsgruppe', 'EFN'], $z);
         case 'cme_nachweise':
             // Betreiber (Betrieb): abgelegte CME-Nachweise aller Veranstaltungen (AP-9)
-            $z = array_map(fn($n) => [$n['veranstaltung'], date('d.m.Y', (int)strtotime($n['datum'])), $n['nachname'], $n['vorname'], $n['efn'] ?? '', $n['vnr'], $n['punkte'], $n['kammer']], ds_cme_liste());
-            return $paket('cme-nachweise-' . gmdate('Ymd') . '.csv', 'CME-Nachweise', ['Veranstaltung', 'Datum', 'Nachname', 'Vorname', 'EFN', 'VNR', 'Punkte', 'Kammer'], $z, ['quer' => true]);
+            $z = array_map(fn($n) => [$n['veranstaltung'], datum_text((string)$n['datum']), $n['nachname'], $n['vorname'], $n['efn'] ?? '', $n['vnr'], $n['punkte'], $n['kammer']], ds_cme_liste());
+            return $paket('cme-nachweise-' . $heute . '.csv', 'CME-Nachweise', ['Veranstaltung', 'Datum', 'Nachname', 'Vorname', 'EFN', 'VNR', 'Punkte', 'Kammer'], $z, ['quer' => true]);
         case 'newsletter':
             // AP-7: bestätigte Abonnierende (eine Liste über t=…, sonst alle)
             $par = [];
@@ -227,7 +228,7 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
             $zeilen = array_map(fn($r) => [$r['liste'], $r['email'], $r['vorname'], datum_zeit_text($r['bestaetigt_am']), $r['fassung'], $r['quelle']], db_zeilen(
                 "SELECT l.name AS liste, p.email, p.vorname, a.bestaetigt_am, a.fassung, a.quelle FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id JOIN newsletter_liste l ON l.id = a.liste_id
                  WHERE a.status = 'bestaetigt'" . $nur . ' ORDER BY l.pos, p.email', $par));
-            return $paket('wintersymposium-newsletter-' . gmdate('Ymd') . '.csv', 'Newsletter-Listen', ['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen, null);
+            return $paket('wintersymposium-newsletter-' . $heute . '.csv', 'Newsletter-Listen', ['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen, null);
         case 'statistik':
             $d = stat_daten($bg);
             $z = [['Angemeldet', $d['angemeldet']], ['Kapazität', $d['kapazitaet'] ?? 'unbegrenzt'], ['Mail nicht bestätigt', $d['unbestaetigt']], ['Warteliste Symposium', $d['warteliste']],

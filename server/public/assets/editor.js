@@ -100,7 +100,7 @@
         dlg.hidden = true;
         dlg.innerHTML = '<label for="ed-' + nr + '-text" data-text-label>Linktext</label><input id="ed-' + nr + '-text" type="text">'
             + '<label for="ed-' + nr + '-ziel">Adresse (https://…' + (ta.getAttribute("data-knopf-ziel") ? " oder " + esc(ta.getAttribute("data-knopf-ziel")) : "") + ')</label><input id="ed-' + nr + '-ziel" type="text">'
-            + '<div class="aktionen"><button type="button" class="knopf klein-knopf" data-ok>Einfügen</button><button type="button" class="knopf zweit klein-knopf" data-weg>Abbrechen</button></div>';
+            + '<div class="aktionen"><button type="button" class="knopf klein" data-ok>Einfügen</button><button type="button" class="knopf zweit klein" data-weg>Abbrechen</button></div>';
 
         var datei = null;
         if (bildUrl) {

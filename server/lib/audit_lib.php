@@ -86,3 +86,45 @@ function audit_ausblenden(int $id, bool $aus, int $kontoId): bool
     }
     return $n === 1;
 }
+
+/** Letzter Protokolleintrag zu einer Anmeldung: ['zeit', 'text', 'name'] oder null. */
+function audit_letzte_anmeldung(int $anmId): ?array
+{
+    return db_zeile("SELECT a.zeit, a.text, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id WHERE a.text LIKE ? OR a.text LIKE ? ORDER BY a.id DESC LIMIT 1",
+        ['Anmeldung ' . $anmId . ' %', '%Anmeldung ' . $anmId]);
+}
+
+/**
+ * Protokoll für die Seite: Einträge, die das Konto sehen darf, gefiltert nach
+ * Veranstaltung ($vf: '' gewählte, 'alle', 'ohne'), Suchtext und Art, eine
+ * Seite davon. Gibt ['zahlen' => [art => n], 'gesamt' => n, 'zeilen' => […]] zurück.
+ */
+function audit_suchen(array $konto, string $vf, string $q, string $art, int $seite, int $proSeite): array
+{
+    [$sicht, $sichtPar] = audit_sichtbar($konto);
+    $wo = [$sicht];
+    $par = $sichtPar;
+    if (va_rechte_da() && $vf === '') {
+        $wo[] = 'a.veranstaltung_id = ?';
+        $par[] = va_id();
+    } elseif (va_rechte_da() && $vf === 'ohne') {
+        $wo[] = 'a.veranstaltung_id IS NULL';
+    }
+    if ($q !== '') {
+        $wo[] = 'a.text LIKE ?';
+        $par[] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
+    }
+    // Zahlen je Art für die Filter (mit Suche, ohne Art-Filter)
+    $zahlen = [];
+    foreach (db_zeilen('SELECT a.art, COUNT(*) AS n FROM audit a WHERE ' . implode(' AND ', $wo) . ' GROUP BY a.art', $par) as $z) {
+        $zahlen[$z['art']] = (int)$z['n'];
+    }
+    if ($art !== '') {
+        $wo[] = 'a.art = ?';
+        $par[] = $art;
+    }
+    $sqlWo = ' WHERE ' . implode(' AND ', $wo);
+    $gesamt = db_zahl('SELECT COUNT(*) FROM audit a' . $sqlWo, $par);
+    $zeilen = db_zeilen('SELECT a.*, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id' . $sqlWo . ' ORDER BY a.id DESC LIMIT ' . $proSeite . ' OFFSET ' . (($seite - 1) * $proSeite), $par);
+    return ['zahlen' => $zahlen, 'gesamt' => $gesamt, 'zeilen' => $zeilen];
+}

@@ -20,22 +20,21 @@ if ($a !== null && (int)$a['veranstaltung_id'] !== va_id()) {
 }
 $nurAnsehen = $a !== null && (va_zeile()['status'] ?? 'aktuell') !== 'aktuell';
 $beginn = microtime(true);
-$aktion = (string)($_POST['aktion'] ?? '');
+$aktion = aktion();
+$modus = (string)($_GET['aendern'] ?? ''); // Ansicht: workshops, essen, daten oder Übersicht
 $fehler = [];
 $tausch = null;
 $tauschPlatz = 0;
 $eingabe = [];
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     if ($aktion === 'ausloggen') {
         anm_ausloggen();
-        flash_setzen('ok', 'Du bist ausgeloggt.');
-        umleiten('/deine-anmeldung');
+        fertig('ok', 'Du bist ausgeloggt.', '/deine-anmeldung');
     }
     if ($aktion === 'einloggen') {
         // Gemeinsamer Login (E-48): Teilnehmende hier, Team weiter zum zweiten Faktor
-        $r = tk_login_pruefen(trim((string)($_POST['email'] ?? '')), (string)($_POST['passwort'] ?? ''));
+        $r = tk_login_pruefen(trim(post_text('email')), post_text('passwort'));
         if (isset($r['konto']) && konto_ist_team($r['konto'])) {
             anmeldung_halb_setzen($r['konto']);
             umleiten('/einloggen');
@@ -47,13 +46,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $fehler['login'] = $r['fehler'];
     } elseif ($aktion === 'link') {
         // Gleiche Antwort und Dauer für jede Adresse (R-03)
-        $email = mail_adresse(is_string($_POST['email'] ?? null) ? $_POST['email'] : '');
+        $email = mail_adresse(post_text('email'));
         if ($email === null) {
             $fehler['email'] = 'Diese E-Mail-Adresse sieht nicht wie eine Adresse aus.';
         } else {
             $ip = rate_merkmal_ip();
             $ziel = rate_merkmal_kennung('link:' . $email);
-            $ok = trim((string)($_POST['website'] ?? '')) === '' && rate_erlaubt('link_ip', $ip) && rate_erlaubt('link_ziel', $ziel);
+            $ok = trim(post_text('website')) === '' && rate_erlaubt('link_ip', $ip) && rate_erlaubt('link_ziel', $ziel);
             rate_misserfolg('link_ip', $ip);
             rate_misserfolg('link_ziel', $ziel);
             $vorhanden = $ok ? anm_per_email($email) : null;
@@ -64,15 +63,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 anm_uebernehmen_senden((int)$frueher['id']);
             }
             rate_gleiche_dauer($beginn, 0.6);
-            flash_setzen('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . ANM_LINK_GUELTIG_H . ' Stunden und einmal. Schau auch im Spam-Ordner.');
-            umleiten('/deine-anmeldung');
+            fertig('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . ANM_LINK_GUELTIG_H . ' Stunden und einmal. Schau auch im Spam-Ordner.', '/deine-anmeldung');
         }
     } elseif ($a === null) {
-        flash_setzen('fehler', 'Deine Sitzung ist abgelaufen. Lass dir einen neuen Link schicken.');
-        umleiten('/deine-anmeldung');
+        fertig('fehler', 'Deine Sitzung ist abgelaufen. Lass dir einen neuen Link schicken.', '/deine-anmeldung');
     } elseif ($nurAnsehen && $aktion !== 'konto_anlegen') {
-        flash_setzen('fehler', 'Diese Veranstaltung ist vorbei – hier lässt sich nichts mehr ändern.');
-        umleiten('/deine-anmeldung');
+        fertig('fehler', 'Diese Veranstaltung ist vorbei – hier lässt sich nichts mehr ändern.', '/deine-anmeldung');
     } else {
         $id = (int)$a['id'];
         switch ($aktion) {
@@ -81,100 +77,85 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $bis = strtotime($a['bestaetigen_bis'] . ' UTC');
                     $token = anm_link_erzeugen($id, 'bestaetigen', $bis);
                     mail_vorlage_einreihen($a['email'], 'bestaetigen', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text($a['bestaetigen_bis']), 'uebersicht' => anm_uebersicht_text($id)]);
-                    flash_setzen('ok', 'Die Bestätigungsmail ist noch einmal unterwegs.');
+                    fertig('ok', 'Die Bestätigungsmail ist noch einmal unterwegs.', '/deine-anmeldung');
                 }
                 umleiten('/deine-anmeldung');
             case 'workshops':
                 if (!anm_frist_offen('stichtag_workshop')) {
-                    flash_setzen('fehler', 'Workshops kannst du nicht mehr selbst ändern. Schreib uns, wir helfen.');
-                    umleiten('/deine-anmeldung');
+                    fertig('fehler', 'Workshops kannst du nicht mehr selbst ändern. Schreib uns, wir helfen.', '/deine-anmeldung');
                 }
                 $fehler = anm_workshops_setzen($id, anm_wahl_lesen($_POST));
                 if ($fehler === []) {
-                    flash_setzen('ok', 'Deine Workshops sind gespeichert. Du bekommst eine Mail mit der Übersicht.');
-                    umleiten('/deine-anmeldung');
+                    fertig('ok', 'Deine Workshops sind gespeichert. Du bekommst eine Mail mit der Übersicht.', '/deine-anmeldung');
                 }
-                $_GET['aendern'] = 'workshops';
+                $modus = 'workshops';
                 $eingabe = $_POST;
                 break;
             case 'essen':
                 if (!anm_frist_offen('stichtag_essen')) {
-                    flash_setzen('fehler', 'Das Essen kannst du nicht mehr selbst ändern.');
-                } elseif (anm_essen_setzen($id, (string)($_POST['essen'] ?? ''))) {
-                    flash_setzen('ok', 'Deine Essenswahl ist gespeichert.');
+                    fertig('fehler', 'Das Essen kannst du nicht mehr selbst ändern.', '/deine-anmeldung');
+                }
+                if (anm_essen_setzen($id, post_text('essen'))) {
+                    fertig('ok', 'Deine Essenswahl ist gespeichert.', '/deine-anmeldung');
                 }
                 umleiten('/deine-anmeldung');
             case 'daten':
                 $r = anm_daten_setzen($id, $_POST);
                 if ($r['fehler'] === [] && $r['email_gesperrt']) {
-                    flash_setzen('fehler', 'Deine übrigen Daten sind gespeichert, die Adresse nicht: ' . ANM_ADRESSE_RATE_TEXT);
-                    umleiten('/deine-anmeldung');
+                    fertig('fehler', 'Deine übrigen Daten sind gespeichert, die Adresse nicht: ' . ANM_ADRESSE_RATE_TEXT, '/deine-anmeldung');
                 }
                 if ($r['fehler'] === []) {
-                    flash_setzen('ok', $r['email_link'] ? 'Gespeichert. An die neue Adresse ist ein Link unterwegs; erst damit gilt sie. Bis dahin bleibt die bisherige.' : 'Deine Daten sind gespeichert.');
-                    umleiten('/deine-anmeldung');
+                    fertig('ok', $r['email_link'] ? 'Gespeichert. An die neue Adresse ist ein Link unterwegs; erst damit gilt sie. Bis dahin bleibt die bisherige.' : 'Deine Daten sind gespeichert.', '/deine-anmeldung');
                 }
                 $fehler = $r['fehler'];
                 $eingabe = $_POST;
-                $_GET['aendern'] = 'daten';
+                $modus = 'daten';
                 break;
             case 'storno':
                 if (!anm_frist_offen('stichtag_storno')) {
-                    flash_setzen('fehler', 'Absagen geht nicht mehr selbst. Schreib uns bitte, wenn du nicht kommen kannst.');
-                    umleiten('/deine-anmeldung');
+                    fertig('fehler', 'Absagen geht nicht mehr selbst. Schreib uns bitte, wenn du nicht kommen kannst.', '/deine-anmeldung');
                 }
                 anm_stornieren($id);
                 // Nur die Anmeldung aus der Sitzung nehmen; Konto- und Team-Login bleiben (E-63 (3), Review B-5)
                 unset($_SESSION['anm']);
-                flash_setzen('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.');
-                umleiten('/deine-anmeldung');
+                fertig('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.', '/deine-anmeldung');
             case 'annehmen':
-                $r = anm_angebot_annehmen($id, (int)($_POST['platz'] ?? 0), !empty($_POST['tausch']));
+                $r = anm_angebot_annehmen($id, post_zahl('platz'), post_haken('tausch'));
                 if (isset($r['ok'])) {
-                    flash_setzen('ok', 'Der Platz ist deiner. Du bekommst eine Mail mit der Übersicht.');
-                    umleiten('/deine-anmeldung');
+                    fertig('ok', 'Der Platz ist deiner. Du bekommst eine Mail mit der Übersicht.', '/deine-anmeldung');
                 }
                 if (isset($r['fehler'])) {
-                    flash_setzen('fehler', $r['fehler']);
-                    umleiten('/deine-anmeldung');
+                    fertig('fehler', $r['fehler'], '/deine-anmeldung');
                 }
                 $tausch = $r['tausch'];
-                $tauschPlatz = (int)($_POST['platz'] ?? 0);
+                $tauschPlatz = post_zahl('platz');
                 break;
             case 'konto_anlegen':
                 $kid = tk_anlegen_aus_anmeldung($id);
                 if ($kid === null) {
-                    flash_setzen('fehler', 'Für diese Adresse lässt sich hier kein Konto anlegen.');
-                    umleiten('/deine-anmeldung');
+                    fertig('fehler', 'Für diese Adresse lässt sich hier kein Konto anlegen.', '/deine-anmeldung');
                 }
                 tk_einloggen(konto_laden($kid));
                 $_SESSION['tk_pw'] = true;
-                flash_setzen('ok', 'Dein Konto ist angelegt. Leg jetzt dein Passwort fest.');
-                umleiten('/konto');
+                fertig('ok', 'Dein Konto ist angelegt. Leg jetzt dein Passwort fest.', '/konto');
             case 'ablehnen':
-                anm_angebot_ablehnen($id, (int)($_POST['platz'] ?? 0));
-                flash_setzen('ok', 'Angebot abgelehnt. Der Platz geht an die nächste Person.');
-                umleiten(anm_laden($id) === null ? '/' : '/deine-anmeldung');
+                anm_angebot_ablehnen($id, post_zahl('platz'));
+                fertig('ok', 'Angebot abgelehnt. Der Platz geht an die nächste Person.', anm_laden($id) === null ? '/' : '/deine-anmeldung');
         }
     }
 }
 
 $a = anm_aktuell();
 $meldung = flash_holen();
-$fehlerFeld = fn(string $k) => isset($fehler[$k]) ? '<p class="feldfehler" id="f-' . $k . '">' . e($fehler[$k]) . '</p>' : '';
-$ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-describedby="f-' . $k . '"' : '';
 
 /* ---- Einstieg ohne Sitzung ---- */
 if ($a === null) {
     seite_kopf('Anmelden', ['aktiv' => '/deine-anmeldung']);
     $zr = anm_zeitraum();
     $kap = anm_kapazitaet(0);
+    echo seiten_kopfzeile('Wie willst du rein?', $zr === 'geschlossen' ? 'Derzeit keine Veranstaltung' : va_kurz() . ' · ' . tag_text(va('veranstaltung_datum')),
+        'Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.');
     ?>
-<div class="innen form-kopf">
-    <p class="kicker"><?= $zr === 'geschlossen' ? 'Derzeit keine Veranstaltung' : e(va_kurz()) . ' · ' . e(tag_text(va('veranstaltung_datum'))) ?></p>
-    <h1 class="titel">Wie willst du rein?</h1>
-    <p class="text">Ein Konto brauchst du nicht. Mit Konto sparst du dir nur die Links per Mail.</p>
-</div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
 <?php if (($ich = tk_aktuell() ?? team_gesehen()) !== null): // Eingeloggt, aber noch nicht angemeldet (E-54): kein Login-Feld ?>
@@ -193,8 +174,7 @@ if ($a === null) {
     </div>
 </div>
 <?php
-    seite_fuss();
-    return;
+    seite_ende();
 endif; ?>
     <div class="zg-raster drei-spalten">
 <?php if ($zr === 'vorher'): ?>
@@ -220,9 +200,10 @@ endif; ?>
             <h2 class="zwischen">Link per Mail</h2>
             <p>Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt <?= ANM_LINK_GUELTIG_H ?> Stunden und nur einmal.</p>
             <form method="post" action="/deine-anmeldung" class="zg-form" novalidate>
-                <?= csrf_feld() ?><input type="hidden" name="aktion" value="link">
+                <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'link']) ?>
+                <?php // Honigtopf von Hand: Rahmen mit aria-hidden, ohne Klasse feld ?>
                 <div class="honig" aria-hidden="true"><label for="website">Website (bitte leer lassen)</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
-                <div class="feld"><label for="zg-mail">E-Mail</label><input id="zg-mail" name="email" type="email" autocomplete="email" required<?= $ungueltig('email') ?>><?= $fehlerFeld('email') ?></div>
+                <?= feld('email', 'E-Mail', ['typ' => 'email', 'id' => 'zg-mail', 'pflicht' => true, 'fehler' => $fehler['email'] ?? null, 'attr' => ['autocomplete' => 'email']]) ?>
                 <button class="knopf" type="submit">Link schicken</button>
             </form>
         </div>
@@ -231,10 +212,10 @@ endif; ?>
             <p class="kicker">Mit Konto</p>
             <h2 class="zwischen">Einloggen</h2>
             <form method="post" action="/deine-anmeldung" class="zg-form" novalidate>
-                <?= csrf_feld() ?><input type="hidden" name="aktion" value="einloggen">
-                <?php if (isset($fehler['login'])): ?><p class="feldfehler" role="alert"><?= e($fehler['login']) ?></p><?php endif; ?>
-                <div class="feld"><label for="zg-lmail">E-Mail</label><input id="zg-lmail" name="email" type="email" autocomplete="username" required></div>
-                <div class="feld"><label for="zg-pw">Passwort</label><input id="zg-pw" name="passwort" type="password" autocomplete="current-password" required></div>
+                <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'einloggen']) ?>
+                <?php if (isset($fehler['login'])): // Fehler zum ganzen Login, keinem Feld zugeordnet ?><p class="feldfehler" role="alert"><?= e($fehler['login']) ?></p><?php endif; ?>
+                <?= feld('email', 'E-Mail', ['typ' => 'email', 'id' => 'zg-lmail', 'pflicht' => true, 'attr' => ['autocomplete' => 'username']]) ?>
+                <?= feld('passwort', 'Passwort', ['typ' => 'passwort', 'id' => 'zg-pw', 'pflicht' => true, 'attr' => ['autocomplete' => 'current-password']]) ?>
                 <div class="aktionen"><button class="knopf" type="submit">Einloggen</button><a class="klein-link" href="/konto/passwort-vergessen">Passwort vergessen?</a></div>
             </form>
             <p class="meta klein">Noch kein Konto? <a href="/konto/neu">Konto anlegen</a></p>
@@ -242,8 +223,7 @@ endif; ?>
     </div>
 </div>
 <?php
-    seite_fuss();
-    return;
+    seite_ende();
 }
 
 /* ---- Mit Sitzung ---- */
@@ -251,7 +231,6 @@ $id = (int)$a['id'];
 $plaetze = anm_plaetze($id);
 $sym = anm_symposium_status($id);
 $angebote = anm_angebote($id);
-$modus = (string)($_GET['aendern'] ?? '');
 $fristText = function (string $schluessel): string {
     $tag = anm_stichtag($schluessel);
     return anm_frist_offen($schluessel) ? 'möglich bis <b>' . e(tag_text($tag)) . '</b>' : 'nur noch über das Team (Stichtag war ' . e(tag_text($tag)) . ')';
@@ -259,87 +238,63 @@ $fristText = function (string $schluessel): string {
 $status = $a['status'] === 'unbestaetigt' ? 'Noch nicht bestätigt' : ($sym === 'fest' ? 'Anmeldung bestätigt' : ($sym === 'angebot' ? 'Platzangebot' : 'Warteliste'));
 
 seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a, 'skripte' => ['anmelden.js']]);
+echo seiten_kopfzeile('Hallo ' . $a['vorname'] . '.', 'Deine Anmeldung · ' . va_kurz() . ' · ' . tag_text(va('veranstaltung_datum')), '', true);
 ?>
-<div class="innen form-kopf">
-    <p class="kicker">Deine Anmeldung · <?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
-    <h1 class="titel">Hallo <?= e($a['vorname']) ?>.</h1>
-    <div class="status-band"><span class="sticker<?= $a['status'] === 'unbestaetigt' || $sym !== 'fest' ? ' hinweis' : '' ?>"><?= e($status) ?></span><span class="mono">Anmeldung Nr. <?= sprintf('%04d', $id) ?></span></div>
+    <div class="status-band"><span class="sticker<?= $a['status'] === 'unbestaetigt' || $sym !== 'fest' ? ' hinweis' : '' ?>"><?= e($status) ?></span><span class="mono">Anmeldung Nr. <?= anm_nummer((int)$id) ?></span></div>
 </div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
     <?php if ($nurAnsehen): ?><p class="va-archiv" role="status"><strong>Diese Veranstaltung ist vorbei.</strong> Du siehst deine Anmeldung nur noch an<?= va_aktuell_id() !== null ? '; zur aktuellen Veranstaltung geht es über die <a href="/">Startseite</a>' : '' ?>.</p><?php endif; ?>
     <?php if ($a['status'] === 'unbestaetigt'): ?>
-    <div class="meldung fehler" role="alert">Bitte bestätige deine Anmeldung über den Link in der Mail – bis <?= e(datum_zeit_text($a['bestaetigen_bis'])) ?> Uhr. Danach verfällt sie und die Plätze gehen an andere.
-        <form method="post" action="/deine-anmeldung" class="inline"><?= csrf_feld() ?><input type="hidden" name="aktion" value="bestaetigung_neu"><button type="submit" class="link-knopf">Mail noch einmal schicken</button></form></div>
+    <?= meldung_html('Anmeldung unbestätigt', 'fehler', ['text_html' => 'Bitte bestätige deine Anmeldung über den Link in der Mail – bis ' . e(datum_zeit_text($a['bestaetigen_bis'])) . ' Uhr. Danach verfällt sie und die Plätze gehen an andere.'
+        . aktion_knopf('/deine-anmeldung', 'bestaetigung_neu', [], 'Mail noch einmal schicken', 'link-knopf', ['form_klasse' => 'inline'])]) ?>
     <?php endif; ?>
 </div>
 
 <?php if ($modus === 'workshops' && $sym === 'fest' && anm_frist_offen('stichtag_workshop')):
-    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : ['fest' => [], 'warte' => []];
-    if ($eingabe === []) {
-        foreach ($plaetze as $p) {
-            if ((int)$p['termin_id'] === 0) {
-                continue;
-            }
-            if ($p['status'] === 'fest') {
-                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
-            } elseif ($p['status'] === 'warte') {
-                $wahl['warte'][] = (int)$p['termin_id'];
-            }
-        }
-    }
+    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : anm_wahl_aus_plaetzen($plaetze);
     $bisher = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] !== 0)); ?>
 <div class="innen abschnitt">
     <form class="form" method="post" action="/deine-anmeldung" novalidate>
-        <?= csrf_feld() ?><input type="hidden" name="aktion" value="workshops">
+        <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'workshops']) ?>
         <fieldset class="feld" id="workshops"><legend>Workshops ändern</legend>
             <p class="hilfe">Gibst du einen festen Platz ab, geht er sofort an die Warteliste. Je Workshop ein fester Termin; Wartelisten für volle Termine.</p>
-            <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert"><ul><?php foreach ($fehler as $f): ?><li><?= e($f) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
-            <?php require __DIR__ . '/teil_workshopwahl.php'; ?>
+            <?= fehler_html($fehler) ?>
+            <?= anm_workshopwahl_html($wahl, $bisher) ?>
         </fieldset>
         <div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="/deine-anmeldung">Abbrechen</a></div>
     </form>
 </div>
-<?php seite_fuss(); return; endif; ?>
+<?php seite_ende(); endif; ?>
 
 <?php if ($modus === 'essen' && anm_frist_offen('stichtag_essen')): ?>
 <div class="innen abschnitt">
     <form class="form" method="post" action="/deine-anmeldung">
-        <?= csrf_feld() ?><input type="hidden" name="aktion" value="essen">
-        <fieldset class="feld"><legend>Essen ändern</legend>
-            <div class="wahl wahl-reihe"><?php foreach (ANM_ESSEN as $k => $t): ?><label><input type="radio" name="essen" value="<?= e($k) ?>"<?= $a['essen'] === $k ? ' checked' : '' ?>><span><?= e($t) ?></span></label><?php endforeach; ?></div>
-        </fieldset>
+        <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'essen']) ?>
+        <?= feld('essen', 'Essen ändern', ['typ' => 'radio-reihe', 'optionen' => ANM_ESSEN, 'wert' => $a['essen']]) ?>
         <div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="/deine-anmeldung">Abbrechen</a></div>
     </form>
 </div>
-<?php seite_fuss(); return; endif; ?>
+<?php seite_ende(); endif; ?>
 
 <?php if ($modus === 'daten'):
-    $gruppen = va_liste('berufsgruppen');
-    $w = fn(string $k) => e($eingabe !== [] ? (string)($eingabe[$k] ?? '') : (string)($a[$k] ?? '')); ?>
+    $werte = $eingabe !== [] ? $eingabe : $a;
+    if (anm_hat_team_konto($a)) {
+        // Adresse des Team-Kontos fest (E-63 (2))
+        $profil = profil_felder_html(['email' => $a['email']] + $werte, $fehler, ['email' => 'fest', 'email_hilfe' => 'Das ist die Adresse deines Team-Kontos. ' . ANM_TEAM_ADRESSE_TEXT]);
+    } else {
+        $profil = profil_felder_html($werte, $fehler, ['email_hilfe' => 'Eine neue Adresse gilt erst, wenn du den Link bestätigst, den wir dorthin schicken.']);
+    } ?>
 <div class="innen abschnitt">
-    <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert">Nicht gespeichert. Bitte prüf die markierten Angaben.</div><?php endif; ?>
+    <?= $fehler !== [] ? meldung_html(NICHT_GESPEICHERT_TEXT, 'fehler') : '' ?>
     <form class="form" method="post" action="/deine-anmeldung" novalidate>
-        <?= csrf_feld() ?><input type="hidden" name="aktion" value="daten">
+        <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'daten']) ?>
         <h2 class="zwischen">Deine Daten</h2>
-        <div class="paar">
-            <div class="feld"><label for="vorname">Vorname</label><input id="vorname" name="vorname" type="text" autocomplete="given-name" maxlength="80" value="<?= $w('vorname') ?>"<?= $ungueltig('vorname') ?>><?= $fehlerFeld('vorname') ?></div>
-            <div class="feld"><label for="nachname">Nachname</label><input id="nachname" name="nachname" type="text" autocomplete="family-name" maxlength="80" value="<?= $w('nachname') ?>"<?= $ungueltig('nachname') ?>><?= $fehlerFeld('nachname') ?></div>
-        </div>
-        <div class="feld"><label for="email">E-Mail</label><?php $teamAdresse = anm_hat_team_konto($a); ?><input id="email" name="email" type="email" autocomplete="email" maxlength="190" value="<?= $teamAdresse ? e($a['email']) : $w('email') ?>"<?= $teamAdresse ? ' readonly' : '' ?><?= $ungueltig('email') ?>><p class="hilfe"><?= $teamAdresse ? 'Das ist die Adresse deines Team-Kontos. ' . e(ANM_TEAM_ADRESSE_TEXT) : 'Eine neue Adresse gilt erst, wenn du den Link bestätigst, den wir dorthin schicken.' ?></p><?= $fehlerFeld('email') ?></div>
-        <div class="paar">
-            <div class="feld"><label for="berufsgruppe">Berufsgruppe</label>
-                <select id="berufsgruppe" name="berufsgruppe" data-efn-gruppe="<?= e($gruppen[0] ?? '') ?>"<?= $ungueltig('berufsgruppe') ?>>
-                    <?php $bg = $eingabe !== [] ? (string)($eingabe['berufsgruppe'] ?? '') : $a['berufsgruppe']; foreach ($gruppen as $g): ?><option value="<?= e($g) ?>"<?= $bg === $g ? ' selected' : '' ?>><?= e($g) ?></option><?php endforeach; ?>
-                </select><?= $fehlerFeld('berufsgruppe') ?></div>
-            <div class="feld"><label for="institution">Klinik / Institution</label><input id="institution" name="institution" type="text" maxlength="160" value="<?= $w('institution') ?>"<?= $ungueltig('institution') ?>><?= $fehlerFeld('institution') ?></div>
-        </div>
-        <div class="feld" id="sonst-feld"><label for="beruf_sonstige">Sonstige – welche? <span class="meta">(freiwillig)</span></label><input id="beruf_sonstige" name="beruf_sonstige" type="text" maxlength="80" value="<?= $w('beruf_sonstige') ?>"></div>
-        <div class="feld" id="efn-feld"><label for="efn">EFN <span class="meta">(freiwillig, für die Fortbildungspunkte)</span></label><input id="efn" name="efn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" value="<?= $w('efn') ?>"<?= $ungueltig('efn') ?>><?= $fehlerFeld('efn') ?></div>
+        <?= $profil ?>
         <div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="/deine-anmeldung">Abbrechen</a></div>
     </form>
 </div>
-<?php seite_fuss(); return; endif; ?>
+<?php seite_ende(); endif; ?>
 
 <div class="innen raster abschnitt">
     <div class="spalte">
@@ -362,19 +317,19 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
             <div class="tausch-bestaetigen" role="alert">
                 <p class="kicker">Bitte bestätigen</p>
                 <ul class="tausch">
-                    <li><span class="chip ok">Wird gebucht</span> <?= e(anm_termin_text($tid)) ?></li>
-                    <?php foreach ($tausch as $x): ?><li><span class="chip wl">Wird storniert</span> <?= e(anm_termin_text((int)$x['termin_id'])) ?> <span class="meta">– <?= e($x['grund']) ?>, Platz geht an die Warteliste</span></li><?php endforeach; ?>
+                    <li><?= chip('ok', 'Wird gebucht') ?> <?= e(anm_termin_text($tid)) ?></li>
+                    <?php foreach ($tausch as $x): ?><li><?= chip('wl', 'Wird storniert') ?> <?= e(anm_termin_text((int)$x['termin_id'])) ?> <span class="meta">– <?= e($x['grund']) ?>, Platz geht an die Warteliste</span></li><?php endforeach; ?>
                 </ul>
                 <p class="meta klein">Das lässt sich nicht rückgängig machen: Die freigegebenen Plätze werden sofort weitervergeben.</p>
                 <div class="aktionen">
-                    <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="annehmen"><input type="hidden" name="platz" value="<?= (int)$o['id'] ?>"><input type="hidden" name="tausch" value="1"><button class="knopf" type="submit">Ja, so tauschen</button></form>
+                    <?= aktion_knopf('/deine-anmeldung', 'annehmen', ['platz' => (int)$o['id'], 'tausch' => 1], 'Ja, so tauschen', 'knopf') ?>
                     <a class="knopf zweit" href="/deine-anmeldung">Abbrechen</a>
                 </div>
             </div>
             <?php else: ?>
             <div class="aktionen">
-                <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="annehmen"><input type="hidden" name="platz" value="<?= (int)$o['id'] ?>"><button class="knopf" type="submit">Platz annehmen</button></form>
-                <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="ablehnen"><input type="hidden" name="platz" value="<?= (int)$o['id'] ?>"><button class="knopf zweit" type="submit">Ablehnen</button></form>
+                <?= aktion_knopf('/deine-anmeldung', 'annehmen', ['platz' => (int)$o['id']], 'Platz annehmen', 'knopf') ?>
+                <?= aktion_knopf('/deine-anmeldung', 'ablehnen', ['platz' => (int)$o['id']], 'Ablehnen', 'knopf zweit') ?>
             </div>
             <?php endif; ?>
         </div>
@@ -386,11 +341,11 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
                 <?php if ($sym !== 'fest'):
                     $sp = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] === 0))[0] ?? null;
                     $r = $sp !== null ? anm_platz_zeile($sp) : null; ?>
-                <div><dt>Symposium</dt><dd><?= $r !== null ? '<span class="chip wl">' . e($r['status']) . '</span>' : '' ?><br><span class="meta klein">Workshops wählst du, sobald du einen Platz hast.</span></dd></div>
+                <div><dt>Symposium</dt><dd><?= $r !== null ? chip('wl', $r['status']) : '' ?><br><span class="meta klein">Workshops wählst du, sobald du einen Platz hast.</span></dd></div>
                 <?php endif; ?>
                 <?php $hatWs = false; foreach ($plaetze as $p): if ((int)$p['termin_id'] === 0) continue; $hatWs = true;
                     $t = anm_termin((int)$p['termin_id']); $r = anm_platz_zeile($p); ?>
-                <div><dt class="mono"><?= e($t !== null ? $t['beginn'] . '–' . $t['ende'] : '–') ?></dt><dd><?= e($t !== null ? trim($t['workshop']['kuerzel'] . ' ' . $t['workshop']['titel']) : $r['text']) ?><br><span class="chip <?= $p['status'] === 'fest' ? 'ok' : 'wl' ?>"><?= e($p['status'] === 'angebot' ? 'Angebot offen, siehe oben' : $r['status']) ?></span></dd></div>
+                <div><dt class="mono"><?= e($t !== null ? $t['beginn'] . '–' . $t['ende'] : '–') ?></dt><dd><?= e($t !== null ? trim($t['workshop']['kuerzel'] . ' ' . $t['workshop']['titel']) : $r['text']) ?><br><?= chip(PLATZ_STATUS_CHIP[$p['status']] ?? 'wl', $p['status'] === 'angebot' ? 'Angebot offen, siehe oben' : $r['status']) ?></dd></div>
                 <?php endforeach; ?>
                 <?php if (!$hatWs && $sym === 'fest'): ?><div><dt>Workshops</dt><dd class="meta">Keine gewählt.</dd></div><?php endif; ?>
                 <?php if (va_an('mit_essen')): ?><div><dt>Essen</dt><dd><?= e(ANM_ESSEN[$a['essen']] ?? $a['essen']) ?></dd></div><?php endif; ?>
@@ -406,7 +361,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <div class="kasten">
             <h2 class="zwischen klein-zwischen">Deine Daten</h2>
             <dl class="liste-def">
-                <div><dt>Name</dt><dd><?= e($a['vorname'] . ' ' . $a['nachname']) ?></dd></div>
+                <div><dt>Name</dt><dd><?= e(person_name($a)) ?></dd></div>
                 <div><dt>E-Mail</dt><dd><?= e($a['email']) ?></dd></div>
                 <div><dt>Berufsgruppe</dt><dd><?= e($a['berufsgruppe'] . ($a['beruf_sonstige'] !== '' ? ' (' . $a['beruf_sonstige'] . ')' : '')) ?></dd></div>
                 <div><dt>Institution</dt><dd><?= e($a['institution']) ?></dd></div>
@@ -418,12 +373,12 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
     </div>
     <div class="spalte">
         <?php $tk = tk_aktuell(); if ($tk !== null): ?>
-        <div class="kasten"><strong>Mit Konto eingeloggt</strong><p class="meta klein">Profil, Adresse und Passwort änderst du unter „Mein Konto“. Bist du 30 Minuten nicht aktiv, loggst du dich neu ein.</p><p><a class="knopf zweit" href="/konto">Mein Konto</a></p></div>
+        <div class="kasten"><strong>Mit Konto eingeloggt</strong><p class="meta klein">Profil, Adresse und Passwort änderst du unter „Mein Konto“. Bist du <?= e(dauer_text(SITZUNG_LEERLAUF_S)) ?> nicht aktiv, loggst du dich neu ein.</p><p><a class="knopf zweit" href="/konto">Mein Konto</a></p></div>
         <?php else: ?>
-        <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta klein">Du hast einen Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du 30 Minuten nicht aktiv, lass dir unter „Deine Anmeldung“ einen neuen schicken.</p></div>
+        <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta klein">Du hast einen Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du <?= e(dauer_text(SITZUNG_LEERLAUF_S)) ?> nicht aktiv, lass dir unter „Deine Anmeldung“ einen neuen schicken.</p></div>
         <?php if ($a['status'] === 'bestaetigt' && $a['konto_id'] === null && (konto_per_email($a['email'])['rolle'] ?? 'teilnehmend') === 'teilnehmend'): ?>
         <div class="kasten"><strong>Konto anlegen?</strong><p>Mit Konto brauchst du keinen Link per Mail mehr. Deine Anmeldung wird übernommen; du legst nur ein Passwort fest.</p>
-            <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="konto_anlegen"><button class="knopf zweit" type="submit">Konto anlegen</button></form></div>
+            <?= aktion_knopf('/deine-anmeldung', 'konto_anlegen', [], 'Konto anlegen', 'knopf zweit') ?></div>
         <?php endif; endif; ?>
         <?php if ($a['status'] === 'bestaetigt' && zertifikat_verfuegbar($a)): ?>
         <div class="kasten akzent-kasten"><strong>Deine Teilnahmebescheinigung</strong><p>Danke, dass du dabei warst! Hier ist dein Zertifikat als PDF – mit deinen Workshops<?= va('cme_punkte') !== '' ? ' und den Fortbildungspunkten' : '' ?>.</p>
@@ -433,11 +388,8 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <?php endif; ?>
         <div class="kasten"><strong>Doch nicht dabei?</strong><p>Sag bitte ab – dein Platz geht an jemanden von der Warteliste.</p>
             <?php if (anm_frist_offen('stichtag_storno')): ?>
-            <details class="bestaetigen"><summary class="knopf gefahr">Anmeldung stornieren</summary>
-                <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="storno">
-                    <p>Deine Anmeldung und alle Plätze werden gelöscht. Das lässt sich nicht rückgängig machen.</p>
-                    <button type="submit" class="knopf gefahr">Ja, stornieren</button></form>
-            </details>
+            <?= bestaetigung_html('Anmeldung stornieren', 'Deine Anmeldung und alle Plätze werden gelöscht. Das lässt sich nicht rückgängig machen.', 'Ja, stornieren',
+                ['aktion' => 'storno'], ['ziel' => '/deine-anmeldung', 'knopfklasse' => 'knopf gefahr']) ?>
             <?php endif; ?>
             <p class="frist"><?= $fristText('stichtag_storno') ?></p>
         </div>

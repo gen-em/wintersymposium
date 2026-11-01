@@ -60,12 +60,12 @@ function jobs_lauf(string $ausloeser, ?int $jetzt = null): array
     if (wartung_aktiv()) {
         return ['status' => 'wartung', 'jobs' => []];
     }
-    if ((int)db_wert("SELECT GET_LOCK('ws_jobs', 0)") !== 1) {
+    if (db_zahl("SELECT GET_LOCK('ws_jobs', 0)") !== 1) {
         return ['status' => 'laeuft_schon', 'jobs' => []];
     }
     try {
         migration_bei_bedarf();
-        einstellung_setzen('jobs_letzter_lauf', gmdate('Y-m-d H:i:s', $jetzt));
+        einstellung_setzen('jobs_letzter_lauf', db_zeit($jetzt));
         einstellung_setzen('jobs_letzter_ausloeser', $ausloeser);
         $ergebnisse = [];
         foreach (jobs_katalog() as $name => $job) {
@@ -82,11 +82,11 @@ function jobs_einen_lauf(string $name, array $job, int $jetzt): array
 {
     $z = db_zeile('SELECT letzter_lauf FROM job WHERE name = ?', [$name]);
     if ($z !== null && $z['letzter_lauf'] !== null
-        && strtotime($z['letzter_lauf'] . ' UTC') > $jetzt - (int)$job['abstand_s']) {
+        && db_ts($z['letzter_lauf']) > $jetzt - (int)$job['abstand_s']) {
         return ['status' => 'nicht_faellig'];
     }
     $beginn = microtime(true);
-    $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+    $jetztDb = db_zeit($jetzt);
     try {
         $ergebnis = ($job['fn'])($jetzt);
         $fehler = null;

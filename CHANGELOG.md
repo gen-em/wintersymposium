@@ -2,6 +2,77 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.27.0] – 2026-11-01
+
+AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umbau; Seiten und Abläufe bleiben für Teilnehmende und Team gleich. Ausnahmen stehen unter „Geändert (sichtbar)“.
+
+### Neu
+
+- **Komponentenblatt** unter Betrieb → Komponenten (`/team/komponenten`, nur BetreiberInnen, E-64 (1)). Es zeigt jede Komponente mit Varianten und darunter den Aufruf: Typografie, Knöpfe, Felder, Kästen, Chips, Meldungen, Kacheln, Filter, Tabellen, Dialoge, Menüs. Die Seite ist Vorlage für neue Seiten und Regressionstest für das CSS im Browser-Durchlauf. Die Beispiel-Knöpfe ändern nichts.
+- **`server/lib/formular_lib.php`** (V-15 bis V-25) bündelt die Bausteine für Formulare und Seiten:
+  - Felder: `feld()` für alle Feldtypen, ein Markup mit `aria-describedby` auf Hilfe und Fehler; `wert()`; `profil_felder_html()` ersetzt fünf Kopien des Profilformulars.
+  - Aktionen und Dialoge: `aktion_knopf()`, `bestaetigung_html()`.
+  - Bausteine: `kachel()`, `chip()` mit den Status-Maps, `filter_leiste()`, `filter_chips()`, `leer_hinweis()`, `seiten_kopfzeile()`.
+  - Seitenablauf: `ist_post()`, `aktion()`, `post_text()`, `post_zahl()`, `post_haken()`, `fertig()`, `fertig_oder_fehler()`.
+- **Kleine Helfer** (V-2, V-3, V-9, V-11, V-48, V-49):
+  - `db_lib`: `db_zeit`, `db_ts`, `db_tag`, `db_zahl`, `db_gibt_es`.
+  - `format_lib`: `dauer_text`, `bytes_text`, `person_name`, `jetzt_text`, `jetzt_iso`; `datum_zeit_text(…, uhr: true)`.
+  - Weitere: `rate_text` und `rate_warten_text`, `anm_nummer`, `konto_profil_setzen`, `anm_profil_setzen`.
+  - `html_lib`: `meldung_html()` nimmt Text, Flash oder Liste; neu sind `NICHT_GESPEICHERT_TEXT`, die Option `seite_kopf(…, ['meldung' => true])` und `seite_ende()`.
+- **Code-Konventionen** stehen im Konzept, Abschnitt 5a (K-a bis K-h, Präfix-Tabelle). Grep-Tests dazu liegen in `tools/tests/konventionen.php`: Typografie, Wortliste, `gmdate`, keine `db_*` in Seiten, keine Feld-Closures, keine Einknopf-Formulare von Hand, CSS-Klassen in beiden Richtungen.
+- Phosphor-Icons `key`, `lock` und `lock-open` (V-41).
+
+### Geändert
+
+- **Alle Seiten nutzen die Helfer** (V-14 bis V-27):
+  - Datenbankzugriffe aus den Seiten sind in Lib-Funktionen gewandert. Die Zählung auf Betrieb → Veranstaltungen braucht jetzt eine Abfrage statt einer je Zeile.
+  - `teil_workshopwahl.php` und `teil_programm.php` sind nur noch Vorlagen von `anm_workshopwahl_html()` und `programm_html()`, mit festen Parametern.
+  - Statt `$_GET` als Zustand gibt es `$modus`; statt `seite_fuss(); return;` gibt es `seite_ende()`.
+  - Selbstgezeichnete SVGs sind durch `icon()` ersetzt.
+- **site.css als ein System** (V-29 bis V-39):
+  - Gegliedert nach Komponenten, mit Inhaltsverzeichnis.
+  - Tokens für Scheine, Backdrop, Papier, Maße und Radien; keine `rgba`- und Hex-Werte mehr außerhalb von `:root`.
+  - Etikett-Typografie als eine Regel (`.etikett`, `.etikett-mono`).
+  - Eine Menü-Karte (`.menue-karte`) für Zeilen-Menü, Personen-Menü und Wechsler.
+  - Aufklapper ohne Dreieck stehen in einer Regel (`details.schlicht`).
+  - Kartenmodus der Tabellen als `.karten-immer`.
+  - `.knopf.klein` statt `.klein-knopf`; `.gefahr-kasten` statt `.gefahrzone-kasten`; `.seitenkopf` statt `.form-kopf`.
+  - Rollen als Chip (`.chip.rolle`, `.chip.rolle-leise` statt `.rolle-tag` und `.rolle-etikett`).
+  - Die Töne der Meldungen stehen an einer Stelle.
+- Feste Zahlen in Texten (72 Stunden, 15 Minuten, 4 MB …) kommen aus den Konstanten (V-9).
+
+### Geändert (sichtbar, gewollt)
+
+- **Umbruchpunkte** (E-69 (6)): 760 und 1000 px statt sieben verschiedener. Folgen bei Zwischenbreiten:
+  - 600 bis 759 px: Formularpaare stehen untereinander, der Bestätigungsdialog kommt von unten.
+  - 900 bis 999 px: zweispaltige Raster (Team-Übersicht, Meine Anmeldung) sind einspaltig.
+  - 960 bis 999 px: Tabellen zeigen Karten.
+  - 1000 bis 1099 px: Die Namensspalte im Workshop-Raster ist 220 px breit.
+- **Profilformulare:**
+  - Überall „Bitte wählen“ als erste Berufsgruppe.
+  - Auf öffentlichen Seiten „(freiwillig)“ an „Sonstige“ und der EFN-Hinweis wie auf /anmelden.
+- **Texte:**
+  - Wortliste (Konzept 5a K-f): „Ja, löschen“ statt „Endgültig löschen“ und „Ja, Konto löschen“; „Entfernen“ statt „Von der Liste nehmen“.
+  - Sperr-Meldungen enden einheitlich auf „… und versuche es dann noch einmal.“
+  - Einheitlicher Text „Nicht gespeichert. Bitte prüf die markierten Angaben.“
+- **Darstellung:**
+  - **Text in Knöpfen, Chips und Feldern sitzt mittig** (Rückmeldung 2026-11-01). Die Schrift Tajawal hat zwei unpassende Sätze vertikaler Metriken; macOS und Chromium setzten Großbuchstaben deshalb 2–4 px zu hoch. Jetzt gelten in allen Engines einheitliche Metriken über `ascent-override`, `descent-override` und `line-gap-override`. Die Zeilenhöhen bleiben gleich, Tajawal-Text sitzt in seiner Zeile optisch mittig.
+  - Leer-Hinweise „Noch kein Passkey.“ und „Noch keine Veranstaltung.“ sind grau-kursiv wie alle anderen.
+  - Das Rollen-Etikett unter „Mein Konto“ ist ein Chip (wenige Pixel höher).
+  - Das Schloss in den Einstellungen und der Passkey-Knopf beim Einloggen zeigen Phosphor-Icons.
+
+### Entfernt
+
+- CSS-Regeln ohne Verwendung: `ablauf`, `angaben`, `cta`, `fussnote`, `hilfe-kasten`, `hilfe-liste`, `nav-name`, `nav-person`, `nowrap`, `rolle-wechsel`, `form-kopf`, `klein-knopf`, `gefahrzone-kasten`, `rolle-tag`, `rolle-etikett`. Dazu die Klassen ohne CSS im Markup: `eb-text`, `link-kasten`, `person-vorname`, `pg-block`, `status`.
+- `betrieb_groesse_text()` (jetzt `bytes_text()`); `hm()` und `minuten()` liegen jetzt in `format_lib` statt in `programm_lib`.
+
+### Doku
+
+- Konzept 5a (Code-Konventionen) und AP-17 Fortschritt; E-69 (5) bis (8).
+- betrieb.md zu Seiten, Bausteinen, Gestaltung und Grep-Tests; CLAUDE.md zum Komponentenblatt und zur CSS-Regel.
+- `docs/mockups/README.md` (Archiv, E-64).
+- Prüfprotokoll T-297 bis T-302.
+
 ## [0.26.3] – 2026-11-01
 
 ### Doku

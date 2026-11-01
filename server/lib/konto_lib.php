@@ -119,7 +119,7 @@ function konto_rolle_setzen(int $id, string $rolle, ?int $durch): void
 /** Zahl aktiver Betreiber (es muss immer mindestens einer bleiben). */
 function konto_aktive_betreiber(): int
 {
-    return (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle = 'betreiber' AND aktiv = 1");
+    return db_zahl("SELECT COUNT(*) FROM konto WHERE rolle = 'betreiber' AND aktiv = 1");
 }
 
 function konto_team_liste(): array
@@ -144,7 +144,7 @@ function konto_link_erzeugen(int $kontoId, string $zweck, ?int $durch = null, ?i
         db_ausfuehren('DELETE FROM konto_link WHERE konto_id = ?', [$kontoId]);
         db_ausfuehren(
             'INSERT INTO konto_link (konto_id, token_hash, zweck, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?)',
-            [$kontoId, hash('sha256', $token), $zweck, gmdate('Y-m-d H:i:s', $jetzt + KONTO_LINK_GUELTIG_S), gmdate('Y-m-d H:i:s', $jetzt)]
+            [$kontoId, hash('sha256', $token), $zweck, db_zeit($jetzt + KONTO_LINK_GUELTIG_S), db_zeit($jetzt)]
         );
     });
     audit_schreiben('konto', 'Link (' . $zweck . ') für Konto ' . $kontoId . ' erzeugt', $durch);
@@ -158,7 +158,7 @@ function konto_link_finden(string $token, ?int $jetzt = null): ?array
         return null;
     }
     $l = db_zeile('SELECT * FROM konto_link WHERE token_hash = ?', [hash('sha256', $token)]);
-    if ($l === null || strtotime($l['gueltig_bis'] . ' UTC') < ($jetzt ?? time())) {
+    if ($l === null || db_ts($l['gueltig_bis']) < ($jetzt ?? time())) {
         return null;
     }
     $k = konto_laden((int)$l['konto_id']);
@@ -181,5 +181,28 @@ function konto_link_url(string $token): string
 /** Abgelaufene Links löschen (Job 'aufraeumen'). */
 function konto_link_aufraeumen(?int $jetzt = null): int
 {
-    return db_ausfuehren('DELETE FROM konto_link WHERE gueltig_bis < ?', [gmdate('Y-m-d H:i:s', $jetzt ?? time())])->rowCount();
+    return db_ausfuehren('DELETE FROM konto_link WHERE gueltig_bis < ?', [db_zeit($jetzt ?? time())])->rowCount();
+}
+
+/**
+ * Profilfelder eines Kontos aus einem Anmeldungs-Datensatz bzw. geprüften Werten
+ * setzen (V-3): name aus vorname/nachname, berufsgruppe, beruf_sonstige,
+ * institution, efn (leer = NULL); mit $email auch die Adresse (nur ausdrücklich,
+ * weil Anmeldungs-Datensätze immer eine Adresse haben). Protokoll schreibt der Aufrufer.
+ */
+function konto_profil_setzen(int $id, array $w, ?string $email = null): void
+{
+    $spalten = ['name' => person_name($w), 'berufsgruppe' => $w['berufsgruppe'], 'beruf_sonstige' => $w['beruf_sonstige'],
+        'institution' => $w['institution'], 'efn' => ($w['efn'] ?? '') !== '' ? $w['efn'] : null];
+    if ($email !== null) {
+        $spalten = ['email' => $email] + $spalten;
+    }
+    db_ausfuehren('UPDATE konto SET ' . implode(', ', array_map(fn($k) => "$k = ?", array_keys($spalten))) . ', geaendert_am = ? WHERE id = ?',
+        [...array_values($spalten), db_jetzt(), $id]);
+}
+
+/** Ob es schon ein Konto gibt (Installer: dann ist die App installiert). */
+function konto_irgendeins_da(): bool
+{
+    return db_gibt_es('SELECT COUNT(*) FROM konto');
 }

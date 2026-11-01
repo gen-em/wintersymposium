@@ -17,11 +17,10 @@ $ich = (int)$konto['id'];
 $fehler = [];
 $werte = ['name' => '', 'email' => '', 'rolle' => 'admin'];
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     zweitfaktor_mailcode_aktion($konto, '/team/konten');
-    $aktion = (string)($_POST['aktion'] ?? '');
-    $ziel = isset($_POST['id']) ? konto_laden((int)$_POST['id']) : null;
+    $aktion = aktion();
+    $ziel = isset($_POST['id']) ? konto_laden(post_zahl('id')) : null;
     if ($aktion !== 'anlegen' && (!konto_ist_team($ziel))) {
         $fehler[] = 'Dieses Konto gibt es nicht.';
     } elseif ($aktion !== 'anlegen' && (int)$ziel['id'] === $ich) {
@@ -29,16 +28,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } else {
         switch ($aktion) {
             case 'anlegen':
-                $werte = ['name' => (string)($_POST['name'] ?? ''), 'email' => (string)($_POST['email'] ?? ''), 'rolle' => (string)($_POST['rolle'] ?? '')];
+                $werte = ['name' => post_text('name'), 'email' => post_text('email'), 'rolle' => post_text('rolle')];
                 $fehler = in_array($werte['rolle'], TEAM_ROLLEN, true) ? konto_eingabe_fehler($werte['name'], $werte['email'], $werte['rolle']) : ['Bitte Admin oder BetreiberIn wählen.'];
                 if ($fehler === []) {
                     $id = konto_anlegen($werte['name'], $werte['email'], $werte['rolle'], null, $ich);
-                    team_link_weitergeben(konto_laden($id), 'einrichten', empty($_POST['nur_anzeigen']), $ich);
+                    team_link_weitergeben(konto_laden($id), 'einrichten', !post_haken('nur_anzeigen'), $ich);
                     umleiten('/team/konten');
                 }
                 break;
             case 'link':
-                team_link_weitergeben($ziel, $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort', empty($_POST['nur_anzeigen']), $ich);
+                team_link_weitergeben($ziel, $ziel['passwort_hash'] === null ? 'einrichten' : 'passwort', !post_haken('nur_anzeigen'), $ich);
                 umleiten('/team/konten');
             case 'zweitfaktor':
                 if (($f = zweitfaktor_aus_formular($ich)) !== null) {
@@ -46,8 +45,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     break;
                 }
                 totp_zuruecksetzen((int)$ziel['id'], 'durch BetreiberIn', $ich);
-                flash_setzen('ok', 'Zweiter Faktor von ' . $ziel['name'] . ' zurückgesetzt. Beim nächsten Einloggen richtet ' . $ziel['name'] . ' ihn neu ein.');
-                umleiten('/team/konten');
+                fertig('ok', 'Zweiter Faktor von ' . $ziel['name'] . ' zurückgesetzt. Beim nächsten Einloggen richtet ' . $ziel['name'] . ' ihn neu ein.', '/team/konten');
             case 'sperren':
                 if ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
                     $fehler[] = 'Es muss mindestens eine aktive BetreiberIn bleiben.';
@@ -58,19 +56,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     break;
                 }
                 konto_aktiv_setzen((int)$ziel['id'], (int)$ziel['aktiv'] !== 1, $ich);
-                flash_setzen('ok', $ziel['name'] . ((int)$ziel['aktiv'] === 1 ? ' gesperrt.' : ' entsperrt.'));
-                umleiten('/team/konten');
+                fertig('ok', $ziel['name'] . ((int)$ziel['aktiv'] === 1 ? ' gesperrt.' : ' entsperrt.'), '/team/konten');
             case 'veranstaltungen':
                 if ($ziel['rolle'] !== 'admin') {
                     $fehler[] = 'BetreiberInnen sehen immer alle Veranstaltungen.';
                     break;
                 }
-                $alle = ($_POST['umfang'] ?? '') !== 'auswahl';
+                $alle = post_text('umfang') !== 'auswahl';
                 va_rechte_setzen((int)$ziel['id'], $alle, (array)($_POST['va'] ?? []), $ich);
-                flash_setzen('ok', 'Veranstaltungen von ' . $ziel['name'] . ': ' . va_rechte_text(konto_laden((int)$ziel['id'])) . '.');
-                umleiten('/team/konten');
+                fertig('ok', 'Veranstaltungen von ' . $ziel['name'] . ': ' . va_rechte_text(konto_laden((int)$ziel['id'])) . '.', '/team/konten');
             case 'rolle':
-                $rolle = (string)($_POST['rolle'] ?? '');
+                $rolle = post_text('rolle');
                 if (!in_array($rolle, TEAM_ROLLEN, true) || $rolle === $ziel['rolle']) {
                     $fehler[] = 'Bitte eine andere Rolle wählen.';
                 } elseif ($ziel['rolle'] === 'betreiber' && (int)$ziel['aktiv'] === 1 && konto_aktive_betreiber() < 2) {
@@ -79,8 +75,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $fehler[] = $f . ' Die Rolle wurde nicht geändert.';
                 } else {
                     konto_rolle_setzen((int)$ziel['id'], $rolle, $ich);
-                    flash_setzen('ok', $ziel['name'] . ' ist jetzt ' . ROLLEN[$rolle] . '.');
-                    umleiten('/team/konten');
+                    fertig('ok', $ziel['name'] . ' ist jetzt ' . ROLLEN[$rolle] . '.', '/team/konten');
                 }
                 break;
             default:
@@ -95,7 +90,7 @@ function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich)
     $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
     if ($perMail && mail_eingerichtet()) {
         mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
-        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt 72 Stunden).');
+        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . ').');
         return;
     }
     $_SESSION['neuer_link'] = ['name' => $k['name'], 'url' => $url];
@@ -107,8 +102,8 @@ unset($_SESSION['neuer_link']);
 team_seite_kopf($konto, 'Team-Konten', '/team/konten', ['skripte' => ['zweitfaktor.js']]);
 echo fehler_html($fehler);
 if (is_array($link)): ?>
-<div class="kasten link-kasten">
-    <p><strong>Link für <?= e($link['name']) ?></strong> – gib ihn persönlich oder über einen sicheren Weg weiter. Er gilt 72 Stunden und nur einmal und wird nur jetzt angezeigt.</p>
+<div class="kasten">
+    <p><strong>Link für <?= e($link['name']) ?></strong> – gib ihn persönlich oder über einen sicheren Weg weiter. Er gilt <?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?> und nur einmal und wird nur jetzt angezeigt.</p>
     <p class="mono umbruch"><?= e($link['url']) ?></p>
 </div>
 <?php endif; ?>
@@ -122,13 +117,13 @@ if (is_array($link)): ?>
             <td data-label="Name"><strong><?= e($k['name']) ?></strong><?= $eigen ? ' <span class="meta">(du)</span>' : '' ?><br><span class="meta klein"><?= e($k['email']) ?></span></td>
             <td data-label="Rolle"><?= e(ROLLEN[$k['rolle']]) ?></td>
             <td data-label="Veranstaltungen" class="klein"><?= e(va_rechte_text($k)) ?></td>
-            <td data-label="Status"><span class="chip <?= (int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen') ?>"><?= e($status) ?></span></td>
+            <td data-label="Status"><?= chip((int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen'), $status) ?></td>
             <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
             <?php if (!$eigen): $kid = (int)$k['id']; $erlaubt = va_erlaubte_ids($k); ?>
                 <?php /* Ein Knopf je Zeile (AP-13, Entwurf 9): Menü, jede Aktion als Dialog */ ?>
                 <details class="zeilen-menue"><summary class="knopf zweit klein">Bearbeiten <?= icon('caret-down', 14) ?></summary>
-                    <div class="zeilen-liste" role="menu">
+                    <div class="menue-karte zeilen-liste" role="menu">
                         <?php if ($k['rolle'] === 'admin'): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-va-<?= $kid ?>">Veranstaltungen …</button><?php endif; ?>
                         <button type="button" hidden class="menue-punkt" role="menuitem" id="m-rolle-<?= $kid ?>">Rolle ändern …</button>
                         <hr>
@@ -162,19 +157,12 @@ if (is_array($link)): ?>
                     </form>
                 </details>
                 <?php if (zweitfaktor_da($k)): ?>
-                <details class="bestaetigen" data-ausloeser="m-zf-<?= $kid ?>" data-titel="Zweiten Schritt zurücksetzen?"><summary class="klein-link">Zweiten Schritt zurücksetzen</summary>
-                    <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="zweitfaktor">
-                        <p><?= e($k['name']) ?> richtet App, Code per E-Mail oder Passkey beim nächsten Einloggen neu ein. Passkeys werden entfernt.</p>
-                        <?= zweitfaktor_feld_html($konto, 'totp-zf-' . $kid) ?>
-                        <button class="knopf gefahr" type="submit">Ja, zurücksetzen</button></form>
-                </details>
+                <?= bestaetigung_html('Zweiten Schritt zurücksetzen', $k['name'] . ' richtet App, Code per E-Mail oder Passkey beim nächsten Einloggen neu ein. Passkeys werden entfernt.', 'Ja, zurücksetzen', ['id' => $kid, 'aktion' => 'zweitfaktor'],
+                    ['ziel' => '/team/konten', 'ausloeser' => 'm-zf-' . $kid, 'titel' => 'Zweiten Schritt zurücksetzen?', 'knopfklasse' => 'klein-link', 'inhalt_html' => zweitfaktor_feld_html($konto, 'totp-zf-' . $kid)]) ?>
                 <?php endif; ?>
-                <details class="bestaetigen" data-ausloeser="m-sperren-<?= $kid ?>" data-titel="<?= (int)$k['aktiv'] === 1 ? 'Konto sperren?' : 'Konto entsperren?' ?>"<?= (int)$k['aktiv'] === 1 ? '' : ' data-art="gruen"' ?>><summary class="klein-link"><?= (int)$k['aktiv'] === 1 ? 'Sperren' : 'Entsperren' ?></summary>
-                    <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="sperren">
-                        <p><?= (int)$k['aktiv'] === 1 ? e($k['name']) . ' kann sich danach nicht mehr einloggen; eine laufende Sitzung endet.' : e($k['name']) . ' kann sich wieder einloggen.' ?></p>
-                        <?= zweitfaktor_feld_html($konto, 'totp-sp-' . $kid) ?>
-                        <button class="knopf<?= (int)$k['aktiv'] === 1 ? ' gefahr' : '' ?>" type="submit"><?= (int)$k['aktiv'] === 1 ? 'Ja, sperren' : 'Ja, entsperren' ?></button></form>
-                </details>
+                <?php $aktiv = (int)$k['aktiv'] === 1; ?>
+                <?= bestaetigung_html($aktiv ? 'Sperren' : 'Entsperren', $aktiv ? $k['name'] . ' kann sich danach nicht mehr einloggen; eine laufende Sitzung endet.' : $k['name'] . ' kann sich wieder einloggen.', $aktiv ? 'Ja, sperren' : 'Ja, entsperren', ['id' => $kid, 'aktion' => 'sperren'],
+                    ['ziel' => '/team/konten', 'art' => $aktiv ? 'rot' : 'gruen', 'ausloeser' => 'm-sperren-' . $kid, 'titel' => $aktiv ? 'Konto sperren?' : 'Konto entsperren?', 'knopfklasse' => 'klein-link', 'inhalt_html' => zweitfaktor_feld_html($konto, 'totp-sp-' . $kid)]) ?>
             <?php endif; ?>
             </div></td>
         </tr>
@@ -187,19 +175,16 @@ if (is_array($link)): ?>
     <form method="post" action="/team/konten" class="formular">
         <?= csrf_feld() ?>
         <input type="hidden" name="aktion" value="anlegen">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" required maxlength="120" value="<?= e($werte['name']) ?>">
-        <label for="email">E-Mail-Adresse</label>
-        <input id="email" name="email" type="email" required maxlength="254" value="<?= e($werte['email']) ?>">
-        <label for="rolle">Rolle</label>
-        <select id="rolle" name="rolle">
-            <option value="admin"<?= $werte['rolle'] === 'admin' ? ' selected' : '' ?>>Admin – Programm, Einstellungen, Anmeldungen</option>
-            <option value="betreiber"<?= $werte['rolle'] === 'betreiber' ? ' selected' : '' ?>>BetreiberIn – zusätzlich Team-Konten und Technik</option>
-        </select>
-        <label class="haken"><input type="checkbox" name="nur_anzeigen" value="1"><span>Keine Mail – Link nur hier anzeigen (ich gebe ihn selbst weiter)</span></label>
+        <?= feld('name', 'Name', ['wert' => $werte['name'], 'pflicht' => true, 'attr' => ['maxlength' => 120], 'ohne_rahmen' => true]) ?>
+        <?= feld('email', 'E-Mail-Adresse', ['typ' => 'email', 'wert' => $werte['email'], 'pflicht' => true, 'attr' => ['maxlength' => 254], 'ohne_rahmen' => true]) ?>
+        <?= feld('rolle', 'Rolle', ['typ' => 'auswahl', 'wert' => $werte['rolle'], 'ohne_rahmen' => true, 'optionen' => [
+            'admin' => 'Admin – Programm, Einstellungen, Anmeldungen',
+            'betreiber' => 'BetreiberIn – zusätzlich Team-Konten und Technik',
+        ]]) ?>
+        <?= feld('nur_anzeigen', 'Keine Mail – Link nur hier anzeigen (ich gebe ihn selbst weiter)', ['typ' => 'haken']) ?>
         <button type="submit" class="knopf">Konto anlegen und einladen</button>
     </form>
-    <p class="meta klein">Die Einladung kommt per Mail mit einem Link zum Festlegen des Passworts (72 Stunden, einmal). Beim ersten Einloggen richtet die Person den zweiten Faktor ein.</p>
+    <p class="meta klein">Die Einladung kommt per Mail mit einem Link zum Festlegen des Passworts (<?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?>, einmal). Beim ersten Einloggen richtet die Person den zweiten Faktor ein.</p>
 </section>
 <?php
 team_seite_fuss();

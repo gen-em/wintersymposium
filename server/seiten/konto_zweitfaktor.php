@@ -15,34 +15,31 @@ $fehler = [];
 $neueCodes = null;
 $appEinrichtung = null;
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
-    $aktion = (string)($_POST['aktion'] ?? '');
+if (ist_post()) {
+    $aktion = aktion();
     if (in_array($aktion, ['codes', 'mail_an', 'mail_aus', 'app_start'], true)) {
         // Änderungen am zweiten Faktor: mit dem Passwort bestätigen (Ratenschutz im Helfer, V-4)
         $zs = totp_zustand($id);
-        if (($f = passwort_bestaetigen($konto, (string)($_POST['pw'] ?? ''), 'Das Passwort stimmt nicht. Nichts geändert.')) !== null) {
+        if (($f = passwort_bestaetigen($konto, post_text('pw'), 'Das Passwort stimmt nicht. Nichts geändert.')) !== null) {
             $fehler[] = $f;
         } elseif ($aktion === 'codes') {
             $neueCodes = totp_codes_erneuern($id);
         } elseif ($aktion === 'mail_an') {
             mailcode_einschalten($id, true);
-            flash_setzen('ok', 'Code per E-Mail ist eingeschaltet. Beim nächsten Einloggen schicken wir dir einen Code.');
-            umleiten('/konto/zweitfaktor');
+            fertig('ok', 'Code per E-Mail ist eingeschaltet. Beim nächsten Einloggen schicken wir dir einen Code.', '/konto/zweitfaktor');
         } elseif ($aktion === 'mail_aus') {
             if (!$zs['an'] && $zs['passkeys'] === 0) {
                 $fehler[] = 'Richte zuerst die Authenticator-App oder einen Passkey ein – ohne zweiten Faktor geht es nicht.';
             } else {
                 mailcode_einschalten($id, false);
-                flash_setzen('ok', 'Code per E-Mail ist ausgeschaltet. Du loggst dich mit der Authenticator-App ein.');
-                umleiten('/konto/zweitfaktor');
+                fertig('ok', 'Code per E-Mail ist ausgeschaltet. Du loggst dich mit der Authenticator-App ein.', '/konto/zweitfaktor');
             }
         } elseif (!$zs['an']) {
             $_SESSION['app_einrichten'] = true;
             umleiten('/konto/zweitfaktor#app');
         }
     } elseif ($aktion === 'app_fertig' && !empty($_SESSION['app_einrichten'])) {
-        $codes = totp_einrichtung_abschliessen($id, (string)($_POST['totp'] ?? ''));
+        $codes = totp_einrichtung_abschliessen($id, post_text('totp'));
         if ($codes === null) {
             $fehler[] = 'Der Code aus der App stimmt nicht. Prüfe die Uhrzeit auf dem Handy und nimm den aktuellen Code.';
         } else {
@@ -59,9 +56,10 @@ if (!empty($_SESSION['app_einrichten']) && !$zf['an']) {
     $aussteller = 'Wintersymposium' . (umgebung() === 'produktion' ? '' : ' (' . umgebung() . ')');
     $appEinrichtung = ['otpauth' => totp_otpauth($roh, (string)$konto['email'], $aussteller), 'text' => totp_base32_gruppen($roh)];
 }
-$pwFeld = fn(string $id) => '<label for="pw-' . $id . '">Bestätigen mit deinem Passwort</label><input id="pw-' . $id . '" name="pw" type="password" required autocomplete="current-password">';
+$pwFeld = fn(string $id) => feld('pw', 'Bestätigen mit deinem Passwort', ['typ' => 'passwort', 'id' => 'pw-' . $id, 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['autocomplete' => 'current-password']]);
 seite_kopf('Zwei-Faktor', ['aktiv' => '/konto', 'konto' => $konto] + ($appEinrichtung !== null ? ['skripte' => ['vendor/qrcode.js', 'qr.js']] : []));
-echo '<div class="innen form-kopf"><p class="kicker"><a href="/konto">Mein Konto</a> ›</p><h1 class="titel">Zwei-Faktor</h1></div><div class="innen">' . meldung_html(flash_holen());
+// Kopf von Hand: der Kicker ist ein Link zurück (seiten_kopfzeile() escaped den Kicker)
+echo '<div class="innen seitenkopf"><p class="kicker"><a href="/konto">Mein Konto</a> ›</p><h1 class="titel">Zwei-Faktor</h1></div><div class="innen">' . meldung_html(flash_holen());
 echo fehler_html($fehler);
 if ($neueCodes !== null): ?>
 <div class="kasten">
@@ -74,9 +72,9 @@ if ($neueCodes !== null): ?>
         <h2 class="zwischen">Zwei-Faktor-Authentifizierung</h2>
         <p class="meta">Nach dem Passwort fragt der Login einen zweiten Nachweis ab. So kommt niemand nur mit deinem Passwort in den Team-Bereich. Änderungen hier bestätigst du mit deinem Passwort.</p>
         <dl class="liste-def">
-            <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? '<span class="chip ok">eingerichtet</span> seit ' . e(datum_zeit_text($konto['totp_seit'])) : '<span class="chip offen">nicht eingerichtet</span>' ?></dd></div>
-            <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? '<span class="chip ok">an</span> bei jedem Einloggen an ' . e($konto['email']) : '<span class="chip offen">aus</span>' ?></dd></div>
-            <div><dt>Passkeys</dt><dd><?= $zf['passkeys'] > 0 ? '<span class="chip ok">' . $zf['passkeys'] . '</span>' : '<span class="chip offen">keiner</span>' ?> <a href="/konto#passkeys">verwalten</a></dd></div>
+            <div><dt>Authenticator-App</dt><dd><?= $zf['an'] ? chip('ok', 'eingerichtet') . ' seit ' . e(datum_zeit_text($konto['totp_seit'])) : chip('offen', 'nicht eingerichtet') ?></dd></div>
+            <div><dt>Code per E-Mail</dt><dd><?= $zf['mail'] ? chip('ok', 'an') . ' bei jedem Einloggen an ' . e($konto['email']) : chip('offen', 'aus') ?></dd></div>
+            <div><dt>Passkeys</dt><dd><?= $zf['passkeys'] > 0 ? chip('ok', (string)$zf['passkeys']) : chip('offen', 'keiner') ?> <a href="/konto#passkeys">verwalten</a></dd></div>
             <div><dt>Wiederherstellungs&shy;codes</dt><dd><?= $zf['codes_offen'] ?> von <?= TOTP_CODES ?> übrig – für den Notfall (Handy weg, Postfach nicht erreichbar)</dd></div>
             <div><dt>Letzte Anmeldung</dt><dd><?= e(datum_zeit_text($konto['letzte_anmeldung'])) ?></dd></div>
         </dl>
@@ -88,7 +86,7 @@ if ($neueCodes !== null): ?>
                 <div><p class="meta klein">Schlüssel zum Abtippen</p><p class="mono schluessel"><?= e($appEinrichtung['text']) ?></p></div>
             </div>
             <form method="post" action="/konto/zweitfaktor" class="formular"><?= csrf_feld() ?><input type="hidden" name="aktion" value="app_fertig">
-                <label for="app-code">Code aus der App</label><input id="app-code" name="totp" type="text" required inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+                <?= feld('totp', 'Code aus der App', ['id' => 'app-code', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['inputmode' => 'numeric', 'autocomplete' => 'one-time-code', 'maxlength' => 8]]) ?>
                 <button type="submit" class="knopf">App einrichten</button></form>
         </div>
         <?php endif; ?>

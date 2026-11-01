@@ -10,4 +10,4 @@ if (!rm_auswahl_gueltig($auswahl) || ($bg !== '' && !in_array($bg, va_liste('ber
     json_antwort(400, ['fehler' => 'Unbekannte Auswahl.']);
 }
 $e = rm_empfaenger($auswahl, $bg);
-json_antwort(200, ['zahl' => count($e), 'namen' => array_map(fn($x) => trim($x['vorname'] . ' ' . $x['nachname']) ?: $x['email'], $e)]);
+json_antwort(200, ['zahl' => count($e), 'namen' => array_map(fn($x) => person_name($x) ?: $x['email'], $e)]);

@@ -20,7 +20,8 @@ function e(mixed $wert): string
  * $opt: 'akzent' => 'lila'|'rot', 'aktiv' => Pfad des aktiven Menüpunkts,
  *       'nav' => false für Seiten ohne Navigation (Installer, Fehler),
  *       'konto' => angemeldetes Konto (zeigt Name und „Ausloggen“, E-40/E-42),
- *       'skripte' => Liste eigener Skripte unter /assets/.
+ *       'skripte' => Liste eigener Skripte unter /assets/,
+ *       'meldung' => true: Flash-Meldung aus der Umleitung unter dem Kopf ausgeben.
  */
 function seite_kopf(string $titel, array $opt = []): void
 {
@@ -78,7 +79,7 @@ function seite_kopf(string $titel, array $opt = []): void
                 . icon('user-circle', 20) . 'Einloggen</a>';
             $flach = $a('/einloggen', 'Einloggen', '/einloggen');
         } else {
-            $name = is_array($ich) ? (string)$ich['name'] : trim($tn['vorname'] . ' ' . $tn['nachname']);
+            $name = is_array($ich) ? (string)$ich['name'] : person_name($tn);
             $teile = preg_split('/\s+/u', trim($name)) ?: [''];
             $kuerzel = mb_strtoupper(mb_substr($teile[0], 0, 1) . (count($teile) > 1 ? mb_substr((string)end($teile), 0, 1) : ''));
             $unter = is_array($ich) ? (konto_ist_team($ich) ? (ROLLEN[$ich['rolle']] ?? '') . ' · ' : '') . $ich['email'] : 'über den Link aus der Mail';
@@ -94,8 +95,8 @@ function seite_kopf(string $titel, array $opt = []): void
             $ab = '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="person-ab">' . icon('sign-out', 22) . '<span>Ausloggen</span></button></form>';
             $rolle = is_array($ich) && konto_ist_team($ich) ? '<span class="person-rolle">' . e(ROLLEN[$ich['rolle']] ?? '') . '</span>' : '';
             $adresse = is_array($ich) ? (string)$ich['email'] : 'über den Link aus der Mail';
-            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
-                . '<div class="person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
+            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span>' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
+                . '<div class="menue-karte person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
                 . implode('', array_map(fn($x) => '<a class="person-punkt' . ($x[4] ?? '') . '" href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . icon($x[3], 22) . '<span class="person-text"><span class="person-titel">' . e($x[1]) . '</span><small>' . e($x[2]) . '</small></span>' . icon('caret-right', 16, 'icon person-weiter') . '</a>', $eintraege))
                 . $ab . '</div></details>';
             $flach = '<li class="person-flach"><p class="person-flach-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
@@ -106,6 +107,17 @@ function seite_kopf(string $titel, array $opt = []): void
             . '<details class="menue"><summary>Menü</summary><ul class="nav-liste">' . $liste . $flach . '</ul></details></nav>';
     }
     echo '</div></header><main id="inhalt">';
+    if (!empty($opt['meldung'])) {
+        // Flash-Meldung aus der Umleitung gleich unter dem Kopf (V-18)
+        echo '<div class="innen">' . meldung_html(flash_holen()) . '</div>';
+    }
+}
+
+/** Seitenfuß ausgeben und die Seite beenden (statt „seite_fuss(); return;“, V-26). */
+function seite_ende(): never
+{
+    seite_fuss();
+    exit;
 }
 
 function seite_fuss(): void
@@ -153,7 +165,7 @@ const TEAM_BEREICHE = [
     'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
     'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/protokoll', 'Protokoll']],
-    'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
+    'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true], ['/team/komponenten', 'Komponenten', true]],
 ];
 
 function team_reiter(array $konto, string $aktiv): string
@@ -217,7 +229,7 @@ function team_veranstaltung_wechsler(array $konto, string $aktiv): string
         . '<a class="va-verwalten" href="/team/veranstaltungen">' . icon('list-bullets', 18) . '<span>Alle Veranstaltungen verwalten</span></a></div>' : '';
     return '<details class="va-wechsler"><summary aria-label="Veranstaltung wechseln, gewählt: ' . e($gewaehltName) . '">'
         . '<span class="va-wahl"><span class="va-label">Veranstaltung</span><span class="va-name">' . e($gewaehltName) . '</span></span>' . $chip($v['status']) . icon('caret-down', 16, 'icon va-pfeil') . '</summary>'
-        . '<div class="va-menue"><p class="va-label">Wechseln zu</p>' . $liste . $aktionen . '</div></details>';
+        . '<div class="menue-karte va-menue"><p class="va-label">Wechseln zu</p>' . $liste . $aktionen . '</div></details>';
 }
 
 /** Hinweis unter den Reitern, wenn die gewählte Veranstaltung ein Entwurf oder abgeschlossen ist (E-58). */
@@ -241,23 +253,34 @@ function team_seite_fuss(): void
     seite_fuss();
 }
 
-/** Meldung (ok, fehler, hinweis) als HTML; null → ''. */
-function meldung_html(?array $m): string
+/** Standardtext über einem Formular mit Fehlern (V-18). */
+const NICHT_GESPEICHERT_TEXT = 'Nicht gespeichert. Bitte prüf die markierten Angaben.';
+
+/**
+ * Meldung als HTML (V-18): ein Text mit Ton (ok, fehler, hinweis), eine Flash-
+ * Meldung ['ton' => …, 'text' => …] oder eine Liste von Texten (als Aufzählung).
+ * null, '' und [] → ''. $opt: klasse (weitere Klassen), text_html (Inhalt roh).
+ */
+function meldung_html(string|array|null $m, string $ton = 'hinweis', array $opt = []): string
 {
-    if ($m === null) {
+    if ($m === null || $m === '' || $m === []) {
         return '';
     }
-    $ton = in_array($m['ton'] ?? '', ['ok', 'fehler', 'hinweis'], true) ? $m['ton'] : 'hinweis';
-    return '<div class="meldung ' . $ton . '" role="' . ($ton === 'fehler' ? 'alert' : 'status') . '">' . e($m['text']) . '</div>';
+    if (is_array($m) && isset($m['text']) && !array_is_list($m)) {
+        $ton = (string)($m['ton'] ?? 'hinweis');
+        $m = (string)$m['text'];
+    }
+    $ton = in_array($ton, ['ok', 'fehler', 'hinweis'], true) ? $ton : 'hinweis';
+    $inhalt = $opt['text_html'] ?? (is_array($m)
+        ? '<ul>' . implode('', array_map(fn($f) => '<li>' . e($f) . '</li>', array_values($m))) . '</ul>'
+        : e($m));
+    return '<div class="meldung ' . $ton . (isset($opt['klasse']) ? ' ' . e($opt['klasse']) : '') . '" role="' . ($ton === 'fehler' ? 'alert' : 'status') . '">' . $inhalt . '</div>';
 }
 
-/** Fehlerliste als HTML. */
+/** Fehlerliste als HTML (auch mit Feldnamen als Schlüssel). */
 function fehler_html(array $fehler): string
 {
-    if ($fehler === []) {
-        return '';
-    }
-    return '<div class="meldung fehler" role="alert"><ul>' . implode('', array_map(fn($f) => '<li>' . e($f) . '</li>', $fehler)) . '</ul></div>';
+    return meldung_html(array_values($fehler), 'fehler');
 }
 
 /** Eine einfache Meldungsseite mit Statuscode. */

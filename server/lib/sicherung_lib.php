@@ -223,7 +223,7 @@ function sicherung_wiederherstellen(string $name, ?int $kontoId): ?string
     $p = (string)sicherung_pfad($name);
     $pdo = db();
     foreach (['ws_jobs', 'ws_platz', 'ws_migration'] as $sperre) {
-        if ((int)db_wert('SELECT GET_LOCK(?, 20)', [$sperre]) !== 1) {
+        if (db_zahl('SELECT GET_LOCK(?, 20)', [$sperre]) !== 1) {
             return 'Die Datenbank ist gerade beschäftigt. Bitte gleich noch einmal versuchen.';
         }
     }
