@@ -8,7 +8,8 @@ declare(strict_types=1);
  * zweite Faktor eingerichtet (Pflicht, E-11). Teilnehmende
  * (AP-4b) nur mit Passwort. Eine Sitzung für alles (E-54): Team-Konten gelten
  * nach dem zweiten Faktor auch als Konto für die eigene Anmeldung.
- * Passkeys folgen später (O-14).
+ * Passkeys (E-55): Knopf „Mit Passkey einloggen“, dazu im Adressfeld
+ * (Conditional UI) und von selbst, wenn das Gerät zuletzt einen nahm (E-75).
  */
 
 team_sitzung();
@@ -138,11 +139,11 @@ if ($halb === null): ?>
 <form method="post" action="/einloggen" class="formular">
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="passwort">
-    <?= feld('email', 'E-Mail-Adresse', ['typ' => 'email', 'pflicht' => true, 'wert' => $email, 'ohne_rahmen' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'username']]) ?>
+    <?= feld('email', 'E-Mail-Adresse', ['typ' => 'email', 'pflicht' => true, 'wert' => $email, 'ohne_rahmen' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'username webauthn']]) ?>
     <?= feld('passwort', 'Passwort', ['typ' => 'passwort', 'pflicht' => true, 'ohne_rahmen' => true, 'attr' => ['autocomplete' => 'current-password']]) ?>
     <button type="submit" class="knopf">Weiter</button>
 </form>
-<div class="pk-login" data-passkey-login hidden>
+<div class="pk-login" data-passkey-login<?= pk_ursprung() !== null ? ' data-passkey-direkt' : '' ?> hidden>
     <p class="trenner-text"><span>oder</span></p>
     <button type="button" class="knopf zweit pk-knopf" data-passkey-los><?= icon('key', 18) ?>Mit Passkey einloggen</button>
     <p class="meta klein">Ohne Passwort, mit Fingerabdruck, Gesicht oder Geräte-PIN – wenn du unter „Mein Konto“ einen Passkey angelegt hast.</p>
