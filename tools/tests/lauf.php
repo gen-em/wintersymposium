@@ -158,6 +158,10 @@ pruefe(oeffnen($p, 'totp|2') === null, 'anderer Zweck (anderes Konto) öffnet ni
 pruefe(oeffnen(substr($p, 0, -4) . 'AAAA', 'totp|1') === null, 'beschädigtes Paket öffnet nicht');
 pruefe(passwort_regel_fehler('kurz', 'kurz') !== null && passwort_regel_fehler(str_repeat('a', 12), str_repeat('a', 12)) === null, 'Passwortregeln');
 
+abschnitt('Code-Konventionen (Konzept 5a, AP-17)');
+require __DIR__ . '/konventionen.php';
+konventionen_pruefen($wurzel);
+
 /* ---- Mit Datenbank --------------------------------------------------------- */
 
 if (!$mitDb) {
