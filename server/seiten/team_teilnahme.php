@@ -132,7 +132,7 @@ team_seite_kopf($konto, 'Teilnahme', '/team/teilnahme');
         <?php if (foto_moeglich()): ?>
         <form class="formular" method="post" action="<?= $ziel ?>" enctype="multipart/form-data"><?= csrf_feld() ?><input type="hidden" name="aktion" value="unterschrift">
             <div class="feld"><label for="bild"><?= unterschrift_da() ? 'Neues Bild' : 'Bild hochladen' ?></label><input id="bild" type="file" name="bild" accept="image/png,image/jpeg" required>
-                <p class="hilfe">PNG mit durchsichtigem Hintergrund (oder JPG auf Weiß), höchstens 4 MB.</p></div>
+                <p class="hilfe">PNG mit durchsichtigem Hintergrund (oder JPG auf Weiß), höchstens <?= e(bytes_text(UNTERSCHRIFT_MAX_BYTES)) ?>.</p></div>
             <button class="knopf zweit" type="submit">Hochladen</button>
         </form>
         <?php endif; ?>

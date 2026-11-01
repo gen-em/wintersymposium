@@ -174,7 +174,7 @@ if ($rm !== null && $rm['status'] !== 'entwurf'):
             <?php if ($empf === []): ?><p class="meta klein">Die Liste ist nach der Löschfrist entfernt (E-24).</p><?php else: ?>
             <ul class="schlicht empfaenger-liste"><?php foreach ($empf as $x): ?><li><?= e($x['name']) ?> <span class="meta klein"><?= e($x['email']) ?></span></li><?php endforeach; ?></ul>
             <?php endif; ?>
-            <?php if ($rm['loeschen_ab'] !== null): ?><p class="meta klein">Wird am <?= e(tag_text($rm['loeschen_ab'])) ?> gelöscht (14 Monate nach dem Symposium).</p><?php endif; ?>
+            <?php if ($rm['loeschen_ab'] !== null): ?><p class="meta klein">Wird am <?= e(tag_text($rm['loeschen_ab'])) ?> gelöscht (<?= RM_ARCHIV_MONATE ?> Monate nach dem Symposium).</p><?php endif; ?>
         </details>
         <?php endif; ?>
         <form method="post" action="/team/mailings?id=<?= $id ?>" class="aktionen">
@@ -232,13 +232,13 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
             <select id="postfach" name="postfach"<?= $ungueltig('postfach') ?>><?php foreach ($stand['postfaecher'] as $p => $pf): ?><option value="<?= e($p) ?>"<?= $w['postfach'] === $p ? ' selected' : '' ?><?= $pf['da'] ? '' : ' disabled' ?>><?= e($pf['titel']) ?><?= $pf['da'] ? '' : ' – nicht eingerichtet' ?></option><?php endforeach; ?></select><?= $fehlerFeld('postfach') ?>
             <p class="hilfe"><?php foreach ($stand['postfaecher'] as $p => $pf): if ($pf['da']): ?><span class="umbruch"><?= e($pf['titel']) ?>: <?= e(mail_absender_name(mail_konfig($p)) . ' <' . $pf['absender'] . '>') ?></span><br><?php endif; endforeach; ?></p></div>
         <div class="empf"><p><strong class="mono" id="rm-zahl"><?= count($empfaenger) ?></strong> Empfänger <span class="meta klein">(nur bestätigte Anmeldungen bzw. Abonnierende)</span></p>
-            <details class="tabelle-details"><summary>Liste ansehen</summary><ul class="schlicht empfaenger-liste" id="rm-liste"><?php foreach ($empfaenger as $x): ?><li><?= e(trim($x['vorname'] . ' ' . $x['nachname']) ?: $x['email']) ?></li><?php endforeach; ?></ul></details></div>
+            <details class="tabelle-details"><summary>Liste ansehen</summary><ul class="schlicht empfaenger-liste" id="rm-liste"><?php foreach ($empfaenger as $x): ?><li><?= e(person_name($x) ?: $x['email']) ?></li><?php endforeach; ?></ul></details></div>
         <div class="feld"><label for="betreff">Betreff</label><input id="betreff" name="betreff" type="text" maxlength="200" value="<?= e($w['betreff']) ?>"></div>
         <div class="feld">
             <label for="rm-html">Text der Mail</label>
             <textarea id="rm-html" name="html" rows="14" class="mono"<?= editor_attribute('block', true) ?>><?= e($w['html']) ?></textarea>
             <p class="hilfe"><strong>Platzhalter</strong> ersetzt die App beim Versand für jede Person: <code>{vorname}</code> und <code>{nachname}</code> aus der Anmeldung; <code>{workshops}</code> die Workshops mit festem Platz (je Zeile Titel und Uhrzeit); <code>{link}</code> ein persönlicher Link zu „Deine Anmeldung“ (48 Stunden gültig), auch als Ziel eines Knopfs. Im Newsletter bleiben <code>{nachname}</code> und <code>{workshops}</code> leer, <code>{link}</code> führt zur Abo-Verwaltung.</p>
-            <p class="hilfe">Bilder (JPG/PNG, höchstens 1200 px) werden auf dieser Webseite gespeichert und in die Mail eingebettet – keine fremden Server. Klick aufs Bild schaltet zwischen voller und halber Breite. Impressum und Datenschutz hängt die App an.</p>
+            <p class="hilfe">Bilder (JPG/PNG, höchstens <?= RM_BILD_MAX_KANTE ?> px) werden auf dieser Webseite gespeichert und in die Mail eingebettet – keine fremden Server. Klick aufs Bild schaltet zwischen voller und halber Breite. Impressum und Datenschutz hängt die App an.</p>
         </div>
         <div class="feld rm-bild-feld"><label for="rm-bild">Bild hochladen</label><input id="rm-bild" name="bild" type="file" accept="image/jpeg,image/png"><button class="knopf zweit klein-knopf" type="submit" name="aktion" value="bild">Bild ans Ende setzen</button></div>
         <div class="aktionen">

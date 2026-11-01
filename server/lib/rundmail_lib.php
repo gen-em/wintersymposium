@@ -444,7 +444,7 @@ function rm_vorschau(array $rm, array $konto): array
             + ['an' => $p !== null ? ($p['vorname'] !== '' ? $p['vorname'] . ' · ' : '') . $p['email'] : 'Beispiel'];
     }
     $werte = $p !== null ? rm_werte($p, false) : rm_werte(['vorname' => tk_namen($konto)['vorname'], 'nachname' => tk_namen($konto)['nachname']], false);
-    return rm_zusammensetzen($rm, $werte, 'url') + ['an' => $p !== null ? $p['vorname'] . ' ' . $p['nachname'] : 'Beispiel'];
+    return rm_zusammensetzen($rm, $werte, 'url') + ['an' => $p !== null ? person_name($p) : 'Beispiel'];
 }
 
 /* ---- Speichern, Senden, Planen ------------------------------------------ */
@@ -556,14 +556,14 @@ function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
             return null;
         }
         $liste = rm_empfaenger($rm['auswahl'], $rm['berufsgruppe']);
-        $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+        $jetztDb = db_zeit($jetzt);
         // Archiv bis 14 Monate nach dem Symposium (E-24); gilt das Datum schon als vorbei, ab heute
         // Newsletter (AP-7): Liste 14 Monate ab Versand; sonst bis 14 Monate nach dem Symposium
         $nl = rm_nl_listen($rm['auswahl']) !== null;
-        $basis = $nl ? gmdate('Y-m-d', $jetzt) : max(va('veranstaltung_datum'), gmdate('Y-m-d', $jetzt));
+        $basis = $nl ? db_tag($jetzt) : max(va('veranstaltung_datum'), db_tag($jetzt));
         $loeschen = (new DateTimeImmutable($basis))->modify('+' . RM_ARCHIV_MONATE . ' months')->format('Y-m-d');
         foreach ($liste as $a) {
-            $name = trim($a['vorname'] . ' ' . $a['nachname']);
+            $name = person_name($a);
             db_ausfuehren('INSERT IGNORE INTO rundmail_empfaenger (rundmail_id, anmeldung_id, nl_person_id, name, email) VALUES (?, ?, ?, ?, ?)',
                 [$id, $nl ? null : $a['id'], $nl ? $a['id'] : null, $name !== '' ? $name : $a['email'], $a['email']]);
             db_ausfuehren(
@@ -617,7 +617,7 @@ function rm_abbrechen(int $id, int $kontoId): ?string
             foreach ($offen as $an) {
                 db_ausfuehren('DELETE FROM rundmail_empfaenger WHERE rundmail_id = ? AND email = ?', [$id, $an]);
             }
-            $raus = (int)db_wert('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$id]);
+            $raus = db_zahl('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$id]);
             db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
             return [$weg, $raus];
         });
@@ -676,7 +676,7 @@ function rm_liste(): array
 function rm_job(int $jetzt): array
 {
     $erg = ['gestartet' => 0, 'fertig' => 0, 'archiv' => 0, 'bilder' => 0];
-    foreach (db_zeilen("SELECT id FROM rundmail WHERE status = 'geplant' AND geplant_fuer <= ?", [gmdate('Y-m-d H:i:s', $jetzt)]) as $r) {
+    foreach (db_zeilen("SELECT id FROM rundmail WHERE status = 'geplant' AND geplant_fuer <= ?", [db_zeit($jetzt)]) as $r) {
         if (rm_einreihen((int)$r['id'], null, $jetzt) !== null) {
             $erg['gestartet']++;
         } else {
@@ -689,7 +689,7 @@ function rm_job(int $jetzt): array
         "UPDATE rundmail r SET r.status = 'gesendet' WHERE r.status = 'versand'
          AND NOT EXISTS (SELECT 1 FROM mail_ausgang m WHERE m.rundmail_id = r.id AND m.status IN ('offen','sendet'))"
     )->rowCount();
-    $erg['archiv'] = db_ausfuehren('DELETE e FROM rundmail_empfaenger e JOIN rundmail r ON r.id = e.rundmail_id WHERE r.loeschen_ab IS NOT NULL AND r.loeschen_ab <= ?', [gmdate('Y-m-d', $jetzt)])->rowCount();
+    $erg['archiv'] = db_ausfuehren('DELETE e FROM rundmail_empfaenger e JOIN rundmail r ON r.id = e.rundmail_id WHERE r.loeschen_ab IS NOT NULL AND r.loeschen_ab <= ?', [db_tag($jetzt)])->rowCount();
     $erg['bilder'] = rm_bilder_aufraeumen($jetzt) + text_bilder_aufraeumen($jetzt);
     return $erg;
 }
@@ -783,7 +783,7 @@ function bild_upload_lesen(array $upload): string
 {
     $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > RM_BILD_MAX_BYTES) {
-        throw new RuntimeException('Das Bild ist zu groß (höchstens 10 MB).');
+        throw new RuntimeException('Das Bild ist zu groß (höchstens ' . bytes_text(RM_BILD_MAX_BYTES) . ').');
     }
     if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
         throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
@@ -832,7 +832,7 @@ function rm_bilder_aufraeumen(int $jetzt): int
         }
     }
     $n = 0;
-    foreach (db_zeilen('SELECT id, datei FROM rundmail_bild WHERE erstellt_am < ?', [gmdate('Y-m-d H:i:s', $jetzt - 86400)]) as $b) {
+    foreach (db_zeilen('SELECT id, datei FROM rundmail_bild WHERE erstellt_am < ?', [db_zeit($jetzt - 86400)]) as $b) {
         if (!isset($genutzt[(int)$b['id']])) {
             @unlink(foto_ordner() . '/' . basename($b['datei']));
             db_ausfuehren('DELETE FROM rundmail_bild WHERE id = ?', [$b['id']]);

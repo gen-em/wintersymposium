@@ -60,7 +60,7 @@ seite_kopf('Konto anlegen', ['aktiv' => '/deine-anmeldung', 'skripte' => ['pow.j
     <div class="kasten danke" role="status">
         <p class="kicker">Fast geschafft</p>
         <h2 class="zwischen">Schau in dein Postfach.</h2>
-        <p>Wir haben dir eine Mail mit einem Link geschickt. Damit bestätigst du deine Adresse und legst dein Passwort fest. Der Link gilt 48 Stunden.</p>
+        <p>Wir haben dir eine Mail mit einem Link geschickt. Damit bestätigst du deine Adresse und legst dein Passwort fest. Der Link gilt <?= e(dauer_text(TK_LINK_GUELTIG_S)) ?>.</p>
         <p class="meta">Gibt es für die Adresse schon ein Konto, bekommst du stattdessen einen Hinweis zum Einloggen.</p>
     </div>
 </div>

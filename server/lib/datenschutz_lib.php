@@ -55,7 +55,7 @@ function ds_anmeldungen_leeren(int $jetzt): array
         }
     }
     if ($erg['geleert'] > 0) {
-        audit_schreiben('datenschutz', 'Anmeldungen geleert (14 Monate nach der Veranstaltung): ' . $erg['geleert'] . ', CME-Nachweise abgelegt: ' . $erg['cme']);
+        audit_schreiben('datenschutz', 'Anmeldungen geleert (' . DS_LEEREN_MONATE . ' Monate nach der Veranstaltung): ' . $erg['geleert'] . ', CME-Nachweise abgelegt: ' . $erg['cme']);
     }
     return $erg;
 }
@@ -67,7 +67,7 @@ function ds_anmeldung_leeren(int $anmId, int $jetzt): void
         db_ausfuehren(
             "UPDATE anmeldung SET vorname = '', nachname = '', email = ?, institution = '', beruf_sonstige = '', efn = NULL, newsletter = 0, konto_wunsch = 0,
                 sitzung_version = sitzung_version + 1, anonymisiert_am = ?, geaendert_am = ? WHERE id = ?",
-            ['geleert-' . $anmId . '@anonym.invalid', gmdate('Y-m-d H:i:s', $jetzt), gmdate('Y-m-d H:i:s', $jetzt), $anmId]
+            ['geleert-' . $anmId . '@anonym.invalid', db_zeit($jetzt), db_zeit($jetzt), $anmId]
         );
         db_ausfuehren('DELETE FROM anmeldung_link WHERE anmeldung_id = ?', [$anmId]);
         db_ausfuehren('UPDATE rundmail_empfaenger SET name = ?, email = ? WHERE anmeldung_id = ?', ['–', '', $anmId]);
@@ -86,7 +86,7 @@ function ds_cme_ablegen(array $a, int $jetzt): bool
             'INSERT INTO cme_nachweis (veranstaltung_id, anmeldung_id, veranstaltung, datum, nachname, vorname, efn, vnr, punkte, kammer, erstellt_am)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE efn = VALUES(efn)',
-            [$vid, (int)$a['id'], tn_name(), va('veranstaltung_datum'), $a['nachname'], $a['vorname'], $a['efn'], va('cme_veranstaltungsnummer'), va('cme_punkte'), va('cme_kammer'), gmdate('Y-m-d H:i:s', $jetzt)]
+            [$vid, (int)$a['id'], tn_name(), va('veranstaltung_datum'), $a['nachname'], $a['vorname'], $a['efn'], va('cme_veranstaltungsnummer'), va('cme_punkte'), va('cme_kammer'), db_zeit($jetzt)]
         );
         return true;
     });
@@ -112,8 +112,8 @@ function ds_cme_liste(): array
 
 function ds_protokoll_kuerzen(int $jetzt): array
 {
-    $alt = db_ausfuehren('DELETE FROM audit WHERE zeit < ?', [gmdate('Y-m-d H:i:s', (new DateTimeImmutable('@' . $jetzt))->modify('-' . DS_PROTOKOLL_MONATE . ' months')->getTimestamp())])->rowCount();
-    $login = db_ausfuehren("DELETE FROM audit WHERE art = 'login' AND zeit < ?", [gmdate('Y-m-d H:i:s', $jetzt - DS_LOGIN_TAGE * 86400)])->rowCount();
+    $alt = db_ausfuehren('DELETE FROM audit WHERE zeit < ?', [db_zeit((new DateTimeImmutable('@' . $jetzt))->modify('-' . DS_PROTOKOLL_MONATE . ' months')->getTimestamp())])->rowCount();
+    $login = db_ausfuehren("DELETE FROM audit WHERE art = 'login' AND zeit < ?", [db_zeit($jetzt - DS_LOGIN_TAGE * 86400)])->rowCount();
     return ['eintraege' => $alt, 'logins' => $login];
 }
 
@@ -122,7 +122,7 @@ function ds_protokoll_kuerzen(int $jetzt): array
 /** Zeitpunkt (Unix) einer Sicherung aus ihrem Namen. */
 function ds_sicherung_zeit(string $name): int
 {
-    return preg_match('/^sicherung-(\d{8})-(\d{6})-/', $name, $m) === 1 ? (int)strtotime($m[1] . ' ' . $m[2] . ' UTC') : 0;
+    return preg_match('/^sicherung-(\d{8})-(\d{6})-/', $name, $m) === 1 ? db_ts($m[1] . ' ' . $m[2]) : 0;
 }
 
 /**

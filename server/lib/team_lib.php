@@ -54,7 +54,7 @@ function team_personen(?array $sicht = null): array
             }
         }
         $status = $a['status'] === 'unbestaetigt' ? 'unbestaetigt' : ($sym === 'fest' ? 'angemeldet' : 'warteliste');
-        $liste[] = ['art' => 'anm', 'id' => (int)$a['id'], 'name' => $a['anonymisiert_am'] !== null ? '(Daten geleert)' : $a['vorname'] . ' ' . $a['nachname'], 'email' => $a['email'],
+        $liste[] = ['art' => 'anm', 'id' => (int)$a['id'], 'name' => $a['anonymisiert_am'] !== null ? '(Daten geleert)' : person_name($a), 'email' => $a['email'],
             'status' => $status, 'sym' => $sym, 'konto' => $k, 'anmeldung' => $a, 'essen' => $a['essen'], 'erstellt' => $a['erstellt_am']];
     }
     foreach ($konten as $id => $k) {
@@ -120,20 +120,16 @@ function team_anm_daten(int $anmId, array $e, bool $mail): array
     }
     if ($neueAdresse) {
         $k = konto_per_email($w['email']);
-        if (db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [va_id(), $w['email'], $anmId]) > 0
+        if (db_gibt_es('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND email = ? AND id <> ?', [va_id(), $w['email'], $anmId])
             || ($k !== null && (int)$k['id'] !== (int)($a['konto_id'] ?? 0))) {
             return ['email' => 'Diese Adresse gehört schon zu einer anderen Anmeldung oder einem anderen Konto.'];
         }
     }
     $kontoMit = $konto !== null && $konto['rolle'] === 'teilnehmend';
     db_transaktion(function () use ($anmId, $w, $a, $neueAdresse, $kontoMit): void {
-        db_ausfuehren(
-            'UPDATE anmeldung SET vorname = ?, nachname = ?, email = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, sitzung_version = sitzung_version + ?, geaendert_am = ? WHERE id = ?',
-            [$w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, $neueAdresse ? 1 : 0, db_jetzt(), $anmId]
-        );
+        anm_profil_setzen($anmId, $w, $w['email'], $neueAdresse);
         if ($kontoMit) {
-            db_ausfuehren('UPDATE konto SET email = ?, name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
-                [$w['email'], trim($w['vorname'] . ' ' . $w['nachname']), $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null, db_jetzt(), $a['konto_id']]);
+            konto_profil_setzen((int)$a['konto_id'], $w, $w['email']);
         }
     });
     if ($neueAdresse && $kontoMit) {
@@ -259,11 +255,11 @@ function team_angebot(int $platzId): ?string
         }
         $jetzt = time();
         $fristTs = $jetzt + va_zahl('nachrueck_frist_h') * 3600;
-        db_ausfuehren("UPDATE platz SET status = 'angebot', angebot_bis = ? WHERE id = ?", [gmdate('Y-m-d H:i:s', $fristTs), $platzId]);
+        db_ausfuehren("UPDATE platz SET status = 'angebot', angebot_bis = ? WHERE id = ?", [db_zeit($fristTs), $platzId]);
         $tausch = anm_tausch((int)$a['id'], $p);
         $token = anm_link_erzeugen((int)$a['id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_H * 3600));
         mail_vorlage_einreihen($a['email'], 'angebot', [
-            'vorname' => $a['vorname'], 'was' => anm_termin_text($tid), 'frist' => datum_zeit_text(gmdate('Y-m-d H:i:s', $fristTs)), 'link' => anm_link_url($token),
+            'vorname' => $a['vorname'], 'was' => anm_termin_text($tid), 'frist' => datum_zeit_text(db_zeit($fristTs)), 'link' => anm_link_url($token),
             'tausch' => $tausch === [] ? '' : 'Nimmst du an, fällt dafür weg: ' . implode('; ', array_map(fn($x) => anm_termin_text((int)$x['termin_id']), $tausch)) . '.',
         ]);
         audit_schreiben('nachruecken', 'Team: Angebot an Anmeldung ' . $a['id'] . ' für Termin ' . $tid, anm_team_konto());
@@ -311,7 +307,7 @@ function team_termine(): array
         $liste[] = [
             'id' => $tid, 'text' => $tid === 0 ? 'Symposium' : anm_termin_text($tid), 'termin' => $tid === 0 ? null : anm_termin($tid),
             'kap' => $kap, 'belegt' => $belegt, 'frei' => $kap === null ? null : $kap - $belegt, 'warte' => anm_wartend($tid),
-            'angebote' => (int)db_wert("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status = 'angebot'", [va_id(), $tid]),
+            'angebote' => db_zahl("SELECT COUNT(*) FROM platz WHERE veranstaltung_id = ? AND termin_id = ? AND status = 'angebot'", [va_id(), $tid]),
         ];
     }
     return $liste;
@@ -342,7 +338,7 @@ function team_aufgaben(?int $jetzt = null, ?string $rolle = null): array
     $auf = [];
     $grenzeVorbei = $jetzt + va_zahl('nachrueck_frist_h') * 3600 > anm_grenze_ts();
     foreach (team_termine() as $t) {
-        $wartendBestaetigt = (int)db_wert("SELECT COUNT(*) FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'", [va_id(), $t['id']]);
+        $wartendBestaetigt = db_zahl("SELECT COUNT(*) FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.termin_id = ? AND p.status = 'warte' AND a.status = 'bestaetigt'", [va_id(), $t['id']]);
         if ($t['frei'] !== null && $t['frei'] > 0 && $wartendBestaetigt > 0) {
             $auf[] = ['art' => 'Manuell', 'text' => $t['text'] . ': ' . $t['frei'] . ($t['frei'] === 1 ? ' Platz' : ' Plätze') . ' frei, ' . $wartendBestaetigt . ' auf der Warteliste'
                 . ($grenzeVorbei ? ' – automatische Angebote sind vorbei.' : ' – das Nachrücken läuft beim nächsten Job.'), 'link' => '/team/workshops?t=' . $t['id'], 'knopf' => 'Vergeben'];
@@ -355,8 +351,8 @@ function team_aufgaben(?int $jetzt = null, ?string $rolle = null): array
     } elseif ($ms['fehler'] > 0) {
         $auf[] = ['art' => 'Mail', 'text' => $ms['fehler'] . ($ms['fehler'] === 1 ? ' Mail ließ' : ' Mails ließen') . ' sich nicht zustellen.', 'link' => '/team/daten', 'knopf' => 'Ansehen'];
     }
-    foreach (db_zeilen("SELECT p.*, a.vorname, a.nachname FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.status = 'angebot' AND p.angebot_bis < ? ORDER BY p.angebot_bis", [va_id(), gmdate('Y-m-d H:i:s', $jetzt + 86400)]) as $o) {
-        $auf[] = ['art' => 'Frist', 'text' => 'Angebot an ' . $o['vorname'] . ' ' . $o['nachname'] . ' (' . anm_termin_text((int)$o['termin_id']) . ') läuft am ' . datum_zeit_text($o['angebot_bis']) . ' ab.', 'link' => '/team/personen?a=' . $o['anmeldung_id'], 'knopf' => 'Ansehen'];
+    foreach (db_zeilen("SELECT p.*, a.vorname, a.nachname FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.veranstaltung_id = ? AND p.status = 'angebot' AND p.angebot_bis < ? ORDER BY p.angebot_bis", [va_id(), db_zeit($jetzt + 86400)]) as $o) {
+        $auf[] = ['art' => 'Frist', 'text' => 'Angebot an ' . person_name($o) . ' (' . anm_termin_text((int)$o['termin_id']) . ') läuft am ' . datum_zeit_text($o['angebot_bis']) . ' ab.', 'link' => '/team/personen?a=' . $o['anmeldung_id'], 'knopf' => 'Ansehen'];
     }
     // Nach der Veranstaltung: abschließen, sobald die Zertifikate freigeschaltet sind (E-58)
     if ((va_zeile()['status'] ?? '') === 'aktuell' && va('veranstaltung_datum') !== '' && va('veranstaltung_datum') < anm_heute($jetzt)) {

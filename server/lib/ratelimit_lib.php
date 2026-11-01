@@ -46,6 +46,18 @@ function rate_grenze(string $topf): array
     return ['max' => $max, 'fenster' => $fenster, 'sperre' => $sperre];
 }
 
+/** „Bitte warte 15 Minuten und versuche es dann noch einmal.“ – Wartezeit aus der Sperre des Topfs. */
+function rate_warten_text(string $topf): string
+{
+    return 'Bitte warte ' . dauer_text(rate_grenze($topf)['sperre']) . ' und versuche es dann noch einmal.';
+}
+
+/** Sperr-Meldung für die Oberfläche (V-48): „Zu viele Versuche. Bitte warte …“; $was z. B. „falsche Codes“. */
+function rate_text(string $topf, string $was = 'Versuche'): string
+{
+    return 'Zu viele ' . $was . '. ' . rate_warten_text($topf);
+}
+
 /** IP der Anfrage (REMOTE_ADDR; Proxy-Kopfzeilen werden bewusst nicht gelesen). */
 function rate_ip(): string
 {
@@ -73,7 +85,7 @@ function rate_erlaubt(string $topf, string $merkmal, ?int $jetzt = null): bool
     rate_grenze($topf);
     $jetzt ??= time();
     $bis = db_wert('SELECT gesperrt_bis FROM rate_limit WHERE topf = ? AND merkmal = ?', [$topf, $merkmal]);
-    return $bis === null || strtotime($bis . ' UTC') <= $jetzt;
+    return $bis === null || db_ts($bis) <= $jetzt;
 }
 
 /** Fehlversuch zählen; sperrt bei Erreichen der Grenze. Gibt true zurück, wenn jetzt gesperrt. */
@@ -81,8 +93,8 @@ function rate_misserfolg(string $topf, string $merkmal, ?int $jetzt = null): boo
 {
     $g = rate_grenze($topf);
     $jetzt ??= time();
-    $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
-    $fensterAb = gmdate('Y-m-d H:i:s', $jetzt - $g['fenster']);
+    $jetztDb = db_zeit($jetzt);
+    $fensterAb = db_zeit($jetzt - $g['fenster']);
     return db_transaktion(function () use ($topf, $merkmal, $g, $jetzt, $jetztDb, $fensterAb): bool {
         $z = db_zeile(
             'SELECT fenster_start, fehlversuche FROM rate_limit WHERE topf = ? AND merkmal = ? FOR UPDATE',
@@ -104,7 +116,7 @@ function rate_misserfolg(string $topf, string $merkmal, ?int $jetzt = null): boo
         if ($n >= $g['max']) {
             db_ausfuehren(
                 'UPDATE rate_limit SET gesperrt_bis = ? WHERE topf = ? AND merkmal = ?',
-                [gmdate('Y-m-d H:i:s', $jetzt + $g['sperre']), $topf, $merkmal]
+                [db_zeit($jetzt + $g['sperre']), $topf, $merkmal]
             );
             return true;
         }
@@ -136,8 +148,8 @@ function rate_aufraeumen(?int $jetzt = null): int
 {
     $jetzt ??= time();
     $laengstesFenster = max(array_map(fn(array $t) => max($t[1], $t[2]), RATE_TOEPFE));
-    $grenze = gmdate('Y-m-d H:i:s', $jetzt - $laengstesFenster);
-    $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+    $grenze = db_zeit($jetzt - $laengstesFenster);
+    $jetztDb = db_zeit($jetzt);
     return db_ausfuehren(
         'DELETE FROM rate_limit WHERE fenster_start < ? AND (gesperrt_bis IS NULL OR gesperrt_bis < ?)',
         [$grenze, $jetztDb]

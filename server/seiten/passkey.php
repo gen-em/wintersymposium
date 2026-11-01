@@ -43,7 +43,7 @@ try {
         case 'login':
             $ip = rate_merkmal_ip();
             if (!rate_erlaubt('login_ip', $ip)) {
-                $nein('Zu viele Versuche. Bitte warte 15 Minuten.');
+                $nein(rate_text('login_ip'));
             }
             try {
                 $kontoId = pk_anmelden(is_array($antwort) ? $antwort : []);
@@ -106,7 +106,7 @@ try {
             }
             $kennung = rate_merkmal('konto:' . $k['id']);
             if (!rate_erlaubt('zweitfaktor', $kennung)) {
-                $nein('Zu viele Versuche. Bitte warte 15 Minuten.');
+                $nein(rate_text('zweitfaktor'));
             }
             try {
                 pk_bestaetigen((int)$k['id'], is_array($antwort) ? $antwort : []);

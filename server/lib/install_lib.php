@@ -65,7 +65,7 @@ function install_weitere_hosts(string $text): array
 function install_ausfuehren(string $hauptHost, array $e): void
 {
     // Sperre gegen zwei gleichzeitige Installationsversuche.
-    if ((int)db_wert("SELECT GET_LOCK('ws_install', 10)") !== 1) {
+    if (db_zahl("SELECT GET_LOCK('ws_install', 10)") !== 1) {
         throw new RuntimeException('Installationssperre nicht erhalten.');
     }
     try {
@@ -81,7 +81,7 @@ function install_ausfuehren_gesperrt(string $hauptHost, array $e): void
         throw new RuntimeException('Die Installation ist schon erfolgt.');
     }
     migration_anwenden();
-    if ((int)db_wert('SELECT COUNT(*) FROM konto') > 0) {
+    if (db_gibt_es('SELECT COUNT(*) FROM konto')) {
         throw new RuntimeException('Es gibt bereits ein Konto; die Installation ist schon erfolgt.');
     }
     db_transaktion(function () use ($hauptHost, $e): void {

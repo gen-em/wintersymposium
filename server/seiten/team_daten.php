@@ -109,7 +109,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 $liste = sicherung_liste();
 $ms = mail_stand();
 $codeFeld = fn(string $id) => zweitfaktor_feld_html($konto, $id);
-$groesse = fn(int $b) => $b >= 1048576 ? zahl_text($b / 1048576, 1) . ' MB' : zahl_text(max(1, (int)round($b / 1024))) . ' KB';
 team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js']]);
 ?>
 <?= fehler_html($fehler) ?>
@@ -117,7 +116,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
     <div class="kasten">
         <h2 class="zwischen">Sicherung</h2>
         <p>Eine Sicherung enthält alle Daten: Einstellungen, Programm, Fotos, Anmeldungen und Team-Konten. Sie liegt auf dem Server außerhalb des Webs. Herunterladen und Wiederherstellen verlangen deinen Code.</p>
-        <p class="meta klein"><strong>Automatisch</strong> alle 3 Stunden (über den Cron). Es bleiben alle der letzten 3 Tage, bis 7 Tage eine je Tag, bis 14 Tage eine je 3 Tage, bis 28 Tage eine je Woche. Von Hand angelegte werden nach 90 Tagen gelöscht (E-59). Für länger: herunterladen und verschlüsselt aufbewahren.</p>
+        <p class="meta klein"><strong>Automatisch</strong> alle <?= e(dauer_text(DS_SICHERUNG_ABSTAND_S)) ?> (über den Cron). Es bleiben alle der letzten 3 Tage, bis 7 Tage eine je Tag, bis 14 Tage eine je 3 Tage, bis 28 Tage eine je Woche. Von Hand angelegte werden nach <?= DS_SICHERUNG_HAND_TAGE ?> Tagen gelöscht (E-59). Für länger: herunterladen und verschlüsselt aufbewahren.</p>
         <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="anlegen"><button class="knopf" type="submit">Sicherung anlegen</button></form>
     </div>
     <?php if (testdaten_moeglich()): ?>
@@ -180,7 +179,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
 <?php $cme = ds_cme_liste(); ?>
 <div class="kasten abstand-oben" id="cme-nachweise">
     <h2 class="zwischen">CME-Nachweise</h2>
-    <p class="meta klein">Name, EFN und Punkte der anwesenden ÄrztInnen, abgelegt, wenn die Anmeldung 14 Monate nach der Veranstaltung geleert wird; gelöscht 10 Jahre nach der Veranstaltung (E-24, E-59). Nur für BetreiberInnen.</p>
+    <p class="meta klein">Name, EFN und Punkte der anwesenden ÄrztInnen, abgelegt, wenn die Anmeldung <?= DS_LEEREN_MONATE ?> Monate nach der Veranstaltung geleert wird; gelöscht 10 Jahre nach der Veranstaltung (E-24, E-59). Nur für BetreiberInnen.</p>
     <p><?= count($cme) ?> <?= count($cme) === 1 ? 'Nachweis' : 'Nachweise' ?><?= $cme !== [] ? ' · älteste Veranstaltung ' . e(tag_text((string)end($cme)['datum'])) : '' ?></p>
     <?php if ($cme !== []): ?><p class="aktionen"><?= export_knoepfe(['art' => 'cme_nachweise']) ?></p><?php endif; ?>
 </div>
@@ -196,7 +195,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
         <tr>
             <td data-label="Angelegt" class="mono"><?= $k !== null ? e(datum_zeit_text($k['erstellt'])) : '–' ?><br><span class="meta klein"><?= e($s['name']) ?></span></td>
             <td data-label="Anlass"><?= $k !== null ? ($k['anlass'] === DS_SICHERUNG_AUTOMATISCH ? '<span class="chip offen">automatisch</span>' : e($k['anlass'])) . '<br><span class="meta klein">Version ' . e($k['version']) . '</span>' : '<span class="chip wl">nicht lesbar</span>' ?></td>
-            <td data-label="Größe" class="mono"><?= e($groesse($s['groesse'])) ?></td>
+            <td data-label="Größe" class="mono"><?= e(bytes_text((int)$s['groesse'])) ?></td>
             <td data-label="Aktionen"><div class="zellen-aktionen">
                 <details class="bestaetigen" data-art="gruen" data-titel="Sicherung herunterladen?"><summary class="knopf zweit klein-knopf">Herunterladen</summary>
                     <form method="post" action="/team/daten"><?= csrf_feld() ?><input type="hidden" name="aktion" value="herunterladen"><input type="hidden" name="name" value="<?= e($s['name']) ?>">

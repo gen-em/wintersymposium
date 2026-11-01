@@ -61,7 +61,7 @@ function nl_liste_speichern(?int $id, array $w, ?int $kontoId): int
         if ($id === null) {
             db_ausfuehren(
                 'INSERT INTO newsletter_liste (name, beschreibung, absender_name, sichtbar, bei_anmeldung, pos, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $w['bei_anmeldung'], (int)db_wert('SELECT COALESCE(MAX(pos), 0) + 1 FROM newsletter_liste'), db_jetzt()]
+                [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $w['bei_anmeldung'], db_zahl('SELECT COALESCE(MAX(pos), 0) + 1 FROM newsletter_liste'), db_jetzt()]
             );
             $id = (int)db()->lastInsertId();
         } else {
@@ -118,7 +118,7 @@ function nl_link_erzeugen(int $personId, string $zweck, ?int $jetzt = null): str
     $token = bin2hex(random_bytes(24));
     $tage = $zweck === 'bestaetigen' ? NL_BESTAETIGEN_TAGE : NL_VERWALTEN_TAGE;
     db_ausfuehren('INSERT INTO newsletter_link (person_id, token_hash, zweck, gueltig_bis) VALUES (?, ?, ?, ?)',
-        [$personId, hash('sha256', $token), $zweck, gmdate('Y-m-d H:i:s', $jetzt + $tage * 86400)]);
+        [$personId, hash('sha256', $token), $zweck, db_zeit($jetzt + $tage * 86400)]);
     return $token;
 }
 
@@ -129,7 +129,7 @@ function nl_link_finden(string $token, ?string $zweck = null): ?array
         return null;
     }
     $l = db_zeile('SELECT * FROM newsletter_link WHERE token_hash = ?', [hash('sha256', $token)]);
-    if ($l === null || strtotime($l['gueltig_bis'] . ' UTC') < time() || ($zweck !== null && $l['zweck'] !== $zweck)) {
+    if ($l === null || db_ts($l['gueltig_bis']) < time() || ($zweck !== null && $l['zweck'] !== $zweck)) {
         return null;
     }
     $p = nl_person((int)$l['person_id']);
@@ -225,7 +225,7 @@ function nl_abmelden(int $personId, ?array $listeIds = null, ?int $kontoId = nul
             }
             $n++;
         }
-        if ((int)db_wert('SELECT COUNT(*) FROM newsletter_abo WHERE person_id = ?', [$personId]) === 0) {
+        if (!db_gibt_es('SELECT COUNT(*) FROM newsletter_abo WHERE person_id = ?', [$personId])) {
             db_ausfuehren('DELETE FROM newsletter_person WHERE id = ?', [$personId]);
         }
     });
@@ -342,9 +342,9 @@ function nl_aufraeumen(int $jetzt): array
     if (!db_tabelle_da('newsletter_abo')) {
         return [];
     }
-    $grenze = gmdate('Y-m-d H:i:s', $jetzt - NL_BESTAETIGEN_TAGE * 86400);
+    $grenze = db_zeit($jetzt - NL_BESTAETIGEN_TAGE * 86400);
     $offen = db_ausfuehren("DELETE FROM newsletter_abo WHERE status = 'offen' AND angefragt_am < ?", [$grenze])->rowCount();
-    $links = db_ausfuehren('DELETE FROM newsletter_link WHERE gueltig_bis < ?', [gmdate('Y-m-d H:i:s', $jetzt)])->rowCount();
+    $links = db_ausfuehren('DELETE FROM newsletter_link WHERE gueltig_bis < ?', [db_zeit($jetzt)])->rowCount();
     $leer = db_ausfuehren('DELETE p FROM newsletter_person p LEFT JOIN newsletter_abo a ON a.person_id = p.id WHERE a.person_id IS NULL')->rowCount();
     return ['offen' => $offen, 'links' => $links, 'personen' => $leer];
 }

@@ -20,7 +20,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $ip = rate_merkmal_ip();
     if (!rate_erlaubt('notzugang', $ip)) {
-        $fehler[] = 'Zu viele Versuche. Bitte warte eine Stunde und versuche es dann noch einmal.';
+        $fehler[] = rate_text('notzugang');
     } else {
         $beginn = microtime(true);
         $schluesselOk = hash_equals((string)konfig('installations_schluessel'), (string)($_POST['schluessel'] ?? ''));
@@ -47,7 +47,7 @@ echo '<div class="innen seitenkopf"><p class="kicker">Team-Bereich</p><h1 class=
 echo fehler_html($fehler);
 if ($link !== null): ?>
 <div class="kasten link-kasten">
-    <p><strong>Zweiter Faktor zurückgesetzt.</strong> Öffne diesen Link, setze ein neues Passwort und richte den zweiten Faktor neu ein. Er gilt 72 Stunden und einmal und wird nur jetzt angezeigt.</p>
+    <p><strong>Zweiter Faktor zurückgesetzt.</strong> Öffne diesen Link, setze ein neues Passwort und richte den zweiten Faktor neu ein. Er gilt <?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?> und einmal und wird nur jetzt angezeigt.</p>
     <p class="mono umbruch"><a href="<?= e($link) ?>"><?= e($link) ?></a></p>
     <p class="meta klein">Danach empfohlen: den Installationsschlüssel in der config.php durch einen neuen ersetzen.</p>
 </div>

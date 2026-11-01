@@ -187,7 +187,7 @@ $emailOffen = isset($fehler['email']);
         <section class="kasten" aria-labelledby="h-profil">
             <h3 class="zwischen klein-zwischen" id="h-profil">Profil</h3>
             <dl class="liste-def">
-                <div><dt>Name</dt><dd><?= e(trim($namen['vorname'] . ' ' . $namen['nachname'])) ?></dd></div>
+                <div><dt>Name</dt><dd><?= e(person_name($namen)) ?></dd></div>
                 <div><dt>E-Mail</dt><dd><?= e($k['email']) ?></dd></div>
                 <div><dt>Berufsgruppe</dt><dd><?= $profil['berufsgruppe'] !== '' ? e($profil['berufsgruppe'] . ($profil['beruf_sonstige'] !== '' ? ' (' . $profil['beruf_sonstige'] . ')' : '')) : '<span class="meta">–</span>' ?></dd></div>
                 <div><dt>Institution</dt><dd><?= $profil['institution'] !== '' ? e($profil['institution']) : '<span class="meta">–</span>' ?></dd></div>
@@ -219,7 +219,7 @@ $emailOffen = isset($fehler['email']);
                     <?php if ($a !== null): ?><span class="chip <?= $a['status'] === 'bestaetigt' ? 'ok' : 'offen' ?>"><?= $a['status'] === 'bestaetigt' ? 'Angemeldet' : 'Noch nicht bestätigt' ?></span>
                     <?php else: ?><span class="chip offen">Nicht angemeldet</span><?php endif; ?></p>
                 <?php if ($a !== null): ?>
-                    <p class="meta klein">Anmeldung Nr. <?= sprintf('%04d', $a['id']) ?></p>
+                    <p class="meta klein">Anmeldung Nr. <?= anm_nummer((int)$a['id']) ?></p>
                     <div class="aktionen"><a class="knopf" href="/deine-anmeldung">Workshops, Essen, absagen</a><?php if (zertifikat_verfuegbar($a)): ?><a class="knopf zweit" href="/konto/zertifikat?a=<?= (int)$a['id'] ?>">Bescheinigung (PDF)</a><?php endif; ?></div>
                 <?php elseif (anm_zeitraum() === 'offen'): ?>
                     <p class="meta klein">Mit deinem Konto sind Name und Adresse schon ausgefüllt, eine Bestätigung per Mail entfällt.</p>

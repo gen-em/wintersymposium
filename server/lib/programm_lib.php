@@ -28,23 +28,6 @@ const PROGRAMM_TYPEN = [
 const PROGRAMM_MAX_TERMINE = 12;
 const PROGRAMM_MAX_PLAETZE = 500;
 
-function hm(?string $zeit): string
-{
-    return $zeit === null || $zeit === '' ? '' : substr($zeit, 0, 5);
-}
-
-function minuten(string $hm): int
-{
-    [$h, $m] = array_map('intval', explode(':', $hm));
-    return $h * 60 + $m;
-}
-
-function hm_aus_minuten(int $min): string
-{
-    $min = max(0, min(23 * 60 + 59, $min));
-    return sprintf('%02d:%02d', intdiv($min, 60), $min % 60);
-}
-
 /* ---- Lesen --------------------------------------------------------------- */
 
 /** Arbeitsstand: Liste der Punkte mit Terminen und Dozierenden (Speicherform für Vergleich und Kopie). */
@@ -696,7 +679,7 @@ function programm_verwerfen(?int $kontoId): void
 /** Gehört der Programmpunkt zur Veranstaltung des Kontexts? (Schutz vor Eingriffen in andere Veranstaltungen) */
 function programm_punkt_im_kontext(int $id): bool
 {
-    return (int)db_wert('SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]) === 1;
+    return db_zahl('SELECT COUNT(*) FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]) === 1;
 }
 
 /** Arbeitsstand einer Veranstaltung in eine andere kopieren (neue IDs, Blöcke und Dozierende mit), E-58. */
@@ -805,7 +788,7 @@ function foto_speichern(int $dozentId, array $upload): string
         throw new RuntimeException('Das Foto kam nicht an. Bitte noch einmal versuchen.');
     }
     if ((int)$upload['size'] > FOTO_MAX_BYTES) {
-        throw new RuntimeException('Das Foto ist zu groß (höchstens 8 MB).');
+        throw new RuntimeException('Das Foto ist zu groß (höchstens ' . bytes_text(FOTO_MAX_BYTES) . ').');
     }
     $daten = (string)file_get_contents((string)$upload['tmp_name']);
     $info = @getimagesizefromstring($daten);

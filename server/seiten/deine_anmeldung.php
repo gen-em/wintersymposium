@@ -263,7 +263,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
 <div class="innen form-kopf">
     <p class="kicker">Deine Anmeldung · <?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
     <h1 class="titel">Hallo <?= e($a['vorname']) ?>.</h1>
-    <div class="status-band"><span class="sticker<?= $a['status'] === 'unbestaetigt' || $sym !== 'fest' ? ' hinweis' : '' ?>"><?= e($status) ?></span><span class="mono">Anmeldung Nr. <?= sprintf('%04d', $id) ?></span></div>
+    <div class="status-band"><span class="sticker<?= $a['status'] === 'unbestaetigt' || $sym !== 'fest' ? ' hinweis' : '' ?>"><?= e($status) ?></span><span class="mono">Anmeldung Nr. <?= anm_nummer((int)$id) ?></span></div>
 </div>
 <div class="innen">
     <?= meldung_html($meldung) ?>
@@ -406,7 +406,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <div class="kasten">
             <h2 class="zwischen klein-zwischen">Deine Daten</h2>
             <dl class="liste-def">
-                <div><dt>Name</dt><dd><?= e($a['vorname'] . ' ' . $a['nachname']) ?></dd></div>
+                <div><dt>Name</dt><dd><?= e(person_name($a)) ?></dd></div>
                 <div><dt>E-Mail</dt><dd><?= e($a['email']) ?></dd></div>
                 <div><dt>Berufsgruppe</dt><dd><?= e($a['berufsgruppe'] . ($a['beruf_sonstige'] !== '' ? ' (' . $a['beruf_sonstige'] . ')' : '')) ?></dd></div>
                 <div><dt>Institution</dt><dd><?= e($a['institution']) ?></dd></div>
@@ -418,9 +418,9 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
     </div>
     <div class="spalte">
         <?php $tk = tk_aktuell(); if ($tk !== null): ?>
-        <div class="kasten"><strong>Mit Konto eingeloggt</strong><p class="meta klein">Profil, Adresse und Passwort änderst du unter „Mein Konto“. Bist du 30 Minuten nicht aktiv, loggst du dich neu ein.</p><p><a class="knopf zweit" href="/konto">Mein Konto</a></p></div>
+        <div class="kasten"><strong>Mit Konto eingeloggt</strong><p class="meta klein">Profil, Adresse und Passwort änderst du unter „Mein Konto“. Bist du <?= e(dauer_text(SITZUNG_LEERLAUF_S)) ?> nicht aktiv, loggst du dich neu ein.</p><p><a class="knopf zweit" href="/konto">Mein Konto</a></p></div>
         <?php else: ?>
-        <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta klein">Du hast einen Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du 30 Minuten nicht aktiv, lass dir unter „Deine Anmeldung“ einen neuen schicken.</p></div>
+        <div class="kasten"><strong>Wie du hierher kommst</strong><p class="meta klein">Du hast einen Link aus deiner Mail geöffnet. Er funktioniert nur einmal. Bist du <?= e(dauer_text(SITZUNG_LEERLAUF_S)) ?> nicht aktiv, lass dir unter „Deine Anmeldung“ einen neuen schicken.</p></div>
         <?php if ($a['status'] === 'bestaetigt' && $a['konto_id'] === null && (konto_per_email($a['email'])['rolle'] ?? 'teilnehmend') === 'teilnehmend'): ?>
         <div class="kasten"><strong>Konto anlegen?</strong><p>Mit Konto brauchst du keinen Link per Mail mehr. Deine Anmeldung wird übernommen; du legst nur ein Passwort fest.</p>
             <form method="post" action="/deine-anmeldung"><?= csrf_feld() ?><input type="hidden" name="aktion" value="konto_anlegen"><button class="knopf zweit" type="submit">Konto anlegen</button></form></div>

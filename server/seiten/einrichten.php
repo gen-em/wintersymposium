@@ -11,7 +11,7 @@ team_sitzung();
 $token = (string)($_GET['t'] ?? $_POST['t'] ?? '');
 $ip = rate_merkmal_ip();
 if (!rate_erlaubt('einrichten', $ip)) {
-    seite_meldung(429, 'Zu viele Versuche', 'Bitte warte 15 Minuten und versuche es dann noch einmal.');
+    seite_meldung(429, 'Zu viele Versuche', rate_warten_text('einrichten'));
 }
 $fund = konto_link_finden($token);
 if ($fund === null || !konto_ist_team($fund['konto'])) {

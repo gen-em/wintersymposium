@@ -94,12 +94,12 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
             <?php if ($pers['fest'] === []): ?><p class="hinweis-leer">Noch niemand.</p><?php else: ?>
             <ol class="team-liste">
                 <?php foreach ($pers['fest'] as $p): ?>
-                <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e($p['vorname'] . ' ' . $p['nachname']) ?></a> <span class="meta klein"><?= e($p['berufsgruppe']) ?></span>
+                <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e(person_name($p)) ?></a> <span class="meta klein"><?= e($p['berufsgruppe']) ?></span>
                     <?= $p['status'] === 'angebot' ? '<span class="chip wl">Angebot bis ' . e(datum_zeit_text($p['angebot_bis'])) . '</span>' : '' ?><?= $p['anm_status'] === 'unbestaetigt' ? ' <span class="chip offen">unbestätigt</span>' : '' ?>
                     <?php if ($auswahl['id'] !== 0): ?>
                     <details class="bestaetigen inline-details" data-titel="Platz entfernen?"><summary class="knopf zweit klein-knopf">Entfernen</summary>
                         <form method="post" action="<?= e($ziel) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="entfernen"><input type="hidden" name="t" value="<?= $auswahl['id'] ?>"><input type="hidden" name="platz" value="<?= (int)$p['id'] ?>">
-                            <p>Platz von <?= e($p['vorname'] . ' ' . $p['nachname']) ?> entfernen? Er geht ans Nachrücken.</p>
+                            <p>Platz von <?= e(person_name($p)) ?> entfernen? Er geht ans Nachrücken.</p>
                             <label class="haken"><input type="checkbox" name="ohne_mail" value="1"><span>ohne Mail</span></label>
                             <button class="knopf gefahr" type="submit">Ja, entfernen</button></form>
                     </details>
@@ -112,7 +112,7 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
             <?php if ($pers['warte'] === []): ?><p class="hinweis-leer">Niemand wartet.</p><?php else: ?>
             <ol class="team-liste">
                 <?php foreach ($pers['warte'] as $p): ?>
-                <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e($p['vorname'] . ' ' . $p['nachname']) ?></a> <span class="meta klein">seit <?= e(datum_zeit_text($p['seit'])) ?></span><?= $p['anm_status'] === 'unbestaetigt' ? ' <span class="chip offen">unbestätigt</span>' : '' ?>
+                <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e(person_name($p)) ?></a> <span class="meta klein">seit <?= e(datum_zeit_text($p['seit'])) ?></span><?= $p['anm_status'] === 'unbestaetigt' ? ' <span class="chip offen">unbestätigt</span>' : '' ?>
                     <span class="zellen-aktionen">
                         <form method="post" action="<?= e($ziel) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="platz"><input type="hidden" name="t" value="<?= $auswahl['id'] ?>"><input type="hidden" name="a" value="<?= (int)$p['anmeldung_id'] ?>"><button class="knopf klein-knopf" type="submit">Platz geben</button></form>
                         <?php if ($auswahl['frei'] === null || $auswahl['frei'] > 0): ?><form method="post" action="<?= e($ziel) ?>"><?= csrf_feld() ?><input type="hidden" name="aktion" value="angebot"><input type="hidden" name="t" value="<?= $auswahl['id'] ?>"><input type="hidden" name="platz" value="<?= (int)$p['id'] ?>"><button class="knopf zweit klein-knopf" type="submit">Angebot schicken</button></form><?php endif; ?>

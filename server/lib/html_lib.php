@@ -78,7 +78,7 @@ function seite_kopf(string $titel, array $opt = []): void
                 . icon('user-circle', 20) . 'Einloggen</a>';
             $flach = $a('/einloggen', 'Einloggen', '/einloggen');
         } else {
-            $name = is_array($ich) ? (string)$ich['name'] : trim($tn['vorname'] . ' ' . $tn['nachname']);
+            $name = is_array($ich) ? (string)$ich['name'] : person_name($tn);
             $teile = preg_split('/\s+/u', trim($name)) ?: [''];
             $kuerzel = mb_strtoupper(mb_substr($teile[0], 0, 1) . (count($teile) > 1 ? mb_substr((string)end($teile), 0, 1) : ''));
             $unter = is_array($ich) ? (konto_ist_team($ich) ? (ROLLEN[$ich['rolle']] ?? '') . ' · ' : '') . $ich['email'] : 'über den Link aus der Mail';

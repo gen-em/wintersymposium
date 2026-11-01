@@ -517,7 +517,7 @@ function pk_anlegen(int $kontoId, array $antwort, string $bezeichnung): int
         throw new PkFehler('Höchstens ' . PK_HOECHSTENS . ' Passkeys je Konto');
     }
     $hash = hash('sha256', (string)$a['kennung']);
-    if (db_wert('SELECT COUNT(*) FROM passkey WHERE kennung_hash = ?', [$hash]) > 0) {
+    if (db_gibt_es('SELECT COUNT(*) FROM passkey WHERE kennung_hash = ?', [$hash])) {
         throw new PkFehler('Diesen Passkey gibt es schon');
     }
     $bez = pk_bezeichnung($bezeichnung);
@@ -631,7 +631,7 @@ function pk_liste(int $kontoId): array
 
 function pk_zahl(int $kontoId): int
 {
-    return pk_tabelle_da() ? (int)db_wert('SELECT COUNT(*) FROM passkey WHERE konto_id = ?', [$kontoId]) : 0;
+    return pk_tabelle_da() ? db_zahl('SELECT COUNT(*) FROM passkey WHERE konto_id = ?', [$kontoId]) : 0;
 }
 
 /** Kennungen (Base64url) für excludeCredentials. */

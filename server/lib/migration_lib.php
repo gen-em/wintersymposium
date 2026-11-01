@@ -626,7 +626,7 @@ function migration_ist(): int
 function migration_anwenden(): array
 {
     $pdo = db();
-    if ((int)db_wert("SELECT GET_LOCK('ws_migration', 30)") !== 1) {
+    if (db_zahl("SELECT GET_LOCK('ws_migration', 30)") !== 1) {
         throw new RuntimeException('Migrationssperre nicht erhalten.');
     }
     try {

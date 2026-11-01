@@ -107,7 +107,7 @@ function va_tabellen_da(): bool
 {
     if (empty($GLOBALS['ws_va_tab'])) {
         $GLOBALS['ws_va_tab'] = db_tabelle_da('veranstaltung') && db_tabelle_da('va_einstellung') && db_tabelle_da('inhalt')
-            && (int)db_wert("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'inhalt' AND column_name = 'veranstaltung_id'") > 0;
+            && db_gibt_es("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'inhalt' AND column_name = 'veranstaltung_id'");
     }
     return $GLOBALS['ws_va_tab'];
 }
@@ -235,7 +235,7 @@ function va_kuerzel_fehler(string $kuerzel, ?int $ausser = null): ?string
     if (in_array($kuerzel, VA_KUERZEL_VERBOTEN, true)) {
         return 'Dieses Kürzel ist schon eine Adresse der Seite. Bitte ein anderes wählen.';
     }
-    if ((int)db_wert('SELECT COUNT(*) FROM veranstaltung WHERE kuerzel = ? AND id <> ?', [$kuerzel, $ausser ?? 0]) > 0) {
+    if (db_gibt_es('SELECT COUNT(*) FROM veranstaltung WHERE kuerzel = ? AND id <> ?', [$kuerzel, $ausser ?? 0])) {
         return 'Dieses Kürzel hat schon eine andere Veranstaltung.';
     }
     return null;
@@ -275,7 +275,7 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
             programm_kopieren($vorlage, $id);
         } else {
             // Startwerte der Texte von der aktuellen Veranstaltung, damit die Startseite nicht leer ist
-            db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? (int)db_wert('SELECT MIN(id) FROM veranstaltung WHERE id <> ?', [$id])]);
+            db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? db_zahl('SELECT MIN(id) FROM veranstaltung WHERE id <> ?', [$id])]);
         }
         db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_name', ?, ?)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
@@ -328,7 +328,7 @@ function va_loeschen(int $id, ?int $kontoId, string $bestaetigung = ''): ?string
     if ($v['status'] === 'aktuell') {
         return 'Die aktuelle Veranstaltung lässt sich nicht löschen. Mach zuerst eine andere zur aktuellen oder schließ sie ab.';
     }
-    if ((int)db_wert('SELECT COUNT(*) FROM veranstaltung') <= 1) {
+    if (db_zahl('SELECT COUNT(*) FROM veranstaltung') <= 1) {
         return 'Die letzte Veranstaltung lässt sich nicht löschen. Leg zuerst eine neue an.'; // Review B-10
     }
     if (trim($bestaetigung) !== $v['kuerzel']) {

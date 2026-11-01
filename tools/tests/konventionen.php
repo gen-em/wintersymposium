@@ -119,6 +119,15 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden(konv_suchen($alle, '/\p{L}{2,} - \p{L}{2,}/u'), 'K-g: Gedankenstrich „ – “, nicht „ - “');
     konv_melden(konv_suchen($alle, '/„[^“"\n]{1,80}"/u'), 'K-g: „ wird mit “ geschlossen, nicht mit "');
 
+    // K-c Zeit: gmdate nur in db_lib und an wenigen begründeten Stellen (Dateinamen, Zeitstempel in Dateien)
+    $gm = 0;
+    foreach (glob("$wurzel/server/lib/*.php") ?: [] as $p) {
+        if (basename($p) !== 'db_lib.php') {
+            $gm += preg_match_all('/\bgmdate\(/', (string)file_get_contents($p));
+        }
+    }
+    pruefe($gm <= 5, "K-c: gmdate außerhalb von db_lib höchstens 5× ($gm)");
+
     // K-f Wortliste
     $verboten = ['Endgültig löschen', 'Ja, Konto löschen', 'Von der Liste nehmen'];
     $muster = '/' . implode('|', array_map(fn($w) => preg_quote($w, '/'), $verboten)) . '/u';

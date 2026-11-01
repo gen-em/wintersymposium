@@ -91,10 +91,10 @@ function tn_sortieren(array $liste, string $nach): array
 /** Anwesend = bestätigt, fester Platz beim Symposium, nicht als „nicht erschienen“ markiert. */
 function tn_anwesend(int $anmId): bool
 {
-    return db_wert(
+    return db_gibt_es(
         "SELECT COUNT(*) FROM anmeldung a JOIN platz p ON p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest' AND p.nicht_erschienen = 0 WHERE a.id = ? AND a.status = 'bestaetigt'",
         [$anmId]
-    ) > 0;
+    );
 }
 
 /** „Nicht erschienen“ setzen oder zurücknehmen (fester Platz). Gibt false zurück, wenn es den Platz nicht gibt. */
@@ -163,7 +163,7 @@ function zertifikat_freischalten(?int $anmId, ?int $kontoId, bool $mail = true, 
         }
     }
     foreach ($ids as $id) {
-        db_ausfuehren('UPDATE anmeldung SET zertifikat_am = ? WHERE id = ? AND zertifikat_am IS NULL', [gmdate('Y-m-d H:i:s', $jetzt), $id]);
+        db_ausfuehren('UPDATE anmeldung SET zertifikat_am = ? WHERE id = ? AND zertifikat_am IS NULL', [db_zeit($jetzt), $id]);
         if ($mail) {
             zertifikat_mail($id, $jetzt);
         }
@@ -194,7 +194,7 @@ function zertifikat_mail(int $anmId, ?int $jetzt = null): void
     }
     $bis = ($jetzt ?? time()) + ZERTIFIKAT_LINK_TAGE * 86400;
     $token = anm_link_erzeugen($anmId, 'zugang', $bis);
-    mail_vorlage_einreihen($a['email'], 'zertifikat', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(gmdate('Y-m-d H:i:s', $bis)),
+    mail_vorlage_einreihen($a['email'], 'zertifikat', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(db_zeit($bis)),
         'name' => tn_name()]);
 }
 
@@ -203,7 +203,7 @@ function zertifikat_mail(int $anmId, ?int $jetzt = null): void
 /** Nummer der Bescheinigung: „WS27-0142“ (Jahr der Veranstaltung, Nummer der Anmeldung). */
 function zertifikat_nr(int $anmId): string
 {
-    return 'WS' . substr(va('veranstaltung_datum'), 2, 2) . '-' . sprintf('%04d', $anmId);
+    return 'WS' . substr(va('veranstaltung_datum'), 2, 2) . '-' . anm_nummer($anmId);
 }
 
 /** Vorträge und Fallbesprechungen im Plenum (nicht einem Workshop-Block zugeordnet): ['zeit' => …, 'titel' => [...]] oder null. */
@@ -239,7 +239,7 @@ function zertifikat_daten(array $anm): array
     }
     usort($ws, fn($x, $y) => $x['beginn'] <=> $y['beginn']);
     return [
-        'name' => trim($anm['vorname'] . ' ' . $anm['nachname']),
+        'name' => person_name($anm),
         'efn' => $anm['berufsgruppe'] === (va_liste('berufsgruppen')[0] ?? '') ? ($anm['efn'] ?? '') : '',
         'nr' => zertifikat_nr((int)$anm['id']),
         'plenum' => zertifikat_plenum(),
@@ -290,7 +290,7 @@ function unterschrift_speichern(array $upload, ?int $kontoId): void
     }
     $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > UNTERSCHRIFT_MAX_BYTES) {
-        throw new RuntimeException('Das Bild ist zu groß (höchstens 4 MB).');
+        throw new RuntimeException('Das Bild ist zu groß (höchstens ' . bytes_text(UNTERSCHRIFT_MAX_BYTES) . ').');
     }
     if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
         throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
@@ -495,7 +495,7 @@ function zertifikat_pdf(array $d): string
     $pdf->SetFont('mono', '', 12);
     $pdf->Cell(30, 6, 'BESTÄTIGT', 0, 2, 'C');
     $pdf->SetFont('mono', '', 7.5);
-    $pdf->Cell(30, 4, date('d.m.Y', (int)strtotime(va('veranstaltung_datum'))), 0, 2, 'C');
+    $pdf->Cell(30, 4, datum_text(va('veranstaltung_datum')), 0, 2, 'C');
     $pdf->drehen_ende();
 
     // Fuß: Punkte links, Unterschrift rechts, Fußnote, Adresse
@@ -634,7 +634,7 @@ function unterschriftenliste_pdf(bool $nurAerzte, string $sortierung): string
     $sortierung = isset(TN_SORTIERUNG[$sortierung]) ? $sortierung : 'nachname';
     $liste = tn_sortieren(array_values(array_filter(tn_liste(), fn($e) => !$nurAerzte || $e['aerztin'])), $sortierung);
     $titel = $nurAerzte ? 'Unterschriftenliste ÄrztInnen' : 'Unterschriftenliste';
-    $stand = 'Stand ' . datum_zeit_text(gmdate('Y-m-d H:i:s'));
+    $stand = 'Stand ' . datum_zeit_text(db_jetzt());
     $pdf = export_pdf_neu(false, $titel, 'Vertraulich – nur für die Organisation · ' . $stand);
     $pdf->SetAutoPageBreak(false);
     // Spalten: Nr, Nachname, Vorname, Berufsgruppe bzw. EFN, Unterschrift (zusammen 178 mm)

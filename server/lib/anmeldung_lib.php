@@ -148,18 +148,18 @@ function team_ids_pruefen(array $konto): void
         return;
     }
     $a = (int)($_GET['a'] ?? $_POST['a'] ?? 0);
-    if ($a > 0 && (int)db_wert('SELECT veranstaltung_id FROM anmeldung WHERE id = ?', [$a]) !== va_id()) {
+    if ($a > 0 && db_zahl('SELECT veranstaltung_id FROM anmeldung WHERE id = ?', [$a]) !== va_id()) {
         nicht_gefunden();
     }
     $p = (int)($_POST['platz'] ?? 0);
-    if ($p > 0 && (int)db_wert('SELECT veranstaltung_id FROM platz WHERE id = ?', [$p]) !== va_id()) {
+    if ($p > 0 && db_zahl('SELECT veranstaltung_id FROM platz WHERE id = ?', [$p]) !== va_id()) {
         nicht_gefunden();
     }
     $kid = (int)($_GET['k'] ?? $_POST['k'] ?? 0);
     if ($kid > 0 && va_erlaubte_ids($konto) !== null) {
         $ziel = konto_laden($kid);
         [$wo, $par] = va_sql_erlaubt($konto, 'veranstaltung_id');
-        if ($ziel === null || ($ziel['rolle'] === 'teilnehmend' && (int)db_wert('SELECT COUNT(*) FROM anmeldung WHERE konto_id = ? AND ' . $wo, array_merge([$kid], $par)) === 0)) {
+        if ($ziel === null || ($ziel['rolle'] === 'teilnehmend' && !db_gibt_es('SELECT COUNT(*) FROM anmeldung WHERE konto_id = ? AND ' . $wo, array_merge([$kid], $par)))) {
             nicht_gefunden();
         }
     }
@@ -220,7 +220,7 @@ function passwort_bestaetigen(array $k, string $pw, string $falsch = 'Das Passwo
 {
     $kennung = rate_merkmal('konto:' . (int)$k['id']);
     if (!rate_erlaubt('login', $kennung)) {
-        return 'Zu viele Versuche. Bitte warte 15 Minuten.';
+        return rate_text('login');
     }
     if (!anmeldung_passwort_ok($k, $pw)) {
         rate_misserfolg('login', $kennung);

@@ -95,7 +95,7 @@ function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich)
     $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
     if ($perMail && mail_eingerichtet()) {
         mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
-        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt 72 Stunden).');
+        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . ').');
         return;
     }
     $_SESSION['neuer_link'] = ['name' => $k['name'], 'url' => $url];
@@ -108,7 +108,7 @@ team_seite_kopf($konto, 'Team-Konten', '/team/konten', ['skripte' => ['zweitfakt
 echo fehler_html($fehler);
 if (is_array($link)): ?>
 <div class="kasten link-kasten">
-    <p><strong>Link für <?= e($link['name']) ?></strong> – gib ihn persönlich oder über einen sicheren Weg weiter. Er gilt 72 Stunden und nur einmal und wird nur jetzt angezeigt.</p>
+    <p><strong>Link für <?= e($link['name']) ?></strong> – gib ihn persönlich oder über einen sicheren Weg weiter. Er gilt <?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?> und nur einmal und wird nur jetzt angezeigt.</p>
     <p class="mono umbruch"><?= e($link['url']) ?></p>
 </div>
 <?php endif; ?>
@@ -199,7 +199,7 @@ if (is_array($link)): ?>
         <label class="haken"><input type="checkbox" name="nur_anzeigen" value="1"><span>Keine Mail – Link nur hier anzeigen (ich gebe ihn selbst weiter)</span></label>
         <button type="submit" class="knopf">Konto anlegen und einladen</button>
     </form>
-    <p class="meta klein">Die Einladung kommt per Mail mit einem Link zum Festlegen des Passworts (72 Stunden, einmal). Beim ersten Einloggen richtet die Person den zweiten Faktor ein.</p>
+    <p class="meta klein">Die Einladung kommt per Mail mit einem Link zum Festlegen des Passworts (<?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?>, einmal). Beim ersten Einloggen richtet die Person den zweiten Faktor ein.</p>
 </section>
 <?php
 team_seite_fuss();

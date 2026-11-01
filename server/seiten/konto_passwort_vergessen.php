@@ -22,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             tk_passwort_vergessen($email);
         }
         rate_gleiche_dauer($beginn, 0.6);
-        flash_setzen('ok', 'Wenn es zu der Adresse ein Konto gibt, ist ein Link unterwegs. Er gilt einmal und 48 Stunden (Team-Konten: 72 Stunden). Schau auch im Spam-Ordner.');
+        flash_setzen('ok', 'Wenn es zu der Adresse ein Konto gibt, ist ein Link unterwegs. Er gilt einmal und ' . dauer_text(TK_LINK_GUELTIG_S) . ' (Team-Konten: ' . dauer_text(KONTO_LINK_GUELTIG_S) . '). Schau auch im Spam-Ordner.');
         umleiten('/konto/passwort-vergessen');
     }
 }

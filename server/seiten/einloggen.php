@@ -57,7 +57,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/einloggen');
         }
         $f = mailcode_senden($k);
-        flash_setzen($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt 10 Minuten.');
+        flash_setzen($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt ' . dauer_text(MAILCODE_GUELTIG_S) . '.');
         if ($aktion === 'mail_waehlen') {
             $_SESSION['zf_mail'] = (int)$k['id'];
         }
@@ -74,7 +74,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $kennung = rate_merkmal('konto:' . $k['id']);
         $code = (string)($_POST['totp'] ?? '');
         if (!rate_erlaubt('zweitfaktor', $kennung)) {
-            $fehler[] = 'Zu viele falsche Codes. Bitte warte 15 Minuten und versuche es dann noch einmal.';
+            $fehler[] = rate_text('zweitfaktor', 'falsche Codes');
         } elseif ($aktion === 'mail_einrichten') {
             if (!totp_zustand((int)$k['id'])['eingerichtet'] && mailcode_pruefen((int)$k['id'], $code)) {
                 rate_erfolg('zweitfaktor', $kennung);
@@ -186,7 +186,7 @@ if ($halb === null): ?>
     <?= csrf_feld() ?>
     <input type="hidden" name="aktion" value="code">
     <?php if ($zs['mail']): ?>
-    <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt (gilt 10 Minuten). <?= $zs['an'] ? 'Der Code aus deiner Authenticator-App geht auch, ebenso' : 'Es geht auch' ?> ein Wiederherstellungscode.</p>
+    <p>Hallo <?= e($halb['name']) ?>. Wir haben dir einen sechsstelligen Code an <strong><?= e($halb['email']) ?></strong> geschickt (gilt <?= e(dauer_text(MAILCODE_GUELTIG_S)) ?>). <?= $zs['an'] ? 'Der Code aus deiner Authenticator-App geht auch, ebenso' : 'Es geht auch' ?> ein Wiederherstellungscode.</p>
     <?php elseif (!$zs['an']): ?>
     <p>Hallo <?= e($halb['name']) ?>. Bestätige mit deinem Passkey – oder gib einen deiner Wiederherstellungscodes ein.</p>
     <?php else: ?>

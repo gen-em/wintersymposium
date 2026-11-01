@@ -174,9 +174,9 @@ function mail_heute_gesendet(?int $jetzt = null, ?string $postfach = null): int
     $tag = (new DateTimeImmutable('@' . $jetzt))->setTimezone(new DateTimeZone(ANZEIGE_ZEITZONE))->format('Y-m-d');
     $ab = lokal_nach_utc($tag . ' 00:00:00');
     if ($postfach === null) {
-        return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ?", [$ab]);
+        return db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ?", [$ab]);
     }
-    return (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ? AND postfach = ?", [$ab, $postfach]);
+    return db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND gesendet_am >= ? AND postfach = ?", [$ab, $postfach]);
 }
 
 /**
@@ -191,13 +191,13 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
     $ende = microtime(true) + $budget;
     $erg = ['gesendet' => 0, 'fehler' => 0, 'wartet' => 0];
     if (!mail_eingerichtet()) {
-        $erg['wartet'] = (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
+        $erg['wartet'] = db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
         return $erg;
     }
     $grenze = ['system' => mail_limit('system')['rundmail'], 'newsletter' => mail_limit('newsletter')['rundmail']];
-    $jetztDb = gmdate('Y-m-d H:i:s', $jetzt);
+    $jetztDb = db_zeit($jetzt);
     // Hängengebliebene Versuche (Abbruch mitten im Versand) nach 10 min freigeben
-    db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [gmdate('Y-m-d H:i:s', $jetzt - 600)]);
+    db_ausfuehren("UPDATE mail_ausgang SET status = 'offen' WHERE status = 'sendet' AND naechster_versuch < ?", [db_zeit($jetzt - 600)]);
     for ($i = 0; $i < $max && microtime(true) < $ende; $i++) {
         $z = db_zeile(
             "SELECT id, an, betreff, text, html, absender_name, prio, postfach, rundmail_id, anmeldung_id, nl_person_id, versuche FROM mail_ausgang
@@ -238,21 +238,21 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
         $fehler ??= mail_zustellen($z['an'], $betreff, $text, $opt);
         if ($fehler === null) {
             // R-02: Inhalt und Empfänger nach dem Versand leeren
-            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, absender_name = NULL, fehler = NULL WHERE id = ?", [gmdate('Y-m-d H:i:s', max($jetzt, time())), $z['id']]);
+            db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ?, an = '', betreff = '', text = '', html = NULL, absender_name = NULL, fehler = NULL WHERE id = ?", [db_zeit(max($jetzt, time())), $z['id']]);
             $erg['gesendet']++;
         } else {
             $versuche = (int)$z['versuche'] + 1;
             if ($versuche > count(MAIL_WIEDERHOLUNG_MIN)) {
                 db_ausfuehren("UPDATE mail_ausgang SET status = 'fehler', versuche = ?, fehler = ? WHERE id = ?", [$versuche, $fehler, $z['id']]);
             } else {
-                $naechster = gmdate('Y-m-d H:i:s', $jetzt + 60 * MAIL_WIEDERHOLUNG_MIN[$versuche - 1]);
+                $naechster = db_zeit($jetzt + 60 * MAIL_WIEDERHOLUNG_MIN[$versuche - 1]);
                 db_ausfuehren("UPDATE mail_ausgang SET status = 'offen', versuche = ?, naechster_versuch = ?, fehler = ? WHERE id = ?", [$versuche, $naechster, $fehler, $z['id']]);
             }
             error_log('Mail ' . $z['id'] . ': ' . $fehler);
             $erg['fehler']++;
         }
     }
-    $erg['wartet'] = (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
+    $erg['wartet'] = db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'offen'");
     return $erg;
 }
 
@@ -489,7 +489,7 @@ function smtp_senden(array $c, string $an, string $nachricht): ?string
 function mail_aufraeumen(?int $jetzt = null): int
 {
     $jetzt ??= time();
-    $grenze = gmdate('Y-m-d H:i:s', $jetzt - MAIL_AUFBEWAHREN_TAGE * 86400);
+    $grenze = db_zeit($jetzt - MAIL_AUFBEWAHREN_TAGE * 86400);
     return db_ausfuehren("DELETE FROM mail_ausgang WHERE status IN ('gesendet','fehler') AND erstellt_am < ?", [$grenze])->rowCount();
 }
 
@@ -499,14 +499,14 @@ function mail_stand(): array
     $pf = [];
     foreach (MAIL_POSTFAECHER as $p => $titel) {
         $pf[$p] = ['titel' => $titel, 'da' => mail_postfach_da($p), 'heute' => mail_heute_gesendet(null, $p), 'absender' => mail_absender(mail_konfig($p))] + mail_limit($p)
-            + ['offen' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet') AND postfach = ?", [$p])];
+            + ['offen' => db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet') AND postfach = ?", [$p])];
     }
     return [
         'postfaecher' => $pf,
         'eingerichtet' => mail_eingerichtet(),
         'modus' => mail_konfig()['modus'],
-        'offen' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
-        'fehler' => (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'fehler'"),
+        'offen' => db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status IN ('offen','sendet')"),
+        'fehler' => db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'fehler'"),
         'heute' => mail_heute_gesendet(),
         'limit' => (int)mail_konfig()['tageslimit'],
         'letzter_fehler' => db_zeile("SELECT fehler, erstellt_am, versuche FROM mail_ausgang WHERE fehler IS NOT NULL AND status IN ('offen','fehler') ORDER BY id DESC LIMIT 1"),
@@ -641,12 +641,12 @@ function mail_vorlage_roh(string $name, array $d): array
         case 'team_rolle':
             return ['Du bist jetzt im Team von ' . reihe_name(),
                 $hallo . 'du hast jetzt die Rolle „' . $d['rolle'] . '“ im Team-Bereich. Einloggen kannst du dich unter ' . url('/einloggen')
-                . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : ". Lege vorher über diesen Link dein Passwort fest (gilt 72 Stunden):\n\n" . $d['link'] . "\n\n")
+                . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : '. Lege vorher über diesen Link dein Passwort fest (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . "):\n\n" . $d['link'] . "\n\n")
                 . " Beim ersten Login richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy).\n\nDas warst nicht du? Dann melde dich bitte beim Team." . mail_gruss()];
         case 'team_einladung':
             return ['Einladung in den Team-Bereich von ' . reihe_name(),
                 $hallo . 'du bist jetzt im Team von ' . reihe_name() . ' (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']
-                . "\n\nDer Link gilt 72 Stunden und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter " . url('/einloggen') . '.'
+                . "\n\nDer Link gilt " . dauer_text(KONTO_LINK_GUELTIG_S) . ' und nur einmal. Danach richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy). Einloggen kannst du dich später unter ' . url('/einloggen') . '.'
                 . "\n\nDu erwartest diese Mail nicht? Dann ignoriere sie und sag dem Team Bescheid." . mail_gruss()];
         case 'newsletter_bestaetigen':
             return ['Bitte bestätige deinen Newsletter',
@@ -662,12 +662,12 @@ function mail_vorlage_roh(string $name, array $d): array
                 . "\n\nDas warst du nicht? Dann ignoriere diese Mail." . mail_gruss()];
         case 'zweitfaktor_code':
             return ['Dein Code zum Einloggen: ' . $d['code'],
-                $hallo . 'dein Code zum Einloggen in den Team-Bereich:' . "\n\n    " . $d['code'] . "\n\nEr gilt 10 Minuten und nur einmal."
+                $hallo . 'dein Code zum Einloggen in den Team-Bereich:' . "\n\n    " . $d['code'] . "\n\nEr gilt " . dauer_text(MAILCODE_GUELTIG_S) . ' und nur einmal.'
                 . "\n\nDu loggst dich gerade nicht ein? Dann hat jemand dein Passwort. Ändere es unter " . url('/konto/passwort-vergessen') . ' und sag dem Team Bescheid.' . mail_gruss()];
         case 'team_passwort':
             return ['Neues Passwort für den Team-Bereich von ' . reihe_name(),
                 $hallo . "mit diesem Link legst du ein neues Passwort fest:\n\n" . $d['link']
-                . "\n\nEr gilt 72 Stunden und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App."
+                . "\n\nEr gilt " . dauer_text(KONTO_LINK_GUELTIG_S) . ' und nur einmal. Dein zweiter Faktor bleibt, wie er ist – beim Einloggen brauchst du weiter den Code aus deiner App.'
                 . "\n\nDu hast keinen Link angefordert? Dann ignoriere diese Mail; dein Passwort bleibt, wie es ist." . mail_gruss()];
         case 'uebernehmen':
             // Wiederkehrende ohne Konto (E-58)
