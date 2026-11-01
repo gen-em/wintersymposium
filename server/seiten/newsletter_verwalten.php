@@ -17,7 +17,11 @@ if ($f !== null && ist_post()) {
         nl_abmelden($pid);
         fertig('ok', 'Du bist von allen Newslettern abgemeldet. Deine Adresse ist gelöscht.', $ziel);
     }
-    nl_listen_setzen($pid, (array)($_POST['listen'] ?? []), 'verwalten');
+    $interessen = nl_interessen((array)($_POST['nl_interesse'] ?? []));
+    if (($wf = nl_wahl_fehler((array)($_POST['listen'] ?? []), $interessen)) !== null) {
+        fertig('fehler', $wf . ' Nichts geändert.', $ziel);
+    }
+    nl_listen_setzen($pid, (array)($_POST['listen'] ?? []), 'verwalten', $interessen);
     fertig('ok', nl_person($pid) === null ? 'Du bist von allen Newslettern abgemeldet. Deine Adresse ist gelöscht.' : 'Gespeichert.', $ziel);
 }
 $p = $f !== null ? nl_person((int)$f['person']['id']) : null;
@@ -34,11 +38,7 @@ echo seiten_kopfzeile('Deine Newsletter', 'Newsletter');
     <form class="form" method="post" action="/newsletter/verwalten">
         <?= csrf_feld() ?><?= versteckt_html(['t' => $token]) ?>
         <fieldset class="feld nl-listen"><legend>Newsletter</legend>
-        <?php foreach (nl_listen(true) as $l): $st = $abos[(int)$l['id']] ?? null; ?>
-            <?= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => (int)$l['id'], 'wert' => $st === 'bestaetigt',
-                'label_html' => '<strong>' . e($l['name']) . '</strong>' . ($st === 'offen' ? ' ' . chip('offen', 'wartet auf Bestätigung') : '')
-                    . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]) ?>
-        <?php endforeach; ?>
+        <?= nl_listen_html(array_keys(array_filter($abos, fn($st) => $st === 'bestaetigt')), nl_interessen_von((int)$p['id']) ?: 'klinik,praeklinik', $abos) ?>
         </fieldset>
         <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>
         <div class="aktionen">

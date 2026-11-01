@@ -30,7 +30,7 @@ function stat_daten(string $bg = ''): array
     $mitEfn = db_zahl("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND berufsgruppe = ? AND efn IS NOT NULL", [va_id(), $erste]);
     $bestaetigt = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt'" . $w);
     $konten = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.konto_id IS NOT NULL" . $w);
-    $newsletter = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.newsletter = 1" . $w);
+    $newsletter = $zahl("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND (a.newsletter = 1 OR a.nl_interessen <> '')" . $w);
 
     // Verlauf: bestätigte Anmeldungen je Tag (Ortszeit), kumuliert
     $tage = [];

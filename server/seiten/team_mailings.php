@@ -193,13 +193,22 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
         <?= csrf_feld() ?>
         <?php if ($id !== null): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
         <?php $nlAuswahl = rm_nl_listen($w['auswahl']); ?>
-        <?php if (rm_newsletter_erlaubt()): // Newsletter-Listen nur für Betreiber (AP-12, E-60) ?>
+        <?php if (rm_newsletter_erlaubt()): // Newsletter-Listen: BetreiberInnen alle, Admins die ihrer Reihen (AP-12, O-52)
+            $nlErlaubt = rm_nl_erlaubt_ids(); $dm = nl_liste_dachmarke(); $nlZiel = rm_nl_ziel($w['auswahl']); ?>
         <fieldset class="feld rm-art"><legend>Empfänger</legend>
             <label class="haken"><input type="radio" name="art" value="teilnehmende"<?= $nlAuswahl === null ? ' checked' : '' ?>><span>Teilnehmende der Veranstaltung</span></label>
             <label class="haken"><input type="radio" name="art" value="newsletter"<?= $nlAuswahl !== null ? ' checked' : '' ?>><span>Newsletter-Listen</span></label>
         </fieldset>
         <fieldset class="feld rm-listen" data-empfaenger="newsletter"><legend>Newsletter-Listen</legend>
-            <?php foreach (nl_zahlen() as $lid => $z): ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= $lid ?>"<?= in_array($lid, $nlAuswahl ?? [], true) ? ' checked' : '' ?>><span><?= e($z['liste']['name']) ?> <span class="meta klein">(<?= $z['bestaetigt'] ?> bestätigt)</span></span></label><?php endforeach; ?>
+            <?php foreach (nl_zahlen() as $lid => $z): if ($nlErlaubt !== null && !in_array($lid, $nlErlaubt, true)) continue; ?><label class="haken"><input type="checkbox" name="listen[]" value="<?= $lid ?>"<?= in_array($lid, $nlAuswahl ?? [], true) ? ' checked' : '' ?><?= $z['liste']['art'] === 'dachmarke' ? ' data-dachmarke' : '' ?>><span><?= e($z['liste']['name']) ?> <span class="meta klein">(<?= $z['bestaetigt'] ?> bestätigt)</span></span></label><?php endforeach; ?>
+            <?php if ($dm !== null && ($nlErlaubt === null || in_array((int)$dm['id'], $nlErlaubt, true))):
+                $zielOpt = ['beide' => 'alle (Klinik und Präklinik)', 'klinik' => 'nur Interesse Klinik', 'praeklinik' => 'nur Interesse Präklinik'];
+                foreach (va_alle() as $v) {
+                    $zielOpt['va:' . $v['id']] = 'wie die Zielgruppe von „' . $v['name'] . '“ (' . VA_ZIELGRUPPEN[va_von($v['id'], 'zielgruppe')] . ')';
+                } ?>
+            <?= feld('nl_ziel', 'Zielgruppe bei „' . $dm['name'] . '“', ['typ' => 'auswahl', 'optionen' => $zielOpt, 'wert' => $nlZiel, 'rahmen_attr' => ['data-nur-dachmarke' => '1'],
+                'hilfe' => 'Mit Bezug auf eine Veranstaltung gehen Mails nur an Abonnierende mit passendem Interesse (E-71). Andere Listen bekommen sie unabhängig davon.']) ?>
+            <?php endif; ?>
             <p class="hilfe">Wer auf mehreren Listen steht, bekommt die Mail nur einmal. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“.</p>
         </fieldset>
         <?php endif; ?>

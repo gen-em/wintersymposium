@@ -16,7 +16,7 @@ declare(strict_types=1);
 const AUDIT_OBJEKTE = [
     'anmeldung' => 'Anmeldung', 'konto' => 'Konto', 'rundmail' => 'Mailing', 'veranstaltung' => 'Veranstaltung',
     'programmpunkt' => 'Programmpunkt', 'termin' => 'Termin', 'dozent' => 'Dozent·in', 'liste' => 'Liste', 'person' => 'Person',
-    'host' => 'Host', 'sicherung' => 'Sicherung', 'audit' => 'Eintrag',
+    'host' => 'Host', 'sicherung' => 'Sicherung', 'audit' => 'Eintrag', 'reihe' => 'Reihe',
 ];
 
 /** Einheitlicher Text mit Bezug: „Anmeldung 12: storniert“. */

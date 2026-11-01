@@ -16,11 +16,19 @@ declare(strict_types=1);
  * - Unbestätigte Einträge löscht der Job nach 7 Tagen.
  * - Das Team kann einladen (Bestätigungsmail), aber niemanden direkt als
  *   bestätigt eintragen.
+ * - Listenarten (AP-19, E-71): 'reihe' (gehört zu einer Veranstaltungsreihe,
+ *   angelegt und benannt mit ihr), 'dachmarke' (Allgäu Akut, mit Interessen
+ *   Klinik/Präklinik je Abo, mindestens eins), 'weitere' (z. B. intern).
  */
 
 const NL_BESTAETIGEN_S = 7 * 86400;
 const NL_VERWALTEN_S = 400 * 86400;
-const NL_EINWILLIGUNG = 'Ich möchte die ausgewählten Newsletter per E-Mail erhalten. Die Einwilligung kann ich jederzeit über den Link in jeder Mail widerrufen. Gespeichert werden meine Adresse, mein Vorname (falls angegeben), die gewählten Listen sowie Zeitpunkt und Fassung dieser Einwilligung.';
+const NL_EINWILLIGUNG = 'Ich möchte die ausgewählten Newsletter per E-Mail erhalten. Die Einwilligung kann ich jederzeit über den Link in jeder Mail widerrufen. Gespeichert werden meine Adresse, mein Vorname (falls angegeben), die gewählten Listen, beim Newsletter der Dachmarke meine Interessen (Klinik, Präklinik) sowie Zeitpunkt und Fassung dieser Einwilligung.';
+
+/** Listenarten (E-71). */
+const NL_ARTEN = ['reihe' => 'Reihe', 'dachmarke' => 'Dachmarke', 'weitere' => 'weitere'];
+/** Interessen beim Newsletter der Dachmarke (E-71 (4)). */
+const NL_INTERESSEN = ['klinik' => 'Klinik', 'praeklinik' => 'Präklinik'];
 
 /* ---- Listen ---------------------------------------------------------------- */
 
@@ -40,7 +48,7 @@ function nl_liste_pruefen(array $e): array
     $t = fn(string $k, int $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($e[$k] ?? '')) ?? ''), 0, $max);
     // Beschreibung mit dem Editor (eine Zeile: fett, kursiv, Link; E-54)
     $w = ['name' => $t('name', 80), 'beschreibung' => html_bereinigen(mb_substr((string)($e['beschreibung'] ?? ''), 0, 900), 'inline'), 'absender_name' => $t('absender_name', 80),
-        'sichtbar' => empty($e['sichtbar']) ? 0 : 1, 'bei_anmeldung' => empty($e['bei_anmeldung']) ? 0 : 1];
+        'sichtbar' => empty($e['sichtbar']) ? 0 : 1];
     $f = [];
     if ($w['name'] === '') {
         $f['name'] = 'Bitte einen Namen angeben.';
@@ -51,32 +59,105 @@ function nl_liste_pruefen(array $e): array
     return ['werte' => $w, 'fehler' => $f];
 }
 
+/**
+ * Liste anlegen (Art aus $w['art'], Standard 'weitere') oder ändern. Name und
+ * Beschreibung einer Reihen-Liste kommen von der Reihe (va_reihe_speichern);
+ * hier ändern sich bei ihr nur Absender und Sichtbarkeit.
+ */
 function nl_liste_speichern(?int $id, array $w, ?int $kontoId): int
 {
     db_transaktion(function () use (&$id, $w): void {
-        // Nur eine Liste wird bei der Symposium-Anmeldung angeboten
-        if ($w['bei_anmeldung'] === 1) {
-            db_ausfuehren('UPDATE newsletter_liste SET bei_anmeldung = 0');
-        }
         if ($id === null) {
             db_ausfuehren(
-                'INSERT INTO newsletter_liste (name, beschreibung, absender_name, sichtbar, bei_anmeldung, pos, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $w['bei_anmeldung'], db_zahl('SELECT COALESCE(MAX(pos), 0) + 1 FROM newsletter_liste'), db_jetzt()]
+                'INSERT INTO newsletter_liste (name, art, beschreibung, absender_name, sichtbar, pos, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$w['name'], isset(NL_ARTEN[$w['art'] ?? '']) ? $w['art'] : 'weitere', $w['beschreibung'], $w['absender_name'], $w['sichtbar'], db_zahl('SELECT COALESCE(MAX(pos), 0) + 1 FROM newsletter_liste'), db_jetzt()]
             );
             $id = (int)db()->lastInsertId();
+        } elseif ((nl_liste($id)['art'] ?? '') === 'reihe') {
+            db_ausfuehren('UPDATE newsletter_liste SET absender_name = ?, sichtbar = ? WHERE id = ?', [$w['absender_name'], $w['sichtbar'], $id]);
         } else {
-            db_ausfuehren('UPDATE newsletter_liste SET name = ?, beschreibung = ?, absender_name = ?, sichtbar = ?, bei_anmeldung = ? WHERE id = ?',
-                [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $w['bei_anmeldung'], $id]);
+            db_ausfuehren('UPDATE newsletter_liste SET name = ?, beschreibung = ?, absender_name = ?, sichtbar = ? WHERE id = ?',
+                [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $id]);
         }
     });
     audit_schreiben('newsletter', audit_text('liste', (int)$id, 'gespeichert (' . $w['name'] . ')'), $kontoId, ['liste' => (int)$id]);
     return (int)$id;
 }
 
-/** Die Liste, die bei der Symposium-Anmeldung angeboten wird, oder null. */
-function nl_liste_anmeldung(): ?array
+/** Der Newsletter der Dachmarke (Allgäu Akut, mit Interessen) oder null. */
+function nl_liste_dachmarke(): ?array
 {
-    return db_zeile('SELECT * FROM newsletter_liste WHERE bei_anmeldung = 1 ORDER BY id LIMIT 1');
+    return db_zeile("SELECT * FROM newsletter_liste WHERE art = 'dachmarke' ORDER BY id LIMIT 1");
+}
+
+/**
+ * Interessen aus Formularwerten (Liste aus 'klinik', 'praeklinik'):
+ * Speicherform „klinik,praeklinik“, '' wenn keins.
+ */
+function nl_interessen(array $werte): string
+{
+    return implode(',', array_values(array_intersect(array_keys(NL_INTERESSEN), array_map('strval', $werte))));
+}
+
+/** Interessen als Text („Klinik, Präklinik“). */
+function nl_interessen_text(string $interessen): string
+{
+    return implode(', ', array_map(fn($i) => NL_INTERESSEN[$i], array_filter(explode(',', $interessen), fn($i) => isset(NL_INTERESSEN[$i]))));
+}
+
+/** Interessen einer Berufsgruppe für die Vorauswahl (O-50): Speicherform. */
+function nl_interessen_fuer(string $berufsgruppe): string
+{
+    $i = va_interesse($berufsgruppe);
+    return $i === 'beides' ? 'klinik,praeklinik' : $i;
+}
+
+/** Gespeicherte Interessen einer Person beim Dachmarken-Newsletter ('' ohne Abo). */
+function nl_interessen_von(int $personId): string
+{
+    $d = nl_liste_dachmarke();
+    $a = $d === null ? null : db_zeile('SELECT klinik, praeklinik FROM newsletter_abo WHERE person_id = ? AND liste_id = ?', [$personId, (int)$d['id']]);
+    return $a === null ? '' : nl_interessen(array_keys(array_filter(['klinik' => (int)$a['klinik'], 'praeklinik' => (int)$a['praeklinik']])));
+}
+
+/**
+ * Listenwahl aus einem Formular prüfen: Fehlertext oder null. Wer die Dachmarke
+ * wählt, braucht mindestens ein Interesse (E-71 (4)).
+ */
+function nl_wahl_fehler(array $listeIds, string $interessen): ?string
+{
+    $d = nl_liste_dachmarke();
+    if ($d !== null && in_array((int)$d['id'], array_map('intval', $listeIds), true) && $interessen === '') {
+        return 'Bei „' . $d['name'] . '“ bitte Klinik, Präklinik oder beides wählen.';
+    }
+    return null;
+}
+
+/**
+ * Auswahl der öffentlichen Listen für die Formulare (Bestellen, Verwalten,
+ * Mein Konto): je Liste ein Häkchen, beim Newsletter der Dachmarke darunter
+ * die Interessen (E-71 (4), (7)). $abos: [liste_id => status] für „wartet auf
+ * Bestätigung“.
+ */
+function nl_listen_html(array $gewaehlt, string $interessen, array $abos = []): string
+{
+    $gewaehlt = array_map('intval', $gewaehlt);
+    $iw = explode(',', $interessen);
+    $h = '';
+    foreach (nl_listen(true) as $l) {
+        $lid = (int)$l['id'];
+        $h .= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => $lid, 'wert' => in_array($lid, $gewaehlt, true),
+            'label_html' => '<strong>' . e($l['name']) . '</strong>' . (($abos[$lid] ?? '') === 'offen' ? ' ' . chip('offen', 'wartet auf Bestätigung') : '')
+                . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]);
+        if ($l['art'] === 'dachmarke') {
+            $h .= '<fieldset class="feld nl-interessen"><legend>Interessiert an <span class="meta">(mindestens eins)</span></legend><div class="wahl wahl-reihe">';
+            foreach (NL_INTERESSEN as $ik => $it) {
+                $h .= '<label><input type="checkbox" name="nl_interesse[]" value="' . e($ik) . '"' . (in_array($ik, $iw, true) ? ' checked' : '') . '><span>' . e($it) . '</span></label>';
+            }
+            $h .= '</div></fieldset>';
+        }
+    }
+    return $h;
 }
 
 /* ---- Personen, Links, Einwilligung --------------------------------------- */
@@ -141,8 +222,11 @@ function nl_verwalten_url(int $personId): string
  * Bestätigungsmail. Ist schon alles bestätigt, kommt ein Link zum Verwalten.
  * Gleiche Antwort für jede Adresse (R-03) – der Aufrufer erfährt nichts.
  */
-function nl_anfragen(string $email, string $vorname, array $listeIds, string $quelle, ?int $kontoId = null): void
+function nl_anfragen(string $email, string $vorname, array $listeIds, string $quelle, ?int $kontoId = null, string $interessen = 'klinik,praeklinik'): void
 {
+    $dachmarke = (int)(nl_liste_dachmarke()['id'] ?? 0);
+    $ik = str_contains($interessen, 'praeklinik') ? 1 : 0;
+    $kl = in_array('klinik', explode(',', $interessen), true) ? 1 : 0;
     $email = mail_adresse($email) ?? '';
     $ids = array_values(array_intersect(array_map('intval', $listeIds), array_map('intval', array_column(nl_listen(), 'id'))));
     if ($email === '' || $ids === []) {
@@ -156,9 +240,11 @@ function nl_anfragen(string $email, string $vorname, array $listeIds, string $qu
         if ($st === 'bestaetigt') {
             continue;
         }
+        $mitI = $lid === $dachmarke;
         db_ausfuehren(
-            'INSERT INTO newsletter_abo (person_id, liste_id, status, quelle, angefragt_am) VALUES (?, ?, \'offen\', ?, ?) ON DUPLICATE KEY UPDATE angefragt_am = VALUES(angefragt_am), quelle = VALUES(quelle)',
-            [$pid, $lid, $quelle, db_jetzt()]
+            'INSERT INTO newsletter_abo (person_id, liste_id, status, quelle, angefragt_am, klinik, praeklinik) VALUES (?, ?, \'offen\', ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE angefragt_am = VALUES(angefragt_am), quelle = VALUES(quelle), klinik = VALUES(klinik), praeklinik = VALUES(praeklinik)',
+            [$pid, $lid, $quelle, db_jetzt(), $mitI ? $kl : 0, $mitI ? $ik : 0]
         );
         $neu[] = $lid;
     }
@@ -167,7 +253,7 @@ function nl_anfragen(string $email, string $vorname, array $listeIds, string $qu
         mail_vorlage_einreihen($email, 'newsletter_schon', ['vorname' => $p['vorname'], 'link' => nl_verwalten_url($pid)]);
         return;
     }
-    $namen = array_map(fn($l) => $l['name'], array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $neu, true)));
+    $namen = array_map(fn($l) => $l['name'] . ((int)$l['id'] === $dachmarke ? ' (' . nl_interessen_text($interessen) . ')' : ''), array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $neu, true)));
     mail_vorlage_einreihen($email, 'newsletter_bestaetigen', ['vorname' => $p['vorname'], 'listen' => implode(', ', $namen),
         'link' => link_url('newsletter', nl_link_erzeugen($pid, 'bestaetigen'), 'bestaetigen'), 'einwilligung' => NL_EINWILLIGUNG]);
     audit_schreiben('newsletter', audit_text('person', $pid, 'Eintrag angefragt (' . $quelle . '): ' . implode(', ', $namen)), $kontoId, ['person' => $pid]);
@@ -234,19 +320,26 @@ function nl_abmelden(int $personId, ?array $listeIds = null, ?int $kontoId = nul
  * Listen werden abgemeldet. Beide Formulare zeigen nur sichtbare Listen:
  * Abos ausgeblendeter Listen (z. B. per Team-Einladung, E-52) bleiben (Review B-6).
  */
-function nl_listen_setzen(int $personId, array $listeIds, string $quelle): void
+function nl_listen_setzen(int $personId, array $listeIds, string $quelle, string $interessen = 'klinik,praeklinik'): void
 {
     $sichtbar = array_map('intval', array_column(nl_listen(true), 'id'));
     $ids = array_values(array_intersect(array_map('intval', $listeIds), $sichtbar));
     $abos = nl_abos($personId);
     $weg = array_values(array_diff(array_intersect(array_map('intval', array_keys($abos)), $sichtbar), $ids));
     $fassung = nl_fassung();
+    $dachmarke = (int)(nl_liste_dachmarke()['id'] ?? 0);
+    $kl = in_array('klinik', explode(',', $interessen), true) ? 1 : 0;
+    $pk = in_array('praeklinik', explode(',', $interessen), true) ? 1 : 0;
+    if (in_array($dachmarke, $ids, true) && ($abos[$dachmarke] ?? '') === 'bestaetigt' && nl_interessen_von($personId) !== $interessen) {
+        db_ausfuehren('UPDATE newsletter_abo SET klinik = ?, praeklinik = ? WHERE person_id = ? AND liste_id = ?', [$kl, $pk, $personId, $dachmarke]);
+        audit_schreiben('newsletter', audit_text('person', $personId, 'Interessen: ' . nl_interessen_text($interessen) . ' (' . $quelle . ')'), null, ['person' => $personId]);
+    }
     foreach ($ids as $lid) {
         if (($abos[$lid] ?? '') !== 'bestaetigt') {
             db_ausfuehren(
-                "INSERT INTO newsletter_abo (person_id, liste_id, status, quelle, angefragt_am, bestaetigt_am, fassung) VALUES (?, ?, 'bestaetigt', ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE status = 'bestaetigt', quelle = VALUES(quelle), bestaetigt_am = VALUES(bestaetigt_am), fassung = VALUES(fassung)",
-                [$personId, $lid, $quelle, db_jetzt(), db_jetzt(), $fassung]
+                "INSERT INTO newsletter_abo (person_id, liste_id, status, quelle, angefragt_am, bestaetigt_am, fassung, klinik, praeklinik) VALUES (?, ?, 'bestaetigt', ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE status = 'bestaetigt', quelle = VALUES(quelle), bestaetigt_am = VALUES(bestaetigt_am), fassung = VALUES(fassung), klinik = VALUES(klinik), praeklinik = VALUES(praeklinik)",
+                [$personId, $lid, $quelle, db_jetzt(), db_jetzt(), $fassung, $lid === $dachmarke ? $kl : 0, $lid === $dachmarke ? $pk : 0]
             );
             audit_schreiben('newsletter', audit_text('person', $personId, 'Liste ' . $lid . ' eingetragen (' . $quelle . ')'), null, ['person' => $personId]);
         }
@@ -256,30 +349,57 @@ function nl_listen_setzen(int $personId, array $listeIds, string $quelle): void
     }
 }
 
-/** Häkchen bei der Symposium-Anmeldung: nach deren Bestätigung eine eigene Bestätigungsmail (Admin 2026-10-30). */
+/**
+ * Häkchen bei der Anmeldung (E-71 (6)): Newsletter der Reihe (Spalte
+ * newsletter) und Allgäu Akut mit Interessen (nl_interessen). Nach der
+ * Bestätigung der Anmeldung eine gemeinsame Bestätigungsmail für beide (O-54).
+ */
 function nl_aus_anmeldung(int $anmId): void
 {
     $a = anm_laden($anmId);
-    $l = nl_liste_anmeldung();
-    if ($a === null || (int)$a['newsletter'] !== 1 || $l === null) {
+    if ($a === null) {
         return;
     }
-    nl_anfragen((string)$a['email'], (string)$a['vorname'], [(int)$l['id']], 'anmeldung');
+    $ids = [];
+    $r = (int)$a['newsletter'] === 1 ? va_reihe_von((int)$a['veranstaltung_id']) : null;
+    if ($r !== null && $r['liste_id'] !== null) {
+        $ids[] = $r['liste_id'];
+    }
+    $d = nl_liste_dachmarke();
+    if ((string)($a['nl_interessen'] ?? '') !== '' && $d !== null) {
+        $ids[] = (int)$d['id'];
+    }
+    if ($ids !== []) {
+        nl_anfragen((string)$a['email'], (string)$a['vorname'], $ids, 'anmeldung', null, (string)($a['nl_interessen'] ?? '') ?: 'klinik,praeklinik');
+    }
+}
+
+/** Was die Anmeldung zum Newsletter anbietet: ['reihe' => Liste oder null, 'dachmarke' => Liste oder null]. */
+function nl_angebot_anmeldung(): array
+{
+    $r = va_reihe_von(va_id());
+    return ['reihe' => $r !== null && $r['liste_id'] !== null ? nl_liste($r['liste_id']) : null, 'reihe_kurz' => $r['kurz'] ?? '', 'dachmarke' => nl_liste_dachmarke()];
 }
 
 /* ---- Team, Versand, Statistik, Aufräumen --------------------------------- */
 
-/** Bestätigte Abonnierende einer oder mehrerer Listen, jede Person einmal. */
-function nl_empfaenger(array $listeIds): array
+/**
+ * Bestätigte Abonnierende einer oder mehrerer Listen, jede Person einmal.
+ * $ziel gilt für den Newsletter der Dachmarke (E-71 (5)): 'klinik' = mit
+ * Interesse Klinik (auch „beides“), 'praeklinik' entsprechend, 'beide' = alle.
+ */
+function nl_empfaenger(array $listeIds, string $ziel = 'beide'): array
 {
     $ids = array_values(array_filter(array_map('intval', $listeIds)));
     if ($ids === []) {
         return [];
     }
     $platz = implode(',', array_fill(0, count($ids), '?'));
+    $d = (int)(nl_liste_dachmarke()['id'] ?? 0);
+    $filter = in_array($ziel, ['klinik', 'praeklinik'], true) ? ' AND (a.liste_id <> ' . $d . ' OR a.' . $ziel . ' = 1)' : '';
     return db_zeilen(
         "SELECT p.id, p.vorname, '' AS nachname, p.email FROM newsletter_person p
-         WHERE EXISTS (SELECT 1 FROM newsletter_abo a WHERE a.person_id = p.id AND a.status = 'bestaetigt' AND a.liste_id IN ($platz))
+         WHERE EXISTS (SELECT 1 FROM newsletter_abo a WHERE a.person_id = p.id AND a.status = 'bestaetigt' AND a.liste_id IN ($platz)$filter)
          ORDER BY p.email",
         $ids
     );

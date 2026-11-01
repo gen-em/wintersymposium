@@ -132,8 +132,8 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
             <p class="unterkopf"><?= e($titel) ?></p>
             <?= feld('mail_absender', 'Absenderadresse', ['typ' => 'email', 'id' => 'mail_absender' . $suf, 'wert' => (string)(einstellung('mail_absender' . $suf) ?? ''), 'attr' => ['placeholder' => mail_absender(mail_konfig($pf))]]) ?>
             <?php if ($pf === 'system'): ?>
-            <?= feld('reihe_name', 'Name der Reihe', ['wert' => (string)(einstellung('reihe_name') ?? ''), 'attr' => ['maxlength' => 60, 'placeholder' => 'Allgäu Akut'],
-                'hilfe' => 'Absender, Betreff und Gruß der Mails, die für alle Veranstaltungen gelten (Team, Konto, Newsletter). Mails zu einer Anmeldung tragen den Namen der Veranstaltung (E-67).']) ?>
+            <?= feld('reihe_name', 'Dachmarke', ['wert' => (string)(einstellung('reihe_name') ?? ''), 'attr' => ['maxlength' => 60, 'placeholder' => 'Allgäu Akut'],
+                'hilfe' => 'Die Dachmarke über allen Reihen und Veranstaltungen (E-71). Absender, Betreff und Gruß der Mails, die für alle Veranstaltungen gelten (Team, Konto, Newsletter). Mails zu einer Anmeldung tragen den Namen der Veranstaltung (E-67).']) ?>
             <?php else: ?>
             <?= feld('mail_absender_name', 'Absendername', ['id' => 'mail_absender_name' . $suf, 'wert' => (string)(einstellung('mail_absender_name' . $suf) ?? ''), 'attr' => ['maxlength' => 80, 'placeholder' => reihe_name()]]) ?>
             <?php endif; ?>

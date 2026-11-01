@@ -10,7 +10,7 @@ function test_newsletter(): void
     $ls = array_column(nl_listen(), 'id', 'name');
     $lw = (int)$ls['Wintersymposium'];
     $la = (int)$ls['Allgäu Akut'];
-    pruefe(nl_liste_anmeldung()['name'] === 'Allgäu Akut' && (int)nl_liste((int)$ls['Referierende (intern)'])['sichtbar'] === 0, '„Allgäu Akut“ bei der Anmeldung angeboten, interne Liste ausgeblendet');
+    pruefe(nl_liste_dachmarke()['name'] === 'Allgäu Akut' && (int)nl_liste((int)$ls['Referierende (intern)'])['sichtbar'] === 0, '„Allgäu Akut“ ist die Dachmarke, interne Liste ausgeblendet');
     $nn = array_column(nl_empfaenger([$lw, $la]), 'email');
     sort($nn);
     pruefe($nn === ['nina@example.org', 'otto@example.org'], 'Beispieldaten: bestätigt bekommen Mails, Pia (unbestätigt) und Lea (andere Liste) nicht, Nina (zwei Listen) einmal');
@@ -61,12 +61,19 @@ function test_newsletter(): void
     $pia = (int)nl_person_per_email('pia@example.org')['id'];
     nl_aufraeumen(time() + 8 * 86400);
     pruefe(nl_person($pia) === null && nl_person($np) !== null, 'Unbestätigte nach 7 Tagen gelöscht, Bestätigte bleiben');
-    // Häkchen bei der Anmeldung: nach der Bestätigung eigene Mail
-    $nlAnm = anm_anlegen(anm_daten_pruefen(['vorname' => 'Rosa', 'nachname' => 'Rundbrief', 'email' => 'rosa@example.org', 'berufsgruppe' => 'StudentIn', 'beruf_sonstige' => '', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'])['werte'], ['fest' => [], 'warte' => []], true);
+    // Zwei Häkchen bei der Anmeldung (AP-19): nach der Bestätigung eine gemeinsame Mail (O-54)
+    $rw = anm_daten_pruefen(['vorname' => 'Rosa', 'nachname' => 'Rundbrief', 'email' => 'rosa@example.org', 'berufsgruppe' => 'StudentIn', 'beruf_sonstige' => '', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'])['werte'];
+    $nlAnm = anm_anlegen($rw + ['nl_interessen' => 'klinik'], ['fest' => [], 'warte' => []], true);
     pruefe(nl_person_per_email('rosa@example.org') === null, 'Häkchen: vor der Bestätigung der Anmeldung nichts');
     anm_link_einloesen(anm_link_erzeugen($nlAnm['id'], 'bestaetigen', time() + 3600));
     $rp = nl_person_per_email('rosa@example.org');
-    pruefe($rp !== null && nl_abos((int)$rp['id']) === [$la => 'offen'] && str_contains((string)test_mail_an('rosa@example.org')['text'], '/newsletter/bestaetigen?t='), 'nach der Bestätigung: eigene Newsletter-Bestätigungsmail');
+    $ra = $rp !== null ? nl_abos((int)$rp['id']) : [];
+    ksort($ra);
+    $erwartet = [$lw => 'offen', $la => 'offen'];
+    ksort($erwartet);
+    $rm = (string)(test_mail_an('rosa@example.org')['text'] ?? '');
+    pruefe($ra === $erwartet && str_contains($rm, '/newsletter/bestaetigen?t=') && str_contains($rm, 'Wintersymposium, Allgäu Akut (Klinik)') && db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'rosa@example.org' AND text LIKE '%/newsletter/bestaetigen?t=%'") === 1,
+        'nach der Bestätigung: eine Bestätigungsmail für Reihe und Allgäu Akut mit Interesse');
     // Export
     $ex = export_erzeugen('newsletter', '', $la);
     pruefe($ex !== null && str_contains($ex['text'], 'nina@example.org') && !str_contains($ex['text'], 'rosa@example.org') && str_contains($ex['text'], nl_fassung()), 'CSV je Liste: nur bestätigte, mit Fassung');

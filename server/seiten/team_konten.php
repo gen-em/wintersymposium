@@ -63,7 +63,7 @@ if (ist_post()) {
                     break;
                 }
                 $alle = post_text('umfang') !== 'auswahl';
-                va_rechte_setzen((int)$ziel['id'], $alle, (array)($_POST['va'] ?? []), $ich);
+                va_rechte_setzen((int)$ziel['id'], $alle, (array)($_POST['va'] ?? []), $ich, (array)($_POST['reihe'] ?? []));
                 fertig('ok', 'Veranstaltungen von ' . $ziel['name'] . ': ' . va_rechte_text(konto_laden((int)$ziel['id'])) . '.', '/team/konten');
             case 'rolle':
                 $rolle = post_text('rolle');
@@ -108,7 +108,8 @@ if (is_array($link)): ?>
             <td data-label="Status"><?= chip((int)$k['aktiv'] !== 1 ? 'gesperrt' : ($status === 'aktiv' ? 'ok' : 'offen'), $status) ?></td>
             <td data-label="Letzte Anmeldung" class="mono klein"><?= e($k['letzte_anmeldung'] ? datum_zeit_text($k['letzte_anmeldung']) : '–') ?></td>
             <td<?= $eigen ? '' : ' data-label="Aktionen"' ?>><div class="aktionen-zelle">
-            <?php if (!$eigen): $kid = (int)$k['id']; $erlaubt = va_erlaubte_ids($k); ?>
+            <?php if (!$eigen): $kid = (int)$k['id']; $erlaubt = va_erlaubte_ids($k); $erlaubtR = va_erlaubte_reihen($k) ?? [];
+                $direkt = $erlaubt === null ? [] : va_rechte_direkt($kid); ?>
                 <?php /* Ein Knopf je Zeile (AP-13, Entwurf 9): Menü, jede Aktion als Dialog */ ?>
                 <details class="zeilen-menue"><summary class="knopf zweit klein">Bearbeiten <?= icon('caret-down', 14) ?></summary>
                     <div class="menue-karte zeilen-liste" role="menu">
@@ -127,10 +128,11 @@ if (is_array($link)): ?>
                         <?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="veranstaltungen">
                         <fieldset class="feld"><legend>Darf diese Veranstaltungen bearbeiten</legend>
                             <label class="haken"><input type="radio" name="umfang" value="alle"<?= $erlaubt === null ? ' checked' : '' ?>><span><strong>Alle</strong>, auch künftige</span></label>
-                            <label class="haken"><input type="radio" name="umfang" value="auswahl"<?= $erlaubt !== null ? ' checked' : '' ?>><span><strong>Nur ausgewählte:</strong></span></label>
-                            <?php foreach (va_alle() as $v): ?><label class="haken einrueck"><input type="checkbox" name="va[]" value="<?= $v['id'] ?>"<?= $erlaubt !== null && in_array($v['id'], $erlaubt, true) ? ' checked' : '' ?>><span><?= e($v['name']) ?> <span class="meta klein">· <?= e($v['kuerzel']) ?> · <?= e(VA_STATUS[$v['status']]) ?></span></span></label><?php endforeach; ?>
+                            <label class="haken"><input type="radio" name="umfang" value="auswahl"<?= $erlaubt !== null ? ' checked' : '' ?>><span><strong>Nur ausgewählte</strong> Reihen und Veranstaltungen (kombinierbar):</span></label>
+                            <?php foreach (va_reihen() as $r): ?><label class="haken einrueck"><input type="checkbox" name="reihe[]" value="<?= $r['id'] ?>"<?= in_array($r['id'], $erlaubtR, true) ? ' checked' : '' ?>><span>Reihe <strong><?= e($r['name']) ?></strong> <span class="meta klein">· alle ihre Veranstaltungen, auch künftige, und ihr Newsletter</span></span></label><?php endforeach; ?>
+                            <?php foreach (va_alle() as $v): ?><label class="haken einrueck"><input type="checkbox" name="va[]" value="<?= $v['id'] ?>"<?= in_array($v['id'], $direkt, true) ? ' checked' : '' ?>><span><?= e($v['name']) ?> <span class="meta klein">· <?= e($v['kuerzel']) ?> · <?= e(VA_STATUS[$v['status']]) ?></span></span></label><?php endforeach; ?>
                         </fieldset>
-                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen.</p>
+                        <p class="hilfe">Sieht dann im Wechsler, in allen Listen und im Protokoll nur diese Veranstaltungen. Mit einer Reihe verschickt die Person auch deren Newsletter; „Allgäu Akut“ bleibt bei den BetreiberInnen.</p>
                         <button class="knopf" type="submit">Speichern</button>
                     </form>
                 </details>
