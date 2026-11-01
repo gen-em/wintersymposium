@@ -317,6 +317,105 @@ function testdaten_laden(?int $kontoId): string
     return $sicherung;
 }
 
+/**
+ * Staging auf den Ausgangsstand zurücksetzen (Admin 2026-11-01): wie nach der
+ * Installation, ohne Beispieldaten und ohne Testkonten. Es bleiben die
+ * Team-Konten, die nicht zu den Testdaten gehören (Adresse nicht bei
+ * example.org und nicht unter testkonten in der config.php), samt zweitem
+ * Faktor, Wiederherstellungscodes und Passkeys; dazu die Betriebs-Einstellungen
+ * (Tabelle einstellung), die Hostnamen sowie Impressum und Datenschutz
+ * (gemeinsame Texte mit ihren Bildern). Alles andere wird neu aufgebaut: alle
+ * Tabellen weg, Migrationen von vorn – also eine Veranstaltung, die Reihe
+ * Wintersymposium und die Newsletter-Listen wie nach der Installation.
+ * Rechte der Admins bleiben für die erste Veranstaltung und für Reihen
+ * gleichen Namens. Vorher eine Sicherung. Mit $testkonten legt es danach die
+ * festen Testkonten aus der config.php neu an. Gibt den Namen der Sicherung
+ * zurück.
+ */
+function testdaten_zuruecksetzen(?int $kontoId, bool $testkonten = false): string
+{
+    if (!testdaten_moeglich()) {
+        throw new RuntimeException('Zurücksetzen nur auf Staging.');
+    }
+    $sicherung = sicherung_anlegen('vor dem Zurücksetzen von Staging', $kontoId);
+    $test = array_filter(array_map(fn($d) => mail_adresse((string)(((array)$d)['email'] ?? '')), (array)konfig('testkonten', [])));
+    $konten = array_values(array_filter(
+        db_zeilen("SELECT * FROM konto WHERE rolle IN ('admin', 'betreiber')"),
+        fn($k) => !str_ends_with(mb_strtolower((string)$k['email']), '@example.org') && !in_array(mail_adresse((string)$k['email']), $test, true)
+    ));
+    $ids = array_map(fn($k) => (int)$k['id'], $konten);
+    // Nummern gelöschter Konten nicht neu vergeben (eine offene Sitzung zeigte sonst auf ein anderes Konto)
+    $naechste = db_zahl('SELECT COALESCE(MAX(id), 0) FROM konto') + 1;
+    $mit = fn(string $tabelle) => $ids === [] ? [] : db_zeilen('SELECT * FROM ' . $tabelle . ' WHERE konto_id IN (' . implode(',', $ids) . ')');
+    $behalten = [
+        'konto' => $konten,
+        'konto_code' => $mit('konto_code'),
+        'passkey' => $mit('passkey'),
+        'konto_veranstaltung' => array_values(array_filter($mit('konto_veranstaltung'), fn($r) => (int)$r['veranstaltung_id'] === 1)),
+        'einstellung' => db_zeilen('SELECT * FROM einstellung'),
+        'host' => db_zeilen('SELECT * FROM host'),
+        'inhalt' => db_zeilen('SELECT * FROM inhalt WHERE veranstaltung_id = 0'),
+    ];
+    $reihenRechte = va_reihen_da() && $ids !== []
+        ? db_zeilen('SELECT kr.konto_id, r.name FROM konto_reihe kr JOIN reihe r ON r.id = kr.reihe_id WHERE kr.konto_id IN (' . implode(',', $ids) . ')') : [];
+
+    $pdo = db();
+    foreach (['ws_jobs', 'ws_platz', 'ws_migration'] as $sperre) {
+        if (db_zahl('SELECT GET_LOCK(?, 20)', [$sperre]) !== 1) {
+            throw new RuntimeException('Die Datenbank ist gerade beschäftigt. Bitte gleich noch einmal versuchen.');
+        }
+    }
+    try {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        foreach (db_zeilen('SELECT table_name AS t FROM information_schema.tables WHERE table_schema = DATABASE()') as $t) {
+            $pdo->exec('DROP TABLE `' . str_replace('`', '', (string)$t['t']) . '`');
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        db_wert('SELECT RELEASE_LOCK(?)', ['ws_migration']);
+        migration_anwenden();
+        // Was die Migrationen vorbelegen (Texte, Hosts), weicht dem behaltenen Stand
+        db_ausfuehren('DELETE FROM inhalt WHERE veranstaltung_id = 0');
+        db_ausfuehren('DELETE FROM host');
+        foreach ($behalten as $tabelle => $zeilen) {
+            foreach ($zeilen as $z) {
+                db_ausfuehren('REPLACE INTO `' . $tabelle . '` (`' . implode('`,`', array_keys($z)) . '`) VALUES (' . implode(',', array_fill(0, count($z), '?')) . ')', array_values($z));
+            }
+        }
+        db_ausfuehren('ALTER TABLE konto AUTO_INCREMENT = ' . $naechste);
+        $reihen = array_column(va_reihen_da() ? db_zeilen('SELECT id, name FROM reihe') : [], 'id', 'name');
+        foreach ($reihenRechte as $rr) {
+            if (isset($reihen[$rr['name']])) {
+                db_ausfuehren('INSERT IGNORE INTO konto_reihe (konto_id, reihe_id) VALUES (?, ?)', [(int)$rr['konto_id'], (int)$reihen[$rr['name']]]);
+            }
+        }
+    } finally {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        foreach (['ws_migration', 'ws_platz', 'ws_jobs'] as $sperre) {
+            db_wert('SELECT RELEASE_LOCK(?)', [$sperre]);
+        }
+    }
+    // Dateien: Fotos, Bilder der Mailings und Unterschriften weg; Bilder in Impressum und Datenschutz bleiben
+    $texte = implode(' ', array_column($behalten['inhalt'], 'text'));
+    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*') ?: [], glob(foto_ordner() . '/text-*') ?: []) as $f) {
+        if (!str_contains($texte, basename($f))) {
+            @unlink($f);
+        }
+    }
+    foreach (glob(laufzeit_pfad('zertifikat') . '/*/unterschrift.png') ?: [] as $f) {
+        @unlink($f);
+    }
+    va_zwischenspeicher_leeren();
+    ctx_weg('va_id');
+    if (function_exists('anm_workshops')) {
+        anm_workshops(true);
+    }
+    if ($testkonten) {
+        testdaten_konten($kontoId);
+    }
+    audit_schreiben('sicherung', 'Staging zurückgesetzt (Sicherung davor: ' . $sicherung . ')' . ($testkonten ? ', Testkonten neu angelegt' : ''), $kontoId);
+    return $sicherung;
+}
+
 /** Rollen der Testkonten aus der config.php (Schlüssel testkonten). */
 const TESTDATEN_KONTO_ROLLEN = ['betreiber' => 'Test BetreiberIn', 'admin' => 'Test Admin', 'teilnehmend' => 'Test Teilnehmerin'];
 

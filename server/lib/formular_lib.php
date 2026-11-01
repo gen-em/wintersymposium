@@ -53,7 +53,10 @@ function attr_html(array $attr): string
  *   klasse   weitere Klassen am Rahmen; rahmen_id: id am Rahmen (z. B. sonst-feld);
  *            rahmen_attr: weitere Attribute am Rahmen (z. B. data-fuer)
  *   sr       true = Label nur für Screenreader (Filterzeilen)
- *   optionen bei auswahl/radio: [wert => text] oder Liste (wert = text)
+ *   optionen bei auswahl/radio: [wert => text]; die Schlüssel sind immer die Werte,
+ *            auch bei 0, 1, 2 … (keine Vermutung, ob eine Liste gemeint ist)
+ *   liste    bei auswahl/radio statt optionen: Werte, die zugleich der Text sind
+ *            (z. B. Berufsgruppen); hängt sich hinter optionen an
  *   leer     bei auswahl: Text einer leeren ersten Option, z. B. „Bitte wählen“
  *   ohne_rahmen  true = nur Label und Element ohne <div class="feld"> (z. B. in Filterzeilen)
  */
@@ -79,9 +82,10 @@ function feld(string $name, string $label, array $opt = []): string
         $klasse = trim('feld ' . ($opt['klasse'] ?? ''));
         return '<' . $tag . ' class="' . e($klasse) . '"' . (isset($opt['rahmen_id']) ? ' id="' . e($opt['rahmen_id']) . '"' : '') . attr_html((array)($opt['rahmen_attr'] ?? [])) . '>' . $innen . '</' . $tag . '>';
     };
+    // Ausdrücklich statt geraten (Reihe-Fehler auf Staging): optionen = [wert => text], liste = Werte als Text
     $optionen = (array)($opt['optionen'] ?? []);
-    if ($optionen !== [] && array_is_list($optionen)) {
-        $optionen = array_combine(array_map('strval', $optionen), $optionen);
+    foreach ((array)($opt['liste'] ?? []) as $w) {
+        $optionen[(string)$w] = (string)$w;
     }
 
     if ($typ === 'haken') {
@@ -166,7 +170,7 @@ function profil_felder_html(array $werte, array $fehler, array $opt = []): strin
             'attr' => $email === 'fest' ? ['readonly' => true] : ['autocomplete' => $ac('email'), 'maxlength' => 190]]);
     }
     $h .= '<div class="paar">'
-        . feld('berufsgruppe', 'Berufsgruppe', ['typ' => 'auswahl', 'optionen' => $gruppen, 'leer' => 'Bitte wählen', 'wert' => $w('berufsgruppe'),
+        . feld('berufsgruppe', 'Berufsgruppe', ['typ' => 'auswahl', 'liste' => $gruppen, 'leer' => 'Bitte wählen', 'wert' => $w('berufsgruppe'),
             'fehler' => $f('berufsgruppe'), 'pflicht' => $pflicht, 'attr' => ['data-efn-gruppe' => $gruppen[0] ?? '']])
         . feld('institution', 'Klinik / Institution', ['wert' => $w('institution'), 'fehler' => $f('institution'), 'pflicht' => $pflicht,
             'attr' => ['autocomplete' => $ac('organization'), 'maxlength' => 160]])

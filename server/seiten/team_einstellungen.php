@@ -31,6 +31,11 @@ if (ist_post()) {
     }
     // Reihe der Veranstaltung (AP-19): Kachel „Reihe & Zielgruppe“, nur BetreiberInnen
     $reihe = $gruppe === 'reihe' && $konto['rolle'] === 'betreiber' && isset($_POST['reihe_id']) ? (post_zahl('reihe_id') ?: null) : false;
+    $reiheRoh = post_text('reihe_id');
+    if ($reihe !== false && $reiheRoh !== '' && !ctype_digit($reiheRoh)) {
+        // Kein stilles „einzeln“ bei einem Wert, der keine Nummer ist (Reihe-Fehler auf Staging: der Name kam statt der Nummer)
+        $r['fehler']['reihe_id'] = 'Unbekannte Reihe.';
+    }
     if ($gruppe === 'reihe' && $reihe === false) {
         // Diagnose (Rückmeldung Staging: Reihe sprang ohne Meldung zurück): warum der Wechsel nicht versucht wurde
         error_log('Einstellungen: Reihe nicht übernommen (Rolle ' . $konto['rolle'] . ', Felder: ' . implode(', ', array_keys($_POST)) . ')');
