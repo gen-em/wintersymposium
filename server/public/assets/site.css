@@ -36,9 +36,13 @@
 @font-face { font-family: "Anton"; src: url("fonts/Anton-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Antonio"; src: url("fonts/Antonio-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Antonio"; src: url("fonts/Antonio-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Light.woff2") format("woff2"); font-weight: 300; font-display: swap; }
-@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+/* Tajawal: Die Schrift hat zwei unpassende Sätze vertikaler Metriken (hhea 643/357, win 1065/411).
+   macOS und Chromium nehmen hhea – Großbuchstaben saßen dann in Knöpfen, Chips und Feldern 2–4 px zu hoch.
+   Die Overrides gelten in allen Engines gleich und zentrieren die Versalhöhe (633) optisch; die Summe
+   bleibt 120 % wie in hhea, Zeilenhöhen ändern sich nicht (Rückmeldung 2026-11-01). */
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Light.woff2") format("woff2"); font-weight: 300; font-display: swap; ascent-override: 82%; descent-override: 18%; line-gap-override: 20%; }
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; ascent-override: 82%; descent-override: 18%; line-gap-override: 20%; }
+@font-face { font-family: "Tajawal"; src: url("fonts/Tajawal-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; ascent-override: 82%; descent-override: 18%; line-gap-override: 20%; }
 @font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
