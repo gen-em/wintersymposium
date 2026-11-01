@@ -73,6 +73,10 @@ if (ist_post()) {
                 fertig('ok', 'Testdaten geladen. Der Stand davor ist gesichert als ' . $s . '.', '/team/daten');
             }
             break;
+        case 'testkonten':
+            // Feste Testkonten aus der config.php (nur Staging, Rückmeldung nach AP-19)
+            $tk = testdaten_konten($ich);
+            fertig($tk['fehler'] === [] ? 'ok' : 'fehler', $tk['konten'] . ' Testkonten gesetzt.' . ($tk['fehler'] !== [] ? ' Fehler: ' . implode('; ', $tk['fehler']) : ''), '/team/daten');
     }
 }
 
@@ -94,6 +98,10 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
         <h2 class="zwischen">Testdaten <?= chip('offen', umgebung()) ?></h2>
         <p>Ersetzt Programm, Dozierende, Anmeldungen und Veranstaltungs-Einstellungen durch den Beispieldatensatz: Veranstaltung in 60 Tagen, Anmeldung offen, Workshops mit vollem Termin, Warteliste und offenem Angebot. Team-Konten bleiben. Vorher wird automatisch gesichert.</p>
         <p class="meta klein">Die Testpersonen haben Adressen bei example.org. Damit keine Mails dorthin gehen, in der config.php unter mail den Eintrag umleiten_an setzen.</p>
+        <?php if (konfig('testkonten', []) !== []): ?>
+        <p class="meta klein">Feste Testkonten aus der config.php (testkonten): Testdaten laden setzt sie mit; einzeln hier.</p>
+        <?= aktion_knopf('/team/daten', 'testkonten', [], 'Testkonten anlegen') ?>
+        <?php endif; ?>
         <?= bestaetigung_html('Testdaten laden', 'Programm, Anmeldungen und Einstellungen werden ersetzt. Zurück geht es über die Sicherung, die dabei entsteht.', 'Ja, Testdaten laden', ['aktion' => 'testdaten'], ['ziel' => '/team/daten', 'knopfklasse' => 'knopf gefahr']) ?>
     </div>
     <?php endif; ?>

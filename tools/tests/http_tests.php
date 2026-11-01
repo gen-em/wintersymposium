@@ -939,7 +939,8 @@ function komponenten_http_tests(string $basis, string $h, string $b): void
     $da = array_filter($abschnitte, fn($a) => str_contains($r['text'], 'id="' . $a . '"'));
     pruefe($r['status'] === 200 && count($da) === count($abschnitte), 'Betreiber: Komponentenblatt mit allen ' . count($abschnitte) . ' Abschnitten');
     pruefe(substr_count($r['text'], 'class="kb-code"') >= count($abschnitte) && str_contains($r['text'], 'class="bestaetigen"') && str_contains($r['text'], 'class="kachel"'), 'je Abschnitt der Aufruf als Text, Helfer erzeugen das Markup');
-    pruefe(str_contains($r['text'], 'href="/team/komponenten" aria-current="page"'), 'Unterseite „Komponenten“ unter Betrieb aktiv');
+    $navi = preg_match('#<div class="team-navi">.*?</nav>(?:<nav class="team-unter".*?</nav>)?</div>#s', $r['text'], $nm) === 1 ? $nm[0] : '';
+    pruefe($navi !== '' && !str_contains($navi, '/team/komponenten'), 'Komponentenblatt nicht in der Navigation (nur über die Adresse, Rückmeldung nach AP-19)');
     $a0 = (int)db_wert('SELECT COUNT(*) FROM audit');
     $r = http_anfrage($basis, 'POST', '/team/komponenten', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'beispiel'], $b);
     pruefe($r['status'] === 303 && (int)db_wert('SELECT COUNT(*) FROM audit') === $a0, 'Beispiel-Aktion ändert nichts (nur Hinweis)');

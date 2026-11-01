@@ -551,14 +551,14 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
           ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Startseite")', '/team/startseite', 'team-startseite'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
           // AP-12: Reiter Betrieb (nur BetreiberInnen)
-          ['.team-nav a:has-text("Betrieb")', '/team/status', 'team-status'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten'],
-          // AP-17 Unterpunkt 6: Komponentenblatt (Regressionstest für das CSS)
-          ['.team-unter a:has-text("Komponenten")', '/team/komponenten', 'team-komponenten']]) {
+          ['.team-nav a:has-text("Betrieb")', '/team/status', 'team-status'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten']]) {
           await p.click(wahl);
           await p.waitForLoadState('load');
           notiere(engine, breite, name, 'Reiter führt zur Seite', new URL(p.url()).pathname === ziel, p.url());
           await pruefeSeite(p, fehler, engine, breite, name, null);
         }
+        // AP-17 Unterpunkt 6: Komponentenblatt (Regressionstest für das CSS); seit der Rückmeldung nach AP-19 nur über die Adresse
+        await pruefeSeite(p, fehler, engine, breite, 'team-komponenten', basis + '/team/komponenten');
         // AP-12: Wechsler der Veranstaltung aufklappen
         await pruefeSeite(p, fehler, engine, breite, 'team-wechsler', basis + '/team/personen');
         await p.click('.va-wechsler > summary');

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Betrieb → Komponenten (AP-17 Unterpunkt 6, E-64 (1); nur BetreiberInnen,
+ * /team/komponenten (AP-17 Unterpunkt 6, E-64 (1); nicht in der Navigation; nur BetreiberInnen,
  * in jeder Umgebung): das Komponentenblatt. Zeigt jeden Helfer aus
  * formular_lib/html_lib und jede Komponente aus site.css einmal mit ihren
  * Varianten und Tönen, darunter den Aufruf als Text. Es ist die Vorlage für
@@ -124,7 +124,7 @@ team_seite_kopf($konto, 'Komponenten', '/team/komponenten');
     "feld('start_titel', 'Titel', ['typ' => 'textarea', 'attr' => ['rows' => 2] + editor_attr('titel')])   // .schreibfeld-titel, .trennstelle\nhtml_bereinigen(\$roh, 'titel')   // nur em und weiches Trennzeichen") ?>
 <?= $muster('<div class="stapel"><div class="geraet-wahl" role="group" aria-label="Gerät"><button type="button" aria-pressed="true">Desktop</button><button type="button" aria-pressed="false">Handy</button><button type="button" aria-pressed="false">Tablet</button></div>'
     . '<div class="vorschau-hinweise"><p class="meldung hinweis">Titel: Größe L. Passt ohne Trennung.</p><p class="meldung fehler">Ein Wort passt nicht in die Zeile, der Browser trennt es selbst.</p></div></div>',
-    "<div class=\"geraet-wahl\" role=\"group\"><button aria-pressed=\"true|false\">\n<div class=\"vorschau-hinweise\"> mit meldung hinweis|fehler (startseite.js)\n<div class=\"vorschau-rahmen\"><iframe class=\"vorschau-frame\">   // Vorschau-Seite: body.vorschau-seite, Links ohne Wirkung\nSeite: form.st-raster > .st-felder (section.kasten > fieldset.st-gruppe), details.st-vorschau, .st-ohne-js, .st-fest, .aktionen.st-knoepfe") ?>
+    "<div class=\"geraet-wahl\" role=\"group\"><button aria-pressed=\"true|false\">\n<div class=\"vorschau-hinweise\"> mit meldung hinweis|fehler (startseite.js)\n<div class=\"aktionen vorschau-steuer\"> mit Zoom (.geraet-wahl, data-zoom) und „Groß ansehen“\n<div class=\"vorschau-rahmen [zoom]\"><div class=\"vorschau-flaeche\"><iframe class=\"vorschau-frame\">   // Vorschau-Seite: body.vorschau-seite, Links ohne Wirkung\ndetails.st-vorschau[.vorschau-gross]   // füllt das Fenster\nSeite: form.st-raster > .st-felder (section.kasten > fieldset.st-gruppe, .st-fest, .aktionen.st-knoepfe schwebt unten), details.st-vorschau, .st-ohne-js") ?>
 <?= $muster('<div class="einst-raster"><section class="kasten einst-kachel"><details class="einst-auf"><summary class="einst-kopf"><h3 class="zwischen klein-titel">Kachel</h3><span class="knopf zweit klein einst-zu" aria-hidden="true">Bearbeiten</span><span class="meta klein einst-offen">wird bearbeitet</span></summary>'
     . '<div class="einst-form stapel"><div class="felder">' . feld('kb_e1', 'Feld', ['wert' => 'Wert']) . feld('kb_e2', 'Noch ein Feld', ['wert' => '']) . '</div><div class="aktionen einst-knoepfe"><button class="knopf" type="button">Speichern</button><button class="knopf zweit" type="button">Abbrechen</button></div></div></details>'
     . '<dl class="liste-def einst-zus"><div><dt>Begriff</dt><dd>Zusammenfassung</dd></div><div><dt>Noch einer</dt><dd>Wert</dd></div></dl></section>'

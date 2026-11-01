@@ -37,6 +37,8 @@ function test_seiten(): array
             }
         }
     }
+    // Nur BetreiberInnen, ohne Eintrag in der Navigation (Komponentenblatt, Rückmeldung nach AP-19)
+    $betreiber[] = '/team/komponenten';
     $erg = ['oeffentlich' => [], 'team' => [], 'betreiber' => []];
     foreach (array_keys(ROUTEN) as $pfad) {
         if (in_array($pfad, TEST_SEITEN_OHNE, true)) {

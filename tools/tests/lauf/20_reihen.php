@@ -123,6 +123,26 @@ function test_reihen(): void
     ctx_weg('inhalt_cache');
     pruefe(inhalt('start_cme_titel') === 'Merke · Fortbildungspunkte', 'Migration 24 setzt den Startwert je Veranstaltung');
 
+    abschnitt('Feste Testkonten aus der config.php (Rückmeldung nach AP-19, T-330)');
+    $cfgDatei = konfig_datei();
+    $cfgAlt = (string)file_get_contents($cfgDatei);
+    $cfg = require $cfgDatei;
+    $geheim = totp_base32(random_bytes(20));
+    $cfg['testkonten'] = ['betreiber' => ['email' => 'tb@example.org', 'passwort' => 'test-betreiber-pw', 'totp' => $geheim], 'admin' => ['email' => 'ta@example.org', 'passwort' => 'test-admin-pw-1', 'totp' => $geheim],
+        'teilnehmend' => ['email' => 'tt@example.org', 'passwort' => 'test-tn-pw'], 'unsinn' => ['email' => 'x@example.org', 'passwort' => 'xxxxxxxxxxxx']];
+    file_put_contents($cfgDatei, '<?php return ' . var_export($cfg, true) . ";\n");
+    konfig_verwerfen();
+    $tk = testdaten_konten(null);
+    $tb = konto_per_email('tb@example.org');
+    $tt = konto_per_email('tt@example.org');
+    pruefe($tk['konten'] === 3 && count($tk['fehler']) === 1 && $tb['rolle'] === 'betreiber' && password_verify('test-betreiber-pw', $tb['passwort_hash']) && totp_an((int)$tb['id'])
+        && totp_code_passt((string)totp_geheimnis((int)$tb['id']), totp_code(totp_base32_dekodieren($geheim), time()), time(), null) !== null && $tt['rolle'] === 'teilnehmend' && $tt['email_bestaetigt_am'] !== null, 'Testkonten angelegt: Passwort, zweiter Faktor mit dem Geheimnis aus der Config, Teilnehmerin bestätigt; unbekannte Rolle abgelehnt');
+    konto_passwort_setzen((int)$tb['id'], 'anderes-passwort-1');
+    testdaten_konten(null);
+    pruefe(password_verify('test-betreiber-pw', konto_per_email('tb@example.org')['passwort_hash']) && va_erlaubte_ids(konto_per_email('ta@example.org')) === null, 'erneut: Passwort zurückgesetzt, Admin für alle Veranstaltungen');
+    file_put_contents($cfgDatei, $cfgAlt);
+    konfig_verwerfen();
+
     abschnitt('Beispieldaten (AP-19 Unterpunkt 8, T-324)');
     $rita = beispieldaten_admin_reihe();
     $rk = konto_laden($rita);
