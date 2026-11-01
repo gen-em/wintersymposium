@@ -109,8 +109,8 @@ function tn_setzen(int $platzId, bool $erschienen, ?int $kontoId): bool
     }
     db_ausfuehren('UPDATE platz SET nicht_erschienen = ? WHERE id = ?', [$erschienen ? 0 : 1, $platzId]);
     // Ohne Namen, wie die übrigen Einträge (R-02, Review S-11)
-    audit_schreiben('teilnahme', 'Anmeldung ' . $p['anmeldung_id'] . ': '
-        . anm_termin_text((int)$p['termin_id']) . ' – ' . ($erschienen ? 'doch erschienen' : 'nicht erschienen'), $kontoId);
+    audit_schreiben('teilnahme', audit_text('anmeldung', (int)$p['anmeldung_id'], anm_termin_text((int)$p['termin_id']) . ' – ' . ($erschienen ? 'doch erschienen' : 'nicht erschienen')),
+        $kontoId, ['anmeldung' => (int)$p['anmeldung_id']]);
     return true;
 }
 
@@ -170,7 +170,7 @@ function zertifikat_freischalten(?int $anmId, ?int $kontoId, bool $mail = true, 
     }
     if ($ids !== []) {
         audit_schreiben('teilnahme', $anmId === null ? 'Zertifikate freigeschaltet: ' . count($ids) . ' Personen' . ($mail ? '' : ' (ohne Mail)')
-            : 'Zertifikat freigeschaltet: Anmeldung ' . $anmId . ($mail ? '' : ' (ohne Mail)'), $kontoId);
+            : audit_text('anmeldung', $anmId, 'Zertifikat freigeschaltet' . ($mail ? '' : ' (ohne Mail)')), $kontoId, $anmId === null ? [] : ['anmeldung' => $anmId]);
     }
     return count($ids);
 }
@@ -180,7 +180,7 @@ function zertifikat_sperren(int $anmId, ?int $kontoId): bool
 {
     $n = db_ausfuehren('UPDATE anmeldung SET zertifikat_am = NULL WHERE id = ? AND zertifikat_am IS NOT NULL', [$anmId])->rowCount();
     if ($n === 1) {
-        audit_schreiben('teilnahme', 'Zertifikat gesperrt: Anmeldung ' . $anmId, $kontoId);
+        audit_schreiben('teilnahme', audit_text('anmeldung', $anmId, 'Zertifikat gesperrt'), $kontoId, ['anmeldung' => $anmId]);
     }
     return $n === 1;
 }

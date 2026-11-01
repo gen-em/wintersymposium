@@ -219,7 +219,7 @@ function mailcode_einschalten(int $kontoId, bool $an, ?int $durch = null): ?arra
             totp_codes_schreiben($kontoId, $codes);
         }
     });
-    audit_schreiben('zweitfaktor', 'Code per E-Mail ' . ($an ? 'eingeschaltet' : 'ausgeschaltet'), $durch ?? $kontoId);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'Code per E-Mail ' . ($an ? 'eingeschaltet' : 'ausgeschaltet')), $durch ?? $kontoId, ['konto' => $kontoId]);
     return $codes;
 }
 
@@ -271,7 +271,7 @@ function totp_einrichtung_abschliessen(int $kontoId, string $eingabe, ?int $zeit
         db_ausfuehren('UPDATE konto SET totp_seit = ?, totp_schritt = ? WHERE id = ? AND totp_seit IS NULL', [db_jetzt(), $schritt, $kontoId]);
         totp_codes_schreiben($kontoId, $codes);
     });
-    audit_schreiben('zweitfaktor', 'Zweiter Faktor eingerichtet', $kontoId);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'zweiter Faktor eingerichtet'), $kontoId, ['konto' => $kontoId]);
     return $codes;
 }
 
@@ -283,7 +283,7 @@ function totp_codes_erneuern(int $kontoId): ?array
     }
     $codes = totp_codes_erzeugen();
     db_transaktion(fn() => totp_codes_schreiben($kontoId, $codes));
-    audit_schreiben('zweitfaktor', 'Wiederherstellungscodes erneuert', $kontoId);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'Wiederherstellungscodes erneuert'), $kontoId, ['konto' => $kontoId]);
     return $codes;
 }
 
@@ -331,7 +331,7 @@ function totp_anmeldung_pruefen(int $kontoId, string $eingabe, ?int $zeit = null
         if ($n !== 1) {
             return $nein;
         }
-        audit_schreiben('zweitfaktor', 'Anmeldung mit Wiederherstellungscode', $kontoId);
+        audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'Login mit Wiederherstellungscode'), $kontoId, ['konto' => $kontoId]);
         return ['ok' => true, 'art' => 'code', 'codes_offen' => totp_zustand($kontoId)['codes_offen']];
     }
     return $nein;
@@ -440,5 +440,5 @@ function totp_zuruecksetzen(int $kontoId, string $wer, ?int $durch = null): void
             db_ausfuehren('DELETE FROM passkey WHERE konto_id = ?', [$kontoId]); // Passkeys gehören zum zweiten Faktor (E-55)
         }
     });
-    audit_schreiben('zweitfaktor', 'Zweiter Faktor zurückgesetzt (' . $wer . ') für Konto ' . $kontoId, $durch);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'zweiter Faktor zurückgesetzt (' . $wer . ')'), $durch, ['konto' => $kontoId]);
 }

@@ -502,7 +502,7 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
         foreach ($r['dozenten'] as $pos => $d) {
             db_ausfuehren('INSERT INTO punkt_dozent (punkt_id, dozent_id, pos) VALUES (?, ?, ?)', [$id, $d, $pos]);
         }
-        audit_schreiben('programm', 'Programmpunkt ' . $id . ' gespeichert (' . $w['typ'] . ')', $kontoId);
+        audit_schreiben('programm', audit_text('programmpunkt', $id, 'gespeichert (' . $w['typ'] . ')'), $kontoId, ['programmpunkt' => $id]);
         return $id;
     });
 }
@@ -519,7 +519,7 @@ function programm_punkt_loeschen(int $id, ?int $kontoId): bool
     }
     db_ausfuehren('UPDATE programmpunkt SET block_id = NULL WHERE block_id = ?', [$id]);
     db_ausfuehren('DELETE FROM programmpunkt WHERE id = ?', [$id]);
-    audit_schreiben('programm', 'Programmpunkt ' . $id . ' gelöscht', $kontoId);
+    audit_schreiben('programm', audit_text('programmpunkt', $id, 'gelöscht'), $kontoId, ['programmpunkt' => $id]);
     return true;
 }
 
@@ -544,7 +544,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             $ende = hm_aus_minuten(minuten($beginn) + $dauer);
             db_ausfuehren('UPDATE workshop_termin SET beginn = ?, ende = ? WHERE id = ?', [$beginn, $ende, $id]);
             db_ausfuehren('UPDATE programmpunkt SET geaendert_am = ? WHERE id = ?', [db_jetzt(), (int)$t['punkt_id']]);
-            audit_schreiben('programm', 'Termin ' . $id . ' verschoben auf ' . $beginn, $kontoId);
+            audit_schreiben('programm', audit_text('termin', $id, 'verschoben auf ' . $beginn), $kontoId, ['termin' => $id]);
             return "{$beginn}–{$ende}";
         }
         $p = db_zeile('SELECT * FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]);
@@ -574,7 +574,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             }
         }
         db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [$beginn, $ende, db_jetzt(), $id]);
-        audit_schreiben('programm', 'Programmpunkt ' . $id . ' verschoben auf ' . $beginn, $kontoId);
+        audit_schreiben('programm', audit_text('programmpunkt', $id, 'verschoben auf ' . $beginn), $kontoId, ['programmpunkt' => $id]);
         // Im Block läuft ein Punkt parallel: dann rückt die Hauptspur nicht nach
         if ($nachruecken && $p['block_id'] === null && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
             $GLOBALS['programm_nachgerueckt'] = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
@@ -653,7 +653,7 @@ function programm_zuordnen(int $punktId, ?int $blockId, ?int $kontoId): bool
         return false;
     }
     db_ausfuehren('UPDATE programmpunkt SET block_id = ?, geaendert_am = ? WHERE id = ?', [$blockId, db_jetzt(), $punktId]);
-    audit_schreiben('programm', 'Programmpunkt ' . $punktId . ($blockId !== null ? ' dem Block ' . $blockId . ' zugeordnet' : ' aus dem Block gelöst'), $kontoId);
+    audit_schreiben('programm', audit_text('programmpunkt', $punktId, $blockId !== null ? 'dem Block ' . $blockId . ' zugeordnet' : 'aus dem Block gelöst'), $kontoId, ['programmpunkt' => $punktId]);
     return true;
 }
 
@@ -764,14 +764,14 @@ function dozent_speichern(?int $id, array $w, ?int $kontoId): int
     } else {
         db_ausfuehren('UPDATE dozent SET name = ?, funktion = ?, kurzbio = ?, geaendert_am = ? WHERE id = ?', [$w['name'], $w['funktion'], $w['kurzbio'], $jetzt, $id]);
     }
-    audit_schreiben('programm', 'Dozent·in ' . $id . ' gespeichert', $kontoId);
+    audit_schreiben('programm', audit_text('dozent', $id, 'gespeichert'), $kontoId, ['dozent' => $id]);
     return $id;
 }
 
 function dozent_loeschen(int $id, ?int $kontoId): void
 {
     db_ausfuehren('DELETE FROM dozent WHERE id = ?', [$id]);
-    audit_schreiben('programm', 'Dozent·in ' . $id . ' gelöscht', $kontoId);
+    audit_schreiben('programm', audit_text('dozent', $id, 'gelöscht'), $kontoId, ['dozent' => $id]);
 }
 
 /* ---- Fotos der Dozierenden ----------------------------------------------- */

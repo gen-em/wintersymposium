@@ -517,13 +517,19 @@ function mail_stand(): array
 }
 
 /** Testmail sofort zustellen (ohne Warteschlange). Gibt null bei Erfolg zurück, sonst den Grund. */
-function mail_testen(string $an): ?string
+/** Testmail sofort zustellen; null = angenommen, sonst der Grund. Mit $durch protokolliert. */
+function mail_testen(string $an, ?int $durch = null): ?string
 {
     if (!mail_eingerichtet()) {
-        return 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+        $grund = 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+    } else {
+        [$betreff, $text] = mail_vorlage('test', []);
+        $grund = mail_zustellen($an, $betreff, $text);
     }
-    [$betreff, $text] = mail_vorlage('test', []);
-    return mail_zustellen($an, $betreff, $text);
+    if ($durch !== null) {
+        audit_schreiben('mail', 'Testmail ' . ($grund === null ? 'versendet' : 'fehlgeschlagen: ' . $grund), $durch);
+    }
+    return $grund;
 }
 
 /* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */
@@ -685,4 +691,30 @@ function mail_vorlage_roh(string $name, array $d): array
             return ['Testmail von ' . reihe_name(), "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }
     throw new InvalidArgumentException('Unbekannte Mail-Vorlage: ' . $name);
+}
+
+/**
+ * Absender je Postfach speichern (Betrieb, E-27, E-50, E-67): System
+ * (anmeldung@, mit Name der Reihe) oder Newsletter (newsletter@, mit eigenem
+ * Namen). Gibt null oder eine Fehlermeldung zurück; protokolliert.
+ */
+function mail_absender_setzen(string $postfach, string $adresse, string $name, string $reihe, ?int $durch): ?string
+{
+    $nl = $postfach === 'newsletter' ? '_newsletter' : '';
+    $adr = trim($adresse);
+    $nam = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+    if ($adr !== '' && mail_adresse($adr) === null) {
+        return 'Die Absenderadresse ist keine gültige Adresse.';
+    }
+    einstellung_setzen('mail_absender' . $nl, $adr === '' ? null : mail_adresse($adr));
+    if ($nl !== '') {
+        einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
+    } else {
+        // System-Postfach: Name der Reihe (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
+        $reihe = trim(preg_replace('/\s+/u', ' ', $reihe) ?? '');
+        einstellung_setzen('reihe_name', $reihe === '' ? null : mb_substr($reihe, 0, 60));
+        einstellung_setzen('mail_absender_name', null);
+    }
+    audit_schreiben('mail', 'Absender ' . ($nl !== '' ? 'Newsletter' : 'System') . ' geändert: ' . ($adr ?: 'aus config.php'), $durch);
+    return null;
 }

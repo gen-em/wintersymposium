@@ -21,7 +21,7 @@ $datei = $x !== null && isset(EXPORT_FORMATE[$format]) ? export_datei($x, $forma
 if ($datei === null) {
     nicht_gefunden();
 }
-audit_schreiben('export', 'Export ' . $art . ' als ' . EXPORT_FORMATE[$format] . ($bg !== '' ? ' (' . $bg . ')' : ''), (int)$konto['id']);
+export_protokollieren('Export ' . $art . ' als ' . EXPORT_FORMATE[$format] . ($bg !== '' ? ' (' . $bg . ')' : ''), (int)$konto['id']);
 header('Content-Type: ' . $datei['typ']);
 header('Content-Disposition: attachment; filename="' . $datei['datei'] . '"');
 header('Content-Length: ' . strlen($datei['inhalt']));

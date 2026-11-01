@@ -41,7 +41,7 @@ if (ist_post()) {
     }
     if ($fehler === []) {
         if ($geaendert !== []) {
-            audit_schreiben('texte', 'Geändert: ' . implode(', ', $geaendert), (int)$konto['id'], $startseite ? -1 : 0);
+            inhalt_protokollieren('Geändert', $geaendert, (int)$konto['id'], $startseite);
         }
         fertig('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.', $textSeite);
     }

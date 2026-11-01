@@ -297,3 +297,9 @@ function start_texte_speichern(array $eingabe, int $kontoId): array
     }
     return [$geaendert, $fehler];
 }
+
+/** Geänderte Texte protokollieren; Startseiten-Texte gehören zur Veranstaltung, die übrigen nicht. */
+function inhalt_protokollieren(string $was, array $schluessel, int $durch, bool $veranstaltung): void
+{
+    audit_schreiben('texte', $was . ': ' . implode(', ', $schluessel), $durch, vaId: $veranstaltung ? -1 : 0);
+}

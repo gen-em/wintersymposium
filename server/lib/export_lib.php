@@ -437,3 +437,9 @@ function export_pdf_linien(tFPDF $pdf, float $breite, string $text): int
     }
     return $n;
 }
+
+/** Einen Export protokollieren (Art export, gehört zur Veranstaltung). */
+function export_protokollieren(string $was, int $durch): void
+{
+    audit_schreiben('export', $was, $durch);
+}

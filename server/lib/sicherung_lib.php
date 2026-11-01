@@ -315,3 +315,9 @@ function testdaten_laden(?int $kontoId): string
     audit_schreiben('sicherung', 'Testdaten geladen (Sicherung davor: ' . $sicherung . ')', $kontoId);
     return $sicherung;
 }
+
+/** Herunterladen einer Sicherung protokollieren (vor der Auslieferung). */
+function sicherung_herunterladen_protokollieren(string $name, ?int $durch): void
+{
+    audit_schreiben('sicherung', 'Sicherung heruntergeladen: ' . $name, $durch);
+}

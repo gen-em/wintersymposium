@@ -1203,8 +1203,8 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
     // Protokoll: nur Einträge der freigeschalteten Veranstaltung
-    audit_schreiben('programm', 'Fremder Eintrag Rechte-Test', null, $aktuell);
-    audit_schreiben('programm', 'Eigener Eintrag Rechte-Test', null, $erlaubt);
+    audit_schreiben('programm', 'Fremder Eintrag Rechte-Test', null, vaId: $aktuell);
+    audit_schreiben('programm', 'Eigener Eintrag Rechte-Test', null, vaId: $erlaubt);
     $r = http_anfrage($basis, 'GET', '/team/protokoll?v=alle', $h, [], null, $k);
     pruefe(str_contains($r['text'], 'Eigener Eintrag Rechte-Test') && !str_contains($r['text'], 'Fremder Eintrag Rechte-Test') && !str_contains($r['text'], 'Ohne Veranstaltung'), 'Protokoll: nur die eigene Veranstaltung');
     $r = http_anfrage($basis, 'GET', '/team/protokoll?v=ohne', $h, [], null, $b);

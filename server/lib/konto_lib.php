@@ -81,7 +81,7 @@ function konto_anlegen(string $name, string $email, string $rolle, ?string $pass
         [konto_email_normieren($email), $rolle === 'teilnehmend' ? null : $jetzt, trim($name), $passwort === null ? null : password_hash($passwort, PASSWORD_DEFAULT), $rolle, $jetzt, $jetzt]
     );
     $id = (int)db()->lastInsertId();
-    audit_schreiben('konto', 'Konto ' . $id . ' angelegt (Rolle ' . $rolle . ')', $durch);
+    audit_schreiben('konto', audit_text('konto', $id, 'angelegt (Rolle ' . $rolle . ')'), $durch, ['konto' => $id]);
     return $id;
 }
 
@@ -92,7 +92,7 @@ function konto_passwort_setzen(int $id, string $passwort): void
         'UPDATE konto SET passwort_hash = ?, sitzung_version = sitzung_version + 1, geaendert_am = ? WHERE id = ?',
         [password_hash($passwort, PASSWORD_DEFAULT), db_jetzt(), $id]
     );
-    audit_schreiben('konto', 'Passwort gesetzt', $id);
+    audit_schreiben('konto', audit_text('konto', $id, 'Passwort gesetzt'), $id, ['konto' => $id]);
 }
 
 function konto_aktiv_setzen(int $id, bool $aktiv, ?int $durch): void
@@ -101,7 +101,7 @@ function konto_aktiv_setzen(int $id, bool $aktiv, ?int $durch): void
         'UPDATE konto SET aktiv = ?, sitzung_version = sitzung_version + 1, geaendert_am = ? WHERE id = ?',
         [$aktiv ? 1 : 0, db_jetzt(), $id]
     );
-    audit_schreiben('konto', 'Konto ' . $id . ($aktiv ? ' entsperrt' : ' gesperrt'), $durch);
+    audit_schreiben('konto', audit_text('konto', $id, $aktiv ? 'entsperrt' : 'gesperrt'), $durch, ['konto' => $id]);
 }
 
 function konto_rolle_setzen(int $id, string $rolle, ?int $durch): void
@@ -113,7 +113,7 @@ function konto_rolle_setzen(int $id, string $rolle, ?int $durch): void
         'UPDATE konto SET rolle = ?, sitzung_version = sitzung_version + 1, geaendert_am = ? WHERE id = ?',
         [$rolle, db_jetzt(), $id]
     );
-    audit_schreiben('konto', 'Rolle von Konto ' . $id . ' auf ' . $rolle . ' gesetzt', $durch);
+    audit_schreiben('konto', audit_text('konto', $id, 'Rolle auf ' . $rolle . ' gesetzt'), $durch, ['konto' => $id]);
 }
 
 /** Zahl aktiver Betreiber (es muss immer mindestens einer bleiben). */
@@ -140,7 +140,7 @@ function konto_link_erzeugen(int $kontoId, string $zweck, ?int $durch = null, ?i
     }
     // Ein neuer Team-Link ersetzt alle älteren des Kontos
     $token = link_erzeugen('konto', $kontoId, $zweck, KONTO_LINK_GUELTIG_S, [], $jetzt, 'alle');
-    audit_schreiben('konto', 'Link (' . $zweck . ') für Konto ' . $kontoId . ' erzeugt', $durch);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Link (' . $zweck . ') erzeugt'), $durch, ['konto' => $kontoId]);
     return $token;
 }
 
@@ -194,4 +194,20 @@ function konto_profil_setzen(int $id, array $w, ?string $email = null): void
 function konto_irgendeins_da(): bool
 {
     return db_gibt_es('SELECT COUNT(*) FROM konto');
+}
+
+/**
+ * Notzugang für eine BetreiberIn (O-34): zweiten Faktor zurücksetzen, Konto
+ * entsperren, Link zum (neuen) Passwort; protokolliert. Gibt die URL zurück.
+ */
+function konto_notzugang(array $k): string
+{
+    $id = (int)$k['id'];
+    totp_zuruecksetzen($id, 'Notzugang mit Installationsschlüssel');
+    if ((int)$k['aktiv'] !== 1) {
+        konto_aktiv_setzen($id, true, null);
+    }
+    $link = konto_link_url(konto_link_erzeugen($id, $k['passwort_hash'] === null ? 'einrichten' : 'passwort'));
+    audit_schreiben('notzugang', audit_text('konto', $id, 'Notzugang benutzt'), null, ['konto' => $id]);
+    return $link;
 }

@@ -23,7 +23,7 @@ if ($pfad === '/team/teilnahme/unterschrift') {
 if ($pfad === '/team/teilnahme/liste') {
     $aerzte = ($_GET['liste'] ?? '') === 'aerzte';
     $inhalt = unterschriftenliste_pdf($aerzte, (string)($_GET['sort'] ?? 'nachname'));
-    audit_schreiben('export', 'Unterschriftenliste' . ($aerzte ? ' ÄrztInnen' : '') . ' als PDF', (int)$konto['id']);
+    export_protokollieren('Unterschriftenliste' . ($aerzte ? ' ÄrztInnen' : '') . ' als PDF', (int)$konto['id']);
     $datei = 'unterschriftenliste' . ($aerzte ? '-aerztinnen' : '') . '-' . va('veranstaltung_datum') . '.pdf';
     $art = 'attachment';
 } else {

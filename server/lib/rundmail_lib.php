@@ -578,7 +578,7 @@ function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
         return count($liste);
     });
     if ($zahl !== null) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' an ' . $zahl . ' Empfänger in die Warteschlange gestellt', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'an ' . $zahl . ' Empfänger in die Warteschlange gestellt'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         mail_nach_antwort_vormerken();
     }
     return $zahl;
@@ -589,7 +589,7 @@ function rm_planen(int $id, string $utc, int $kontoId): bool
 {
     $n = db_ausfuehren("UPDATE rundmail SET status = 'geplant', geplant_fuer = ?, gesendet_von = ?, geaendert_am = ? WHERE id = ? AND status IN ('entwurf','geplant')", [$utc, $kontoId, db_jetzt(), $id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' geplant für ' . datum_zeit_text($utc), $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'geplant für ' . datum_zeit_text($utc)), $kontoId, ['rundmail' => $id], rm_va((int)$id));
     }
     return $n === 1;
 }
@@ -606,7 +606,7 @@ function rm_abbrechen(int $id, int $kontoId): ?string
     }
     if ($rm['status'] === 'geplant') {
         db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL, geaendert_am = ? WHERE id = ?", [db_jetzt(), $id]);
-        audit_schreiben('mailing', 'Planung von Mailing ' . $id . ' aufgehoben', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Planung aufgehoben'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         return 'Planung aufgehoben – das Mailing ist wieder ein Entwurf.';
     }
     if ($rm['status'] === 'versand') {
@@ -621,7 +621,7 @@ function rm_abbrechen(int $id, int $kontoId): ?string
             db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
             return [$weg, $raus];
         });
-        audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Versand abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         return 'Versand abgebrochen: ' . $weg . ' Mails gehen nicht mehr raus.';
     }
     return null;
@@ -654,7 +654,7 @@ function rm_loeschen(int $id, int $kontoId): bool
     $va = rm_va($id);
     $n = db_ausfuehren("DELETE FROM rundmail WHERE id = ? AND status = 'entwurf'", [$id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Entwurf ' . $id . ' gelöscht', $kontoId, $va);
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Entwurf gelöscht'), $kontoId, ['rundmail' => $id], $va);
     }
     return $n === 1;
 }
@@ -682,7 +682,7 @@ function rm_job(int $jetzt): array
         } else {
             // Nicht mehr sendbar (z. B. keine Empfänger): zurück zum Entwurf, im Protokoll vermerkt
             db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL WHERE id = ? AND status = 'geplant'", [$r['id']]);
-            audit_schreiben('mailing', 'Geplantes Mailing ' . $r['id'] . ' nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf', null, rm_va((int)$r['id']));
+            audit_schreiben('mailing', audit_text('rundmail', (int)$r['id'], 'geplant, aber nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf'), null, ['rundmail' => (int)$r['id']], rm_va((int)$r['id']));
         }
     }
     $erg['fertig'] = db_ausfuehren(

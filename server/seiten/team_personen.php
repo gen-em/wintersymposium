@@ -53,8 +53,7 @@ if (ist_post()) {
             break;
         case 'link':
             if (anm_laden($aId) !== null) {
-                anm_zugang_senden($aId);
-                audit_schreiben('anmeldung', 'Team: Einmal-Link an Anmeldung ' . $aId . ' geschickt', $ich);
+                team_link_senden($aId, $ich);
                 fertig('ok', 'Einmal-Link ist unterwegs.', $ziel());
             }
             umleiten($ziel());
@@ -293,9 +292,9 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <?php endif; ?>
                 </div>
             </div>
-            <?php $letzte = $a !== null ? audit_letzte_anmeldung((int)$a['id']) : null;
+            <?php $letzte = $a !== null ? audit_letzter('anmeldung', (int)$a['id']) : null;
             if ($letzte !== null): ?>
-            <p class="meta klein">Letzte Änderung <?= e(datum_zeit_text($letzte['zeit'])) ?> durch <?= e($letzte['name'] ?? 'die Person selbst oder das System') ?> (<?= e($letzte['text']) ?>) · <a href="/team/protokoll?q=<?= e(rawurlencode('Anmeldung ' . $a['id'])) ?>">Protokoll ansehen</a></p>
+            <p class="meta klein">Letzte Änderung <?= e(datum_zeit_text($letzte['zeit'])) ?> durch <?= e($letzte['name'] ?? 'die Person selbst oder das System') ?> (<?= e($letzte['text']) ?>) · <a href="/team/protokoll?o=anmeldung-<?= (int)$a['id'] ?>">Protokoll ansehen</a></p>
             <?php endif; ?>
         </div>
 <?php endif; ?>

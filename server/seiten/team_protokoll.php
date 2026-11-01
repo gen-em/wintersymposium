@@ -18,16 +18,19 @@ if (ist_post()) {
     }
     $aus = aktion() === 'ausblenden';
     fertig('ok', audit_ausblenden(post_zahl('id'), $aus, (int)$konto['id']) ? ($aus ? 'Eintrag ausgeblendet – nur BetreiberInnen sehen ihn noch.' : 'Eintrag wieder eingeblendet.') : 'Nichts geändert.',
-        '/team/protokoll?' . http_build_query(array_filter(['art' => post_text('art'), 'q' => post_text('q'), 's' => post_text('s'), 'v' => post_text('v')])));
+        '/team/protokoll?' . http_build_query(array_filter(['art' => post_text('art'), 'q' => post_text('q'), 's' => post_text('s'), 'v' => post_text('v'), 'o' => post_text('o')])));
 }
 $art = (string)($_GET['art'] ?? '');
 // Veranstaltung: '' = die gewählte, 'alle' = alle sichtbaren, 'ohne' = ohne Veranstaltung (nur Betreiber)
 $vf = in_array($_GET['v'] ?? '', $betreiber ? ['alle', 'ohne'] : ['alle'], true) ? (string)$_GET['v'] : '';
 $q = trim((string)($_GET['q'] ?? ''));
+// Einträge zu einem Objekt (V-8), z. B. o=anmeldung-12 aus „Personen → Protokoll ansehen“
+$objekt = preg_match('/^([a-z]+)-(\d+)$/', (string)($_GET['o'] ?? ''), $m) === 1 && isset(AUDIT_OBJEKTE[$m[1]]) ? [$m[1], (int)$m[2]] : null;
+$o = $objekt !== null ? $objekt[0] . '-' . $objekt[1] : '';
 $seite = max(1, (int)($_GET['s'] ?? 1));
 $proSeite = 50;
-['zahlen' => $zahlen, 'gesamt' => $gesamt, 'zeilen' => $zeilen] = audit_suchen($konto, $vf, $q, $art, $seite, $proSeite);
-$link = fn(array $neu) => '/team/protokoll?' . http_build_query(array_filter(array_merge(['art' => $art ?: null, 'q' => $q ?: null, 'v' => $vf ?: null], $neu)));
+['zahlen' => $zahlen, 'gesamt' => $gesamt, 'zeilen' => $zeilen] = audit_suchen($konto, $vf, $q, $art, $seite, $proSeite, $objekt);
+$link = fn(array $neu) => '/team/protokoll?' . http_build_query(array_filter(array_merge(['art' => $art ?: null, 'q' => $q ?: null, 'v' => $vf ?: null, 'o' => $o ?: null], $neu)));
 $vaNamen = array_column(va_alle(), 'kuerzel', 'id');
 $titel = fn(string $a) => AUDIT_ARTEN[$a] ?? $a;
 team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
@@ -35,7 +38,8 @@ team_seite_kopf($konto, 'Protokoll', '/team/protokoll');
 <p class="meta klein"><?= $betreiber ? 'Du siehst alle Einträge. Ausgeblendete sehen nur BetreiberInnen.' : 'Du siehst die Einträge zu Anmeldungen, Programm, Einstellungen, Texten, Exporten, Mailings und Teilnahme aus deinen Veranstaltungen.' ?></p>
 <?= filter_chips(['' => 'Gewählte Veranstaltung', 'alle' => $betreiber ? 'Alle Einträge' : 'Alle meine Veranstaltungen'] + ($betreiber ? ['ohne' => 'Ohne Veranstaltung'] : []),
     $vf, fn(string $k) => $link(['v' => $k !== '' ? $k : null, 's' => null]), 'Veranstaltung') ?>
-<?= filter_leiste(['ziel' => '/team/protokoll', 'suche' => true, 'versteckt' => ['art' => $art, 'v' => $vf],
+<?= $objekt !== null ? meldung_html('Filter', 'hinweis', ['text_html' => 'Nur Einträge zu ' . e(AUDIT_OBJEKTE[$objekt[0]] . ' ' . $objekt[1]) . ' · <a href="' . e($link(['o' => null, 's' => null])) . '">alle zeigen</a>']) : '' ?>
+<?= filter_leiste(['ziel' => '/team/protokoll', 'suche' => true, 'versteckt' => ['art' => $art, 'v' => $vf, 'o' => $o],
     'felder' => feld('q', 'Suchen', ['typ' => 'search', 'wert' => $q, 'attr' => ['placeholder' => 'z. B. Anmeldung 12'], 'sr' => true, 'ohne_rahmen' => true])]) ?>
 <?php
 $artFilter = ['' => ['Alle', array_sum($zahlen)]];
@@ -52,7 +56,7 @@ foreach (array_keys($zahlen + ($art !== '' ? [$art => 0] : [])) as $a) {
     <?php foreach ($zeilen as $z): $weg = $z['ausgeblendet_am'] !== null; ?>
         <tr<?= $weg ? ' class="ausgeblendet"' : '' ?>><td data-label="Zeit" class="mono klein"><?= e(datum_zeit_text($z['zeit'])) ?></td><td data-label="Art"><?= chip('offen', $titel($z['art'])) ?></td><td data-label="Veranstaltung" class="klein"><?= isset($z['veranstaltung_id']) ? e($vaNamen[(int)$z['veranstaltung_id']] ?? 'gelöscht') : '<span class="meta">–</span>' ?></td><td data-label="Was"><?= e($z['text']) ?></td><td data-label="Wer"><?= e($z['name'] ?? ($z['konto_id'] !== null ? 'Konto ' . $z['konto_id'] : 'System / Teilnehmende')) ?></td>
         <?php if ($betreiber): ?><td data-label="Sichtbar"><?php if ($z['art'] !== 'protokoll'): ?>
-            <?= aktion_knopf('/team/protokoll', $weg ? 'einblenden' : 'ausblenden', ['id' => (int)$z['id'], 'art' => $art, 'q' => $q, 's' => $seite > 1 ? $seite : '', 'v' => $vf],
+            <?= aktion_knopf('/team/protokoll', $weg ? 'einblenden' : 'ausblenden', ['id' => (int)$z['id'], 'art' => $art, 'q' => $q, 's' => $seite > 1 ? $seite : '', 'v' => $vf, 'o' => $o],
                 $weg ? 'Einblenden' : 'Ausblenden', 'knopf zweit klein', ['form_klasse' => 'inline-form', 'vor_html' => $weg ? chip('gesperrt', 'nur BetreiberInnen') . ' ' : '']) ?>
             <?php else: ?><span class="meta klein">nur BetreiberInnen</span><?php endif; ?></td><?php endif; ?></tr>
     <?php endforeach; ?>

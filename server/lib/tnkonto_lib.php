@@ -71,7 +71,7 @@ function tk_ausloggen(): void
 {
     $k = tk_aktuell();
     if ($k !== null && konto_ist_team($k)) {
-        audit_schreiben('login', 'Ausgeloggt', (int)$k['id']);
+        audit_schreiben('login', audit_text('konto', (int)$k['id'], 'ausgeloggt'), (int)$k['id'], ['konto' => (int)$k['id']]);
     }
     sitzung_beenden();
     sitzung_starten('link');
@@ -124,7 +124,7 @@ function tk_verknuepfen(int $kontoId): void
     }
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kontoId, $a['id']]);
     konto_profil_setzen($kontoId, $a);
-    audit_schreiben('konto', 'Konto ' . $kontoId . ' mit Anmeldung ' . $a['id'] . ' verknüpft', $kontoId);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'mit Anmeldung ' . $a['id'] . ' verknüpft'), $kontoId, ['konto' => $kontoId]);
 }
 
 /**
@@ -233,7 +233,7 @@ function tk_link_einloesen(string $token): ?array
     switch ($f['link']['zweck']) {
         case 'bestaetigen':
             db_ausfuehren('UPDATE konto SET email_bestaetigt_am = COALESCE(email_bestaetigt_am, ?) WHERE id = ?', [db_jetzt(), $id]);
-            audit_schreiben('konto', 'Adresse bestätigt', $id);
+            audit_schreiben('konto', audit_text('konto', $id, 'Adresse bestätigt'), $id, ['konto' => $id]);
             tk_verknuepfen($id);
             $meldung = 'Deine Adresse ist bestätigt. Leg jetzt dein Passwort fest.';
             break;
@@ -252,7 +252,7 @@ function tk_link_einloesen(string $token): ?array
                         db_ausfuehren('UPDATE anmeldung SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, db_jetzt(), $a['id']]);
                     }
                 });
-                audit_schreiben('konto', 'Neue Adresse bestätigt', $id);
+                audit_schreiben('konto', audit_text('konto', $id, 'neue Adresse bestätigt'), $id, ['konto' => $id]);
                 $meldung = 'Deine neue Adresse gilt ab jetzt' . ($a !== null ? ', auch für deine Anmeldung.' : '.');
             }
             break;
@@ -320,7 +320,7 @@ function tk_profil_setzen(int $kontoId, array $e): array
     }
     $w = $r['werte'];
     konto_profil_setzen($kontoId, $w);
-    audit_schreiben('konto', 'Profil geändert', $kontoId);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Profil geändert'), $kontoId, ['konto' => $kontoId]);
     return [];
 }
 
@@ -358,7 +358,7 @@ function tk_loeschen(int $kontoId, bool $anmeldungAuch): ?string
         anm_stornieren((int)$a['id']);
     }
     db_ausfuehren("DELETE FROM konto WHERE id = ? AND rolle = 'teilnehmend'", [$kontoId]);
-    audit_schreiben('konto', 'Konto ' . $kontoId . ' gelöscht' . ($a !== null ? ($anmeldungAuch ? ' (Anmeldung storniert)' : ' (Anmeldung bleibt)') : ''));
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'gelöscht' . ($a !== null ? ($anmeldungAuch ? ' (Anmeldung storniert)' : ' (Anmeldung bleibt)') : '')), null, ['konto' => $kontoId]);
     return null;
 }
 

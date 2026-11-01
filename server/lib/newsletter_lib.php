@@ -69,7 +69,7 @@ function nl_liste_speichern(?int $id, array $w, ?int $kontoId): int
                 [$w['name'], $w['beschreibung'], $w['absender_name'], $w['sichtbar'], $w['bei_anmeldung'], $id]);
         }
     });
-    audit_schreiben('newsletter', 'Liste ' . $id . ' gespeichert (' . $w['name'] . ')', $kontoId);
+    audit_schreiben('newsletter', audit_text('liste', (int)$id, 'gespeichert (' . $w['name'] . ')'), $kontoId, ['liste' => (int)$id]);
     return (int)$id;
 }
 
@@ -170,7 +170,7 @@ function nl_anfragen(string $email, string $vorname, array $listeIds, string $qu
     $namen = array_map(fn($l) => $l['name'], array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $neu, true)));
     mail_vorlage_einreihen($email, 'newsletter_bestaetigen', ['vorname' => $p['vorname'], 'listen' => implode(', ', $namen),
         'link' => link_url('newsletter', nl_link_erzeugen($pid, 'bestaetigen'), 'bestaetigen'), 'einwilligung' => NL_EINWILLIGUNG]);
-    audit_schreiben('newsletter', 'Eintrag angefragt (' . $quelle . ') für Person ' . $pid . ': ' . implode(', ', $namen), $kontoId);
+    audit_schreiben('newsletter', audit_text('person', $pid, 'Eintrag angefragt (' . $quelle . '): ' . implode(', ', $namen)), $kontoId, ['person' => $pid]);
 }
 
 /** Bestätigungslink einlösen: offene Abos werden bestätigt. Gibt die Person zurück oder null. */
@@ -184,7 +184,7 @@ function nl_bestaetigen(string $token): ?array
     $n = db_ausfuehren("UPDATE newsletter_abo SET status = 'bestaetigt', bestaetigt_am = ?, fassung = ? WHERE person_id = ? AND status = 'offen'", [db_jetzt(), nl_fassung(), $pid])->rowCount();
     link_loeschen('newsletter', $pid, 'bestaetigen');
     if ($n > 0) {
-        audit_schreiben('newsletter', 'Person ' . $pid . ': ' . $n . ' Liste(n) bestätigt (Double-Opt-In)');
+        audit_schreiben('newsletter', audit_text('person', $pid, $n . ' Liste(n) bestätigt (Double-Opt-In)'), null, ['person' => $pid]);
     }
     return $f['person'];
 }
@@ -222,7 +222,7 @@ function nl_abmelden(int $personId, ?array $listeIds = null, ?int $kontoId = nul
         }
     });
     if ($n > 0) {
-        audit_schreiben('newsletter', 'Person ' . $personId . ': von ' . $n . ' Liste(n) abgemeldet', $kontoId);
+        audit_schreiben('newsletter', audit_text('person', $personId, 'von ' . $n . ' Liste(n) abgemeldet'), $kontoId, ['person' => $personId]);
     }
     return $n;
 }
@@ -248,7 +248,7 @@ function nl_listen_setzen(int $personId, array $listeIds, string $quelle): void
                  ON DUPLICATE KEY UPDATE status = 'bestaetigt', quelle = VALUES(quelle), bestaetigt_am = VALUES(bestaetigt_am), fassung = VALUES(fassung)",
                 [$personId, $lid, $quelle, db_jetzt(), db_jetzt(), $fassung]
             );
-            audit_schreiben('newsletter', 'Person ' . $personId . ': Liste ' . $lid . ' eingetragen (' . $quelle . ')');
+            audit_schreiben('newsletter', audit_text('person', $personId, 'Liste ' . $lid . ' eingetragen (' . $quelle . ')'), null, ['person' => $personId]);
         }
     }
     if ($weg !== []) {

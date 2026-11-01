@@ -251,7 +251,7 @@ function va_kuerzel_setzen(int $id, string $kuerzel, ?int $kontoId): ?string
     $alt = (string)db_wert('SELECT kuerzel FROM veranstaltung WHERE id = ?', [$id]);
     if ($alt !== $kuerzel) {
         db_ausfuehren('UPDATE veranstaltung SET kuerzel = ? WHERE id = ?', [$kuerzel, $id]);
-        audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ': Kürzel ' . $alt . ' → ' . $kuerzel, $kontoId);
+        audit_schreiben('einstellungen', audit_text('veranstaltung', $id, 'Kürzel ' . $alt . ' → ' . $kuerzel), $kontoId, ['veranstaltung' => $id]);
     }
     return null;
 }
@@ -281,7 +281,7 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
         return $id;
     });
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : ''), $kontoId);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, 'angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : '')), $kontoId, ['veranstaltung' => $id]);
     return ['id' => $id];
 }
 
@@ -298,7 +298,7 @@ function va_aktuell_machen(int $id, ?int $kontoId): ?string
     }
     db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell' WHERE id = ?", [$id]);
     unset($GLOBALS['ws_va_aktuell']);
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') ist jetzt die aktuelle', $kontoId);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ' ist jetzt die aktuelle'), $kontoId, ['veranstaltung' => $id]);
     return null;
 }
 
@@ -311,7 +311,7 @@ function va_abschliessen(int $id, ?int $kontoId): ?string
     }
     db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen', abgeschlossen_am = ? WHERE id = ?", [db_jetzt(), $id]);
     unset($GLOBALS['ws_va_aktuell']);
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') abgeschlossen', $kontoId);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ' abgeschlossen'), $kontoId, ['veranstaltung' => $id]);
     return null;
 }
 
@@ -357,7 +357,7 @@ function va_loeschen(int $id, ?int $kontoId, string $bestaetigung = ''): ?string
     if (($GLOBALS['ws_va_id'] ?? null) === $id) {
         unset($GLOBALS['ws_va_id']);
     }
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ', ' . VA_STATUS[$v['status']] . ') gelöscht: ' . count($anm) . ' Anmeldungen; vorher gesichert: ' . $sicherung, $kontoId, 0);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ', ' . VA_STATUS[$v['status']] . ', gelöscht: ' . count($anm) . ' Anmeldungen; vorher gesichert: ' . $sicherung), $kontoId, ['veranstaltung' => $id], 0);
     return null;
 }
 
@@ -604,7 +604,7 @@ function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch): vo
         }
     });
     $namen = $alle ? 'alle, auch künftige' : (implode(', ', array_map(fn($i) => va_zeile($i)['kuerzel'] ?? (string)$i, $ids)) ?: 'keine');
-    audit_schreiben('konto', 'Veranstaltungen von Konto ' . $kontoId . ': ' . $namen, $durch);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Veranstaltungen: ' . $namen), $durch, ['konto' => $kontoId]);
 }
 
 /** Kurzbeschreibung der Rechte für Listen („alle“, „Kürzel, Kürzel“, „keine“). */

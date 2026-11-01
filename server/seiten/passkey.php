@@ -55,7 +55,7 @@ try {
             if ($k === null || (int)$k['aktiv'] !== 1 || (!konto_ist_team($k) && $k['email_bestaetigt_am'] === null)) {
                 $nein('Dieses Konto ist gesperrt oder noch nicht bestätigt.');
             }
-            audit_schreiben('login', 'Anmeldung mit Passkey', $kontoId);
+            pk_login_protokollieren($kontoId);
             if (konto_ist_team($k)) {
                 anmeldung_voll($k); // Passkey = Besitz + Fingerabdruck/PIN: Passwort und zweiter Faktor (E-55)
                 json_antwort(200, ['ok' => true, 'ziel' => '/team']);

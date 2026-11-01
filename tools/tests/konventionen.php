@@ -168,12 +168,16 @@ function konventionen_pruefen(string $wurzel): void
     $dbInSeiten = [];
     $closures = [];
     $einknopf = [];
+    $auditInSeiten = [];
     foreach (glob("$wurzel/server/seiten/*.php") ?: [] as $p) {
         $quelle = (string)file_get_contents($p);
         $tok = token_get_all($quelle);
         foreach ($tok as $i => $t) {
             if (is_array($t) && $t[0] === T_STRING && str_starts_with($t[1], 'db_')) {
                 $dbInSeiten[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
+            }
+            if (is_array($t) && $t[0] === T_STRING && $t[1] === 'audit_schreiben') {
+                $auditInSeiten[] = basename($p) . ':' . $t[2];
             }
             if (is_array($t) && $t[0] === T_VARIABLE && in_array($t[1], ['$fehlerFeld', '$ungueltig'], true)) {
                 $closures[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
@@ -186,6 +190,7 @@ function konventionen_pruefen(string $wurzel): void
         }
     }
     konv_melden($dbInSeiten, 'K-d: keine db_*-Aufrufe in server/seiten');
+    konv_melden($auditInSeiten, 'K-d: Protokoll (audit_schreiben) nur in Libs, nicht in Seiten');
     konv_melden($closures, 'Unterpunkt 4: keine Feld-Closures ($fehlerFeld, $ungueltig) in Seiten');
     konv_melden($einknopf, 'Unterpunkt 4: Einknopf-Formulare über aktion_knopf(), nicht von Hand');
 

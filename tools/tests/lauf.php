@@ -1912,6 +1912,36 @@ va_zwischenspeicher_leeren();
     link_loeschen('konto', $lKonto);
     link_loeschen('konto', $teamK);
 
+    abschnitt('Protokoll mit Objektbezug (AP-17 Unterpunkt 9, V-8)');
+    pruefe(audit_text('anmeldung', 12, 'storniert') === 'Anmeldung 12: storniert' && audit_text('rundmail', 3, 'gesendet') === 'Mailing 3: gesendet', 'audit_text: einheitliche Formulierung');
+    try {
+        audit_schreiben('konto', 'x', null, ['gibtsnicht' => 1]);
+        pruefe(false, 'unbekannte Objekt-Art abgewiesen');
+    } catch (InvalidArgumentException) {
+        pruefe(true, 'unbekannte Objekt-Art abgewiesen');
+    }
+    $oAnm = (int)db_wert('SELECT MIN(id) FROM anmeldung');
+    audit_schreiben('anmeldung', audit_text('anmeldung', $oAnm, 'Test Objektbezug'), null, ['anmeldung' => $oAnm]);
+    $oL = audit_letzter('anmeldung', $oAnm);
+    pruefe($oL !== null && $oL['text'] === 'Anmeldung ' . $oAnm . ': Test Objektbezug', 'Eintrag mit Bezug wird über objekt_art/objekt_id gefunden (statt LIKE)');
+    $oBetr = konto_laden((int)db_wert("SELECT MIN(id) FROM konto WHERE rolle = 'betreiber'"));
+    $oS = audit_suchen($oBetr, 'alle', '', '', 1, 50, ['anmeldung', $oAnm]);
+    pruefe($oS['gesamt'] >= 1 && array_filter($oS['zeilen'], fn($z) => $z['objekt_art'] !== 'anmeldung' || (int)$z['objekt_id'] !== $oAnm) === [], 'Protokoll-Filter nach Objekt zeigt nur dessen Einträge');
+    // Altdaten: dieselben UPDATEs wie Migration 21 auf Einträgen ohne Bezug
+    $altIds = [];
+    foreach ([['anmeldung', 'Anmeldung 12 storniert', null], ['nachruecken', 'Angebot an Anmeldung 13 für Termin 4', null], ['mailing', 'Entwurf 7 gelöscht', null], ['konto', 'Konto 5 mit Anmeldung 9 verknüpft', null], ['login', 'Ausgeloggt', $oBetr['id']], ['programm', 'Dozent·in 3 gelöscht', null], ['datenschutz', 'Anmeldungen geleert: 4', null]] as [$aArt, $aText, $aKonto]) {
+        db_ausfuehren('INSERT INTO audit (zeit, konto_id, art, text) VALUES (?, ?, ?, ?)', [db_jetzt(), $aKonto, $aArt, $aText]);
+        $altIds[$aText] = (int)db()->lastInsertId();
+    }
+    foreach (array_slice(migration_katalog()[21]['sql'], 1) as $sql) {
+        db()->exec($sql);
+    }
+    $bezugVon = fn(string $t) => db_zeile('SELECT objekt_art, objekt_id FROM audit WHERE id = ?', [$altIds[$t]]);
+    pruefe($bezugVon('Anmeldung 12 storniert') == ['objekt_art' => 'anmeldung', 'objekt_id' => 12] && $bezugVon('Angebot an Anmeldung 13 für Termin 4') == ['objekt_art' => 'anmeldung', 'objekt_id' => 13], 'Migration ordnet „Anmeldung 12 storniert“ und Angebote der Anmeldung zu');
+    pruefe($bezugVon('Entwurf 7 gelöscht') == ['objekt_art' => 'rundmail', 'objekt_id' => 7] && $bezugVon('Konto 5 mit Anmeldung 9 verknüpft') == ['objekt_art' => 'konto', 'objekt_id' => 5] && $bezugVon('Dozent·in 3 gelöscht') == ['objekt_art' => 'dozent', 'objekt_id' => 3], 'Migration: Mailing, Konto (Hauptbezug vor weiteren Nummern), Dozent·in');
+    pruefe($bezugVon('Ausgeloggt') == ['objekt_art' => 'konto', 'objekt_id' => (int)$oBetr['id']] && $bezugVon('Anmeldungen geleert: 4') == ['objekt_art' => null, 'objekt_id' => null], 'Migration: eigene Konto-Einträge ohne Nummer, Sammel-Einträge ohne Bezug');
+    db_ausfuehren('DELETE FROM audit WHERE id IN (' . implode(',', $altIds) . ')');
+
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);
     pruefe($r['status'] === 'ok' && $r['jobs']['aufraeumen']['status'] === 'ok', 'erster Lauf führt Job aus');

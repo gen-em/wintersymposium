@@ -135,7 +135,7 @@ function team_anm_daten(int $anmId, array $e, bool $mail): array
     if ($neueAdresse && $kontoMit) {
         // Login-Adresse eines Kontos geändert: Hinweis an die alte Adresse, Protokoll ohne Adressen (R-02)
         mail_vorlage_einreihen($a['email'], 'adresse_vom_team', ['vorname' => $w['vorname']]);
-        audit_schreiben('konto', 'Konto ' . (int)$a['konto_id'] . ': Adresse vom Team geändert', anm_team_konto());
+        audit_schreiben('konto', audit_text('konto', (int)$a['konto_id'], 'Adresse vom Team geändert'), anm_team_konto(), ['konto' => (int)$a['konto_id']]);
     }
     anm_geaendert_melden($anmId, 'deine Angaben sind aktualisiert.', $mail, true);
     return [];
@@ -168,7 +168,7 @@ function team_anlegen(array $e, bool $ueberbuchen, bool $mail): array
         $id = (int)db()->lastInsertId();
         $fest = anm_frei(0) > 0 || $ueberbuchen;
         anm_platz_anlegen($id, 0, $fest ? 'fest' : 'warte', time());
-        audit_schreiben('anmeldung', 'Anmeldung ' . $id . ' vom Team angelegt' . ($fest ? '' : ' (Warteliste)') . ($mail ? '' : ', ohne Mail'), anm_team_konto());
+        audit_schreiben('anmeldung', audit_text('anmeldung', $id, 'vom Team angelegt' . ($fest ? '' : ' (Warteliste)') . ($mail ? '' : ', ohne Mail')), anm_team_konto(), ['anmeldung' => $id]);
         if ($mail) {
             mail_vorlage_einreihen($w['email'], 'bestaetigt', ['vorname' => $w['vorname'], 'uebersicht' => anm_uebersicht_text($id)]);
         }
@@ -225,7 +225,7 @@ function team_platz_geben(int $anmId, int $terminId, bool $bestaetigt, bool $mai
         foreach ($tausch as $x) {
             anm_nachruecken((int)$x['termin_id']);
         }
-        audit_schreiben('nachruecken', 'Team: Platz für Termin ' . $terminId . ' an Anmeldung ' . $anmId . ' vergeben' . ($frage !== [] ? ' (bestätigt: ' . implode(' ', $frage) . ')' : ''), anm_team_konto());
+        audit_schreiben('nachruecken', audit_text('anmeldung', $anmId, 'Platz für Termin ' . $terminId . ' vom Team vergeben' . ($frage !== [] ? ' (bestätigt: ' . implode(' ', $frage) . ')' : '')), anm_team_konto(), ['anmeldung' => $anmId]);
         if ($mail && $a['status'] === 'bestaetigt') {
             mail_vorlage_einreihen($a['email'], 'platz_erhalten', ['vorname' => $a['vorname'], 'was' => anm_termin_text($terminId), 'uebersicht' => anm_uebersicht_text($anmId)]);
         }
@@ -262,7 +262,7 @@ function team_angebot(int $platzId): ?string
             'vorname' => $a['vorname'], 'was' => anm_termin_text($tid), 'frist' => datum_zeit_text(db_zeit($fristTs)), 'link' => anm_link_url($token),
             'tausch' => $tausch === [] ? '' : 'Nimmst du an, fällt dafür weg: ' . implode('; ', array_map(fn($x) => anm_termin_text((int)$x['termin_id']), $tausch)) . '.',
         ]);
-        audit_schreiben('nachruecken', 'Team: Angebot an Anmeldung ' . $a['id'] . ' für Termin ' . $tid, anm_team_konto());
+        audit_schreiben('nachruecken', audit_text('anmeldung', (int)$a['id'], 'Angebot für Termin ' . $tid . ' vom Team'), anm_team_konto(), ['anmeldung' => (int)$a['id']]);
         return null;
     });
 }
@@ -382,7 +382,7 @@ function team_passwort_link(int $kontoId): bool
     }
     $l = tk_link($kontoId, 'passwort');
     mail_vorlage_einreihen($k['email'], 'konto_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $l['url'], 'gueltig' => $l['gueltig']]);
-    audit_schreiben('konto', 'Team: Passwort-Link an Konto ' . $kontoId . ' geschickt', anm_team_konto());
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Passwort-Link vom Team geschickt'), anm_team_konto(), ['konto' => $kontoId]);
     return true;
 }
 
@@ -437,4 +437,11 @@ function team_essen_zahlen(): array
         $essen[$z['essen']] = (int)$z['n'];
     }
     return $essen;
+}
+
+/** Einmal-Link an eine Anmeldung schicken (Team, Personen) und protokollieren. */
+function team_link_senden(int $anmId, int $durch): void
+{
+    anm_zugang_senden($anmId);
+    audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'Einmal-Link vom Team geschickt'), $durch, ['anmeldung' => $anmId]);
 }

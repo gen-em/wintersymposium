@@ -611,7 +611,7 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
         if ($l['zweck'] === 'bestaetigen' && $a['status'] === 'unbestaetigt') {
             db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL, geaendert_am = ? WHERE id = ?", [db_zeit($jetzt), db_jetzt(), $anmId]);
             link_loeschen('anmeldung', $anmId, 'bestaetigen');
-            audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' bestätigt');
+            audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'bestätigt'), null, ['anmeldung' => $anmId]);
             // Wer jetzt bestätigt ist, kann Angebote für seine Wartelisten bekommen
             foreach (db_zeilen("SELECT termin_id FROM platz WHERE anmeldung_id = ? AND status = 'warte'", [$anmId]) as $p) {
                 anm_nachruecken((int)$p['termin_id'], $jetzt);
@@ -642,7 +642,7 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
                 if ($a['konto_id'] !== null) {
                     db_ausfuehren('UPDATE konto SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, db_jetzt(), $a['konto_id']]);
                 }
-                audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ': neue E-Mail-Adresse bestätigt');
+                audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'neue E-Mail-Adresse bestätigt'), null, ['anmeldung' => $anmId]);
                 $meldung = 'Deine neue Adresse gilt ab jetzt.';
             }
         }
@@ -710,7 +710,7 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
                 'uebersicht' => anm_uebersicht_text($id),
             ]);
         }
-        audit_schreiben('anmeldung', 'Anmeldung ' . $id . ' angelegt' . ($warteliste ? ' (Warteliste)' : ''));
+        audit_schreiben('anmeldung', audit_text('anmeldung', $id, 'angelegt' . ($warteliste ? ' (Warteliste)' : '')), null, ['anmeldung' => $id]);
         return ['art' => 'neu', 'id' => $id, 'warteliste' => $warteliste, 'bestaetigt' => $vomKonto];
     });
 }
@@ -783,7 +783,7 @@ function anm_geaendert_melden(int $anmId, string $was, bool $mail = true, bool $
 {
     $a = anm_laden($anmId);
     db_ausfuehren('UPDATE anmeldung SET geaendert_am = ? WHERE id = ?', [db_jetzt(), $anmId]);
-    audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' geändert' . ($team ? ' (Team' . ($mail ? '' : ', ohne Mail') . ')' : ''), $team ? anm_team_konto() : null);
+    audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'geändert' . ($team ? ' (Team' . ($mail ? '' : ', ohne Mail') . ')' : '')), $team ? anm_team_konto() : null, ['anmeldung' => $anmId]);
     if ($mail && $a !== null && $a['status'] === 'bestaetigt') {
         // „vom Team geändert“ (Admin 2026-10-29)
         $was = $team ? 'das Team hat deine Anmeldung geändert: ' . $was : $was;
@@ -822,7 +822,7 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
         return ['fehler' => ['email' => ANM_TEAM_ADRESSE_TEXT], 'email_link' => false, 'email_gesperrt' => false];
     }
     anm_profil_setzen($anmId, $w);
-    audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ': Daten geändert');
+    audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'Daten geändert'), null, ['anmeldung' => $anmId]);
     $link = false;
     if ($w['email'] !== $a['email']) {
         if (!adresse_aendern_erlaubt($w['email'])) {
@@ -877,7 +877,7 @@ function anm_stornieren(int $anmId, ?int $jetzt = null, bool $mail = true): bool
             mail_vorlage_einreihen($a['email'], 'storniert', ['vorname' => $a['vorname']]);
         }
         db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmId]);
-        audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' storniert');
+        audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'storniert'), null, ['anmeldung' => $anmId]);
         foreach ($frei as $tid) {
             anm_nachruecken($tid, $jetzt);
         }
@@ -949,7 +949,7 @@ function anm_nachruecken(int $terminId, ?int $jetzt = null): int
             'link' => anm_link_url($token),
             'tausch' => $tausch === [] ? '' : 'Nimmst du an, fällt dafür weg: ' . implode('; ', array_map(fn($x) => anm_termin_text((int)$x['termin_id']), $tausch)) . '.',
         ]);
-        audit_schreiben('nachruecken', 'Angebot an Anmeldung ' . $p['anmeldung_id'] . ' für Termin ' . $terminId);
+        audit_schreiben('nachruecken', audit_text('anmeldung', (int)$p['anmeldung_id'], 'Angebot für Termin ' . $terminId), null, ['anmeldung' => (int)$p['anmeldung_id']]);
         $n++;
     }
     return $n;
@@ -986,7 +986,7 @@ function anm_angebot_annehmen(int $anmId, int $platzId, bool $tauschBestaetigt, 
         }
         $a = anm_laden($anmId);
         mail_vorlage_einreihen($a['email'], 'platz_erhalten', ['vorname' => $a['vorname'], 'was' => anm_termin_text((int)$p['termin_id']), 'uebersicht' => anm_uebersicht_text($anmId)]);
-        audit_schreiben('nachruecken', 'Anmeldung ' . $anmId . ' hat Angebot für Termin ' . $p['termin_id'] . ' angenommen');
+        audit_schreiben('nachruecken', audit_text('anmeldung', $anmId, 'Angebot für Termin ' . $p['termin_id'] . ' angenommen'), null, ['anmeldung' => $anmId]);
         return ['ok' => true];
     });
 }
@@ -1005,7 +1005,7 @@ function anm_angebot_ablehnen(int $anmId, int $platzId, ?int $jetzt = null): boo
             // Symposium abgelehnt: dann ist die ganze Anmeldung hinfällig
             db_ausfuehren('DELETE FROM anmeldung WHERE id = ?', [$anmId]);
         }
-        audit_schreiben('nachruecken', 'Anmeldung ' . $anmId . ' hat Angebot für Termin ' . $p['termin_id'] . ' abgelehnt');
+        audit_schreiben('nachruecken', audit_text('anmeldung', $anmId, 'Angebot für Termin ' . $p['termin_id'] . ' abgelehnt'), null, ['anmeldung' => $anmId]);
         anm_nachruecken((int)$p['termin_id'], $jetzt);
         return true;
     });
@@ -1036,7 +1036,7 @@ function anm_job(int $jetzt): array
             db_ausfuehren("UPDATE platz SET status = 'warte', angebot_bis = NULL, seit = ? WHERE id = ?", [$jetztDb, $p['id']]);
             $a = anm_laden((int)$p['anmeldung_id']);
             mail_vorlage_einreihen($a['email'], 'angebot_abgelaufen', ['vorname' => $a['vorname'], 'was' => anm_termin_text((int)$p['termin_id']), 'uebersicht' => anm_uebersicht_text((int)$p['anmeldung_id'])]);
-            audit_schreiben('nachruecken', 'Angebot an Anmeldung ' . $p['anmeldung_id'] . ' für Termin ' . $p['termin_id'] . ' abgelaufen');
+            audit_schreiben('nachruecken', audit_text('anmeldung', (int)$p['anmeldung_id'], 'Angebot für Termin ' . $p['termin_id'] . ' abgelaufen'), null, ['anmeldung' => (int)$p['anmeldung_id']]);
             anm_nachruecken((int)$p['termin_id'], $jetzt);
             return 1;
         });

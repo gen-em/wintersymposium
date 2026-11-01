@@ -46,7 +46,7 @@ if (!konto_ist_team($k)) {
 }
 if ($befehl === 'link') {
     $token = konto_link_erzeugen((int)$k['id'], $k['passwort_hash'] === null ? 'einrichten' : 'passwort');
-    audit_schreiben('konto', 'Link über die Kommandozeile erzeugt für Konto ' . $k['id']);
+    audit_schreiben('konto', audit_text('konto', (int)$k['id'], 'Link über die Kommandozeile erzeugt'), null, ['konto' => (int)$k['id']]);
     echo konto_link_url($token), "\n";
 } else {
     totp_zuruecksetzen((int)$k['id'], 'Kommandozeile');

@@ -132,7 +132,8 @@ function host_aendern(string $name, string $was, ?int $kontoId): bool
 }
 
 /** Hosts hinzufügen (Installer und Betrieb, AP-5). */
-function host_anlegen(string $name, bool $haupt = false): void
+/** Hostnamen anlegen; mit $durch (Team-Bereich) protokolliert. */
+function host_anlegen(string $name, bool $haupt = false, ?int $durch = null): void
 {
     $n = host_normalisieren($name);
     if ($n === null) {
@@ -148,5 +149,8 @@ function host_anlegen(string $name, bool $haupt = false): void
             [$n, $haupt ? 1 : 0, db_jetzt()]
         );
     });
+    if ($durch !== null) {
+        audit_schreiben('host', 'Host ' . $n . ' hinzugefügt', $durch);
+    }
     host_liste(true);
 }

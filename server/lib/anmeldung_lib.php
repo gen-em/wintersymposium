@@ -99,7 +99,7 @@ function anmeldung_voll(array $k): void
     sitzung_erneuern();
     unset($_SESSION['halb']);
     $_SESSION['konto'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
-    audit_schreiben('login', 'Team-Anmeldung', (int)$k['id']);
+    audit_schreiben('login', audit_text('konto', (int)$k['id'], 'Team-Login'), (int)$k['id'], ['konto' => (int)$k['id']]);
     // Ein Konto für alles (E-54): dasselbe Konto gilt auch als Teilnehmenden-Konto (Meine Anmeldung, Mein Konto)
     tk_einloggen($k);
 }
@@ -108,7 +108,7 @@ function anmeldung_beenden(): void
 {
     $k = anmeldung_konto();
     if ($k !== null) {
-        audit_schreiben('login', 'Ausgeloggt', (int)$k['id']);
+        audit_schreiben('login', audit_text('konto', (int)$k['id'], 'ausgeloggt'), (int)$k['id'], ['konto' => (int)$k['id']]);
     }
     sitzung_beenden();
 }

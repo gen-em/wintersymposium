@@ -526,7 +526,7 @@ function pk_anlegen(int $kontoId, array $antwort, string $bezeichnung): int
         [$kontoId, $u['rp_id'], pk_b64u((string)$a['kennung']), $hash, $k['pem'], $k['alg'], $a['zaehler'], $bez, db_jetzt()]
     );
     $id = (int)db()->lastInsertId();
-    audit_schreiben('zweitfaktor', 'Passkey angelegt: ' . ($bez !== '' ? $bez : 'ohne Namen'), $kontoId);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'Passkey ' . $id . ' angelegt'), $kontoId, ['konto' => $kontoId]);
     return $id;
 }
 
@@ -602,7 +602,7 @@ function pk_signatur_pruefen(string $zweck, array $antwort, ?int $kontoId = null
     if ($neu === 0 && $alt === 0) {
         db_ausfuehren('UPDATE passkey SET zuletzt_am = ? WHERE id = ?', [db_jetzt(), (int)$pk['id']]);
     } elseif ($neu <= $alt || db_ausfuehren('UPDATE passkey SET zaehler = ?, zuletzt_am = ? WHERE id = ? AND zaehler = ?', [$neu, db_jetzt(), (int)$pk['id'], $alt])->rowCount() !== 1) {
-        audit_schreiben('zweitfaktor', 'Passkey „' . $pk['bezeichnung'] . '“: Zähler zurückgelaufen (' . $alt . ' → ' . $neu . '), Anmeldung abgelehnt – möglicherweise kopiert', (int)$pk['konto_id']);
+        audit_schreiben('zweitfaktor', audit_text('konto', (int)$pk['konto_id'], 'Passkey ' . (int)$pk['id'] . ': Zähler zurückgelaufen (' . $alt . ' → ' . $neu . '), Login abgelehnt – möglicherweise kopiert'), (int)$pk['konto_id'], ['konto' => (int)$pk['konto_id']]);
         throw new PkFehler('Zähler zurückgelaufen');
     }
     return (int)$pk['konto_id'];
@@ -657,10 +657,15 @@ function pk_entfernen(int $kontoId, int $id): ?string
     if ($k !== null && konto_ist_team($k) && !$z['an'] && !$z['mail'] && pk_zahl($kontoId) <= 1) {
         return 'Das ist dein einziger zweiter Faktor. Richte zuerst die Authenticator-App oder den Code per E-Mail ein.';
     }
-    $bez = (string)db_wert('SELECT bezeichnung FROM passkey WHERE id = ? AND konto_id = ?', [$id, $kontoId]);
     if (db_ausfuehren('DELETE FROM passkey WHERE id = ? AND konto_id = ?', [$id, $kontoId])->rowCount() === 0) {
         return 'Diesen Passkey gibt es nicht mehr.';
     }
-    audit_schreiben('zweitfaktor', 'Passkey entfernt: ' . ($bez !== '' ? $bez : 'ohne Namen'), $kontoId);
+    audit_schreiben('zweitfaktor', audit_text('konto', $kontoId, 'Passkey ' . $id . ' entfernt'), $kontoId, ['konto' => $kontoId]);
     return null;
+}
+
+/** Gelungenen Login mit Passkey protokollieren. */
+function pk_login_protokollieren(int $kontoId): void
+{
+    audit_schreiben('login', audit_text('konto', $kontoId, 'Login mit Passkey'), $kontoId, ['konto' => $kontoId]);
 }

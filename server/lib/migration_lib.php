@@ -611,6 +611,25 @@ function migration_katalog(): array
                 "DROP TABLE newsletter_link",
             ],
         ],
+        21 => [
+            'beschreibung' => 'Protokoll mit Objektbezug (AP-17, V-8): objekt_art, objekt_id; Altdaten aus dem Text zugeordnet, soweit erkennbar',
+            'sql' => [
+                "ALTER TABLE audit ADD COLUMN objekt_art VARCHAR(20) NULL, ADD COLUMN objekt_id INT UNSIGNED NULL, ADD KEY ix_audit_objekt (objekt_art, objekt_id)",
+                // Reihenfolge = Vorrang: der fachliche Hauptbezug je Art zuerst
+                "UPDATE audit SET objekt_art = 'anmeldung', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Anmeldung [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('anmeldung', 'nachruecken', 'teilnahme') AND text REGEXP 'Anmeldung [0-9]+'",
+                "UPDATE audit SET objekt_art = 'rundmail', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, '(Mailing|Entwurf) [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('mailing') AND text REGEXP '(Mailing|Entwurf) [0-9]+'",
+                "UPDATE audit SET objekt_art = 'programmpunkt', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Programmpunkt [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Programmpunkt [0-9]+'",
+                "UPDATE audit SET objekt_art = 'termin', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Termin [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Termin [0-9]+'",
+                "UPDATE audit SET objekt_art = 'dozent', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Dozent·in [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Dozent·in [0-9]+'",
+                "UPDATE audit SET objekt_art = 'veranstaltung', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Veranstaltung [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('einstellungen') AND text REGEXP 'Veranstaltung [0-9]+'",
+                "UPDATE audit SET objekt_art = 'person', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Person [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('newsletter') AND text REGEXP 'Person [0-9]+'",
+                "UPDATE audit SET objekt_art = 'liste', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Liste [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('newsletter') AND text REGEXP 'Liste [0-9]+'",
+                "UPDATE audit SET objekt_art = 'audit', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Eintrag [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('protokoll') AND text REGEXP 'Eintrag [0-9]+'",
+                "UPDATE audit SET objekt_art = 'konto', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Konto [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('konto', 'notzugang', 'zweitfaktor', 'login') AND text REGEXP 'Konto [0-9]+'",
+                // Einträge über das eigene Konto ohne Nummer im Text (Passwort gesetzt, Ausgeloggt …)
+                "UPDATE audit SET objekt_art = 'konto', objekt_id = konto_id WHERE objekt_art IS NULL AND konto_id IS NOT NULL AND art IN ('konto', 'login', 'zweitfaktor')",
+            ],
+        ],
     ];
 }
 
