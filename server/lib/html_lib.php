@@ -36,9 +36,10 @@ function seite_kopf(string $titel, array $opt = []): void
         // (Rückmeldung 2026-10-31).
         $konto = $opt['konto'] ?? null;
         // Auch mit übergebener Anmeldung (Meine Anmeldung): Team-Bereich in der Leiste (Rückmeldung 2026-10-31)
-        $team = is_array($konto) ? $konto : team_gesehen();
-        $tn = $opt['teilnehmer'] ?? anm_aus_keks();
-        $tk = session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null;
+        $wer = ich();
+        $team = is_array($konto) ? $konto : $wer['team'];
+        $tn = $opt['teilnehmer'] ?? $wer['anmeldung'];
+        $tk = $wer['konto'];
         $ich = $tk ?? $team; // eingeloggtes Konto
         $erkannt = is_array($tn) || is_array($ich);
     }

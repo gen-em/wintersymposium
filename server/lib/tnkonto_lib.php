@@ -10,8 +10,8 @@ declare(strict_types=1);
  *     Bestätigung per Mail). Erst eine bestätigte Adresse macht das Konto gültig.
  *   - Einloggen über denselben Login wie das Team (/einloggen oder Kasten auf
  *     „Deine Anmeldung“); Teilnehmende ohne zweiten Faktor (E-11).
- *   - Sitzung 'link' (wie nach einem Einmal-Link): $_SESSION['tk'] = Konto,
- *     $_SESSION['anm'] = verknüpfte Anmeldung.
+ *   - Sitzung 'link' (wie nach einem Einmal-Link): $_SESSION[SITZUNG_SCHLUESSEL_TK] = Konto,
+ *     $_SESSION[SITZUNG_SCHLUESSEL_ANM] = verknüpfte Anmeldung.
  *   - Gibt es zu einer bestätigten Konto-Adresse eine Anmeldung, werden beide
  *     verknüpft (Admin 2026-10-29).
  *   - Konto löschen: wahlweise mit oder ohne Anmeldung (Admin 2026-10-29).
@@ -38,7 +38,7 @@ const TK_LINK_GUELTIG_S = 48 * 3600;
  */
 function tk_aktuell(): ?array
 {
-    $s = $_SESSION['tk'] ?? null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_TK] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['version'])) {
         return null;
     }
@@ -46,7 +46,7 @@ function tk_aktuell(): ?array
     $ok = $k !== null && (int)$k['aktiv'] === 1 && (int)$k['sitzung_version'] === (int)$s['version']
         && (konto_ist_team($k) ? (int)(anmeldung_konto()['id'] ?? 0) === (int)$k['id'] : ($k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null));
     if (!$ok) {
-        unset($_SESSION['tk']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_TK]);
         return null;
     }
     return $k;
@@ -55,9 +55,10 @@ function tk_aktuell(): ?array
 /** Konto in der Sitzung merken (nach Login, Bestätigung oder neuem Passwort). */
 function tk_einloggen(array $k): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     sitzung_erneuern();
     $k = konto_laden((int)$k['id']) ?? $k;
-    $_SESSION['tk'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
+    $_SESSION[SITZUNG_SCHLUESSEL_TK] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
     // Login setzt die Löschfrist neu (14 Monate ohne Login, E-54)
     db_ausfuehren('UPDATE konto SET letzte_anmeldung = ?, loesch_erinnert_am = NULL WHERE id = ?', [db_jetzt(), (int)$k['id']]);
     $a = tk_anmeldung((int)$k['id']);
@@ -69,6 +70,7 @@ function tk_einloggen(array $k): void
 /** Ausloggen: beendet die ganze Sitzung (Team, Konto und Link, E-54) und startet eine leere. */
 function tk_ausloggen(): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     $k = tk_aktuell();
     if ($k !== null && konto_ist_team($k)) {
         audit_schreiben('login', audit_text('konto', (int)$k['id'], 'ausgeloggt'), (int)$k['id'], ['konto' => (int)$k['id']]);
@@ -335,7 +337,7 @@ function tk_email_aendern(int $kontoId, string $neu): ?string
     if ($neu === $k['email']) {
         return null;
     }
-    if (!adresse_aendern_erlaubt($neu)) {
+    if (!anm_adresse_aendern_erlaubt($neu)) {
         return ANM_ADRESSE_RATE_TEXT;
     }
     // tk_link löscht ältere Links desselben Zwecks; Anrede ohne Namen (Review S-2)

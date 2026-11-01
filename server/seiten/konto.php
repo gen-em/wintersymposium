@@ -21,7 +21,7 @@ $team = konto_ist_team($k);
 $pwMin = $team ? PASSWORT_MIN_LAENGE : PASSWORT_MIN_TN;
 $fehler = [];
 $eingabe = [];
-$pwNoetig = $k['passwort_hash'] === null || !empty($_SESSION['tk_pw']);
+$pwNoetig = $k['passwort_hash'] === null || !empty($_SESSION[SITZUNG_SCHLUESSEL_TK_PW]);
 $modus = (string)($_GET['aendern'] ?? '');
 
 if (ist_post()) {
@@ -43,7 +43,7 @@ if (ist_post()) {
             $f = passwort_regel_fehler(post_text('passwort'), post_text('passwort2'), $pwMin);
             if ($f === null) {
                 konto_passwort_setzen($id, post_text('passwort'));
-                unset($_SESSION['tk_pw']);
+                unset($_SESSION[SITZUNG_SCHLUESSEL_TK_PW]);
                 tk_einloggen(konto_laden($id));
                 fertig('ok', 'Dein Passwort ist gespeichert. Ab jetzt kannst du dich mit Adresse und Passwort einloggen.', '/konto');
             }
@@ -58,7 +58,7 @@ if (ist_post()) {
                 konto_passwort_setzen($id, post_text('neu'));
                 // Andere Sitzungen enden (neue sitzung_version), diese bleibt – beim Team samt zweitem Faktor
                 if ($team) {
-                    $_SESSION['konto'] = ['id' => $id, 'version' => (int)konto_laden($id)['sitzung_version']];
+                    $_SESSION[SITZUNG_SCHLUESSEL_KONTO] = ['id' => $id, 'version' => (int)konto_laden($id)['sitzung_version']];
                 }
                 tk_einloggen(konto_laden($id));
                 fertig('ok', 'Dein Passwort ist geändert. Andere Sitzungen sind beendet.', '/konto');

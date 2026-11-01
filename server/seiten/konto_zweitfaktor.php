@@ -35,22 +35,22 @@ if (ist_post()) {
                 fertig('ok', 'Code per E-Mail ist ausgeschaltet. Du loggst dich mit der Authenticator-App ein.', '/konto/zweitfaktor');
             }
         } elseif (!$zs['an']) {
-            $_SESSION['app_einrichten'] = true;
+            $_SESSION[SITZUNG_SCHLUESSEL_APP_EINRICHTEN] = true;
             umleiten('/konto/zweitfaktor#app');
         }
-    } elseif ($aktion === 'app_fertig' && !empty($_SESSION['app_einrichten'])) {
+    } elseif ($aktion === 'app_fertig' && !empty($_SESSION[SITZUNG_SCHLUESSEL_APP_EINRICHTEN])) {
         $codes = totp_einrichtung_abschliessen($id, post_text('totp'));
         if ($codes === null) {
             $fehler[] = 'Der Code aus der App stimmt nicht. Prüfe die Uhrzeit auf dem Handy und nimm den aktuellen Code.';
         } else {
-            unset($_SESSION['app_einrichten']);
+            unset($_SESSION[SITZUNG_SCHLUESSEL_APP_EINRICHTEN]);
             $neueCodes = $codes;
         }
     }
 }
 
 $zf = totp_zustand($id);
-if (!empty($_SESSION['app_einrichten']) && !$zf['an']) {
+if (!empty($_SESSION[SITZUNG_SCHLUESSEL_APP_EINRICHTEN]) && !$zf['an']) {
     $roh = $zf['angefangen'] ? totp_geheimnis($id) : null;
     $roh ??= totp_einrichtung_beginnen($id);
     $aussteller = 'Wintersymposium' . (umgebung() === 'produktion' ? '' : ' (' . umgebung() . ')');

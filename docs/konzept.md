@@ -245,53 +245,55 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
 | K-e | Zustand | Sitzungsschlüssel stehen als Konstanten `SITZUNG_SCHLUESSEL_*` in `sitzung_lib`; Zustand je Anfrage über `kontext_lib` (`ctx()`), nicht über `$GLOBALS`; Ergebnisse als Rückgabe, nicht als globaler Ausgabeparameter. Statische Caches haben eine Leer-Funktion für Tests. |
 | K-f | Wortliste | Knöpfe und Meldungen: **Speichern** (Formular sichern; mit Objekt nur, wenn mehrere Formulare auf einer Seite stehen: „Passwort speichern“), **Abbrechen** (Dialog/Formular ohne Änderung verlassen), **Entfernen** (Eintrag aus einer Liste oder Zuordnung nehmen, der Datensatz bleibt), **Löschen** (Datensatz ist weg), **„Ja, löschen“** als Ja im Lösch-Dialog (andere Dialoge: „Ja, <Verb>“ wie „Ja, stornieren“), **Schließen** (Hinweis ohne Entscheidung), **Verstanden** (Hinweis bestätigen). Menüpunkte und Knöpfe, die erst einen Dialog öffnen, enden auf „…“. Nicht verwenden: „Endgültig löschen“, „Ja, Konto löschen“, „Von der Liste nehmen“. |
 | K-g | Typografie | Auslassung „…“ (nie `...`), Gedankenstrich „ – “ (nie ` - ` zwischen Wörtern), deutsche Anführungszeichen „…“, Uhrzeiten mit „Uhr“ über `datum_zeit_text(…, uhr: true)` bzw. `zeit_lokal(…) . ' Uhr'`. Gilt für Texte in PHP (Zeichenketten und HTML) und JavaScript, nicht für Code-Kommentare. |
-| K-h | Präfixe | Jede Funktion beginnt mit dem Präfix ihrer Lib (Tabelle unten, Zielzustand nach AP-17 Unterpunkt 10). Allgemeine Helfer ohne Präfix stehen nur in `html_lib`, `formular_lib`, `format_lib`, `konfig_lib`, `sitzung_lib` und `kontext_lib`. |
+| K-h | Präfixe | Jede Funktion beginnt mit einem Präfix ihrer Lib (Tabelle unten); ein Präfix gehört zu genau einer Lib. Kurze allgemeine Helfer (`e`, `icon`, `feld`, `chip`, `hm` …) stehen nur in `html_lib`, `formular_lib` und `format_lib`. |
 
-**Präfix-Tabelle (Zielzustand)**
+**Präfix-Tabelle** (Stand nach AP-17 Unterpunkt 10; maschinell geprüft in `tools/tests/konventionen.php`, Konstante `KONV_PRAEFIXE`; Präfixe in mehreren Libs nur mit Grund in `KONV_PRAEFIX_GETEILT`: `db`, `passwort`, `team`, `seiten`, `mail`)
 
-| Lib | Präfixe | Inhalt |
+| Lib | Präfixe (erstes Wort des Namens) | Inhalt |
 |---|---|---|
-| `anmeldung_lib` (bisher `buchung_lib`) | `anm_` | Anmeldungen, Plätze, Warteliste, Einmal-Links der Anmeldung |
-| `login_lib` (bisher `anmeldung_lib`) | `login_`, `team_sitzung`, `team_tor`, `team_gesehen`, `anmeldung_halb*`, `anmeldung_voll`, `anmeldung_beenden`, `ich` | Team-Login, halbe Anmeldung, „Wer bin ich“ |
-| `audit_lib` | `audit_` | Protokoll |
-| `betrieb_lib` | `betrieb_` | Betriebsseite |
-| `bild_lib` (neu) | `bild_`, `datei_senden` | Upload, Verkleinern, Ausliefern |
-| `datenschutz_lib` | `ds_` | Löschfristen, Auskunft |
-| `db_lib` | `db_`, `einstellung*` | Datenbank, Einstellungen |
-| `export_lib` | `export_`, `xlsx_`, `csv_` | Exporte |
-| `format_lib` | `datum_`, `zeit_`, `tag_`, `zahl_`, `dauer_`, `bytes_`, `person_`, `hm`, `minuten`, `efn_`, `iso_`, `lokal_` | Formatieren, Ortszeit |
-| `formular_lib` (neu) | `feld`, `wert`, `profil_`, `aktion_`, `bestaetigung_`, `kachel`, `chip`, `filter_`, `leer_`, `seiten_kopfzeile`, `ist_post`, `aktion`, `post_`, `fertig` | Formulare und Seitenbausteine |
-| `host_lib` | `host_`, `url_`, `basis_` | Hostnamen |
-| `html_lib` | `e`, `seite_`, `team_seite_`, `team_reiter`, `team_veranstaltung_`, `icon`, `meldung_`, `fehler_`, `umleiten`, `json_`, `nicht_gefunden`, `seiten_name` | Seitengerüst |
-| `inhalt_lib` | `inhalt_`, `editor_`, `start_`, `html_bereinigen` | Pflegbare Texte, HTML-Bereiniger |
-| `install_lib` | `install_`, `installiert` | Installer |
-| `jobs_lib` | `job_`, `jobs_` | Hintergrundjobs |
-| `kontext_lib` (neu) | `ctx` | Zustand je Anfrage |
-| `konfig_lib` | `konfig_`, `laufzeit_`, `umgebung`, `entwicklung`, `app_` | Konfiguration |
-| `konto_lib` | `konto_`, `passwort_` | Konten |
-| `kopfzeilen_lib` | `kopf_`, `kopfzeilen_`, `https_` | HTTP-Kopfzeilen |
-| `krypto_lib` | `krypto_`, `versiegeln`, `oeffnen` | Verschlüsselung |
-| `link_lib` (neu) | `link_` | Einmal-Links |
-| `mail_lib`, `mail_html_lib` | `mail_`, `smtp_`, `reihe_`, `va_mail*`, `antwort_` | Mails |
-| `migration_lib` | `migration_` | Datenbank-Schema |
-| `newsletter_lib` | `nl_` | Newsletter |
-| `passkey_lib` | `pk_` | Passkeys |
-| `programm_lib` | `programm_`, `dozent_`, `foto_`, `termin_`, `kuerzel_` | Programm |
-| `ratelimit_lib` | `rate_` | Ratenschutz |
-| `rundmail_lib` | `rm_` | Mailings |
-| `sicherung_lib` | `sicherung_`, `testdaten_` | Sicherungen |
-| `sitzung_lib` | `sitzung_`, `csrf_`, `flash_` | Sitzung, CSRF, Flash |
-| `spamschutz_lib` | `spam_` | Spamschutz |
-| `statistik_lib` | `stat_` | Statistik |
-| `team_lib` | `team_` | Team-Funktionen an Anmeldungen |
-| `teilnahme_lib` | `tn_` | Teilnahme vor Ort |
-| `tnkonto_lib` | `tk_` | Teilnehmenden-Konten |
-| `totp_lib` | `totp_` | TOTP (nur RFC 6238 und Codes) |
-| `transaktion_lib` | `db_transaktion` | Transaktionen |
-| `veranstaltung_lib` | `va_` | Veranstaltungen |
-| `wartung_lib` | `wartung_` | Wartung |
-| `zertifikat_lib` (neu) | `zertifikat_`, `unterschrift_`, `code128_` | Teilnahmebescheinigung |
-| `zweitfaktor_lib` (neu) | `zweitfaktor_`, `mailcode_` | Zweiter Faktor (Wahl, Mail-Code, Bestätigung) |
+| `anmeldung_lib` | `anm` | Anmeldungen, Plätze, Warteliste, Sitzung der Teilnehmenden |
+| `audit_lib` | `audit` | Protokoll mit Objektbezug |
+| `betrieb_lib` | `betrieb` | Betrieb → Status |
+| `bild_lib` | `bild`, `datei`, `foto`, `text` | Bilder hochladen, verkleinern, ausliefern; Fotos der Dozierenden, Bilder der Texte; Dateien senden |
+| `datenschutz_lib` | `ds` | Löschfristen |
+| `db_lib` | `db`, `einstellung` | Datenbank, Einstellungen |
+| `export_lib` | `csv`, `export`, `xlsx` | Exporte (CSV, xlsx, PDF) |
+| `format_lib` | `bytes`, `datum`, `dauer`, `efn`, `hm`, `iso`, `jetzt`, `lokal`, `minuten`, `person`, `tag`, `zahl`, `zeit` | Formatieren, Ortszeit, Dauern, Größen, Namen, EFN |
+| `formular_lib` | `aktion`, `attr`, `bestaetigung`, `chip`, `feld`, `fertig`, `filter`, `ist`, `kachel`, `leer`, `post`, `profil`, `seiten`, `versteckt`, `wert` | Formulare und Seitenbausteine, Seitenablauf |
+| `host_lib` | `basis`, `host`, `url` | Hostnamen |
+| `html_lib` | `e`, `fehler`, `icon`, `json`, `meldung`, `nicht`, `seite`, `seiten`, `team`, `umleiten` | Seitengerüst, Meldungen, Icons |
+| `inhalt_lib` | `editor`, `html`, `inhalt`, `start` | Pflegbare Texte, Editor, HTML-Bereiniger (html_bereinigen) |
+| `install_lib` | `install`, `installiert` | Installer |
+| `jobs_lib` | `job`, `jobs` | Hintergrundjobs |
+| `konfig_lib` | `app`, `entwicklung`, `konfig`, `laufzeit`, `umgebung` | Konfiguration |
+| `kontext_lib` | `ctx` | Zustand je Anfrage (ctx) |
+| `konto_lib` | `konto`, `passwort` | Konten |
+| `kopfzeilen_lib` | `https`, `kopf`, `kopfzeilen` | HTTP-Kopfzeilen |
+| `krypto_lib` | `krypto`, `oeffnen`, `versiegeln` | Verschlüsselung |
+| `link_lib` | `link` | Einmal-Links |
+| `login_lib` | `anmeldung`, `ich`, `passwort`, `team` | Team-Login, halbe Anmeldung, ich() |
+| `mail_html_lib` | `mail` | HTML-Fassung der Mails |
+| `mail_lib` | `antwort`, `mail`, `reihe`, `smtp` | Mails, Warteschlange, SMTP |
+| `migration_lib` | `migration` | Datenbank-Schema |
+| `newsletter_lib` | `nl` | Newsletter |
+| `passkey_lib` | `pk` | Passkeys |
+| `programm_lib` | `dozent`, `kuerzel`, `programm`, `termin` | Programm, Dozierende |
+| `ratelimit_lib` | `rate` | Ratenschutz |
+| `rundmail_lib` | `rm` | Mailings |
+| `sicherung_lib` | `sicherung`, `testdaten` | Sicherungen, Testdaten |
+| `sitzung_lib` | `csrf`, `flash`, `sitzung` | Sitzung, CSRF, Flash, Sitzungsschlüssel |
+| `spamschutz_lib` | `spam` | Spamschutz |
+| `statistik_lib` | `stat` | Statistik |
+| `team_lib` | `team` | Team-Aktionen an Anmeldungen und Konten |
+| `teilnahme_lib` | `tn` | Anwesenheit |
+| `tnkonto_lib` | `tk` | Teilnehmenden-Konten |
+| `totp_lib` | `totp` | TOTP (RFC 6238), Wiederherstellungscodes |
+| `transaktion_lib` | `db` | Transaktionen |
+| `veranstaltung_lib` | `va` | Veranstaltungen |
+| `wartung_lib` | `wartung` | Wartungsmodus |
+| `zertifikat_lib` | `code128`, `unterschrift`, `unterschriftenliste`, `zertifikat` | Teilnahmebescheinigung, Unterschrift, Unterschriftenliste |
+| `zweitfaktor_lib` | `mailcode`, `zweitfaktor` | Zweiter Faktor: Mail-Code, Bestätigung heikler Aktionen |
+
 
 ## 6. Arbeitspakete
 
@@ -694,6 +696,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {nr: 7, stand: "erledigt", notiz: "assets/basis.js (aus dialog.js und kopf.js, zuerst geladen) mit window.ws: csrf (aus <meta name=\"csrf\">, nur mit Sitzung), post/get mit einheitlicher Antwort {ok, fehler, …}, melden, dialog (einheitlicher Dialog), oeffnen (Programm-Popups), minuten/hm, b64u/bytes; passkey.js, zweitfaktor.js, mailings.js, editor.js, programm.js, programm-team.js darauf; readyState-Boilerplate weg; ein Codestil (doppelte Anführungszeichen, 4 Leerzeichen, NodeList.forEach) in allen Dateien, Umformung mit acorn-Syntaxbaum vorher/nachher geprüft"}
     - {nr: 8, stand: "erledigt", notiz: "server/lib/link_lib.php (link_token, link_erzeugen, link_finden, link_sperren, link_verbrauchen, link_loeschen, link_url, link_aufraeumen, LINK_ARTEN); Migration 20: Tabelle link, Altdaten aus konto_link, anmeldung_link, newsletter_link mit ihren Hashes übernommen, alte Tabellen gelöscht (E-69 (7)); konto_link_*, tk_link, anm_link_*, nl_link_* sind dünne Aufrufe; Gültigkeiten in Sekunden (ANM_LINK_GUELTIG_S, NL_BESTAETIGEN_S, NL_VERWALTEN_S); Pfade unverändert; 12 neue Tests"}
     - {nr: 9, stand: "erledigt", notiz: "Migration 21: audit.objekt_art, audit.objekt_id mit Index; Altdaten per Regex zugeordnet (Hauptbezug je Art, eigene Konto-Einträge über konto_id); audit_schreiben($art, $text, $durch, $bezug, vaId:), audit_text() für „Anmeldung 12: storniert“, AUDIT_OBJEKTE; alle Aufrufe mit Bezug und nach dem Muster, Passkey-Bezeichnungen nicht mehr im Text (R-02); Aufrufe aus neun Seiten in Libs (pk_login_protokollieren, host_anlegen mit $durch, mail_absender_setzen, mail_testen mit $durch, sicherung_herunterladen_protokollieren, team_link_senden, export_protokollieren, konto_notzugang, inhalt_protokollieren); Personen „Letzte Änderung“ über audit_letzter(), Protokoll-Filter ?o=anmeldung-12; Grep-Test: kein audit_schreiben in Seiten; 8 neue Tests"}
+    - {nr: 10, stand: "erledigt", notiz: "anmeldung_lib → login_lib, buchung_lib → anmeldung_lib (je ein Commit, git mv); neue Libs zweitfaktor_lib (aus totp_lib), zertifikat_lib (aus teilnahme_lib), bild_lib (Fotos, Bilder, bild_upload_lesen, bild_verkleinern, bild_schreiben, bild_senden, datei_senden; drei Upload-Wege und sechs Auslieferungen darauf), kontext_lib (ctx, ctx_setzen, ctx_da, ctx_weg, ctx_leeren; alle $GLOBALS['ws_*'] und programm_nachgerueckt als Rückgabeparameter); efn_* → format_lib, csv_text/export_erzeugen/export_termin_info → export_lib, va_absender_name → veranstaltung_lib, team_link_weitergeben/zweitfaktor_codes_seite aus Seiten in Libs, anm_adresse_aendern_erlaubt; ich() mit Cache je Anfrage in seite_kopf; DB-abhängige Caches im Kontext; Sitzungsschlüssel als SITZUNG_SCHLUESSEL_*; html_bereinigen() mit Profilen inline, block, mail; Präfix-Tabelle maschinell geprüft (beide Richtungen); 12 neue Tests"}
   ergebnis: null
   probleme:
     - {problem: "Konzept nannte für konto_profil_setzen/anm_profil_setzen einen Parameter ?int $durch; das Protokoll schreibt aber der Aufrufer", loesung: "ohne $durch (ein ungenutzter Parameter wäre irreführend); Adresse nur ausdrücklich über $email, weil Anmeldungs-Datensätze immer 'email' tragen – sonst hätte das Verknüpfen eines Kontos dessen Adresse überschrieben"}
@@ -715,6 +718,9 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {problem: "Teilnehmenden- und Team-Links teilen sich die Art konto und den Zweck passwort", loesung: "Trennung wie bisher über die Rolle des Kontos (/einrichten nur Team, /konto/link nur teilnehmend); Test: Team-Token über /konto/link abgewiesen und nicht verbraucht"}
     - {problem: "audit_schreiben hatte schon einen vierten Parameter (Veranstaltung)", loesung: "neue Signatur ($art, $text, $durch, $bezug, $vaId); die sieben Aufrufe mit Veranstaltung nutzen das benannte Argument vaId:"}
     - {problem: "Protokolltexte ändern sich durch das einheitliche Muster; ältere Einträge behalten ihren alten Text", loesung: "gewollt (V-8); Altdaten bekommen den Bezug per Migration, der Filter arbeitet über den Bezug, nicht über den Text"}
+    - {problem: "Die zwei HTML-Bereiniger (Editor, Mailings) unterscheiden sich in Einzelheiten (leere Absätze mit <br>, leere Listen, erlaubte Bilder), und der Mailing-Durchlauf erzeugt zugleich Text- und HTML-Mail", loesung: "html_bereinigen($html, $profil) ist der eine Einstieg (inline, block, mail); dahinter bleiben beide Durchläufe, damit gespeichertes HTML gleich bleibt. Ein gemeinsamer Durchlauf wäre eine sichtbare Änderung an Mailings – offen, falls gewünscht"}
+    - {problem: "Die drei Bild-Pipelines verkleinern verschieden (längste Kante, quadratisch, nur Breite mit Transparenz)", loesung: "bild_verkleinern() mit Optionen (quadrat, nur_breite, transparent, typen); Rundung der Höhe wie vorher je Fall, Test mit demselben Bild für alle drei"}
+    - {problem: "Ein Cache, der nach Ein- oder Ausloggen in derselben Anfrage veraltet wäre (ich(), anmeldung_konto())", loesung: "im Kontext gespeichert; tk_einloggen/tk_ausloggen, anmeldung_voll/anmeldung_beenden, anm_einloggen/anm_ausloggen vergessen ihn"}
 
 - id: AP-16
   titel: "Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (Review AP-R2)"

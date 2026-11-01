@@ -7,7 +7,7 @@ declare(strict_types=1);
  * eine frisch ausgelieferte, noch leere Installation übernehmen kann.
  */
 
-$host = (string)$GLOBALS['ws_host'];
+$host = (string)ctx('host');
 
 // Konfiguration unvollständig: sagen, was fehlt (ohne Werte), sonst nichts.
 $maengel = konfig_maengel();

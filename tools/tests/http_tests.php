@@ -413,7 +413,7 @@ function http_bild_hochladen(string $basis, string $h, string $keks, string $csr
 function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): void
 {
     abschnitt('HTTP: Mailings und Team-Mails (AP-6)');
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     team_anlegen(['vorname' => 'Rita', 'nachname' => 'Rundmail', 'email' => 'rita@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 5', 'efn' => '', 'beruf_sonstige' => '', 'essen' => 'egal'], true, false);
     $r = http_anfrage($basis, 'GET', '/team/mailings', $h, [], null, $b);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'href="/team/mailings" class="an" aria-current="page"') && str_contains($r['text'], '+ Neues Mailing'), 'Reiter Mailings mit Übersicht');
@@ -1175,10 +1175,10 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
 {
     abschnitt('HTTP: Rechte je Veranstaltung (AP-12, E-60)');
     $aktuell = (int)va_aktuell_id();
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     $erlaubt = (int)va_anlegen('rechte-test', 'Rechte-Test', null, null)['id']; // zweite Veranstaltung (Entwurf)
     $fremdAnm = (int)db_wert('SELECT id FROM anmeldung WHERE veranstaltung_id = ? ORDER BY id LIMIT 1', [$aktuell]);
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     $kid = konto_anlegen('Rosa Rechte', 'rosa.rechte@example.org', 'admin', 'rosas-passwort-12', null);
     // BetreiberIn schaltet Rosa nur für eine Veranstaltung frei (Team-Konten)
     $c = http_csrf(http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b)['text']);

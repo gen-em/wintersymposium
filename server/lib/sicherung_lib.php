@@ -309,7 +309,7 @@ function testdaten_laden(?int $kontoId): string
         db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell', abgeschlossen_am = NULL WHERE id = 1");
     });
     va_zwischenspeicher_leeren();
-    unset($GLOBALS['ws_va_id']);
+    ctx_weg('va_id');
     anm_workshops(true);
     beispieldaten_laden();
     audit_schreiben('sicherung', 'Testdaten geladen (Sicherung davor: ' . $sicherung . ')', $kontoId);

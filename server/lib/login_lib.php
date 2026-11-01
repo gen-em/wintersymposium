@@ -7,8 +7,8 @@ declare(strict_types=1);
  * verkleinert.
  *
  * Ablauf in der Sitzung 'team':
- *   1. Passwort richtig  → $_SESSION['halb'] = [id, zeit, version]
- *   2. Code richtig      → $_SESSION['konto'] = [id, version], halb entfällt
+ *   1. Passwort richtig  → $_SESSION[SITZUNG_SCHLUESSEL_HALB] = [id, zeit, version]
+ *   2. Code richtig      → $_SESSION[SITZUNG_SCHLUESSEL_KONTO] = [id, version], halb entfällt
  *      (ohne eingerichteten Faktor: erst Einrichtung, dann voll)
  * Jede Anfrage lädt das Konto neu: gesperrt, andere Rolle oder neue
  * sitzung_version (Passwortwechsel, Sperre, Rollenwechsel) beenden die Sitzung.
@@ -27,20 +27,39 @@ function team_sitzung(): void
 /** Das angemeldete Team-Konto oder null. */
 function anmeldung_konto(): ?array
 {
-    static $cache = false;
-    if ($cache !== false) {
-        return $cache;
+    // je Anfrage gemerkt (Kontext, ctx_leeren() vergisst es)
+    if (ctx_da('anmeldung_konto')) {
+        return ctx('anmeldung_konto')[0];
     }
-    $s = $_SESSION['konto'] ?? null;
-    if (!is_array($s) || !isset($s['id'], $s['version'])) {
-        return $cache = null;
+    $k = null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_KONTO] ?? null;
+    if (is_array($s) && isset($s['id'], $s['version'])) {
+        $k = konto_laden((int)$s['id']);
+        if ($k === null || (int)$k['aktiv'] !== 1 || !konto_ist_team($k) || (int)$k['sitzung_version'] !== (int)$s['version'] || !zweitfaktor_da($k)) {
+            unset($_SESSION[SITZUNG_SCHLUESSEL_KONTO]);
+            $k = null;
+        }
     }
-    $k = konto_laden((int)$s['id']);
-    if ($k === null || (int)$k['aktiv'] !== 1 || !konto_ist_team($k) || (int)$k['sitzung_version'] !== (int)$s['version'] || !zweitfaktor_da($k)) {
-        unset($_SESSION['konto']);
-        return $cache = null;
+    ctx_setzen('anmeldung_konto', [$k]);
+    return $k;
+}
+
+/**
+ * Wer bin ich in dieser Anfrage (V-6): ['team' => Team-Konto (auch halb
+ * eingeloggt erkannt) oder null, 'konto' => eingeloggtes Konto (alle Rollen)
+ * oder null, 'anmeldung' => Anmeldung aus Sitzung oder Keks oder null].
+ * Je Anfrage gemerkt; Ein- und Ausloggen vergessen es.
+ */
+function ich(): array
+{
+    if (!ctx_da('ich')) {
+        ctx_setzen('ich', [
+            'team' => team_gesehen(),
+            'konto' => session_status() === PHP_SESSION_ACTIVE ? tk_aktuell() : null,
+            'anmeldung' => anm_aus_keks(),
+        ]);
     }
-    return $cache = $k;
+    return ctx('ich');
 }
 
 /**
@@ -66,24 +85,24 @@ function team_gesehen(): ?array
 function anmeldung_halb_setzen(array $k): void
 {
     sitzung_erneuern();
-    unset($_SESSION['konto']);
-    $_SESSION['halb'] = ['id' => (int)$k['id'], 'zeit' => time(), 'version' => (int)$k['sitzung_version']];
+    unset($_SESSION[SITZUNG_SCHLUESSEL_KONTO]);
+    $_SESSION[SITZUNG_SCHLUESSEL_HALB] = ['id' => (int)$k['id'], 'zeit' => time(), 'version' => (int)$k['sitzung_version']];
 }
 
 /** Konto der halben Anmeldung (Passwort bestätigt, innerhalb der Frist) oder null. */
 function anmeldung_halb(): ?array
 {
-    $h = $_SESSION['halb'] ?? null;
+    $h = $_SESSION[SITZUNG_SCHLUESSEL_HALB] ?? null;
     if (!is_array($h) || !isset($h['id'], $h['zeit'], $h['version'])) {
         return null;
     }
     if (time() - (int)$h['zeit'] > ANMELDUNG_HALB_FRIST_S) {
-        unset($_SESSION['halb']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_HALB]);
         return null;
     }
     $k = konto_laden((int)$h['id']);
     if ($k === null || (int)$k['aktiv'] !== 1 || !konto_ist_team($k) || (int)$k['sitzung_version'] !== (int)$h['version']) {
-        unset($_SESSION['halb']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_HALB]);
         return null;
     }
     return $k;
@@ -91,14 +110,15 @@ function anmeldung_halb(): ?array
 
 function anmeldung_halb_verwerfen(): void
 {
-    unset($_SESSION['halb']);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_HALB]);
 }
 
 function anmeldung_voll(array $k): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     sitzung_erneuern();
-    unset($_SESSION['halb']);
-    $_SESSION['konto'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
+    unset($_SESSION[SITZUNG_SCHLUESSEL_HALB]);
+    $_SESSION[SITZUNG_SCHLUESSEL_KONTO] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
     audit_schreiben('login', audit_text('konto', (int)$k['id'], 'Team-Login'), (int)$k['id'], ['konto' => (int)$k['id']]);
     // Ein Konto für alles (E-54): dasselbe Konto gilt auch als Teilnehmenden-Konto (Meine Anmeldung, Mein Konto)
     tk_einloggen($k);
@@ -106,6 +126,7 @@ function anmeldung_voll(array $k): void
 
 function anmeldung_beenden(): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     $k = anmeldung_konto();
     if ($k !== null) {
         audit_schreiben('login', audit_text('konto', (int)$k['id'], 'ausgeloggt'), (int)$k['id'], ['konto' => (int)$k['id']]);
@@ -130,8 +151,8 @@ function team_tor(array $rollen = TEAM_ROLLEN): array
     if (!in_array($k['rolle'], $rollen, true)) {
         seite_meldung(403, 'Kein Zugriff', 'Diese Seite ist für deine Rolle nicht freigegeben.');
     }
-    $GLOBALS['ws_team_konto'] = (int)$k['id']; // für das Audit-Protokoll bei Team-Änderungen
-    $GLOBALS['ws_team_rolle'] = $k['rolle']; // Newsletter-Mailings nur für Betreiber (AP-12)
+    ctx_setzen('team_konto', (int)$k['id']); // für das Audit-Protokoll bei Team-Änderungen
+    ctx_setzen('team_rolle', $k['rolle']); // Newsletter-Mailings nur für Betreiber (AP-12)
     team_veranstaltung_waehlen($k);
     team_ids_pruefen($k);
     return $k;
@@ -180,11 +201,11 @@ function team_veranstaltung_waehlen(array $konto): void
         if (!va_darf($konto, (int)$_GET['va'])) {
             seite_meldung(403, 'Kein Zugriff', 'Für diese Veranstaltung bist du nicht freigeschaltet.');
         }
-        $_SESSION['team_va'] = (int)$_GET['va'];
+        $_SESSION[SITZUNG_SCHLUESSEL_TEAM_VA] = (int)$_GET['va'];
     }
-    $id = (int)($_SESSION['team_va'] ?? 0);
+    $id = (int)($_SESSION[SITZUNG_SCHLUESSEL_TEAM_VA] ?? 0);
     if ($id === 0 || va_zeile($id) === null || !va_darf($konto, $id)) {
-        unset($_SESSION['team_va']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_TEAM_VA]);
         $aktuell = va_aktuell_id();
         if ($aktuell !== null && va_darf($konto, $aktuell)) {
             $id = $aktuell;

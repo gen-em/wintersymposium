@@ -177,7 +177,7 @@ function beispieldaten_mailings(): array
     }
     $gesendet = rm_speichern(null, [
         'betreff' => 'Anfahrt und Parken',
-        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Parken kannst du im Parkhaus P2 (kostenlos mit Einfahrtsticket).</p><p>Deine Workshops:<br>{workshops}</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+        'html' => html_bereinigen('<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Parken kannst du im Parkhaus P2 (kostenlos mit Einfahrtsticket).</p><p>Deine Workshops:<br>{workshops}</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>', 'mail'),
         'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
     ], null);
     rm_einreihen($gesendet, null);
@@ -185,9 +185,9 @@ function beispieldaten_mailings(): array
     db_ausfuehren("UPDATE rundmail SET status = 'gesendet' WHERE id = ?", [$gesendet]);
     $entwurf = rm_speichern(null, [
         'betreff' => 'WS 01 Atemweg: Raumänderung',
-        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>'
+        'html' => html_bereinigen('<p>Hallo {vorname},</p><p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>'
             . ($bild !== null ? '<p><img src="/team/mailings/bild?id=' . $bild['id'] . '" alt="Lageplan" data-breite="100"></p>' : '')
-            . '<p>Alles andere bleibt. Wir freuen uns auf dich!</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+            . '<p>Alles andere bleibt. Wir freuen uns auf dich!</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>', 'mail'),
         'auswahl' => $termin > 0 ? 'termin:' . $termin : 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
     ], null);
     return ['gesendet' => $gesendet, 'entwurf' => $entwurf, 'bild' => $bild['id'] ?? null];

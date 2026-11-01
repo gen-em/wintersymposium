@@ -48,7 +48,7 @@ if ($zeitraum === 'offen' && ist_post()) {
         if ($mensch) {
             $erg = anm_anlegen($r['werte'], $wahl, post_haken('newsletter'), null, post_haken('konto'), $tk);
             if ($erg['art'] !== 'fehler') {
-                unset($_SESSION['anm_vorlage']); // Vorlage „Daten übernehmen“ ist verbraucht (Review B-13)
+                unset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]); // Vorlage „Daten übernehmen“ ist verbraucht (Review B-13)
             }
             if ($erg['art'] === 'fehler') {
                 $wsFehler = $erg['fehler'];

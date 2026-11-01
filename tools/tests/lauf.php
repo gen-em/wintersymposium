@@ -384,14 +384,14 @@ va_zwischenspeicher_leeren();
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Eingefügt']);
     $neuId = programm_punkt_speichern(null, $r, null);
     $zeit = fn(string $titel) => db_zeile('SELECT TIME_FORMAT(beginn, "%H:%i") AS b, TIME_FORMAT(ende, "%H:%i") AS e FROM programmpunkt WHERE titel = ?', [$titel]);
-    $neu = programm_verschieben('punkt', $neuId, '19:15', null, true);
-    pruefe($neu === '19:15–19:45' && $GLOBALS['programm_nachgerueckt'] === 2 && $zeit('Workshops und offene Stationen') == ['b' => '19:45', 'e' => '21:45'] && $zeit('Abschluss') == ['b' => '21:45', 'e' => '22:15'], 'Einfügen: Block und Abschluss rücken nach hinten');
+    $neu = programm_verschieben('punkt', $neuId, '19:15', null, true, $nachNr);
+    pruefe($neu === '19:15–19:45' && $nachNr === 2 && $zeit('Workshops und offene Stationen') == ['b' => '19:45', 'e' => '21:45'] && $zeit('Abschluss') == ['b' => '21:45', 'e' => '22:15'], 'Einfügen: Block und Abschluss rücken nach hinten');
     pruefe(db_wert("SELECT MIN(t.beginn) FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE p.veranstaltung_id = ?", [va_id()]) === '19:45:00' && db_wert("SELECT beginn FROM programmpunkt WHERE typ = 'station' AND veranstaltung_id = ?", [va_id()]) === '19:45:00', 'Block nimmt beim Nachrücken Termine und Station mit');
     pruefe($zeit('Fall #1') == ['b' => '18:45', 'e' => '19:15'], 'Punkte davor bleiben');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'Ohne Folgen']);
     $id2 = programm_punkt_speichern(null, $r, null);
-    programm_verschieben('punkt', $id2, '23:00', null, true);
-    pruefe($GLOBALS['programm_nachgerueckt'] === 0, 'Lücke danach: nichts rückt');
+    programm_verschieben('punkt', $id2, '23:00', null, true, $nachNr);
+    pruefe($nachNr === 0, 'Lücke danach: nichts rückt');
     programm_verwerfen(null);
     pruefe($zeit('Abschluss') == ['b' => '21:30', 'e' => '22:00'] && $zeit('Eingefügt') === null, 'Verwerfen stellt den Plan wieder her');
 
@@ -565,7 +565,7 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM konto WHERE id = ?', [$teamId]);
 
     abschnitt('Team-Bereich (AP-5)');
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     $ws = fn(string $k) => (int)array_values(array_filter(anm_workshops(true), fn($w) => $w['kuerzel'] === $k))[0]['id'];
     $tt = function (string $k, string $b): int {
         foreach (anm_workshops() as $w) {
@@ -868,7 +868,7 @@ va_zwischenspeicher_leeren();
     pruefe($kind($fb2) === 1 && !in_array($fb2, $haupt(), true), 'Fallbesprechung (Beispieldaten) steht im Block, nicht im Hauptprogramm');
     pruefe($kind($vt1) === 0, 'Vortrag ohne Zuordnung bleibt im Hauptprogramm, auch wenn ein Block läuft');
     $faelle = db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'");
-    pruefe(programm_verschieben('punkt', $fb2, '19:40', null, true) === '19:40–20:10' && db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'") == $faelle && (int)($GLOBALS['programm_nachgerueckt'] ?? 0) === 0, 'Punkt im Block verschieben schiebt die Hauptspur nicht');
+    pruefe(programm_verschieben('punkt', $fb2, '19:40', null, true, $nachNr) === '19:40–20:10' && db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'") == $faelle && $nachNr === 0, 'Punkt im Block verschieben schiebt die Hauptspur nicht');
     $blockAlt = db_zeile('SELECT beginn FROM programmpunkt WHERE id = ?', [$blockId]);
     programm_verschieben('punkt', $blockId, '19:40', null);
     pruefe(hm((string)db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb2])) === '19:50', 'Block verschieben nimmt die zugeordnete Fallbesprechung mit');
@@ -961,13 +961,13 @@ va_zwischenspeicher_leeren();
 
     abschnitt('Passkeys (O-14, E-55)');
     require_once __DIR__ . '/passkey_hilfe.php';
-    $hostAlt = $GLOBALS['ws_host'] ?? null;
-    $GLOBALS['ws_host'] = 'localhost';
+    $hostAlt = ctx('host') ?? null;
+    ctx_setzen('host', 'localhost');
     $u = pk_ursprung();
     pruefe($u === ['ursprung' => 'http://localhost', 'rp_id' => 'localhost'], 'Ursprung aus der Adresse (localhost ohne HTTPS erlaubt)');
-    $GLOBALS['ws_host'] = '127.0.0.1';
+    ctx_setzen('host', '127.0.0.1');
     pruefe(pk_ursprung() === null, 'Keine Passkeys unter einer IP-Adresse');
-    $GLOBALS['ws_host'] = 'localhost';
+    ctx_setzen('host', 'localhost');
     $kp = konto_anlegen('Paul Passkey', 'paul@example.org', 'teilnehmend', 'pauls-passwort-1', null);
     db_ausfuehren('UPDATE konto SET email_bestaetigt_am = ? WHERE id = ?', [db_jetzt(), $kp]);
     $pkFehlt = function (callable $f): bool {
@@ -1021,8 +1021,8 @@ va_zwischenspeicher_leeren();
     pruefe(pk_zahl($kt) === 0, 'Zurücksetzen des zweiten Faktors entfernt auch die Passkeys');
     db_ausfuehren('DELETE FROM konto WHERE id IN (?, ?)', [$kp, $kt]);
     pruefe((int)db_wert('SELECT COUNT(*) FROM passkey WHERE konto_id IN (?, ?)', [$kp, $kt]) === 0, 'Konto gelöscht: Passkeys weg');
-    $GLOBALS['ws_host'] = $hostAlt;
-    unset($_SESSION['pk']);
+    ctx_setzen('host', $hostAlt);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_PK]);
 
     abschnitt('Newsletter (AP-7)');
     $ls = array_column(nl_listen(), 'id', 'name');
@@ -1228,9 +1228,9 @@ va_zwischenspeicher_leeren();
     }
     $ein = anm_link_einloesen($tok);
     pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $mailVor + 1 && ($ein['zweck'] ?? '') === 'uebernehmen' && $ein['anm'] === (int)$fr2['id'], 'Link „Daten übernehmen“ per Mail, einlösbar');
-    $_SESSION['anm_vorlage'] = ['id' => (int)$fr2['id'], 'zeit' => time()];
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] = ['id' => (int)$fr2['id'], 'zeit' => time()];
     pruefe((anm_vorlage()['email'] ?? '') === $fr2['email'] && (anm_vorlage()['institution'] ?? '') === $fr2['institution'], 'Vorlage fürs Formular aus der früheren Anmeldung');
-    unset($_SESSION['anm_vorlage']);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]);
     // Bausteine: ohne Essen und ohne Fortbildungspunkte
     va_mit($v2, fn() => einstellung_setzen('mit_essen', 'nein'));
     va_mit($v2, fn() => einstellung_setzen('mit_cme', 'nein'));
@@ -1526,7 +1526,7 @@ va_zwischenspeicher_leeren();
         && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'betrieb' AND text = 'Fehlerprotokoll geleert'") === $audit0 + 1 && $amp('fehlerlog') === 'ok', 'Leeren: 0 Byte, Zeitpunkt gesetzt, Protokolleintrag, wieder ok');
 
     abschnitt('Review-Behebung 1 (AP-14, T-275 bis T-281)');
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     $rd = ['nachname' => 'Review', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'];
     // Unterpunkt 1 (S-1, T-275): Adresse eines Team-Kontos nicht über eine Anmeldung
@@ -1563,7 +1563,7 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM mail_ausgang');
     $nlRm = rm_speichern(null, rm_pruefen(['art' => 'newsletter', 'listen' => [$nlListe], 'betreff' => 'Review', 'html' => '<p>Hallo {vorname}</p>', 'postfach' => 'newsletter'])['werte'], null);
     $nlAnz = rm_einreihen($nlRm, null);
-    $GLOBALS['ws_team_rolle'] = 'admin';
+    ctx_setzen('team_rolle', 'admin');
     $nlE = mail_senden_faellige(5, 20.0);
     pruefe($nlAnz === 3 && $nlE['gesendet'] === 3 && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE rundmail_id = ? AND status = 'gesendet'", [$nlRm]) === 3, 'Newsletter mit 3 Empfängern, Team-Rolle admin: alle 3 gesendet, keine gelöscht');
     $vaFremd = (int)db_wert('SELECT id FROM veranstaltung WHERE id <> ? ORDER BY id LIMIT 1', [va_id()]);
@@ -1571,9 +1571,9 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('UPDATE rundmail SET veranstaltung_id = ? WHERE id = ?', [$vaFremd, $rmFremd]);
     $rmF = rm_laden($rmFremd);
     pruefe($vaFremd > 0 && $rmF !== null && function_exists('rm_sichtbar') && !rm_sichtbar($rmF) && !rm_sichtbar(rm_laden($nlRm)), 'Admin: Mailing einer fremden Veranstaltung und Newsletter nicht sichtbar, rm_laden liefert die Zeile');
-    $GLOBALS['ws_team_rolle'] = 'betreiber';
+    ctx_setzen('team_rolle', 'betreiber');
     pruefe(function_exists('rm_sichtbar') && rm_sichtbar(rm_laden($nlRm)), 'Betreiber: Newsletter-Mailing sichtbar');
-    unset($GLOBALS['ws_team_rolle']);
+    ctx_weg('team_rolle');
     db_ausfuehren("INSERT INTO mail_ausgang (an, betreff, text, prio, status, postfach, rundmail_id, anmeldung_id, erstellt_am, naechster_versuch) VALUES ('weg@example.org', '', '', 5, 'offen', 'system', 999999, 1, ?, ?)", [db_jetzt(), db_jetzt()]);
     mail_senden_faellige(5, 20.0);
     $weg = db_zeile("SELECT status, versuche, fehler FROM mail_ausgang WHERE an = 'weg@example.org'");
@@ -1649,17 +1649,17 @@ va_zwischenspeicher_leeren();
 
     // Unterpunkt 6 (B-13, T-280): Vorlage „Daten übernehmen“ läuft ab
     $voP = team_anlegen(['vorname' => 'Vera', 'email' => 'vera.vorlage@example.org'] + $rd, true, false)['id'];
-    $_SESSION['anm_vorlage'] = ['id' => $voP, 'zeit' => time() - 29 * 60];
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] = ['id' => $voP, 'zeit' => time() - 29 * 60];
     $voFrisch = anm_vorlage();
-    $_SESSION['anm_vorlage'] = ['id' => $voP, 'zeit' => time() - 31 * 60];
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] = ['id' => $voP, 'zeit' => time() - 31 * 60];
     $voAlt = anm_vorlage();
-    pruefe(($voFrisch['email'] ?? '') === 'vera.vorlage@example.org' && $voAlt === null && !isset($_SESSION['anm_vorlage']), 'Vorlage nach 29 min da, nach 31 min weg (Zeitstempel im Sitzungseintrag)');
-    $_SESSION['anm_vorlage'] = $voP;
+    pruefe(($voFrisch['email'] ?? '') === 'vera.vorlage@example.org' && $voAlt === null && !isset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]), 'Vorlage nach 29 min da, nach 31 min weg (Zeitstempel im Sitzungseintrag)');
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] = $voP;
     pruefe(anm_vorlage() === null, 'alter Sitzungseintrag ohne Zeitstempel gilt nicht');
-    unset($_SESSION['anm_vorlage']);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]);
 
     abschnitt('Review-Behebung 2 (AP-16, T-288 bis T-296)');
-    $GLOBALS['ws_team_konto'] = null;
+    ctx_setzen('team_konto', null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     db_ausfuehren('DELETE FROM rate_limit');
     $rd = ['nachname' => 'Sechzehn', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'efn' => '', 'essen' => 'egal'];
@@ -1679,18 +1679,18 @@ va_zwischenspeicher_leeren();
     $kimAltVer = (int)anm_laden($kimAlt)['sitzung_version'];
     $_SESSION = ['tk' => ['id' => $kimId, 'version' => $kimVer]];
     pruefe(anm_aktuell() === null, 'B-4: Konto mit Anmeldung nur in der abgeschlossenen Veranstaltung: im Kontext der aktuellen keine Anmeldung');
-    $_SESSION['anm'] = ['id' => $kimAlt, 'version' => $kimAltVer, 'va' => $vAlt, 'link' => false];
-    pruefe(anm_aktuell() === null && !isset($_SESSION['anm']), 'B-4: abgeleiteter Eintrag mit va der alten Veranstaltung im Kontext der aktuellen verworfen');
-    $_SESSION['anm'] = ['id' => $kimAlt, 'version' => $kimAltVer, 'va' => $vAlt, 'link' => true];
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM] = ['id' => $kimAlt, 'version' => $kimAltVer, 'va' => $vAlt, 'link' => false];
+    pruefe(anm_aktuell() === null && !isset($_SESSION[SITZUNG_SCHLUESSEL_ANM]), 'B-4: abgeleiteter Eintrag mit va der alten Veranstaltung im Kontext der aktuellen verworfen');
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM] = ['id' => $kimAlt, 'version' => $kimAltVer, 'va' => $vAlt, 'link' => true];
     pruefe((int)(anm_aktuell()['id'] ?? 0) === $kimAlt, 'B-4: Eintrag aus einem Einmal-Link bleibt (Zertifikat-Mail einer vergangenen Veranstaltung, E-58)');
-    unset($_SESSION['anm']);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_ANM]);
     va_kontext($vAlt);
     $imArchiv = anm_aktuell();
-    unset($GLOBALS['ws_va_id']);
-    pruefe($imArchiv === null && !isset($_SESSION['anm']), 'B-4: mit gesetztem Kontext (Team-Seite, Archivseite) wird nichts abgeleitet');
+    ctx_weg('va_id');
+    pruefe($imArchiv === null && !isset($_SESSION[SITZUNG_SCHLUESSEL_ANM]), 'B-4: mit gesetztem Kontext (Team-Seite, Archivseite) wird nichts abgeleitet');
     $kimNeu = (int)team_anlegen(['vorname' => 'Kim', 'email' => 'kim.konto@example.org'] + $rd, true, false)['id'];
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kimId, $kimNeu]);
-    pruefe((int)(anm_aktuell()['id'] ?? 0) === $kimNeu && (int)($_SESSION['anm']['va'] ?? 0) === $vAkt && empty($_SESSION['anm']['link']), 'B-4: öffentliche Seite der aktuellen Veranstaltung: verknüpfte Anmeldung abgeleitet, mit va');
+    pruefe((int)(anm_aktuell()['id'] ?? 0) === $kimNeu && (int)($_SESSION[SITZUNG_SCHLUESSEL_ANM]['va'] ?? 0) === $vAkt && empty($_SESSION[SITZUNG_SCHLUESSEL_ANM]['link']), 'B-4: öffentliche Seite der aktuellen Veranstaltung: verknüpfte Anmeldung abgeleitet, mit va');
     $_SESSION = $sitzungAlt;
 
     // Unterpunkt 2 (B-6, T-289): ausgeblendete Listen bleiben
@@ -1724,7 +1724,7 @@ va_zwischenspeicher_leeren();
         pruefe(zweitfaktor_bestaetigen($zId, $c) === null && zweitfaktor_bestaetigt($zId) && !zweitfaktor_bestaetigt($zId), 'B-7: Konto nur mit Mail-Code: Code aus der Mail bestätigt, Bestätigung gilt einmal');
         zweitfaktor_merken($zId);
         pruefe(!zweitfaktor_bestaetigt($zId + 1), 'B-7: Bestätigung gilt nur für das eigene Konto');
-        $_SESSION['zf_bestaetigt'] = ['konto' => $zId, 'bis' => time() - 1];
+        $_SESSION[SITZUNG_SCHLUESSEL_ZF_BESTAETIGT] = ['konto' => $zId, 'bis' => time() - 1];
         pruefe(!zweitfaktor_bestaetigt($zId), 'B-7: Bestätigung älter als 5 Minuten gilt nicht');
         $codes = totp_codes_erneuern($zId);
         pruefe(zweitfaktor_bestaetigen($zId, strtolower($codes[0])) === null && zweitfaktor_bestaetigt($zId), 'B-7: Wiederherstellungscode bestätigt');
@@ -1735,7 +1735,7 @@ va_zwischenspeicher_leeren();
         pruefe(str_contains((string)zweitfaktor_bestaetigen($zId, $c), 'Zu viele') && !zweitfaktor_bestaetigt($zId), 'B-7: nach 5 falschen Codes gesperrt, auch mit richtigem');
         db_ausfuehren('DELETE FROM rate_limit');
         // Konto nur mit Passkey: Bestätigen über pk_bestaetigen (Aktion bestaetigen in passkey.php)
-        $GLOBALS['ws_host'] = 'localhost';
+        ctx_setzen('host', 'localhost');
         $pkK = konto_anlegen('Pit Passkey', 'pit.pk@example.org', 'betreiber', 'pits-passwort-16', null);
         $gp = test_pk_geraet();
         $o = pk_anlage_optionen(konto_laden($pkK));
@@ -1750,7 +1750,7 @@ va_zwischenspeicher_leeren();
         pruefe($pkOk && count($o['allowCredentials']) === 1, 'B-7: Konto nur mit Passkey: Bestätigung mit eigenem Passkey');
         $o = pk_bestaetigen_optionen(konto_laden($zId));
         pruefe($pkFehlt(fn() => pk_bestaetigen($zId, test_pk_login($gp, $o['challenge'], 'localhost', 'http://localhost'))), 'B-7: Passkey eines anderen Kontos abgelehnt');
-        $GLOBALS['ws_host'] = $hostAlt;
+        ctx_setzen('host', $hostAlt);
         // S-4: Passwort im eingeloggten Zustand mit Ratenschutz
         for ($i = 0; $i < 5; $i++) {
             passwort_bestaetigen(konto_laden($zId), 'falsch');
@@ -1941,6 +1941,36 @@ va_zwischenspeicher_leeren();
     pruefe($bezugVon('Entwurf 7 gelöscht') == ['objekt_art' => 'rundmail', 'objekt_id' => 7] && $bezugVon('Konto 5 mit Anmeldung 9 verknüpft') == ['objekt_art' => 'konto', 'objekt_id' => 5] && $bezugVon('Dozent·in 3 gelöscht') == ['objekt_art' => 'dozent', 'objekt_id' => 3], 'Migration: Mailing, Konto (Hauptbezug vor weiteren Nummern), Dozent·in');
     pruefe($bezugVon('Ausgeloggt') == ['objekt_art' => 'konto', 'objekt_id' => (int)$oBetr['id']] && $bezugVon('Anmeldungen geleert: 4') == ['objekt_art' => null, 'objekt_id' => null], 'Migration: eigene Konto-Einträge ohne Nummer, Sammel-Einträge ohne Bezug');
     db_ausfuehren('DELETE FROM audit WHERE id IN (' . implode(',', $altIds) . ')');
+
+    abschnitt('Lib-Aufteilung, Bilder, Kontext (AP-17 Unterpunkt 10)');
+    // Ein Weg für Bilder (V-12): dasselbe Testbild als JPG und PNG, zu groß, kein Bild
+    $png = (function (): string { $b = imagecreatetruecolor(1600, 800); imagefill($b, 0, 0, imagecolorallocate($b, 180, 140, 255)); ob_start(); imagepng($b); return (string)ob_get_clean(); })();
+    $jpg = (function (): string { $b = imagecreatetruecolor(1600, 800); ob_start(); imagejpeg($b); return (string)ob_get_clean(); })();
+    $v = bild_verkleinern($png, RM_BILD_MAX_KANTE);
+    pruefe($v['png'] && $v['breite'] === 1200 && $v['hoehe'] === 600, 'Mailing-Bild: PNG auf die längste Kante 1200 verkleinert');
+    $v = bild_verkleinern($jpg, FOTO_KANTE, true);
+    pruefe(!$v['png'] && $v['breite'] === FOTO_KANTE && $v['hoehe'] === FOTO_KANTE, 'Foto: JPG quadratisch zugeschnitten');
+    $v = bild_verkleinern($png, UNTERSCHRIFT_BREITE, false, ['nur_breite' => true, 'transparent' => true]);
+    pruefe($v['breite'] === UNTERSCHRIFT_BREITE && $v['hoehe'] === 600, 'Unterschrift: nur die Breite begrenzt');
+    try {
+        bild_verkleinern('kein Bild', 100);
+        pruefe(false, 'kein Bild abgewiesen');
+    } catch (RuntimeException $ex) {
+        pruefe(str_contains($ex->getMessage(), 'JPG oder PNG'), 'kein Bild abgewiesen');
+    }
+    $meldung = fn(array $u, int $max, string $was) => (function () use ($u, $max, $was) { try { bild_upload_lesen($u, $max, $was); return ''; } catch (RuntimeException $ex) { return $ex->getMessage(); } })();
+    pruefe($meldung(['error' => UPLOAD_ERR_OK, 'size' => FOTO_MAX_BYTES + 1, 'tmp_name' => '/tmp/x'], FOTO_MAX_BYTES, 'Foto') === 'Das Foto ist zu groß (höchstens 8 MB).', 'zu groß: Meldung mit Grenze');
+    pruefe($meldung(['error' => UPLOAD_ERR_OK, 'size' => 10, 'tmp_name' => __FILE__], RM_BILD_MAX_BYTES, 'Bild') === 'Das Bild kam nicht an. Bitte noch einmal versuchen.', 'keine echte Upload-Datei abgewiesen');
+    // Kontext statt $GLOBALS (V-10)
+    ctx_setzen('test', 5);
+    pruefe(ctx('test') === 5 && ctx_da('test'), 'ctx: setzen und lesen');
+    ctx_weg('test');
+    pruefe(ctx('test') === null && !ctx_da('test'), 'ctx: entfernen');
+    $hostVor = ctx('host');
+    ctx_leeren();
+    pruefe(ctx('host') === null, 'ctx_leeren vergisst alles');
+    ctx_setzen('host', $hostVor);
+    pruefe(html_bereinigen('<p><b>a</b></p>') === '<p><strong>a</strong></p>' && html_bereinigen('<p>x</p>', 'inline') === 'x' && html_bereinigen('<h1>T</h1>', 'mail') === '<h2>T</h2>', 'html_bereinigen: Profile block, inline, mail');
 
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);

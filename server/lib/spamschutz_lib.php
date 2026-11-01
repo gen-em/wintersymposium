@@ -48,14 +48,14 @@ function spam_pow_aufgabe(): string
 {
     $jetzt = time();
     $liste = [];
-    foreach ((array)($_SESSION['pow'] ?? []) as $a => $bis) {
+    foreach ((array)($_SESSION[SITZUNG_SCHLUESSEL_POW] ?? []) as $a => $bis) {
         if (is_string($a) && is_int($bis) && $bis >= $jetzt) {
             $liste[$a] = $bis;
         }
     }
     $neu = bin2hex(random_bytes(32));
     $liste[$neu] = $jetzt + SPAM_FORMULAR_GILT_S;
-    $_SESSION['pow'] = array_slice($liste, -SPAM_POW_OFFEN, null, true);
+    $_SESSION[SITZUNG_SCHLUESSEL_POW] = array_slice($liste, -SPAM_POW_OFFEN, null, true);
     return $neu;
 }
 
@@ -65,10 +65,10 @@ function spam_pow_ok(string $aufgabe, string $loesung): bool
     if (preg_match('/^[0-9a-f]{64}$/', $aufgabe) !== 1) {
         return false;
     }
-    $liste = (array)($_SESSION['pow'] ?? []);
+    $liste = (array)($_SESSION[SITZUNG_SCHLUESSEL_POW] ?? []);
     $bis = $liste[$aufgabe] ?? null;
     unset($liste[$aufgabe]);
-    $_SESSION['pow'] = $liste;
+    $_SESSION[SITZUNG_SCHLUESSEL_POW] = $liste;
     if (!is_int($bis) || $bis < time() || preg_match('/^[0-9]{1,12}$/', $loesung) !== 1) {
         return false;
     }

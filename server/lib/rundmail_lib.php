@@ -74,7 +74,7 @@ function rm_nl_listen(string $auswahl): ?array
 /** Mailings an Newsletter-Listen: nur Betreiber (AP-12, E-60); außerhalb des Team-Bereichs (Jobs) erlaubt. */
 function rm_newsletter_erlaubt(): bool
 {
-    return !isset($GLOBALS['ws_team_rolle']) || $GLOBALS['ws_team_rolle'] === 'betreiber';
+    return !ctx_da('team_rolle') || ctx('team_rolle') === 'betreiber';
 }
 
 function rm_auswahl_gueltig(string $auswahl): bool
@@ -478,7 +478,7 @@ function rm_pruefen(array $e): array
     }
     $w = [
         'betreff' => trim(mb_substr(preg_replace('/[\r\n]+/', ' ', (string)($e['betreff'] ?? '')) ?? '', 0, 200)),
-        'html' => rm_html_bereinigen((string)($e['html'] ?? '')),
+        'html' => html_bereinigen((string)($e['html'] ?? ''), 'mail'),
         'auswahl' => (string)($e['auswahl'] ?? 'angemeldet'),
         'berufsgruppe' => (string)($e['berufsgruppe'] ?? ''),
         'postfach' => (string)($e['postfach'] ?? 'system'),

@@ -39,7 +39,7 @@ function nl_liste_pruefen(array $e): array
 {
     $t = fn(string $k, int $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($e[$k] ?? '')) ?? ''), 0, $max);
     // Beschreibung mit dem Editor (eine Zeile: fett, kursiv, Link; E-54)
-    $w = ['name' => $t('name', 80), 'beschreibung' => editor_bereinigen(mb_substr((string)($e['beschreibung'] ?? ''), 0, 900), 'inline'), 'absender_name' => $t('absender_name', 80),
+    $w = ['name' => $t('name', 80), 'beschreibung' => html_bereinigen(mb_substr((string)($e['beschreibung'] ?? ''), 0, 900), 'inline'), 'absender_name' => $t('absender_name', 80),
         'sichtbar' => empty($e['sichtbar']) ? 0 : 1, 'bei_anmeldung' => empty($e['bei_anmeldung']) ? 0 : 1];
     $f = [];
     if ($w['name'] === '') {

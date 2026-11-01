@@ -13,10 +13,10 @@ declare(strict_types=1);
 
 team_sitzung();
 // Passkey als zweiter Faktor beim ersten Login eingerichtet (E-55): Wiederherstellungscodes einmal zeigen
-if (isset($_GET['codes']) && is_array($_SESSION['pk_codes'] ?? null) && anmeldung_konto() !== null) {
-    $pkCodes = $_SESSION['pk_codes'];
-    unset($_SESSION['pk_codes']);
-    codes_seite($pkCodes);
+if (isset($_GET['codes']) && is_array($_SESSION[SITZUNG_SCHLUESSEL_PK_CODES] ?? null) && anmeldung_konto() !== null) {
+    $pkCodes = $_SESSION[SITZUNG_SCHLUESSEL_PK_CODES];
+    unset($_SESSION[SITZUNG_SCHLUESSEL_PK_CODES]);
+    zweitfaktor_codes_seite($pkCodes);
 }
 if (anmeldung_konto() !== null) {
     umleiten('/team');
@@ -47,7 +47,7 @@ if (ist_post()) {
         $fehler[] = $r['fehler'];
     } elseif ($aktion === 'abbrechen') {
         anmeldung_halb_verwerfen();
-        unset($_SESSION['zf_mail']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL]);
         umleiten('/einloggen');
     } elseif ($aktion === 'mail_waehlen' || $aktion === 'mailcode') {
         // E-Mail-Code wählen (erstes Einloggen) bzw. neuen Code anfordern – Grenze je Konto in mailcode_senden (Review S-9)
@@ -57,11 +57,11 @@ if (ist_post()) {
         }
         $f = mailcode_senden($k);
         if ($aktion === 'mail_waehlen') {
-            $_SESSION['zf_mail'] = (int)$k['id'];
+            $_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL] = (int)$k['id'];
         }
         fertig($f === null ? 'ok' : 'hinweis', $f ?? 'Code ist unterwegs an ' . $k['email'] . '. Er gilt ' . dauer_text(MAILCODE_GUELTIG_S) . '.', '/einloggen');
     } elseif ($aktion === 'app_waehlen') {
-        unset($_SESSION['zf_mail']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL]);
         umleiten('/einloggen');
     } elseif ($aktion === 'code' || $aktion === 'einrichten' || $aktion === 'mail_einrichten') {
         $k = anmeldung_halb();
@@ -76,9 +76,9 @@ if (ist_post()) {
             if (!totp_zustand((int)$k['id'])['eingerichtet'] && mailcode_pruefen((int)$k['id'], $code)) {
                 rate_erfolg('zweitfaktor', $kennung);
                 $codes = mailcode_einschalten((int)$k['id'], true);
-                unset($_SESSION['zf_mail']);
+                unset($_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL]);
                 anmeldung_voll(konto_laden((int)$k['id']));
-                codes_seite($codes ?? []);
+                zweitfaktor_codes_seite($codes ?? []);
             }
             rate_misserfolg('zweitfaktor', $kennung);
             $fehler[] = 'Der Code stimmt nicht oder ist abgelaufen. Fordere einen neuen an.';
@@ -100,7 +100,7 @@ if (ist_post()) {
             if ($codes !== null) {
                 rate_erfolg('zweitfaktor', $kennung);
                 anmeldung_voll(konto_laden((int)$k['id']));
-                codes_seite($codes);
+                zweitfaktor_codes_seite($codes);
             }
             rate_misserfolg('zweitfaktor', $kennung);
             $fehler[] = 'Der Code stimmt nicht. Prüfe, ob die Uhrzeit auf deinem Handy stimmt, und nimm den aktuellen Code.';
@@ -108,31 +108,18 @@ if (ist_post()) {
     }
 }
 
-/** Wiederherstellungscodes einmal anzeigen und beenden. */
-function codes_seite(array $codes): never
-{
-    seite_kopf('Wiederherstellungscodes', ['nav' => false]);
-    echo seiten_kopfzeile("Deine Wiederherstellungs\u{AD}codes", 'Zwei-Faktor-Authentifizierung eingerichtet') // \u{AD}: weiches Trennzeichen
-        . '<div class="innen text">'
-        . '<p>Mit einem dieser Codes kommst du rein, wenn du keinen anderen Code bekommst (Handy weg, Postfach nicht erreichbar). Jeder Code gilt einmal. '
-        . '<strong>Sie werden nur jetzt angezeigt</strong>: Speichere sie in deinem Passwortmanager oder drucke sie aus.</p>'
-        . '<ul class="codes">' . implode('', array_map(fn($c) => '<li class="mono">' . e(totp_code_anzeige($c)) . '</li>', $codes)) . '</ul>'
-        . '<p><a class="knopf" href="/team">Codes gesichert – weiter zum Team-Bereich</a></p></div>';
-    seite_ende();
-}
-
 $halb = anmeldung_halb();
 $skripte = [];
 $einrichtung = null;
 $zs = $halb !== null ? totp_zustand((int)$halb['id']) : null;
-$mailWahl = $halb !== null && !$zs['eingerichtet'] && ($_SESSION['zf_mail'] ?? 0) === (int)$halb['id'];
+$mailWahl = $halb !== null && !$zs['eingerichtet'] && ($_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL] ?? 0) === (int)$halb['id'];
 // E-Mail-Code eingeschaltet: beim ersten Aufruf nach dem Passwort einen Code schicken
-if ($halb !== null && $zs['mail'] && ($_SESSION['zf_mail_halb'] ?? '') !== ($_SESSION['halb']['zeit'] ?? '')) {
+if ($halb !== null && $zs['mail'] && ($_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL_HALB] ?? '') !== ($_SESSION[SITZUNG_SCHLUESSEL_HALB]['zeit'] ?? '')) {
     // An der Grenze (Review S-9) kein neuer Code; ein Code aus den letzten 10 Minuten gilt weiter
     if (($f = mailcode_senden($halb)) !== null) {
         flash_setzen('hinweis', $f);
     }
-    $_SESSION['zf_mail_halb'] = $_SESSION['halb']['zeit'] ?? '';
+    $_SESSION[SITZUNG_SCHLUESSEL_ZF_MAIL_HALB] = $_SESSION[SITZUNG_SCHLUESSEL_HALB]['zeit'] ?? '';
 }
 if ($halb !== null && !$zs['eingerichtet'] && !$mailWahl) {
     $roh = totp_zustand((int)$halb['id'])['angefangen'] ? totp_geheimnis((int)$halb['id']) : null;

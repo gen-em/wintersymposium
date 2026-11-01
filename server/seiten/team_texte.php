@@ -33,7 +33,7 @@ if (ist_post()) {
             $fehler[] = $titel . ': zu lang.';
             continue;
         }
-        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : editor_bereinigen($roh, $art, $art === 'block');
+        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
         if ($neu !== inhalt($k)) {
             inhalt_setzen($k, $neu, (int)$konto['id']);
             $geaendert[] = $k;

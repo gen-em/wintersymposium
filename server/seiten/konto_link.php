@@ -17,7 +17,7 @@ if (ist_post()) {
     }
     tk_einloggen($r['konto']);
     if ($r['zweck'] !== 'email') {
-        $_SESSION['tk_pw'] = true; // nach Bestätigung oder „Passwort vergessen“: neues Passwort festlegen
+        $_SESSION[SITZUNG_SCHLUESSEL_TK_PW] = true; // nach Bestätigung oder „Passwort vergessen“: neues Passwort festlegen
     }
     fertig(str_contains((string)$r['meldung'], 'gehört schon') ? 'fehler' : 'ok', (string)$r['meldung'], '/konto');
 }

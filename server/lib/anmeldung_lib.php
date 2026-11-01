@@ -102,7 +102,7 @@ const ANM_ESSEN = [
  */
 function anm_workshops(bool $neu = false): array
 {
-    static $cache = [];
+    $cache = ctx('anm_workshops') ?? [];
     $va = va_id();
     if (isset($cache[$va]) && !$neu) {
         return $cache[$va];
@@ -117,7 +117,9 @@ function anm_workshops(bool $neu = false): array
         $liste[] = ['id' => (int)$p['id'], 'kuerzel' => $p['kuerzel'], 'titel' => $p['titel'], 'ort' => $p['ort'], 'termine' => $termine];
     }
     usort($liste, fn($a, $b) => [$a['termine'][0]['beginn'], $a['kuerzel'], $a['id']] <=> [$b['termine'][0]['beginn'], $b['kuerzel'], $b['id']]);
-    return $cache[$va] = $liste;
+    $cache[$va] = $liste;
+    ctx_setzen('anm_workshops', $cache);
+    return $liste;
 }
 
 /** Termin mit Workshop-Angaben oder null: ['id','beginn','ende','plaetze','workshop' => [...]]. */
@@ -528,9 +530,9 @@ const ANM_VORLAGE_MIN = 30;
  */
 function anm_vorlage(?int $jetzt = null): ?array
 {
-    $s = $_SESSION['anm_vorlage'] ?? null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['zeit']) || (int)$s['zeit'] < ($jetzt ?? time()) - ANM_VORLAGE_MIN * 60) {
-        unset($_SESSION['anm_vorlage']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]);
         return null;
     }
     $a = anm_laden((int)$s['id']);
@@ -799,7 +801,7 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
     audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'Daten geändert'), null, ['anmeldung' => $anmId]);
     $link = false;
     if ($w['email'] !== $a['email']) {
-        if (!adresse_aendern_erlaubt($w['email'])) {
+        if (!anm_adresse_aendern_erlaubt($w['email'])) {
             // Daten ohne Adresse sind gespeichert, die Adresse bleibt (Review S-2)
             return ['fehler' => [], 'email_link' => false, 'email_gesperrt' => true];
         }
@@ -819,7 +821,7 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
  * wie „Link per Mail“ je IP und je Zieladresse; jeder Versand zählt. Gibt
  * false zurück, wenn gesperrt (dann keine Mail).
  */
-function adresse_aendern_erlaubt(string $ziel): bool
+function anm_adresse_aendern_erlaubt(string $ziel): bool
 {
     $ip = rate_merkmal_ip();
     $zielM = rate_merkmal_kennung('link:' . $ziel);
@@ -1041,12 +1043,13 @@ function anm_sitzung(): void
  */
 function anm_merken(array $a, bool $link): void
 {
-    $_SESSION['anm'] = ['id' => (int)$a['id'], 'version' => (int)$a['sitzung_version'], 'va' => (int)$a['veranstaltung_id'], 'link' => $link];
+    $_SESSION[SITZUNG_SCHLUESSEL_ANM] = ['id' => (int)$a['id'], 'version' => (int)$a['sitzung_version'], 'va' => (int)$a['veranstaltung_id'], 'link' => $link];
 }
 
 /** Nach einem gültigen Link: diese Anmeldung in der Sitzung merken. */
 function anm_einloggen(int $anmId): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     $a = anm_laden($anmId);
     if ($a === null) {
         return;
@@ -1078,7 +1081,7 @@ function anm_eigene_team(array $konto): ?array
  */
 function anm_ableiten_erlaubt(): bool
 {
-    return !isset($GLOBALS['ws_va_id']) && va_aktuell_id() !== null;
+    return !ctx_da('va_id') && va_aktuell_id() !== null;
 }
 
 /** Die Anmeldung dieser Sitzung oder null (gelöscht oder Sitzung beendet). */
@@ -1086,11 +1089,11 @@ function anm_aktuell(): ?array
 {
     // Abgeleitet in einer anderen Veranstaltung: verwerfen und neu ableiten (Review B-4).
     // Einträge aus einem Einmal-Link bleiben (Zertifikat-Mail einer vergangenen Veranstaltung, E-58).
-    $s = $_SESSION['anm'] ?? null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_ANM] ?? null;
     if (is_array($s) && isset($s['va']) && empty($s['link']) && (int)$s['va'] !== va_id()) {
-        unset($_SESSION['anm']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_ANM]);
     }
-    if (!isset($_SESSION['anm']) && anm_ableiten_erlaubt()) {
+    if (!isset($_SESSION[SITZUNG_SCHLUESSEL_ANM]) && anm_ableiten_erlaubt()) {
         // Mit Konto eingeloggt: die verknüpfte Anmeldung (AP-4b)
         $a = ($k = tk_aktuell()) !== null ? tk_anmeldung((int)$k['id']) : null;
         // Team-Mitglied mit eigener Anmeldung (verknüpft oder bestätigt mit gleicher Adresse, S-3)
@@ -1101,13 +1104,13 @@ function anm_aktuell(): ?array
             anm_merken($a, false);
         }
     }
-    $s = $_SESSION['anm'] ?? null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_ANM] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['version'])) {
         return null;
     }
     $a = anm_laden((int)$s['id']);
     if ($a === null || (int)$a['sitzung_version'] !== (int)$s['version']) {
-        unset($_SESSION['anm']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_ANM]);
         return null;
     }
     return $a;
@@ -1115,6 +1118,7 @@ function anm_aktuell(): ?array
 
 function anm_ausloggen(): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     tk_ausloggen(); // eine Sitzung für alles (E-54)
 }
 
@@ -1135,7 +1139,7 @@ function anm_aus_keks(): ?array
 /** Konto-ID des Team-Mitglieds dieser Anfrage (für das Audit-Protokoll) oder null. */
 function anm_team_konto(): ?int
 {
-    return isset($GLOBALS['ws_team_konto']) ? (int)$GLOBALS['ws_team_konto'] : null;
+    return ctx_da('team_konto') ? (int)ctx('team_konto') : null;
 }
 
 /** Alle Anmeldungen mit ihren Plätzen (Team-Liste). */

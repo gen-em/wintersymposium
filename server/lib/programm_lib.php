@@ -271,7 +271,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'kuerzel' => $text('kuerzel', 12),
         'titel' => $text('titel', 160),
         'untertitel' => $text('untertitel', 200),
-        'beschreibung' => editor_bereinigen((string)($e['beschreibung'] ?? ''), 'block', true),
+        'beschreibung' => html_bereinigen((string)($e['beschreibung'] ?? ''), 'block', true),
         'ort' => $text('ort', 120),
         'bring' => $text('bring', 160),
         'notiz' => $text('notiz', 300),
@@ -526,15 +526,16 @@ function programm_punkt_loeschen(int $id, ?int $kontoId): bool
 /**
  * Verschieben im Plan (Ziehen): neuer Beginn, die Dauer bleibt. Art 'punkt' oder 'termin'.
  * Ein Block nimmt alle Termine und Stationen in seiner Zeit mit. Punkte ohne Uhrzeit
- * bekommen 30 Minuten. Gibt den neuen Zeitraum als Text zurück oder null.
+ * bekommen 30 Minuten. Gibt den neuen Zeitraum als Text zurück oder null;
+ * $nachgerueckt bekommt die Zahl der Punkte, die dahinter nach hinten rückten.
  */
-function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId, bool $nachruecken = false): ?string
+function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId, bool $nachruecken = false, ?int &$nachgerueckt = null): ?string
 {
     if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $beginn) !== 1) {
         return null;
     }
-    $GLOBALS['programm_nachgerueckt'] = 0;
-    return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken): ?string {
+    $nachgerueckt = 0;
+    return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken, &$nachgerueckt): ?string {
         if ($art === 'termin') {
             $t = db_zeile('SELECT t.* FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE t.id = ? AND p.veranstaltung_id = ?', [$id, va_id()]);
             if ($t === null) {
@@ -577,7 +578,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
         audit_schreiben('programm', audit_text('programmpunkt', $id, 'verschoben auf ' . $beginn), $kontoId, ['programmpunkt' => $id]);
         // Im Block läuft ein Punkt parallel: dann rückt die Hauptspur nicht nach
         if ($nachruecken && $p['block_id'] === null && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
-            $GLOBALS['programm_nachgerueckt'] = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
+            $nachgerueckt = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
         }
         return "{$beginn}–{$ende}";
     });
@@ -740,7 +741,7 @@ function dozent_pruefen(array $e): array
     $w = [
         'name' => trim(preg_replace('/\s+/u', ' ', (string)($e['name'] ?? '')) ?? ''),
         'funktion' => trim(preg_replace('/\s+/u', ' ', (string)($e['funktion'] ?? '')) ?? ''),
-        'kurzbio' => editor_bereinigen((string)($e['kurzbio'] ?? ''), 'block', true),
+        'kurzbio' => html_bereinigen((string)($e['kurzbio'] ?? ''), 'block', true),
     ];
     $f = [];
     if ($w['name'] === '' || mb_strlen($w['name']) > 120) {

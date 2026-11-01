@@ -36,7 +36,7 @@ if (ist_post()) {
         case 'aktuell':
             $f = va_aktuell_machen($id, $ich);
             if ($f === null) {
-                $_SESSION['team_va'] = $id;
+                $_SESSION[SITZUNG_SCHLUESSEL_TEAM_VA] = $id;
             }
             fertig_oder_fehler($f, 'Diese Veranstaltung ist jetzt die aktuelle: Startseite, Anmeldung und „Meine Anmeldung“ zeigen sie.', '/team/veranstaltungen');
         case 'abschliessen':
@@ -44,7 +44,7 @@ if (ist_post()) {
             fertig_oder_fehler($f, 'Abgeschlossen. Sie ist nur noch zum Ansehen da; Zertifikate bleiben herunterladbar.', '/team/veranstaltungen');
         case 'loeschen':
             $f = va_loeschen($id, $ich, post_text('kuerzel'));
-            unset($_SESSION['team_va']);
+            unset($_SESSION[SITZUNG_SCHLUESSEL_TEAM_VA]);
             fertig_oder_fehler($f, 'Veranstaltung gelöscht. Der Stand davor liegt als Sicherung unter Betrieb.', '/team/veranstaltungen');
     }
 }

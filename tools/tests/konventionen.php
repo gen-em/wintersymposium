@@ -145,6 +145,64 @@ function konv_klassen_im_code(string $wurzel): array
     return array_keys($k);
 }
 
+/**
+ * Präfix-Tabelle (Konzept 5a K-h): erlaubtes erstes Wort jedes Funktionsnamens
+ * je Lib. Neue Präfixe nur mit Eintrag hier und im Konzept.
+ */
+const KONV_PRAEFIXE = [
+    'anmeldung_lib' => ['anm'],
+    'audit_lib' => ['audit'],
+    'betrieb_lib' => ['betrieb'],
+    'bild_lib' => ['bild', 'datei', 'foto', 'text'],
+    'datenschutz_lib' => ['ds'],
+    'db_lib' => ['db', 'einstellung'],
+    'export_lib' => ['csv', 'export', 'xlsx'],
+    'format_lib' => ['bytes', 'datum', 'dauer', 'efn', 'hm', 'iso', 'jetzt', 'lokal', 'minuten', 'person', 'tag', 'zahl', 'zeit'],
+    'formular_lib' => ['aktion', 'attr', 'bestaetigung', 'chip', 'feld', 'fertig', 'filter', 'ist', 'kachel', 'leer', 'post', 'profil', 'seiten', 'versteckt', 'wert'],
+    'host_lib' => ['basis', 'host', 'url'],
+    'html_lib' => ['e', 'fehler', 'icon', 'json', 'meldung', 'nicht', 'seite', 'seiten', 'team', 'umleiten'],
+    'inhalt_lib' => ['editor', 'html', 'inhalt', 'start'],
+    'install_lib' => ['install', 'installiert'],
+    'jobs_lib' => ['job', 'jobs'],
+    'konfig_lib' => ['app', 'entwicklung', 'konfig', 'laufzeit', 'umgebung'],
+    'kontext_lib' => ['ctx'],
+    'konto_lib' => ['konto', 'passwort'],
+    'kopfzeilen_lib' => ['https', 'kopf', 'kopfzeilen'],
+    'krypto_lib' => ['krypto', 'oeffnen', 'versiegeln'],
+    'link_lib' => ['link'],
+    'login_lib' => ['anmeldung', 'ich', 'passwort', 'team'],
+    'mail_html_lib' => ['mail'],
+    'mail_lib' => ['antwort', 'mail', 'reihe', 'smtp'],
+    'migration_lib' => ['migration'],
+    'newsletter_lib' => ['nl'],
+    'passkey_lib' => ['pk'],
+    'programm_lib' => ['dozent', 'kuerzel', 'programm', 'termin'],
+    'ratelimit_lib' => ['rate'],
+    'rundmail_lib' => ['rm'],
+    'sicherung_lib' => ['sicherung', 'testdaten'],
+    'sitzung_lib' => ['csrf', 'flash', 'sitzung'],
+    'spamschutz_lib' => ['spam'],
+    'statistik_lib' => ['stat'],
+    'team_lib' => ['team'],
+    'teilnahme_lib' => ['tn'],
+    'tnkonto_lib' => ['tk'],
+    'totp_lib' => ['totp'],
+    'transaktion_lib' => ['db'],
+    'veranstaltung_lib' => ['va'],
+    'wartung_lib' => ['wartung'],
+    'zertifikat_lib' => ['code128', 'unterschrift', 'unterschriftenliste', 'zertifikat'],
+    'zweitfaktor_lib' => ['mailcode', 'zweitfaktor'],
+];
+
+/** Präfixe in mehreren Libs, mit Grund. */
+const KONV_PRAEFIX_GETEILT = [
+    'db' => 'db_lib (Zugriff) und transaktion_lib (db_transaktion)',
+    'passwort' => 'konto_lib (Regeln, Setzen) und login_lib (passwort_bestaetigen im Team-Login)',
+    'team' => 'team_lib (Team-Aktionen), login_lib (team_tor, team_sitzung) und html_lib (team_seite_kopf, team_reiter)',
+    'seiten' => 'html_lib (seiten_name) und formular_lib (seiten_kopfzeile)',
+    'mail' => 'mail_lib (Warteschlange, Versand) und mail_html_lib (HTML-Fassung) – ein Teilsystem in zwei Dateien',
+];
+
 function konventionen_pruefen(string $wurzel): void
 {
     $alle = konv_alle_texte($wurzel);
@@ -207,6 +265,33 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden($ohne, 'V-29: jede Klasse in site.css wird in PHP/JS verwendet (' . count($cssKlassen) . ' Klassen)');
     $fehlt = array_values(array_filter(konv_klassen_im_code($wurzel), fn($k) => !in_array($k, $cssKlassen, true) && !isset(KONV_KLASSE_OHNE_CSS[$k])));
     konv_melden($fehlt, 'V-29: jede Klasse im Markup hat eine Regel in site.css');
+
+    // K-h Präfixe: jede Funktion liegt in der Lib ihres Präfixes
+    $falsch = [];
+    foreach (glob("$wurzel/server/lib/*.php") ?: [] as $p) {
+        $lib = basename($p, '.php');
+        preg_match_all('/^function ([a-z0-9_]+)/m', (string)file_get_contents($p), $m);
+        foreach ($m[1] as $fn) {
+            if (!in_array(explode('_', $fn)[0], KONV_PRAEFIXE[$lib] ?? [], true)) {
+                $falsch[] = "$lib: $fn";
+            }
+        }
+    }
+    konv_melden($falsch, 'K-h: Funktionen nach der Präfix-Tabelle in ihrer Lib');
+    // … und jedes Präfix gehört zu genau einer Lib (z. B. anm_* nur anmeldung_lib, tk_* nur tnkonto_lib)
+    $wo = [];
+    foreach (KONV_PRAEFIXE as $lib => $px) {
+        foreach ($px as $x) {
+            $wo[$x][] = $lib;
+        }
+    }
+    $doppelt = [];
+    foreach ($wo as $x => $libs) {
+        if (count($libs) > 1 && !isset(KONV_PRAEFIX_GETEILT[$x])) {
+            $doppelt[] = $x . ': ' . implode(', ', $libs);
+        }
+    }
+    konv_melden($doppelt, 'K-h: jedes Präfix in genau einer Lib (Ausnahmen begründet)');
 
     // K-f Wortliste
     $verboten = ['Endgültig löschen', 'Ja, Konto löschen', 'Von der Liste nehmen'];

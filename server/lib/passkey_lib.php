@@ -348,15 +348,15 @@ function pk_ursprung(): ?array
 function pk_herausforderung(string $zweck, ?int $kontoId = null): string
 {
     $h = pk_b64u(random_bytes(32));
-    $_SESSION['pk'][$zweck] = ['h' => $h, 'bis' => time() + PK_GUELTIG_S, 'konto' => $kontoId];
+    $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] = ['h' => $h, 'bis' => time() + PK_GUELTIG_S, 'konto' => $kontoId];
     return $h;
 }
 
 /** Abgelegte Herausforderung holen und verbrauchen (gilt einmal). */
 function pk_herausforderung_nehmen(string $zweck): array
 {
-    $a = $_SESSION['pk'][$zweck] ?? null;
-    unset($_SESSION['pk'][$zweck]);
+    $a = $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] ?? null;
+    unset($_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck]);
     if (!is_array($a) || !is_string($a['h'] ?? null) || (int)($a['bis'] ?? 0) < time()) {
         throw new PkFehler('Herausforderung fehlt oder ist abgelaufen');
     }

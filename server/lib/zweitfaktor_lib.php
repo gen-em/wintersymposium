@@ -100,14 +100,14 @@ function zweitfaktor_bestaetigen(int $kontoId, string $code): ?string
 /** Bestätigung in der Sitzung merken (nach Code oder Passkey). */
 function zweitfaktor_merken(int $kontoId): void
 {
-    $_SESSION['zf_bestaetigt'] = ['konto' => $kontoId, 'bis' => time() + ZWEITFAKTOR_BESTAETIGT_S];
+    $_SESSION[SITZUNG_SCHLUESSEL_ZF_BESTAETIGT] = ['konto' => $kontoId, 'bis' => time() + ZWEITFAKTOR_BESTAETIGT_S];
 }
 
 /** Liegt eine frische Bestätigung vor? Gilt einmal: wird beim Lesen gelöscht. */
 function zweitfaktor_bestaetigt(int $kontoId): bool
 {
-    $z = $_SESSION['zf_bestaetigt'] ?? null;
-    unset($_SESSION['zf_bestaetigt']);
+    $z = $_SESSION[SITZUNG_SCHLUESSEL_ZF_BESTAETIGT] ?? null;
+    unset($_SESSION[SITZUNG_SCHLUESSEL_ZF_BESTAETIGT]);
     return is_array($z) && (int)($z['konto'] ?? 0) === $kontoId && (int)($z['bis'] ?? 0) >= time();
 }
 
@@ -160,4 +160,17 @@ function zweitfaktor_feld_html(array $konto, string $id): string
         . '<input id="' . e($id) . '" name="totp" type="text" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="12"></div>'
         . '<p class="aktionen" data-zf-wege hidden><button type="button" class="knopf zweit klein" data-zf-mailcode>Code per E-Mail schicken</button>' . $pk . '</p>'
         . '<p class="hilfe" data-zf-meldung role="status" hidden></p>';
+}
+
+/** Wiederherstellungscodes einmal anzeigen und beenden. */
+function zweitfaktor_codes_seite(array $codes): never
+{
+    seite_kopf('Wiederherstellungscodes', ['nav' => false]);
+    echo seiten_kopfzeile("Deine Wiederherstellungs\u{AD}codes", 'Zwei-Faktor-Authentifizierung eingerichtet') // \u{AD}: weiches Trennzeichen
+        . '<div class="innen text">'
+        . '<p>Mit einem dieser Codes kommst du rein, wenn du keinen anderen Code bekommst (Handy weg, Postfach nicht erreichbar). Jeder Code gilt einmal. '
+        . '<strong>Sie werden nur jetzt angezeigt</strong>: Speichere sie in deinem Passwortmanager oder drucke sie aus.</p>'
+        . '<ul class="codes">' . implode('', array_map(fn($c) => '<li class="mono">' . e(totp_code_anzeige($c)) . '</li>', $codes)) . '</ul>'
+        . '<p><a class="knopf" href="/team">Codes gesichert – weiter zum Team-Bereich</a></p></div>';
+    seite_ende();
 }

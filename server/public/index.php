@@ -90,7 +90,7 @@ if (konfig_maengel() !== [] || !installiert()) {
     }
     $host = host_angefragt() ?? 'localhost';
     https_tor($host);
-    $GLOBALS['ws_host'] = $host;
+    ctx_setzen('host', $host);
     require dirname(__DIR__) . '/seiten/install.php';
     exit;
 }

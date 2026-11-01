@@ -77,7 +77,7 @@ function host_haupt(): ?string
  */
 function basis_url(): string
 {
-    $host = $GLOBALS['ws_host'] ?? null;
+    $host = ctx('host') ?? null;
     if (!is_string($host) || $host === '') {
         $host = host_haupt() ?? 'localhost';
     }
@@ -105,7 +105,7 @@ function host_tor(): string
         echo "Unbekannter Hostname.\n";
         exit;
     }
-    $GLOBALS['ws_host'] = $host;
+    ctx_setzen('host', $host);
     return $host;
 }
 

@@ -334,7 +334,7 @@ function team_termin_personen(int $terminId): array
 function team_aufgaben(?int $jetzt = null, ?string $rolle = null): array
 {
     $jetzt ??= time();
-    $rolle ??= (string)($GLOBALS['ws_team_rolle'] ?? '');
+    $rolle ??= (string)(ctx('team_rolle') ?? '');
     $auf = [];
     $grenzeVorbei = $jetzt + va_zahl('nachrueck_frist_h') * 3600 > anm_grenze_ts();
     foreach (team_termine() as $t) {
@@ -427,4 +427,16 @@ function team_link_senden(int $anmId, int $durch): void
 {
     anm_zugang_senden($anmId);
     audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'Einmal-Link vom Team geschickt'), $durch, ['anmeldung' => $anmId]);
+}
+
+/** Link erzeugen und per Mail schicken oder (nur_anzeigen) einmal anzeigen. */
+function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich): void
+{
+    $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
+    if ($perMail && mail_eingerichtet()) {
+        mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
+        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . ').');
+        return;
+    }
+    $_SESSION[SITZUNG_SCHLUESSEL_NEUER_LINK] = ['name' => $k['name'], 'url' => $url];
 }

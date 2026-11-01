@@ -26,12 +26,14 @@ function inhalt(string $schluessel): string
 {
     $va = inhalt_va($schluessel);
     $k = $va . ':' . $schluessel;
-    if (!array_key_exists($k, $GLOBALS['ws_inhalt_cache'] ??= [])) {
-        $GLOBALS['ws_inhalt_cache'][$k] = (string)(va_tabellen_da()
+    $cache = ctx('inhalt_cache') ?? [];
+    if (!array_key_exists($k, $cache)) {
+        $cache[$k] = (string)(va_tabellen_da()
             ? db_wert('SELECT text FROM inhalt WHERE veranstaltung_id = ? AND schluessel = ?', [$va, $schluessel]) ?? ''
             : db_wert('SELECT text FROM inhalt WHERE schluessel = ?', [$schluessel]) ?? '');
+        ctx_setzen('inhalt_cache', $cache);
     }
-    return $GLOBALS['ws_inhalt_cache'][$k];
+    return $cache[$k];
 }
 
 function inhalt_setzen(string $schluessel, string $text, ?int $kontoId = null): void
@@ -50,7 +52,9 @@ function inhalt_setzen(string $schluessel, string $text, ?int $kontoId = null): 
          ON DUPLICATE KEY UPDATE text = VALUES(text), geaendert_am = VALUES(geaendert_am), geaendert_von = VALUES(geaendert_von)',
         [$va, $schluessel, $text, db_jetzt(), $kontoId]
     );
-    unset($GLOBALS['ws_inhalt_cache'][$va . ':' . $schluessel]);
+    $cache = ctx('inhalt_cache') ?? [];
+    unset($cache[$va . ':' . $schluessel]);
+    ctx_setzen('inhalt_cache', $cache);
 }
 
 /** Pfad eines hochgeladenen Text-Bildes (öffentlich unter /bild/). */
@@ -88,6 +92,24 @@ function editor_attribute(string $art = 'block', bool $mail = false): string
  * Editor-HTML bereinigen. $art 'block' oder 'inline'; $bilder: eigene
  * Text-Bilder erlauben (nur in den Texten der Webseite).
  */
+/**
+ * Ein Einstieg für alle HTML-Bereinigungen (V-13): Profil 'inline' (eine
+ * Zeile: fett, kursiv, Link), 'block' (Absätze, Überschriften, Listen,
+ * Links; mit $bilder auch Bilder der Texte) und 'mail' (Mailings: wie block,
+ * dazu Bilder der Mailings und der Platzhalter {link}). Unter 'mail' arbeitet
+ * der Bereiniger der Mailings (rm_html_bereinigen), weil derselbe Durchlauf
+ * auch Text- und HTML-Mail erzeugt; gespeichertes Mailing-HTML bleibt so
+ * unverändert.
+ */
+function html_bereinigen(string $html, string $profil = 'block', bool $bilder = false): string
+{
+    return match ($profil) {
+        'inline', 'block' => editor_bereinigen($html, $profil, $bilder),
+        'mail' => rm_html_bereinigen($html),
+        default => throw new InvalidArgumentException('Unbekanntes Profil: ' . $profil),
+    };
+}
+
 function editor_bereinigen(string $html, string $art = 'block', bool $bilder = false): string
 {
     $html = trim(mb_substr(str_replace("\r", '', $html), 0, EDITOR_MAX));
@@ -285,7 +307,7 @@ function start_texte_speichern(array $eingabe, int $kontoId): array
             $fehler[$k] = 'Zu lang.';
             continue;
         }
-        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : editor_bereinigen($roh, $art, $art === 'block');
+        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
         if ($neu !== inhalt($k)) {
             inhalt_setzen($k, $neu, $kontoId);
             $geaendert[] = $k;

@@ -150,9 +150,9 @@ function mail_einreihen(string $an, string $betreff, string $text, int $prio = M
 /** Im Web nach der Antwort senden (auch nach einer Umleitung mit exit); Jobs und Tests senden selbst. */
 function mail_nach_antwort_vormerken(): void
 {
-    $GLOBALS['ws_mail_neu'] = true;
-    if (PHP_SAPI !== 'cli' && empty($GLOBALS['ws_mail_shutdown'])) {
-        $GLOBALS['ws_mail_shutdown'] = true;
+    ctx_setzen('mail_neu', true);
+    if (PHP_SAPI !== 'cli' && empty(ctx('mail_shutdown'))) {
+        ctx_setzen('mail_shutdown', true);
         register_shutdown_function('mail_nach_antwort');
     }
 }
@@ -262,10 +262,10 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
  */
 function mail_nach_antwort(): void
 {
-    if (empty($GLOBALS['ws_mail_neu'])) {
+    if (empty(ctx('mail_neu'))) {
         return;
     }
-    $GLOBALS['ws_mail_neu'] = false;
+    ctx_setzen('mail_neu', false);
     antwort_abschliessen();
     try {
         mail_senden_faellige(5, 12.0);
@@ -548,12 +548,6 @@ function reihe_name(): string
 {
     $n = trim((string)(einstellung('reihe_name') ?? ''));
     return $n !== '' ? $n : 'Allgäu Akut';
-}
-
-/** Name der Veranstaltung als Absender (E-67): voller Name, sonst Kurzname. */
-function va_absender_name(): string
-{
-    return va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz();
 }
 
 /** Vorlagen, die für alle Veranstaltungen gelten (E-67): Absender, Betreff, Kicker und Gruß mit dem Namen der Reihe. */

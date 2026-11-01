@@ -117,7 +117,7 @@ if (ist_post()) {
                 }
                 anm_stornieren($id);
                 // Nur die Anmeldung aus der Sitzung nehmen; Konto- und Team-Login bleiben (E-63 (3), Review B-5)
-                unset($_SESSION['anm']);
+                unset($_SESSION[SITZUNG_SCHLUESSEL_ANM]);
                 fertig('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.', '/deine-anmeldung');
             case 'annehmen':
                 $r = anm_angebot_annehmen($id, post_zahl('platz'), post_haken('tausch'));
@@ -136,7 +136,7 @@ if (ist_post()) {
                     fertig('fehler', 'Für diese Adresse lässt sich hier kein Konto anlegen.', '/deine-anmeldung');
                 }
                 tk_einloggen(konto_laden($kid));
-                $_SESSION['tk_pw'] = true;
+                $_SESSION[SITZUNG_SCHLUESSEL_TK_PW] = true;
                 fertig('ok', 'Dein Konto ist angelegt. Leg jetzt dein Passwort fest.', '/konto');
             case 'ablehnen':
                 anm_angebot_ablehnen($id, post_zahl('platz'));
