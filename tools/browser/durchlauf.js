@@ -938,6 +938,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.fill('dialog[open] input[name=totp]', zfCode);
       const [zfDl] = await Promise.all([p.waitForEvent('download', { timeout: 10000 }).catch(() => null), p.click('dialog[open] .dlg-ja')]);
       notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'Herunterladen mit dem Code aus der Mail', zfCode !== '' && zfDl !== null && zfDl.suggestedFilename().endsWith('.gz'), zfCode);
+      // Ein Download lädt die Seite nicht neu: der Dialog bleibt offen, bis man ihn schließt
+      if (await p.locator('dialog[open]').count()) await p.keyboard.press('Escape');
       if (engine === 'chromium') {
         const cdpZ = await ctx.newCDPSession(p);
         await cdpZ.send('WebAuthn.enable');
