@@ -98,15 +98,9 @@ function konv_melden(array $funde, string $was): void
     }
 }
 
-/* ---- Ausnahmen (K-f): leert AP-17 Unterpunkt 4 ---------------------------- */
+/* ---- Ausnahmen (K-f): seit AP-17 Unterpunkt 4 leer ------------------------ */
 
 const KONV_WORT_AUSNAHMEN = [
-    // Stand vor AP-17 Unterpunkt 4; die Seiten werden dort umgestellt
-    'server/seiten/konto.php|Ja, Konto löschen',
-    'server/seiten/team_personen.php|Von der Liste nehmen',
-    'server/seiten/team_personen.php|Ja, Konto löschen',
-    'server/seiten/team_veranstaltungen.php|Endgültig löschen',
-    'server/seiten/team_workshops.php|Von der Liste nehmen',
 ];
 
 function konventionen_pruefen(string $wurzel): void
@@ -128,10 +122,35 @@ function konventionen_pruefen(string $wurzel): void
     }
     pruefe($gm <= 5, "K-c: gmdate außerhalb von db_lib höchstens 5× ($gm)");
 
+    // K-d und Unterpunkt 4: Seiten nutzen Lib-Funktionen und die Helfer aus formular_lib
+    $dbInSeiten = [];
+    $closures = [];
+    $einknopf = [];
+    foreach (glob("$wurzel/server/seiten/*.php") ?: [] as $p) {
+        $quelle = (string)file_get_contents($p);
+        $tok = token_get_all($quelle);
+        foreach ($tok as $i => $t) {
+            if (is_array($t) && $t[0] === T_STRING && str_starts_with($t[1], 'db_')) {
+                $dbInSeiten[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
+            }
+            if (is_array($t) && $t[0] === T_VARIABLE && in_array($t[1], ['$fehlerFeld', '$ungueltig'], true)) {
+                $closures[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
+            }
+        }
+        if (preg_match_all('~<form[^>]*>\s*(?:<\?= csrf_feld\(\) \?>|\' \. csrf_feld\(\) \. \')\s*(?:<input type="hidden"[^>]*>\s*)+<button[^>]*>[^<]*</button>\s*</form>~', $quelle, $m, PREG_OFFSET_CAPTURE)) {
+            foreach ($m[0] as [$x, $pos]) {
+                $einknopf[] = basename($p) . ':' . (substr_count($quelle, "\n", 0, $pos) + 1);
+            }
+        }
+    }
+    konv_melden($dbInSeiten, 'K-d: keine db_*-Aufrufe in server/seiten');
+    konv_melden($closures, 'Unterpunkt 4: keine Feld-Closures ($fehlerFeld, $ungueltig) in Seiten');
+    konv_melden($einknopf, 'Unterpunkt 4: Einknopf-Formulare über aktion_knopf(), nicht von Hand');
+
     // K-f Wortliste
     $verboten = ['Endgültig löschen', 'Ja, Konto löschen', 'Von der Liste nehmen'];
     $muster = '/' . implode('|', array_map(fn($w) => preg_quote($w, '/'), $verboten)) . '/u';
     $ausnahmen = array_fill_keys(KONV_WORT_AUSNAHMEN, true);
     konv_melden(konv_suchen($alle, $muster, $ausnahmen), 'K-f: Wortliste (' . implode(', ', $verboten) . ' nicht verwenden)');
-    pruefe(count(KONV_WORT_AUSNAHMEN) <= 5, 'K-f: Ausnahmeliste der Wortliste (' . count(KONV_WORT_AUSNAHMEN) . ' Einträge)');
+    pruefe(count(KONV_WORT_AUSNAHMEN) === 0, 'K-f: Ausnahmeliste der Wortliste (' . count(KONV_WORT_AUSNAHMEN) . ' Einträge)');
 }
