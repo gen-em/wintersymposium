@@ -61,6 +61,8 @@ function tk_einloggen(array $k): void
     $_SESSION[SITZUNG_SCHLUESSEL_TK] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
     // Login setzt die Löschfrist neu (14 Monate ohne Login, E-54)
     db_ausfuehren('UPDATE konto SET letzte_anmeldung = ?, loesch_erinnert_am = NULL WHERE id = ?', [db_jetzt(), (int)$k['id']]);
+    // Diese IP gilt 30 Tage als bekannt (O-47): fremde Fehlversuche sperren hier nicht aus
+    rate_bekannt_merken((int)$k['id']);
     $a = tk_anmeldung((int)$k['id']);
     if ($a !== null) {
         anm_merken($a, false);
@@ -268,22 +270,30 @@ function tk_link_einloesen(string $token): ?array
  */
 function tk_login_pruefen(string $email, string $passwort): array
 {
+    $beginn = microtime(true);
     $ip = rate_merkmal_ip();
-    $kennung = rate_merkmal_kennung($email);
-    if (!rate_erlaubt('login_ip', $ip) || !rate_erlaubt('login', $kennung)) {
+    $k = konto_per_email($email);
+    // O-47 (Admin 2026-11-01, Variante C): Von einer IP, von der sich das Konto in den
+    // letzten 30 Tagen eingeloggt hat, zählt ein eigener Topf je Konto und IP. Fremde
+    // Fehlversuche sperren die Person so nicht aus; Fremde bleiben je Adresse gebremst.
+    if ($k !== null && rate_bekannt((int)$k['id'])) {
+        [$topf, $kennung] = ['login_bekannt', rate_merkmal_bekannt((int)$k['id'])];
+    } else {
+        [$topf, $kennung] = ['login', rate_merkmal_kennung($email)];
+    }
+    if (!rate_erlaubt('login_ip', $ip) || !rate_erlaubt($topf, $kennung)) {
+        rate_gleiche_dauer($beginn);
         return ['fehler' => rate_text('login')];
     }
-    $beginn = microtime(true);
-    $k = konto_per_email($email);
     $ok = anmeldung_passwort_ok($k, $passwort) && (int)$k['aktiv'] === 1
         && (konto_ist_team($k) || ($k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null));
     rate_gleiche_dauer($beginn);
     if (!$ok) {
         rate_misserfolg('login_ip', $ip);
-        rate_misserfolg('login', $kennung);
+        rate_misserfolg($topf, $kennung);
         return ['fehler' => 'E-Mail-Adresse oder Passwort stimmt nicht.'];
     }
-    rate_erfolg('login', $kennung);
+    rate_erfolg($topf, $kennung);
     return ['konto' => $k];
 }
 

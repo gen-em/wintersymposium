@@ -419,6 +419,38 @@ function betrieb_token_angezeigt(?int $kontoId): void
     audit_schreiben('betrieb', 'Cron-URL mit Token angezeigt', $kontoId);
 }
 
+/* ---- Suchmaschinen (Release 1.0) ------------------------------------------ */
+
+/**
+ * Dürfen Suchmaschinen die öffentlichen Seiten aufnehmen? Nur auf Produktion
+ * und nur, wenn eine BetreiberIn den Schalter unter Betrieb eingeschaltet hat
+ * (Admin 2026-11-01: am Anfang aus). Staging und Entwicklung bleiben gesperrt.
+ */
+function betrieb_suchmaschinen_erlaubt(): bool
+{
+    return umgebung() === 'produktion' && betrieb_suchmaschinen_schalter();
+}
+
+/** Stellung des Schalters (unabhängig von der Umgebung). */
+function betrieb_suchmaschinen_schalter(): bool
+{
+    return einstellung('suchmaschinen') === '1';
+}
+
+/** Schalter setzen und protokollieren. Gibt null oder einen Fehlertext zurück (K-a). */
+function betrieb_suchmaschinen_setzen(bool $erlauben, ?int $durch): ?string
+{
+    if (umgebung() !== 'produktion') {
+        return 'Auf ' . (umgebung() === 'staging' ? 'Staging' : 'der Entwicklung') . ' bleiben Suchmaschinen immer gesperrt.';
+    }
+    if ($erlauben === betrieb_suchmaschinen_schalter()) {
+        return null;
+    }
+    einstellung_setzen('suchmaschinen', $erlauben ? '1' : '0');
+    audit_schreiben('betrieb', $erlauben ? 'Suchmaschinen erlaubt' : 'Suchmaschinen gesperrt', $durch);
+    return null;
+}
+
 /* ---- Aufgaben auf der Übersicht ------------------------------------------- */
 
 /** Je rote Zeile eine Aufgabe für die Team-Übersicht (nur BetreiberInnen). */

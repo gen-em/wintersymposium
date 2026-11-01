@@ -41,6 +41,7 @@ const MAIL_VORLAGE_KOPF = [
     'konto_passwort' => ['Neues Passwort', 'Neues Passwort festlegen'],
     'team_rolle' => ['Willkommen im Team', 'Passwort festlegen'],
     'team_einladung' => ['Einladung ins Team', 'Passwort festlegen'],
+    'team_adresse' => ['Adresse geändert', null],
     'newsletter_bestaetigen' => ['Newsletter bestätigen', 'Newsletter bestätigen'],
     'newsletter_schon' => ['Dein Newsletter', 'Newsletter verwalten'],
     'zweitfaktor_code' => ['Dein Code', null],

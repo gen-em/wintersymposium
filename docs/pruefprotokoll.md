@@ -44,6 +44,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
 | E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen, Staging durchklicken | umgesetzt, Staging durchgeklickt | lokal T-332, T-333, T-340; Staging T-339 | Status-Seite im eigenen Browser, Frage an den Hoster (siehe unten) |
 | E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
+| AP-20 | Release 1.0 (E-76): Suchmaschinen-Schalter, Login-Sperre mit bekannten IPs (O-47), Adresse eines Team-Kontos ändern (O-48) | umgesetzt, Produktion offen | lokal T-343 bis T-346 | T-347 Produktion per Tag, Prüfungen auf echten Geräten (siehe unten) |
 
 ## Wie geprüft wird
 
@@ -993,4 +994,43 @@ Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gi
 4. **Android, Chrome:** wie 1; die Passkeys erscheinen in der Vorschlagsleiste des Adressfelds.
 5. **Letzten Passkey entfernen:** unter „Mein Konto“ → „Passkeys“ den einzigen Passkey entfernen, ausloggen, `/einloggen` öffnen. Erwartet: nichts öffnet sich von selbst.
 6. **Länger als 5 Minuten:** `/einloggen` offen lassen (über 5 Minuten), dann ins Adressfeld tippen und den Passkey wählen. Erwartet: Login klappt (die stille Abfrage holt vor Ablauf eine frische Herausforderung).
+
+## Release 1.0 (AP-20, E-76)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-343, ap: AP-20, was: "Login-Sperre mit bekannten IPs (O-47, Variante C)", wie: "lauf.php (21_release): IP nach dem Login bekannt, gespeichert nur HMAC; 5 Fehlversuche von fremder IP sperren die Adresse für fremde IPs, nicht für die bekannte; dort eigener Zähler (5); nach 30 Tagen vergessen, Job räumt auf; Sicherung ohne Inhalt"}
+- {id: T-344, ap: AP-20, was: "Suchmaschinen-Schalter", wie: "lauf.php: aus nach der Installation, außerhalb der Produktion nicht einschaltbar und wirkungslos, auf Produktion ein/aus mit Protokoll; http_tests (release): Startseite trägt noindex, Kasten unter Betrieb ohne Schalter, Einschalten abgewiesen; Browser: Kasten auf team-daten. Auf Produktion: Admin (siehe unten)"}
+- {id: T-345, ap: AP-20, was: "Adresse eines Team-Kontos ändern (O-48)", wie: "lauf.php: Prüfungen (ungültig, belegt, gleich, Teilnehmenden-Konto), Änderung mit verknüpfter Anmeldung, Links verfallen, Mail an die alte Adresse, Protokoll ohne Adressen, Login mit neuer Adresse; http_tests: Menüpunkt und Dialog, ohne Code nichts geändert, mit Wiederherstellungscode geändert, eigenes Konto abgewiesen; Browser: Dialog in allen Engines (Handy, Desktop)"}
+- {id: T-346, ap: AP-20, was: "Repo-Prüfung R-10 vor dem Release", wie: "git grep nach Hoster-Namen, privaten IP-Adressen, Serverpfaden und Zugangsdaten im ganzen Repo und im Diff"}
+- {id: T-347, ap: AP-20, was: "Produktion per Tag v1.0.0 (ergänzt T-106)", wie: "Tag auf main → Lauf „Auslieferung“ grün, Ordner Produktion gefüllt, Staging unverändert; config.php, Installer, Cron, Status „Alles in Ordnung“, Quelltext der Startseite enthält noindex", status: offen}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-343 bis T-345 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1236 ok, 0 Fehler (vorher 1197; neu: Bereich `release` und HTTP-Bereich `release`); BROWSER_ERGEBNIS | Links eines Kontos liegen seit Migration 20 in `link` (Test zeigte es sofort); der O-48-Test nimmt den Beispieldatensatz Olaf Orga statt eigenem Anlegen (V-50) |
+| T-346 | 2026-11-01 | claude-dev | bestanden | `git grep` nach Hoster-Namen, IP-Adressen außerhalb der Tests (nur die privaten Bereiche in der Proxy-Prüfung als Code), Serverpfaden und Passwörtern; im Diff nur Beispiel-IPs aus den Dokumentationsbereichen (198.51.100.0/24, 203.0.113.0/24) | Der Name des Hosters, den der Admin im Chat genannt hat, steht nirgends im Repo |
+
+### Noch zu prüfen
+
+**Produktion (Admin, nach dem Merge, T-347):** Schritte in `docs/betrieb.md` Abschnitt 2 („Besonderheiten auf Produktion“) und 3.
+
+1. Tag `v1.0.0` auf `main` setzen; unter GitHub → Actions ist der Lauf „Auslieferung“ grün; Staging bleibt auf seinem Stand.
+2. `config.php` mit `umgebung` = `produktion`, ohne `mail.umleiten_an`, ohne `testkonten`, mit neuen Zufallswerten; Installer; BetreiberIn-Konto mit zweitem Faktor.
+3. Cron einrichten; Betrieb → Status zeigt nach dem ersten Lauf „Alles in Ordnung“.
+4. Quelltext der Startseite (Rechtsklick → Seitenquelltext) enthält `noindex`; unter Betrieb → Betrieb steht „Suchmaschinen gesperrt“ mit dem Knopf „Suchmaschinen erlauben …“ (erst zum Anmeldestart drücken).
+5. „Testmail an mich“ kommt an; Zustellbarkeit mit mail-tester.com (Checkliste Konzept Abschnitt 9).
+6. Login-Sperre stichprobenartig: aus einem anderen Netz (z. B. Handy ohne WLAN) fünfmal ein falsches Passwort für das eigene Konto, danach am eigenen Rechner (bekannte IP) normal einloggen → geht.
+
+**Auf echten Geräten (Admin; kann der Browser-Durchlauf nicht):**
+
+1. iPhone/Safari, Android/Chrome, LibreWolf: Passkey anlegen und einloggen (Liste bei E-75 oben, T-152).
+2. Barcode-Scanner vor Ort liest die EFN auf der Unterschriftenliste (T-251).
+3. Zertifikat und Unterschriftenliste ausdrucken (T-251, AP-10).
+4. Exporte (CSV, xlsx) in Excel und LibreOffice öffnen, PDF am Handy (T-156, Export xlsx und PDF).
+5. Bitwarden füllt den Code in Firefox ein (T-221).
+6. Stehende Kopfleiste und Menü auf Handy und Tablet (T-271).
 

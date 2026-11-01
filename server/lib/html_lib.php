@@ -22,6 +22,8 @@ function e(mixed $wert): string
  *       'konto' => angemeldetes Konto (zeigt Name und „Ausloggen“, E-40/E-42),
  *       'skripte' => Liste eigener Skripte unter /assets/,
  *       'meldung' => true: Flash-Meldung aus der Umleitung unter dem Kopf ausgeben,
+ *       'suchmaschinen' => true: öffentliche Seite, die Suchmaschinen aufnehmen dürfen, sobald der
+ *                     Schalter unter Betrieb an ist (nur Produktion); sonst immer noindex,
  *       'vorschau' => Hinweise (Liste): Vorschau der Startseite im iframe (E-70 (6)) –
  *                     einbettbar, Navigation wie für Besucherinnen und Besucher, Links ohne Wirkung.
  */
@@ -48,8 +50,9 @@ function seite_kopf(string $titel, array $opt = []): void
     }
     echo '<!doctype html><html lang="de"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        // Bis zum Anmeldestart nicht in Suchmaschinen (Konzept AP-2, Checkliste Abschnitt 9)
-        . '<meta name="robots" content="noindex">'
+        // Suchmaschinen nur für öffentliche Seiten ('suchmaschinen' => true), nur auf Produktion
+        // und nur mit dem Schalter unter Betrieb (Release 1.0, Checkliste Anmeldestart)
+        . (($opt['suchmaschinen'] ?? false) && betrieb_suchmaschinen_erlaubt() ? '' : '<meta name="robots" content="noindex">')
         . '<title>' . e($titel) . ' – ' . e(seiten_name()) . '</title>'
         . '<link rel="stylesheet" href="/assets/site.css">'
         // .ico zuerst mit fester Größe, SVG danach: so nehmen Chrome, Edge und Firefox die SVG,

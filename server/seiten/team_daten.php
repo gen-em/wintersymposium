@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Daten: Sicherungen und Testdaten (nur Betreiber; E-47). Zahlen zum
+ * Daten: Sicherungen, Testdaten und Suchmaschinen-Schalter (nur Betreiber; E-47). Zahlen zum
  * Mailversand stehen seit AP-15 auf der Status-Seite (E-65).
  * Herunterladen und Wiederherstellen verlangen den eigenen zweiten Faktor
  * (Code aus App oder Mail, Wiederherstellungscode oder Passkey; wie der
@@ -35,6 +35,11 @@ if (ist_post()) {
                 fertig('fehler', $f, '/team/daten');
             }
             fertig('ok', 'Absender gespeichert. Prüf ihn mit „Testmail an mich“.', '/team/daten');
+        case 'suchmaschinen':
+            // Release 1.0 (Admin 2026-11-01): Schalter, am Anfang aus; nur auf Produktion wirksam
+            $an = post_text('wert') === '1';
+            $f = betrieb_suchmaschinen_setzen($an, $ich);
+            fertig($f === null ? 'ok' : 'fehler', $f ?? ($an ? 'Suchmaschinen dürfen die öffentlichen Seiten jetzt aufnehmen.' : 'Suchmaschinen sind wieder gesperrt.'), '/team/daten');
         case 'testmail':
             $grund = mail_testen((string)$konto['email'], $ich);
             fertig($grund === null ? 'ok' : 'fehler', $grund === null
@@ -133,6 +138,20 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
     <?php if ($ms['umleiten'] !== ''): ?><p>Umleitung: alle Mails gehen an <span class="mono"><?= e($ms['umleiten']) ?></span>.</p><?php endif; ?>
     <?= aktion_knopf('/team/daten', 'testmail', [], 'Testmail an mich', 'knopf zweit', ['form_klasse' => 'abstand-oben-klein']) ?>
     <p class="meta klein">Versendet sofort an <?= e($konto['email']) ?> und zeigt den Fehler des Mailservers, falls er die Mail ablehnt. Das Passwort wird nie angezeigt.</p>
+</div>
+
+<?php $sm = betrieb_suchmaschinen_schalter(); $prod = umgebung() === 'produktion'; ?>
+<div class="kasten abstand-oben" id="suchmaschinen">
+    <h2 class="zwischen">Suchmaschinen <?= $prod && $sm ? chip('ok', 'erlaubt') : chip('offen', 'gesperrt') ?></h2>
+    <?php if ($prod): ?>
+    <p>Startseite, Anmeldung, Newsletter, Impressum und Datenschutz <?= $sm ? 'dürfen in Suchmaschinen erscheinen.' : 'tragen „noindex“ und erscheinen nicht in Suchmaschinen.' ?> Team-Bereich, Login, Konto und Links sind immer gesperrt.</p>
+    <p class="meta klein">Zum Anmeldestart einschalten (Checkliste). Bis eine Suchmaschine die Seite aufnimmt, vergehen meist einige Tage.</p>
+    <?= $sm
+        ? bestaetigung_html('Suchmaschinen sperren …', 'Die öffentlichen Seiten tragen wieder „noindex“. Schon aufgenommene Seiten verschwinden erst nach und nach aus den Ergebnissen.', 'Ja, sperren', ['aktion' => 'suchmaschinen', 'wert' => '0'], ['ziel' => '/team/daten', 'art' => 'lila', 'titel' => 'Suchmaschinen sperren?', 'knopfklasse' => 'knopf zweit'])
+        : bestaetigung_html('Suchmaschinen erlauben …', 'Startseite, Anmeldung, Newsletter, Impressum und Datenschutz dürfen dann in Suchmaschinen erscheinen.', 'Ja, erlauben', ['aktion' => 'suchmaschinen', 'wert' => '1'], ['ziel' => '/team/daten', 'art' => 'gruen', 'titel' => 'Suchmaschinen erlauben?', 'knopfklasse' => 'knopf zweit']) ?>
+    <?php else: ?>
+    <p>Auf <?= umgebung() === 'staging' ? 'Staging' : 'der Entwicklung' ?> tragen alle Seiten „noindex“. Den Schalter gibt es nur auf Produktion.</p>
+    <?php endif; ?>
 </div>
 
 <div class="team-raster abstand-oben">
