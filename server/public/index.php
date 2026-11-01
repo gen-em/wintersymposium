@@ -44,6 +44,7 @@ const ROUTEN = [
     '/team/anmeldungen' => 'team_anmeldungen',
     '/team/daten' => 'team_daten',
     '/team/status' => 'team_status',
+    '/team/komponenten' => 'team_komponenten',
     '/team/personen' => 'team_personen',
     '/team/workshops' => 'team_workshops',
     '/team/statistik' => 'team_statistik',

@@ -201,7 +201,7 @@ function versteckt_html(array $felder): string
  * versteckten Feldern. $opt: text_html (Knopf-Inhalt roh), form_klasse, vor_html
  * (vor dem Knopf, z. B. ein Chip), titel (title-Attribut des Knopfs).
  */
-function aktion_knopf(string $ziel, string $aktion, array $felder, string $text, string $klasse = 'knopf zweit klein-knopf', array $opt = []): string
+function aktion_knopf(string $ziel, string $aktion, array $felder, string $text, string $klasse = 'knopf zweit klein', array $opt = []): string
 {
     return '<form method="post" action="' . e($ziel) . '"' . (isset($opt['form_klasse']) ? ' class="' . e($opt['form_klasse']) . '"' : '') . '>'
         . csrf_feld() . versteckt_html(['aktion' => $aktion] + $felder) . ($opt['vor_html'] ?? '')
@@ -223,7 +223,7 @@ function aktion_knopf(string $ziel, string $aktion, array $felder, string $text,
  *   art         rot (Standard) | gruen | lila – Farbe des Dialogs
  *   titel       Überschrift im Dialog (Standard bei dialog.js: Auslöser mit „?“)
  *   ausloeser   id eines anderen Knopfs, der den Dialog öffnet
- *   knopfklasse Klasse des Auslösers (Standard: knopf zweit klein-knopf)
+ *   knopfklasse Klasse des Auslösers (Standard: knopf zweit klein)
  *   ja_klasse   Klasse des Ja-Knopfs (Standard: rot → knopf gefahr, sonst knopf)
  *   klasse      weitere Klassen am details (inline-details, gefahrzone, senden)
  *   inhalt_html weiteres HTML vor dem Ja-Knopf (Felder, Haken)
@@ -245,7 +245,7 @@ function bestaetigung_html(string $knopf, string $frage, string $jaText, array $
         . (isset($opt['ausloeser']) ? ' data-ausloeser="' . e($opt['ausloeser']) . '"' : '')
         . (isset($opt['titel']) ? ' data-titel="' . e($opt['titel']) . '"' : '')
         . (!empty($opt['offen']) ? ' open' : '') . '>'
-        . '<summary class="' . e($opt['knopfklasse'] ?? 'knopf zweit klein-knopf') . '"' . (isset($opt['knopf_id']) ? ' id="' . e($opt['knopf_id']) . '"' : '') . '>' . ($opt['knopf_html'] ?? e($knopf)) . '</summary>';
+        . '<summary class="' . e($opt['knopfklasse'] ?? 'knopf zweit klein') . '"' . (isset($opt['knopf_id']) ? ' id="' . e($opt['knopf_id']) . '"' : '') . '>' . ($opt['knopf_html'] ?? e($knopf)) . '</summary>';
     if (!empty($opt['im_formular'])) {
         $aktion = (string)($felder['aktion'] ?? '');
         return $h . '<div class="bestaetigen-feld">' . $mitte . '<button class="' . e($jaKlasse) . '" type="submit" name="aktion" value="' . e($aktion) . '">' . e($jaText) . '</button></div></details>';
@@ -288,7 +288,7 @@ function filter_chips(array $optionen, string $aktiv, callable $href, string $la
     foreach ($optionen as $k => $t) {
         [$text, $zahl] = is_array($t) ? [$t[0], $t[1] ?? null] : [$t, null];
         $an = (string)$k === $aktiv;
-        $h .= '<a class="knopf klein-knopf' . ($an ? '' : ' zweit') . '" href="' . e($href((string)$k)) . '"' . ($an ? ' aria-current="true"' : '') . '>'
+        $h .= '<a class="knopf klein' . ($an ? '' : ' zweit') . '" href="' . e($href((string)$k)) . '"' . ($an ? ' aria-current="true"' : '') . '>'
             . e($text) . ($zahl !== null ? ' <span class="mono">' . e($zahl) . '</span>' : '') . '</a>';
     }
     return $h . '</div>';
@@ -311,7 +311,7 @@ function filter_leiste(array $opt): string
     $knopf = (string)($opt['knopf'] ?? 'Suchen');
     return '<form class="filterzeile" method="get" action="' . e($opt['ziel']) . '"' . (!empty($opt['suche']) ? ' role="search"' : '') . '>'
         . versteckt_html($versteckt) . ($opt['felder'] ?? '')
-        . ($knopf !== '' ? '<button class="knopf zweit klein-knopf" type="submit">' . e($knopf) . '</button>' : '')
+        . ($knopf !== '' ? '<button class="knopf zweit klein" type="submit">' . e($knopf) . '</button>' : '')
         . ($opt['nach_html'] ?? '') . '</form>';
 }
 

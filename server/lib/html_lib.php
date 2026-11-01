@@ -95,8 +95,8 @@ function seite_kopf(string $titel, array $opt = []): void
             $ab = '<form method="post" action="/ausloggen">' . csrf_feld() . '<button type="submit" class="person-ab">' . icon('sign-out', 22) . '<span>Ausloggen</span></button></form>';
             $rolle = is_array($ich) && konto_ist_team($ich) ? '<span class="person-rolle">' . e(ROLLEN[$ich['rolle']] ?? '') . '</span>' : '';
             $adresse = is_array($ich) ? (string)$ich['email'] : 'über den Link aus der Mail';
-            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-vorname">' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
-                . '<div class="person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
+            $person = '<details class="person-menue"><summary aria-label="Konto-Menü: ' . e($name) . '"><span class="person-kuerzel" aria-hidden="true">' . e($kuerzel) . '</span><span>' . e($teile[0]) . '</span>' . icon('caret-down', 14, 'icon person-pfeil') . '</summary>'
+                . '<div class="menue-karte person-liste"><div class="person-kopf"><span class="person-kuerzel gross" aria-hidden="true">' . e($kuerzel) . '</span><span class="person-wer"><strong>' . e($name) . '</strong><span>' . e($adresse) . '</span>' . $rolle . '</span></div>'
                 . implode('', array_map(fn($x) => '<a class="person-punkt' . ($x[4] ?? '') . '" href="' . $x[0] . '"' . ($aktiv === $x[0] ? ' aria-current="page"' : '') . '>' . icon($x[3], 22) . '<span class="person-text"><span class="person-titel">' . e($x[1]) . '</span><small>' . e($x[2]) . '</small></span>' . icon('caret-right', 16, 'icon person-weiter') . '</a>', $eintraege))
                 . $ab . '</div></details>';
             $flach = '<li class="person-flach"><p class="person-flach-kopf"><strong>' . e($name) . '</strong><span>' . e($unter) . '</span></p></li>'
@@ -165,7 +165,7 @@ const TEAM_BEREICHE = [
     'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
     'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/protokoll', 'Protokoll']],
-    'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
+    'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true], ['/team/komponenten', 'Komponenten', true]],
 ];
 
 function team_reiter(array $konto, string $aktiv): string
@@ -229,7 +229,7 @@ function team_veranstaltung_wechsler(array $konto, string $aktiv): string
         . '<a class="va-verwalten" href="/team/veranstaltungen">' . icon('list-bullets', 18) . '<span>Alle Veranstaltungen verwalten</span></a></div>' : '';
     return '<details class="va-wechsler"><summary aria-label="Veranstaltung wechseln, gewählt: ' . e($gewaehltName) . '">'
         . '<span class="va-wahl"><span class="va-label">Veranstaltung</span><span class="va-name">' . e($gewaehltName) . '</span></span>' . $chip($v['status']) . icon('caret-down', 16, 'icon va-pfeil') . '</summary>'
-        . '<div class="va-menue"><p class="va-label">Wechseln zu</p>' . $liste . $aktionen . '</div></details>';
+        . '<div class="menue-karte va-menue"><p class="va-label">Wechseln zu</p>' . $liste . $aktionen . '</div></details>';
 }
 
 /** Hinweis unter den Reitern, wenn die gewählte Veranstaltung ein Entwurf oder abgeschlossen ist (E-58). */

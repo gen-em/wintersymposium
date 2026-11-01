@@ -165,7 +165,7 @@ $emailOffen = isset($fehler['email']);
                 <div><dt>Berufsgruppe</dt><dd><?= $profil['berufsgruppe'] !== '' ? e($profil['berufsgruppe'] . ($profil['beruf_sonstige'] !== '' ? ' (' . $profil['beruf_sonstige'] . ')' : '')) : '<span class="meta">–</span>' ?></dd></div>
                 <div><dt>Institution</dt><dd><?= $profil['institution'] !== '' ? e($profil['institution']) : '<span class="meta">–</span>' ?></dd></div>
                 <?php if ($profil['berufsgruppe'] === ($gruppen[0] ?? '')): ?><div><dt>EFN</dt><dd class="mono"><?= $profil['efn'] !== null ? e(efn_text($profil['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
-                <?php if ($team): ?><div><dt>Rolle</dt><dd class="konto-rolle"><span class="rolle-etikett"><?= e(ROLLEN[$k['rolle']] ?? '') ?></span>
+                <?php if ($team): ?><div><dt>Rolle</dt><dd class="konto-rolle"><span class="chip rolle-leise"><?= e(ROLLEN[$k['rolle']] ?? '') ?></span>
                     <span class="meta klein"><?= $k['rolle'] === 'admin' ? 'Admin für:' : 'Zuständig für:' ?></span>
                     <ul class="rechte-liste"><?php foreach (va_rechte_liste($k) as $r): ?><li><?= e($r) ?></li><?php endforeach; ?></ul></dd></div><?php endif; ?>
             </dl>

@@ -43,14 +43,14 @@ $zusatz = function (array $z) use ($anl, $mitToken, $logZeilen): string {
             . '<p class="meta klein">Im Kundenmenü des Hosters einen Cronjob anlegen, Art „Befehl“ bzw. „Shell“, Zeitplan alle 5 Minuten. Verlangt der Hoster eine bestimmte PHP-Version, statt <span class="mono">php</span> deren Pfad eintragen.</p>'
             . '<div class="form">' . feld('cron-zeitplan', 'Zeitplan', ['wert' => $anl['zeitplan'], 'attr' => ['class' => 'mono', 'readonly' => true]])
             . feld('cron-kommando', 'Befehl', ['wert' => $anl['kommando'], 'attr' => ['class' => 'mono', 'readonly' => true]]) . '</div>'
-            . '<p class="aktionen"><button type="button" class="knopf klein-knopf" data-kopieren="cron-kommando">Befehl kopieren</button><span class="meta klein" role="status" data-kopiert="cron-kommando"></span></p>'
+            . '<p class="aktionen"><button type="button" class="knopf klein" data-kopieren="cron-kommando">Befehl kopieren</button><span class="meta klein" role="status" data-kopiert="cron-kommando"></span></p>'
             . '<p class="unterkopf abstand-oben-klein">Ausweichweg: Aufruf einer URL</p>'
             . '<p class="meta klein">Nur, wenn der Hoster keine Befehle erlaubt. Der Token steht dann in der URL und landet in Zugriffslogs; das Anzeigen wird protokolliert.</p>'
             . feld('cron-url', 'URL', ['wert' => $anl['url'], 'attr' => ['class' => 'mono', 'readonly' => true]]);
         if ($mitToken) {
-            $h .= '<p class="aktionen"><button type="button" class="knopf zweit klein-knopf" data-kopieren="cron-url">URL kopieren</button><span class="meta klein" role="status" data-kopiert="cron-url"></span></p>';
+            $h .= '<p class="aktionen"><button type="button" class="knopf zweit klein" data-kopieren="cron-url">URL kopieren</button><span class="meta klein" role="status" data-kopiert="cron-url"></span></p>';
         } else {
-            $h .= aktion_knopf('/team/status#zeile-cron', 'token_zeigen', [], 'URL mit Token anzeigen', 'knopf zweit klein-knopf', ['form_klasse' => 'aktionen']);
+            $h .= aktion_knopf('/team/status#zeile-cron', 'token_zeigen', [], 'URL mit Token anzeigen', 'knopf zweit klein', ['form_klasse' => 'aktionen']);
         }
     }
     if ($z['id'] === 'fehlerlog') {
@@ -63,7 +63,7 @@ $zusatz = function (array $z) use ($anl, $mitToken, $logZeilen): string {
             $h .= aktion_knopf('/team/status#zeile-fehlerlog', 'log_zeigen', [], 'Letzte ' . BETRIEB_LOG_ZEILEN . ' Zeilen anzeigen');
         }
         $h .= bestaetigung_html('Leeren', 'Alle Einträge im Fehlerprotokoll werden gelöscht. Vorher ansehen, falls etwas zu klären ist.', 'Ja, leeren', ['aktion' => 'log_leeren'],
-            ['ziel' => '/team/status', 'titel' => 'Fehlerprotokoll leeren?', 'knopfklasse' => 'knopf gefahr klein-knopf']) . '</div>';
+            ['ziel' => '/team/status', 'titel' => 'Fehlerprotokoll leeren?', 'knopfklasse' => 'knopf gefahr klein']) . '</div>';
     }
     return $h;
 };
@@ -83,7 +83,7 @@ $zeile = function (array $z) use ($zusatz, $mitToken, $logZeilen): string {
 
 team_seite_kopf($konto, 'Status', '/team/status', ['skripte' => ['status.js']]);
 ?>
-<p class="aktionen"><span class="meta klein mono">Stand <?= e(jetzt_text()) ?></span> <a class="knopf zweit klein-knopf" href="/team/status">Jetzt prüfen</a></p>
+<p class="aktionen"><span class="meta klein mono">Stand <?= e(jetzt_text()) ?></span> <a class="knopf zweit klein" href="/team/status">Jetzt prüfen</a></p>
 
 <?php if ($offen === []): ?>
 <?= meldung_html('Alles in Ordnung, Stand ' . jetzt_text() . '.', 'ok') ?>

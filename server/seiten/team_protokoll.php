@@ -53,14 +53,14 @@ foreach (array_keys($zahlen + ($art !== '' ? [$art => 0] : [])) as $a) {
         <tr<?= $weg ? ' class="ausgeblendet"' : '' ?>><td data-label="Zeit" class="mono klein"><?= e(datum_zeit_text($z['zeit'])) ?></td><td data-label="Art"><?= chip('offen', $titel($z['art'])) ?></td><td data-label="Veranstaltung" class="klein"><?= isset($z['veranstaltung_id']) ? e($vaNamen[(int)$z['veranstaltung_id']] ?? 'gelöscht') : '<span class="meta">–</span>' ?></td><td data-label="Was"><?= e($z['text']) ?></td><td data-label="Wer"><?= e($z['name'] ?? ($z['konto_id'] !== null ? 'Konto ' . $z['konto_id'] : 'System / Teilnehmende')) ?></td>
         <?php if ($betreiber): ?><td data-label="Sichtbar"><?php if ($z['art'] !== 'protokoll'): ?>
             <?= aktion_knopf('/team/protokoll', $weg ? 'einblenden' : 'ausblenden', ['id' => (int)$z['id'], 'art' => $art, 'q' => $q, 's' => $seite > 1 ? $seite : '', 'v' => $vf],
-                $weg ? 'Einblenden' : 'Ausblenden', 'knopf zweit klein-knopf', ['form_klasse' => 'inline-form', 'vor_html' => $weg ? chip('gesperrt', 'nur BetreiberInnen') . ' ' : '']) ?>
+                $weg ? 'Einblenden' : 'Ausblenden', 'knopf zweit klein', ['form_klasse' => 'inline-form', 'vor_html' => $weg ? chip('gesperrt', 'nur BetreiberInnen') . ' ' : '']) ?>
             <?php else: ?><span class="meta klein">nur BetreiberInnen</span><?php endif; ?></td><?php endif; ?></tr>
     <?php endforeach; ?>
     </tbody>
 </table></div>
 <div class="aktionen abstand-oben-klein">
-    <?php if ($seite > 1): ?><a class="knopf zweit klein-knopf" href="<?= e($link(['s' => $seite - 1 > 1 ? $seite - 1 : null])) ?>">Neuere</a><?php endif; ?>
-    <?php if ($seite * $proSeite < $gesamt): ?><a class="knopf zweit klein-knopf" href="<?= e($link(['s' => $seite + 1])) ?>">Ältere</a><?php endif; ?>
+    <?php if ($seite > 1): ?><a class="knopf zweit klein" href="<?= e($link(['s' => $seite - 1 > 1 ? $seite - 1 : null])) ?>">Neuere</a><?php endif; ?>
+    <?php if ($seite * $proSeite < $gesamt): ?><a class="knopf zweit klein" href="<?= e($link(['s' => $seite + 1])) ?>">Ältere</a><?php endif; ?>
 </div>
 <?php endif; ?>
 <?php

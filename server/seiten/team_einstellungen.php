@@ -49,7 +49,7 @@ team_seite_kopf($konto, 'Einstellungen', '/team/einstellungen');
 <div class="sperre <?= $offen ? 'offen' : 'zu' ?>" role="status">
     <?= icon($offen ? 'lock-open' : 'lock', 22, 'icon sperre-symbol') ?>
     <span class="sperre-text"><?= $offen ? '<strong>Entsperrt.</strong> Änderungen wirken nach dem Speichern sofort auf der Startseite und bei der Anmeldung.' : '<strong>Gesperrt.</strong> Damit nichts aus Versehen geändert wird – zum Bearbeiten entsperren.' ?></span>
-    <a class="knopf <?= $offen ? 'zweit' : '' ?> klein-knopf" href="/team/einstellungen<?= $offen ? '' : '?bearbeiten=1' ?>"><?= $offen ? 'Wieder sperren' : 'Entsperren' ?></a>
+    <a class="knopf <?= $offen ? 'zweit' : '' ?> klein" href="/team/einstellungen<?= $offen ? '' : '?bearbeiten=1' ?>"><?= $offen ? 'Wieder sperren' : 'Entsperren' ?></a>
 </div>
 <?= $fehler !== [] ? meldung_html(NICHT_GESPEICHERT_TEXT, 'fehler') : '' ?>
 <form method="post" action="/team/einstellungen" class="einstellungen" novalidate>

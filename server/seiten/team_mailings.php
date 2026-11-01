@@ -117,7 +117,7 @@ if ($rm === null && !$neu && $eingabe === null): ?>
 <div class="personen-raster">
     <div class="spalte">
         <?php if ($liste === []): ?><?= leer_hinweis('Noch keine Mailings.') ?><?php else: ?>
-        <div class="tabelle-wrap"><table class="t karten">
+        <div class="tabelle-wrap"><table class="t karten karten-immer">
             <thead><tr><th>Betreff</th><th>Status</th><th>Empfänger</th><th>Datum</th></tr></thead>
             <tbody>
             <?php foreach ($liste as $r):
@@ -220,13 +220,13 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
             <p class="hilfe"><strong>Platzhalter</strong> ersetzt die App beim Versand für jede Person: <code>{vorname}</code> und <code>{nachname}</code> aus der Anmeldung; <code>{workshops}</code> die Workshops mit festem Platz (je Zeile Titel und Uhrzeit); <code>{link}</code> ein persönlicher Link zu „Deine Anmeldung“ (48 Stunden gültig), auch als Ziel eines Knopfs. Im Newsletter bleiben <code>{nachname}</code> und <code>{workshops}</code> leer, <code>{link}</code> führt zur Abo-Verwaltung.</p>
             <p class="hilfe">Bilder (JPG/PNG, höchstens <?= RM_BILD_MAX_KANTE ?> px) werden auf dieser Webseite gespeichert und in die Mail eingebettet – keine fremden Server. Klick aufs Bild schaltet zwischen voller und halber Breite. Impressum und Datenschutz hängt die App an.</p>
         </div>
-        <div class="feld rm-bild-feld"><label for="rm-bild">Bild hochladen</label><input id="rm-bild" name="bild" type="file" accept="image/jpeg,image/png"><button class="knopf zweit klein-knopf" type="submit" name="aktion" value="bild">Bild ans Ende setzen</button></div>
+        <div class="feld rm-bild-feld"><label for="rm-bild">Bild hochladen</label><input id="rm-bild" name="bild" type="file" accept="image/jpeg,image/png"><button class="knopf zweit klein" type="submit" name="aktion" value="bild">Bild ans Ende setzen</button></div>
         <div class="aktionen">
             <button class="knopf zweit" type="submit" name="aktion" value="test">Testmail an mich</button>
             <button class="knopf zweit" type="submit" name="aktion" value="speichern">Entwurf speichern</button>
             <details class="planen"<?= isset($fehler['geplant']) ? ' open' : '' ?>><summary class="knopf zweit">Planen …</summary>
                 <div class="planen-feld feld"><?= feld('geplant', 'Senden am', ['typ' => 'datetime-local', 'wert' => isset($_POST['geplant']) ? post_text('geplant') : $jetztLokal, 'fehler' => $fehler['geplant'] ?? null, 'ohne_rahmen' => true]) ?>
-                    <button class="knopf klein-knopf" type="submit" name="aktion" value="planen">Planen</button></div>
+                    <button class="knopf klein" type="submit" name="aktion" value="planen">Planen</button></div>
             </details>
             <?= bestaetigung_html('An ' . count($empfaenger) . ' senden', '', 'Ja, jetzt senden', ['aktion' => 'senden'], [
                 'im_formular' => true, 'art' => 'gruen', 'titel' => 'Mailing senden?', 'klasse' => 'senden', 'knopfklasse' => 'knopf', 'knopf_id' => 'rm-senden',
@@ -239,7 +239,7 @@ $jetztLokal = (new DateTimeImmutable('now', new DateTimeZone(ANZEIGE_ZEITZONE)))
     <div class="stapel">
         <div class="kasten">
             <div class="stat-kopf"><h2 class="zwischen klein-titel">Vorschau</h2>
-                <?php if ($id !== null): ?><div class="filter" role="group" aria-label="Vorschau-Breite"><button type="button" class="knopf klein-knopf" data-breite="handy" aria-pressed="true">Handy</button><button type="button" class="knopf klein-knopf zweit" data-breite="desktop" aria-pressed="false">Desktop</button></div><?php endif; ?></div>
+                <?php if ($id !== null): ?><div class="filter" role="group" aria-label="Vorschau-Breite"><button type="button" class="knopf klein" data-breite="handy" aria-pressed="true">Handy</button><button type="button" class="knopf klein zweit" data-breite="desktop" aria-pressed="false">Desktop</button></div><?php endif; ?></div>
             <?php if ($id === null): ?><?= leer_hinweis('Die Vorschau erscheint nach dem ersten Speichern.') ?><?php else: ?>
             <p class="meta klein">Gespeicherter Stand<?= $empfaenger !== [] ? ', mit den Daten von ' . e(person_name($empfaenger[0])) : '' ?>. „Entwurf speichern“ aktualisiert sie.</p>
             <div class="ml-vorschau-rahmen handy" id="rm-vorschau"><iframe class="ml-vorschau-frame" title="Vorschau der Mail" src="/team/mailings/vorschau?id=<?= $id ?>&amp;v=<?= e(substr(hash('sha256', (string)$rm['geaendert_am'] . $rm['html']), 0, 8)) ?>" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>

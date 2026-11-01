@@ -38,7 +38,7 @@ if ($zf['codes_offen'] <= 2) {
         <?php if ($aufgaben === []): ?><?= leer_hinweis('Nichts offen.') ?><?php else: ?>
         <ul class="aufgaben">
             <?php foreach ($aufgaben as $af): ?>
-            <li><?= chip(in_array($af['art'], ['Manuell', 'Betrieb'], true) ? 'wl' : 'offen', $af['art']) ?> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein-knopf" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
+            <li><?= chip(in_array($af['art'], ['Manuell', 'Betrieb'], true) ? 'wl' : 'offen', $af['art']) ?> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
             <?php endforeach; ?>
         </ul>
         <?php endif; ?>

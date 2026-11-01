@@ -64,10 +64,10 @@ team_seite_kopf($konto, 'Veranstaltungen', '/team/veranstaltungen');
             <td data-label="Status"><?= chip(VA_STATUS_CHIP[$v['status']], VA_STATUS[$v['status']]) ?></td>
             <td data-label="Anmeldungen" class="mono"><?= $n ?></td>
             <td data-label="Aktionen"><span class="zellen-aktionen">
-                <a class="knopf zweit klein-knopf" href="/team?va=<?= $v['id'] ?>">Öffnen</a>
+                <a class="knopf zweit klein" href="/team?va=<?= $v['id'] ?>">Öffnen</a>
                 <?php if ($v['status'] === 'entwurf'): ?>
                 <?= bestaetigung_html('Aktuell machen', $v['name'] . ' erscheint dann auf der Startseite; die Anmeldung öffnet zum eingestellten Zeitpunkt. Es darf keine andere aktuelle geben.', 'Ja, aktuell machen', ['aktion' => 'aktuell', 'id' => $v['id']],
-                    ['ziel' => '/team/veranstaltungen', 'klasse' => 'inline-details', 'titel' => 'Zur aktuellen machen?', 'knopfklasse' => 'knopf klein-knopf', 'ja_klasse' => 'knopf']) ?>
+                    ['ziel' => '/team/veranstaltungen', 'klasse' => 'inline-details', 'titel' => 'Zur aktuellen machen?', 'knopfklasse' => 'knopf klein', 'ja_klasse' => 'knopf']) ?>
                 <?php endif; ?>
                 <?php if ($v['status'] !== 'abgeschlossen'): ?>
                 <?= bestaetigung_html('Abschließen', 'Danach lässt sich an ' . $v['name'] . ' nichts mehr ändern: keine Anmeldungen, kein Programm, keine Anwesenheit, keine Freischaltungen. Ansehen, Exporte und bereits freigeschaltete Zertifikate bleiben. Erst Anwesenheit eintragen und Zertifikate freischalten.', 'Ja, abschließen', ['aktion' => 'abschliessen', 'id' => $v['id']],

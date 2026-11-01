@@ -422,11 +422,11 @@ function zweitfaktor_mailcode_aktion(array $konto, string $ziel): void
 function zweitfaktor_feld_html(array $konto, string $id): string
 {
     $pk = pk_zahl((int)$konto['id']) > 0
-        ? ' <button type="button" class="knopf zweit klein-knopf" data-zf-passkey hidden>Mit Passkey bestätigen</button>'
+        ? ' <button type="button" class="knopf zweit klein" data-zf-passkey hidden>Mit Passkey bestätigen</button>'
         : '';
     return '<div class="feld"><label for="' . e($id) . '">' . e(ZWEITFAKTOR_FELD_TEXT) . '</label>'
         . '<input id="' . e($id) . '" name="totp" type="text" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="12"></div>'
-        . '<p class="aktionen" data-zf-wege hidden><button type="button" class="knopf zweit klein-knopf" data-zf-mailcode>Code per E-Mail schicken</button>' . $pk . '</p>'
+        . '<p class="aktionen" data-zf-wege hidden><button type="button" class="knopf zweit klein" data-zf-mailcode>Code per E-Mail schicken</button>' . $pk . '</p>'
         . '<p class="hilfe" data-zf-meldung role="status" hidden></p>';
 }
 

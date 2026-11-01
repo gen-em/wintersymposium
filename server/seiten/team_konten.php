@@ -102,7 +102,7 @@ unset($_SESSION['neuer_link']);
 team_seite_kopf($konto, 'Team-Konten', '/team/konten', ['skripte' => ['zweitfaktor.js']]);
 echo fehler_html($fehler);
 if (is_array($link)): ?>
-<div class="kasten link-kasten">
+<div class="kasten">
     <p><strong>Link für <?= e($link['name']) ?></strong> – gib ihn persönlich oder über einen sicheren Weg weiter. Er gilt <?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?> und nur einmal und wird nur jetzt angezeigt.</p>
     <p class="mono umbruch"><?= e($link['url']) ?></p>
 </div>
@@ -123,7 +123,7 @@ if (is_array($link)): ?>
             <?php if (!$eigen): $kid = (int)$k['id']; $erlaubt = va_erlaubte_ids($k); ?>
                 <?php /* Ein Knopf je Zeile (AP-13, Entwurf 9): Menü, jede Aktion als Dialog */ ?>
                 <details class="zeilen-menue"><summary class="knopf zweit klein">Bearbeiten <?= icon('caret-down', 14) ?></summary>
-                    <div class="zeilen-liste" role="menu">
+                    <div class="menue-karte zeilen-liste" role="menu">
                         <?php if ($k['rolle'] === 'admin'): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-va-<?= $kid ?>">Veranstaltungen …</button><?php endif; ?>
                         <button type="button" hidden class="menue-punkt" role="menuitem" id="m-rolle-<?= $kid ?>">Rolle ändern …</button>
                         <hr>

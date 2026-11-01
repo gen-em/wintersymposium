@@ -110,7 +110,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
         <?= aktion_knopf('/team/daten', 'anlegen', [], 'Sicherung anlegen', 'knopf') ?>
     </div>
     <?php if (testdaten_moeglich()): ?>
-    <div class="kasten gefahrzone-kasten">
+    <div class="kasten gefahr-kasten">
         <h2 class="zwischen">Testdaten <?= chip('offen', umgebung()) ?></h2>
         <p>Ersetzt Programm, Dozierende, Anmeldungen und Veranstaltungs-Einstellungen durch den Beispieldatensatz: Veranstaltung in 60 Tagen, Anmeldung offen, Workshops mit vollem Termin, Warteliste und offenem Angebot. Team-Konten bleiben. Vorher wird automatisch gesichert.</p>
         <p class="meta klein">Die Testpersonen haben Adressen bei example.org. Damit keine Mails dorthin gehen, in der config.php unter mail den Eintrag umleiten_an setzen.</p>
@@ -186,7 +186,7 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
                 <?= bestaetigung_html('Herunterladen', 'Die Datei enthält personenbezogene Daten. Nur verschlüsselt aufbewahren.', 'Herunterladen', ['aktion' => 'herunterladen', 'name' => $s['name']],
                     ['ziel' => '/team/daten', 'art' => 'gruen', 'titel' => 'Sicherung herunterladen?', 'inhalt_html' => $codeFeld('totp-dl-' . $i)]) ?>
                 <?= bestaetigung_html('Wiederherstellen', 'Alle Daten werden durch diesen Stand ersetzt, auch die Team-Konten. Der jetzige Stand wird vorher gesichert.', 'Ja, wiederherstellen', ['aktion' => 'wiederherstellen', 'name' => $s['name']],
-                    ['ziel' => '/team/daten', 'titel' => 'Sicherung wiederherstellen?', 'knopfklasse' => 'knopf gefahr klein-knopf', 'inhalt_html' => $codeFeld('totp-wh-' . $i)]) ?>
+                    ['ziel' => '/team/daten', 'titel' => 'Sicherung wiederherstellen?', 'knopfklasse' => 'knopf gefahr klein', 'inhalt_html' => $codeFeld('totp-wh-' . $i)]) ?>
                 <?= bestaetigung_html('Löschen', 'Diese Sicherung wird endgültig gelöscht.', 'Ja, löschen', ['aktion' => 'loeschen', 'name' => $s['name']], ['ziel' => '/team/daten', 'titel' => 'Sicherung löschen?']) ?>
             </div></td>
         </tr>

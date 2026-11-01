@@ -50,7 +50,7 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
 <?= fehler_html($fehler) ?>
 <div class="personen-raster<?= $auswahl !== null ? ' mit-auswahl' : '' ?>">
     <div class="spalte">
-        <div class="tabelle-wrap"><table class="t karten">
+        <div class="tabelle-wrap"><table class="t karten karten-immer">
             <thead><tr><th>Termin</th><th>Belegt</th><th>Frei</th><th>Warteliste</th></tr></thead>
             <tbody>
             <?php foreach ($termine as $t): ?>
@@ -106,7 +106,7 @@ team_seite_kopf($konto, 'Workshops', '/team/workshops');
                 <?php foreach ($pers['warte'] as $p): ?>
                 <li><a href="/team/personen?a=<?= (int)$p['anmeldung_id'] ?>"><?= e(person_name($p)) ?></a> <span class="meta klein">seit <?= e(datum_zeit_text($p['seit'])) ?></span><?= $p['anm_status'] === 'unbestaetigt' ? ' ' . chip('offen', 'unbestätigt') : '' ?>
                     <span class="zellen-aktionen">
-                        <?= aktion_knopf($ziel, 'platz', ['t' => $auswahl['id'], 'a' => (int)$p['anmeldung_id']], 'Platz geben', 'knopf klein-knopf') ?>
+                        <?= aktion_knopf($ziel, 'platz', ['t' => $auswahl['id'], 'a' => (int)$p['anmeldung_id']], 'Platz geben', 'knopf klein') ?>
                         <?= $auswahl['frei'] === null || $auswahl['frei'] > 0 ? aktion_knopf($ziel, 'angebot', ['t' => $auswahl['id'], 'platz' => (int)$p['id']], 'Angebot schicken') : '' ?>
                         <?= aktion_knopf($ziel, 'entfernen', ['t' => $auswahl['id'], 'platz' => (int)$p['id']], 'Entfernen') ?>
                     </span>

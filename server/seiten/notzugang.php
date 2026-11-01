@@ -45,7 +45,7 @@ seite_kopf('Notzugang', ['nav' => false]);
 echo seiten_kopfzeile('Notzugang', 'Team-Bereich') . '<div class="innen schmal">';
 echo fehler_html($fehler);
 if ($link !== null): ?>
-<div class="kasten link-kasten">
+<div class="kasten">
     <p><strong>Zweiter Faktor zurückgesetzt.</strong> Öffne diesen Link, setze ein neues Passwort und richte den zweiten Faktor neu ein. Er gilt <?= e(dauer_text(KONTO_LINK_GUELTIG_S)) ?> und einmal und wird nur jetzt angezeigt.</p>
     <p class="mono umbruch"><a href="<?= e($link) ?>"><?= e($link) ?></a></p>
     <p class="meta klein">Danach empfohlen: den Installationsschlüssel in der config.php durch einen neuen ersetzen.</p>

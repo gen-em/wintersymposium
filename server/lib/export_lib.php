@@ -56,7 +56,7 @@ function export_knoepfe(array $param, string $vor = ''): string
             continue;
         }
         $q = http_build_query(array_filter($param + ['format' => $f === 'csv' ? null : $f], fn($v) => $v !== null && $v !== ''));
-        $h[] = '<a class="knopf zweit klein-knopf" href="/team/export?' . e($q) . '" download>' . e($vor . $name) . '</a>';
+        $h[] = '<a class="knopf zweit klein" href="/team/export?' . e($q) . '" download>' . e($vor . $name) . '</a>';
     }
     return '<span class="export-knoepfe">' . implode(' ', $h) . '</span>';
 }

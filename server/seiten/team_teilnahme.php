@@ -97,7 +97,7 @@ team_seite_kopf($konto, 'Teilnahme', '/team/teilnahme');
     <div class="kasten" id="zertifikat">
         <h2 class="zwischen klein-zwischen">Zertifikate</h2>
         <p class="meta klein">Freigeschaltet bekommen Anwesende eine Mail mit Link und laden das PDF unter „Meine Anmeldung“ herunter. Wer als „nicht erschienen“ markiert ist, bekommt keins.</p>
-        <p class="aktionen"><a class="knopf zweit klein-knopf" href="/team/teilnahme/zertifikat?beispiel=1" target="_blank" rel="noopener">Vorschau mit Beispiel</a> <a class="klein-link" href="/team/einstellungen#zertifikat">Angaben auf dem Zertifikat</a></p>
+        <p class="aktionen"><a class="knopf zweit klein" href="/team/teilnahme/zertifikat?beispiel=1" target="_blank" rel="noopener">Vorschau mit Beispiel</a> <a class="klein-link" href="/team/einstellungen#zertifikat">Angaben auf dem Zertifikat</a></p>
         <?php if (!$abHeute): ?>
         <?= leer_hinweis('Freischalten geht ab dem Veranstaltungstag (' . tag_text(va('veranstaltung_datum')) . ').') ?>
         <?php elseif ($z['offen'] > 0): ?>

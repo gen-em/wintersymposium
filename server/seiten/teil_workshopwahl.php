@@ -38,7 +38,7 @@ foreach (anm_workshops() as $w):
             // Team (AP-5): volle Termine wählbar, Überbuchen wird beim Speichern bestätigt
             $rechts = $st === 'fest' ? ($team ? 'fest' : 'dein Platz') : ($frei > 0 ? $frei . ' frei' : 'voll · überbuchen');
             $festeZeilen .= '<label><input type="radio" name="ws[' . $wid . ']" value="' . $tid . '" data-von="' . minuten($t['beginn']) . '" data-bis="' . minuten($t['ende']) . '" data-titel="' . $titel . '"' . ($an ? ' checked' : '') . '>'
-                . '<span>' . $zeit . '<span class="grund" data-grund></span></span><span class="rechts status">' . e($rechts) . '</span></label>';
+                . '<span>' . $zeit . '<span class="grund" data-grund></span></span><span class="rechts">' . e($rechts) . '</span></label>';
         }
         // Ein bestehender Warte-Eintrag steht immer da und wird mitgesendet – auch im
         // Team-Modus und wenn der Termin inzwischen frei ist (Review B-2, B-3)

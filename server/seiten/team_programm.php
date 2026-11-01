@@ -118,7 +118,7 @@ if ($st['offen']):
     $namen = array_map(fn($p) => trim($p['kuerzel'] . ' ' . $p['titel']), $geaendert);
     $weg = array_map(fn($p) => trim($p['kuerzel'] . ' ' . $p['titel']) . ' (gelöscht)', $st['geloescht']); ?>
 <div class="entwurf-banner" role="status">
-    <span class="eb-text"><strong>Gespeichert, aber nicht veröffentlicht.</strong> <?= count($namen) + count($weg) ?> <?= count($namen) + count($weg) === 1 ? 'Programmpunkt ist' : 'Programmpunkte sind' ?> geändert und noch nicht auf der Startseite: <?= e(implode(', ', array_merge($namen, $weg))) ?>.</span>
+    <span><strong>Gespeichert, aber nicht veröffentlicht.</strong> <?= count($namen) + count($weg) ?> <?= count($namen) + count($weg) === 1 ? 'Programmpunkt ist' : 'Programmpunkte sind' ?> geändert und noch nicht auf der Startseite: <?= e(implode(', ', array_merge($namen, $weg))) ?>.</span>
     <span class="eb-knoepfe">
         <a class="knopf zweit" href="/team/programm/vorschau">Vorschau</a>
         <?php if ($pub !== null): ?>
@@ -165,7 +165,7 @@ if ($st['offen']):
         foreach ($gliederung as $g):
             $p = $g['punkt'];
             if ($g['art'] === 'block'): ?>
-            <li class="pg-block"><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], '<strong>' . e($p['titel']) . '</strong> <span class="meta klein">Workshop-Block · ' . count($g['kinder']) . ' Einträge</span>') ?>
+            <li><?= $zeile($p, 'punkt', $p['id'], $p['beginn'], $p['ende'], '<strong>' . e($p['titel']) . '</strong> <span class="meta klein">Workshop-Block · ' . count($g['kinder']) . ' Einträge</span>') ?>
                 <ol class="pg-kinder">
                 <?php foreach ($g['kinder'] as $k):
                     $kp = $k['punkt'];

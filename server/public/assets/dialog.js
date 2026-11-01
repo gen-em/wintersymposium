@@ -50,7 +50,7 @@
                 }
                 b.setAttribute("form", f.getAttribute("id"));
             }
-            b.classList.remove("gefahr", "zweit", "klein-knopf");
+            b.classList.remove("gefahr", "zweit", "klein");
             b.classList.add("knopf", "dlg-ja");
             knoepfe.appendChild(b);
         });

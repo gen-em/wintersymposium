@@ -103,6 +103,48 @@ function konv_melden(array $funde, string $was): void
 const KONV_WORT_AUSNAHMEN = [
 ];
 
+/** Klassen, die nur dynamisch entstehen oder JS/Tests als Haken dienen (V-29); je mit Grund. */
+const KONV_CSS_OHNE_VORKOMMEN = [
+    'akzent-rot' => 'seite_kopf setzt akzent-<farbe>',
+    'dlg-gruen' => 'dialog.js setzt dlg-<art>',
+    'dlg-lila' => 'dialog.js setzt dlg-<art>',
+];
+const KONV_KLASSE_OHNE_CSS = [
+    'dlg-nein' => 'Haken in dialog.js',
+    'personen' => 'Haken im Browser-Durchlauf (table.personen)',
+    'rm-form' => 'Haken in mailings.js',
+    'vorlage' => 'Haken in programm-team.js',
+    'vor' => 'Vergleichswert in programm-team.js (wo === \'vor\'), keine Klasse',
+];
+
+/** Klassen aus class="…"-Angaben in PHP und JS (nur feste Teile, dynamische Stücke entfallen). */
+function konv_klassen_im_code(string $wurzel): array
+{
+    $dateien = array_merge(glob("$wurzel/server/seiten/*.php") ?: [], glob("$wurzel/server/lib/*.php") ?: [], glob("$wurzel/server/public/assets/*.js") ?: []);
+    $k = [];
+    foreach ($dateien as $p) {
+        $q = (string)file_get_contents($p);
+        preg_match_all('/class(?:Name)?\s*=\s*\\?"([^"]*)\\?"|class=\'([^\']*)\'|classList\.(?:add|remove|toggle)\(([^)]*)\)|\'(?:knopf|klasse|knopfklasse|form_klasse|ja_klasse)\'\s*=>\s*\'([^\']*)\'/', $q, $m, PREG_SET_ORDER);
+        foreach ($m as $x) {
+            if (($x[3] ?? '') !== '') {
+                // classList.add/remove/toggle: nur die Zeichenketten, keine Ausdrücke
+                preg_match_all('/"([^"]*)"|\'([^\']*)\'/', $x[3], $lit);
+                $teil = implode(' ', array_merge($lit[1], $lit[2]));
+            } else {
+                $teil = $x[1] !== '' ? $x[1] : (($x[2] ?? '') !== '' ? $x[2] : ($x[4] ?? ''));
+            }
+            // dynamische Stücke entfernen (PHP-Ausgaben, Verkettungen in PHP und JS)
+            $teil = (string)preg_replace(['/<\?=.*?\?>/s', '/\'\s*\..*?\.\s*\'/s', '/"\s*\+.*?\+\s*"/s'], ' ', $teil);
+            foreach (preg_split('/[\s,"\']+/', $teil) ?: [] as $kl) {
+                if (preg_match('/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/', $kl) === 1) {
+                    $k[$kl] = true;
+                }
+            }
+        }
+    }
+    return array_keys($k);
+}
+
 function konventionen_pruefen(string $wurzel): void
 {
     $alle = konv_alle_texte($wurzel);
@@ -146,6 +188,20 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden($dbInSeiten, 'K-d: keine db_*-Aufrufe in server/seiten');
     konv_melden($closures, 'Unterpunkt 4: keine Feld-Closures ($fehlerFeld, $ungueltig) in Seiten');
     konv_melden($einknopf, 'Unterpunkt 4: Einknopf-Formulare über aktion_knopf(), nicht von Hand');
+
+    // Unterpunkt 5 (V-29): jede Klasse in site.css kommt in PHP/JS vor und umgekehrt
+    $css = (string)preg_replace('~/\*.*?\*/~s', '', (string)file_get_contents("$wurzel/server/public/assets/site.css"));
+    $selektoren = (string)preg_replace(['/\{[^{}]*\}/', '/url\([^)]*\)/'], ['{}', ''], $css);
+    preg_match_all('/\.([a-z][a-z0-9-]*)/', (string)preg_replace('/\d*\.\d+/', '', $selektoren), $m);
+    $cssKlassen = array_unique($m[1]);
+    $code = '';
+    foreach (array_merge(glob("$wurzel/server/seiten/*.php") ?: [], glob("$wurzel/server/lib/*.php") ?: [], glob("$wurzel/server/public/assets/*.js") ?: []) as $p) {
+        $code .= (string)file_get_contents($p) . "\n";
+    }
+    $ohne = array_values(array_filter($cssKlassen, fn($k) => !isset(KONV_CSS_OHNE_VORKOMMEN[$k]) && preg_match('/(?<![\w-])' . preg_quote($k, '/') . '(?![\w-])/', $code) !== 1));
+    konv_melden($ohne, 'V-29: jede Klasse in site.css wird in PHP/JS verwendet (' . count($cssKlassen) . ' Klassen)');
+    $fehlt = array_values(array_filter(konv_klassen_im_code($wurzel), fn($k) => !in_array($k, $cssKlassen, true) && !isset(KONV_KLASSE_OHNE_CSS[$k])));
+    konv_melden($fehlt, 'V-29: jede Klasse im Markup hat eine Regel in site.css');
 
     // K-f Wortliste
     $verboten = ['Endgültig löschen', 'Ja, Konto löschen', 'Von der Liste nehmen'];

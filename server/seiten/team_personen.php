@@ -152,7 +152,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
 <p class="legende meta klein"><strong>Angemeldet</strong> = Mail bestätigt, Platz beim Symposium · <strong>Mail nicht bestätigt</strong> = Link noch nicht geklickt, Platz nur vorgemerkt · <strong>Warteliste</strong> = bestätigt, wartet auf einen Platz beim Symposium</p>
 <?= filter_leiste(['ziel' => '/team/personen', 'suche' => true, 'versteckt' => ['f' => $filter !== 'alle' ? $filter : null],
     'felder' => feld('q', 'Suchen', ['typ' => 'search', 'id' => 'suche', 'sr' => true, 'ohne_rahmen' => true, 'wert' => $q, 'attr' => ['placeholder' => 'Name, Adresse, Institution']]),
-    'nach_html' => '<a class="knopf klein-knopf" href="/team/personen?neu=1">+ Person anlegen</a>']) ?>
+    'nach_html' => '<a class="knopf klein" href="/team/personen?neu=1">+ Person anlegen</a>']) ?>
 <?= filter_chips(array_map(fn($f) => [TEAM_FILTER[$f], $zahlen[$f]], array_combine(array_keys(TEAM_FILTER), array_keys(TEAM_FILTER))), $filter,
     fn(string $f) => '/team/personen?' . http_build_query(array_filter(['f' => $f !== 'alle' ? $f : null, 'q' => $q ?: null]))) ?>
 
@@ -161,7 +161,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
     <?php if ($zeigen === []): ?>
         <?= leer_hinweis('Personen', $q !== '' || $filter !== 'alle') ?>
     <?php else: ?>
-        <div class="tabelle-wrap"><table class="t karten personen">
+        <div class="tabelle-wrap"><table class="t karten karten-immer personen">
             <thead><tr><th>Name</th><th>Status</th><th>Konto / Rolle</th><th>Workshops</th><th>Essen</th></tr></thead>
             <tbody>
             <?php foreach ($zeigen as $p):
@@ -171,7 +171,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <tr<?= $gewaehlt ? ' class="gewaehlt"' : '' ?>>
                     <td data-label="Name"><a href="<?= e($href) ?>"<?= $gewaehlt ? ' aria-current="true"' : '' ?>><?= e($p['name']) ?></a><br><span class="meta klein"><?= e($p['email']) ?></span></td>
                     <td data-label="Status"><?= chip($farbe, $st) ?></td>
-                    <td data-label="Konto"><?= $p['konto'] === null ? '<span class="meta">ohne Konto</span>' : ($p['konto']['rolle'] === 'teilnehmend' ? ((int)$p['konto']['aktiv'] === 1 ? 'Konto' : chip('gesperrt', 'Konto gesperrt')) : '<span class="rolle-tag">' . e(ROLLEN[$p['konto']['rolle']]) . '</span>') ?></td>
+                    <td data-label="Konto"><?= $p['konto'] === null ? '<span class="meta">ohne Konto</span>' : ($p['konto']['rolle'] === 'teilnehmend' ? ((int)$p['konto']['aktiv'] === 1 ? 'Konto' : chip('gesperrt', 'Konto gesperrt')) : '<span class="chip rolle">' . e(ROLLEN[$p['konto']['rolle']]) . '</span>') ?></td>
                     <td data-label="Workshops" class="mono klein"><?= $p['anmeldung'] !== null ? e($wsKurz($p['anmeldung'])) : '–' ?></td>
                     <td data-label="Essen"><?= $p['essen'] !== null ? e(ANM_ESSEN[$p['essen']] ?? '') : '–' ?></td>
                 </tr>
@@ -242,7 +242,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <?= feld('ohne_mail', 'ohne Mail an die Person', ['typ' => 'haken']) ?>
                 <div class="aktionen"><button class="knopf" type="submit">Speichern</button></div>
             </form>
-            <?= aktion_knopf($ziel(), 'link', ['a' => (int)$a['id']], 'Einmal-Link senden', 'knopf zweit klein-knopf', ['form_klasse' => 'abstand-oben-klein']) ?>
+            <?= aktion_knopf($ziel(), 'link', ['a' => (int)$a['id']], 'Einmal-Link senden', 'knopf zweit klein', ['form_klasse' => 'abstand-oben-klein']) ?>
 
             <p class="unterkopf">Plätze, Wartelisten und Angebote</p>
             <dl class="liste-def">
@@ -250,7 +250,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <div><dt class="mono klein"><?= e($tid === 0 ? 'Symposium' : (anm_termin($tid)['beginn'] ?? '') . '–' . (anm_termin($tid)['ende'] ?? '')) ?></dt><dd><?= e($tid === 0 ? '' : trim((anm_termin($tid)['workshop']['kuerzel'] ?? '') . ' ' . (anm_termin($tid)['workshop']['titel'] ?? ''))) ?> <?= chip($p['status'] === 'fest' ? 'ok' : 'wl', $r['status']) ?>
                     <span class="zellen-aktionen">
                     <?php if ($p['status'] !== 'fest'): ?>
-                        <?= aktion_knopf($ziel(), 'platz', ['a' => (int)$a['id'], 't' => $tid], 'Platz geben', 'knopf klein-knopf') ?>
+                        <?= aktion_knopf($ziel(), 'platz', ['a' => (int)$a['id'], 't' => $tid], 'Platz geben', 'knopf klein') ?>
                         <?= $p['status'] === 'warte' && anm_frei($tid) > 0 ? aktion_knopf($ziel(), 'angebot', ['a' => (int)$a['id'], 'platz' => (int)$p['id']], 'Angebot schicken') : '' ?>
                     <?php endif; ?>
                     <?= $tid !== 0 ? aktion_knopf($ziel(), 'entfernen', ['a' => (int)$a['id'], 'platz' => (int)$p['id']], 'Entfernen') : '' ?>
@@ -262,7 +262,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
 <?php if ($k !== null): ?>
             <p class="unterkopf">Konto</p>
             <?php if ($k['rolle'] !== 'teilnehmend'): ?>
-                <p><span class="rolle-tag"><?= e(ROLLEN[$k['rolle']]) ?></span> Team-Konto – verwalten unter <?= $betreiber ? '<a href="/team/konten">Team-Konten</a>' : '„Team-Konten“ (BetreiberIn)' ?>.</p>
+                <p><span class="chip rolle"><?= e(ROLLEN[$k['rolle']]) ?></span> Team-Konto – verwalten unter <?= $betreiber ? '<a href="/team/konten">Team-Konten</a>' : '„Team-Konten“ (BetreiberIn)' ?>.</p>
             <?php else: ?>
                 <p><?= (int)$k['aktiv'] === 1 ? 'Konto aktiv' : chip('gesperrt', 'Konto gesperrt') ?> · <?= $k['email_bestaetigt_am'] !== null ? 'Adresse bestätigt' : 'Adresse noch nicht bestätigt' ?> · <?= $k['passwort_hash'] !== null ? 'Passwort gesetzt' : 'noch ohne Passwort' ?></p>
                 <div class="zellen-aktionen">
@@ -284,11 +284,11 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <div class="zellen-aktionen">
                 <?php if ($a !== null): ?>
                     <?= bestaetigung_html('Anmeldung stornieren', 'Die Anmeldung und alle Plätze von ' . $auswahl['name'] . ' werden gelöscht.', 'Ja, stornieren', ['aktion' => 'storno', 'a' => (int)$a['id']],
-                        ['ziel' => $ziel(), 'knopfklasse' => 'knopf gefahr klein-knopf', 'inhalt_html' => feld('ohne_mail', 'ohne Mail', ['typ' => 'haken'])]) ?>
+                        ['ziel' => $ziel(), 'knopfklasse' => 'knopf gefahr klein', 'inhalt_html' => feld('ohne_mail', 'ohne Mail', ['typ' => 'haken'])]) ?>
                 <?php endif; ?>
                 <?php if ($k !== null && $k['rolle'] === 'teilnehmend'): ?>
                     <?php // Auswahl ohne Rahmen und Legende (feld() radio bringt ein fieldset mit) bleibt von Hand ?>
-                    <?= bestaetigung_html('Konto löschen', 'Das Konto wird gelöscht.', 'Ja, löschen', ['aktion' => 'konto_loeschen', 'k' => (int)$k['id']], ['ziel' => $ziel(), 'knopfklasse' => 'knopf gefahr klein-knopf', 'vor_frage' => true,
+                    <?= bestaetigung_html('Konto löschen', 'Das Konto wird gelöscht.', 'Ja, löschen', ['aktion' => 'konto_loeschen', 'k' => (int)$k['id']], ['ziel' => $ziel(), 'knopfklasse' => 'knopf gefahr klein', 'vor_frage' => true,
                         'inhalt_html' => $a !== null ? '<div class="wahl"><label><input type="radio" name="anmeldung" value="behalten" checked><span>Anmeldung behalten</span></label><label><input type="radio" name="anmeldung" value="stornieren"><span>Anmeldung auch stornieren</span></label></div>' : '']) ?>
                 <?php endif; ?>
                 </div>
