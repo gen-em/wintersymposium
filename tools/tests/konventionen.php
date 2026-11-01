@@ -106,11 +106,11 @@ const KONV_WORT_AUSNAHMEN = [
 /** Klassen, die nur dynamisch entstehen oder JS/Tests als Haken dienen (V-29); je mit Grund. */
 const KONV_CSS_OHNE_VORKOMMEN = [
     'akzent-rot' => 'seite_kopf setzt akzent-<farbe>',
-    'dlg-gruen' => 'dialog.js setzt dlg-<art>',
-    'dlg-lila' => 'dialog.js setzt dlg-<art>',
+    'dlg-gruen' => 'basis.js setzt dlg-<art>',
+    'dlg-lila' => 'basis.js setzt dlg-<art>',
 ];
 const KONV_KLASSE_OHNE_CSS = [
-    'dlg-nein' => 'Haken in dialog.js',
+    'dlg-nein' => 'Haken in basis.js',
     'personen' => 'Haken im Browser-Durchlauf (table.personen)',
     'rm-form' => 'Haken in mailings.js',
     'vorlage' => 'Haken in programm-team.js',

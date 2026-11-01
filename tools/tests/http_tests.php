@@ -540,7 +540,8 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe(http_anfrage($basis, 'GET', '/team', $h, [], null, $b)['status'] === 200, 'Team-Sitzung bleibt danach bestehen');
     $r = http_anfrage($basis, 'GET', '/', $h, [], null, "$tmp/kekse-gast.txt");
     pruefe(str_contains($r['text'], 'class="nav-anmelden" href="/deine-anmeldung"') && !str_contains($r['text'], 'Meine Anmeldung') && !str_contains($r['text'], '>Team</a>'), 'Gäste: grüner Knopf „Anmelden“, kein Team-Link in der Fußzeile');
-    pruefe(str_contains($r['text'], '/assets/dialog.js'), 'Dialog-Skript auf jeder Seite');
+    pruefe(str_contains($r['text'], '/assets/basis.js') && !str_contains($r['text'], '/assets/dialog.js'), 'JS-Basis (mit Dialogen, AP-17) auf jeder Seite');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team', $h, [], null, $b)['text'], '<meta name="csrf" content="'), 'CSRF-Meta für Skripte, wenn eine Sitzung besteht');
     // Vor dem Anmeldestart: Hinweis statt „Link per Mail“
     $start = einstellung('anmeldung_start');
     einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() + 86400 * 3));

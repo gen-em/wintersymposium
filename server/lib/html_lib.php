@@ -54,8 +54,10 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
         . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         . '<meta name="theme-color" content="#001E3A">'
-        // dialog.js zuerst: macht aus jeder Nachfrage den einheitlichen Dialog (Rückmeldung 2026-10-30)
-        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_merge(['dialog.js', 'kopf.js'], $opt['skripte'] ?? [])))
+        // CSRF für Skripte (ws.post in basis.js), nur mit Sitzung
+        . (session_status() === PHP_SESSION_ACTIVE ? '<meta name="csrf" content="' . e(csrf_token()) . '">' : '')
+        // basis.js zuerst (AP-17, V-42): window.ws, Bestätigungsdialoge, Kopfleiste
+        . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_values(array_unique(array_merge(['basis.js'], $opt['skripte'] ?? [])))))
         . '</head><body class="akzent-' . $akzent . '">'
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'
