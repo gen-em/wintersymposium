@@ -41,6 +41,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | umgesetzt, Staging offen | lokal T-309 bis T-316 | Staging (siehe unten) |
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | umgesetzt, Staging offen | lokal T-317 bis T-325 | Staging (siehe unten) |
 | E-72 | Rückmeldungen nach AP-18/AP-19 | umgesetzt, Staging offen | lokal T-326 bis T-330 | Staging (siehe unten) |
+| E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
 
 ## Wie geprüft wird
 
@@ -898,18 +899,20 @@ Nach dem Merge auf Staging. Ziel: Reihen und Newsletter so, wie in E-71 beschrie
 ### Geplante Prüfungen
 
 ```yaml
-- {id: T-326, ap: E-72, was: "Überschrift Merke als Feld", wie: "lauf.php (20_reihen): Startwert aus Migration 24, änderbar, leer ohne Überschrift; http_tests: Feld auf der Seite „Startseite“", status: "offen"}
-- {id: T-327, ap: E-72, was: "Abbrechen schließt die Kachel", wie: "http_tests: Abbrechen leitet ohne Speichern um, Speichern zuerst im Markup; Browser: Kachel zu, Eingabe verworfen; Reihe „einzeln“ und zurück (Rückmeldung Staging)", status: "offen"}
-- {id: T-328, ap: E-72, was: "Seite Startseite: schwebendes Speichern, Zoom, Groß ansehen, Hinweise", wie: "Browser: Knopfleiste am unteren Rand beim Scrollen; Zoom 100 % scrollt seitlich; Groß ansehen füllt das Fenster, Esc schließt; keine Größenangabe mehr, Kachel 3 leer bleibt", status: "offen"}
-- {id: T-329, ap: E-72, was: "Dozierende: Suche", wie: "http_tests: Suche nach Funktion und Name, kein Treffer", status: "offen"}
-- {id: T-330, ap: E-72, was: "Allgäu Akut zuerst, newsletter@ vorausgewählt, Testkonten, Komponentenblatt", wie: "lauf.php: Reihenfolge der Listen, Hervorhebung, Testkonten aus der config (Passwort, zweiter Faktor, Rollen, ungültige abgelehnt, erneut zurückgesetzt); http_tests: Mailings mit Allgäu Akut zuerst und Postfach-Hinweis, Komponentenblatt nicht in der Navigation", status: "offen"}
+- {id: T-326, ap: E-72, was: "Überschrift Merke als Feld", wie: "lauf.php (20_reihen): Startwert aus Migration 24, änderbar, leer ohne Überschrift; http_tests: Feld auf der Seite „Startseite“", status: "ok"}
+- {id: T-327, ap: E-72, was: "Abbrechen schließt die Kachel", wie: "http_tests: Abbrechen leitet ohne Speichern um, Speichern zuerst im Markup; Browser: Kachel zu, Eingabe verworfen; Reihe „einzeln“ und zurück (Rückmeldung Staging)", status: "ok"}
+- {id: T-328, ap: E-72, was: "Seite Startseite: schwebendes Speichern, Zoom, Groß ansehen, Hinweise", wie: "Browser: Knopfleiste am unteren Rand beim Scrollen; Zoom 100 % scrollt seitlich; Groß ansehen füllt das Fenster, Esc schließt; keine Größenangabe mehr, Kachel 3 leer bleibt", status: "ok"}
+- {id: T-329, ap: E-72, was: "Dozierende: Suche", wie: "http_tests: Suche nach Funktion und Name, kein Treffer", status: "ok"}
+- {id: T-331, ap: E-73, was: "Abbruch je Engine und Teilwiederholung", wie: "Stufe 2 (Seite archiv) mit WS_TEST_ABBRUCH=firefox: Firefox abgebrochen, Chromium läuft weiter; WS_WIEDERHOLEN zweimal: zuerst beide Engines neu (beide waren abgebrochen), dann nur Firefox, Chromium samt Fotos übernommen, gemeinsamer Bericht grün", status: "ok"}
+- {id: T-330, ap: E-72, was: "Allgäu Akut zuerst, newsletter@ vorausgewählt, Testkonten, Komponentenblatt", wie: "lauf.php: Reihenfolge der Listen, Hervorhebung, Testkonten aus der config (Passwort, zweiter Faktor, Rollen, ungültige abgelehnt, erneut zurückgesetzt); http_tests: Mailings mit Allgäu Akut zuerst und Postfach-Hinweis, Komponentenblatt nicht in der Navigation", status: "ok"}
 ```
 
 ### Ergebnisse
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
-| T-326 bis T-330 | 2026-11-01 | claude-dev | ERGEBNIS_72 | ERGEBNIS_ZAHLEN_72 | Reihe-Fehler von Staging (LibreWolf) lokal nicht nachstellbar; Diagnose eingebaut |
+| T-326 bis T-330 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1165 ok, 0 Fehler; Browser **Stufe 3** (Arbeitspaket-Abschluss der Rückmeldungen, gemeinsame Teile: CSS, JavaScript, Navigation) `node tools/browser/durchlauf.js` → 9356 ok, 0 Fehler (3 Engines × 4 Breiten, 15 Min.); Fotos angesehen (Startseite groß, Handy mit schwebender Leiste) | Firefox brach zweimal bei „Vorschau folgt dem Tippen“ ab: zwei Formular-Sendungen kurz nacheinander in den iframe, Firefox verwarf eine → startseite.js schickt die zweite erst nach dem Laden der ersten (Sicherung 8 s). Reihe-Fehler von Staging (LibreWolf) lokal nicht nachstellbar; Diagnose eingebaut |
+| T-331 | 2026-11-01 | claude-dev | bestanden | Stufe 2 (Seite archiv, Chromium und Firefox) mit `WS_TEST_ABBRUCH=firefox`: Abbruch erfasst mit Seite und Zeile, nächste Engine lief weiter; `WS_WIEDERHOLEN` zweimal, am Ende nur Firefox neu, Chromium samt Fotos übernommen → 498 ok, 0 Fehler, `ergebnis.json` mit Code-Stand | Beim ersten Versuch brach Chromium an einem eigenen Ersetzungsfehler ab (`ALLE_satz`) – der Abbruch wurde wie vorgesehen erfasst und Firefox lief trotzdem; behoben. Der volle Lauf oben lief noch mit dem Durchlauf vor E-73 (nur das Prüfwerkzeug geändert, App-Code gleich) |
 
 ### Noch zu prüfen
 

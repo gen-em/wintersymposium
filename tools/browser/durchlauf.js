@@ -27,6 +27,19 @@
  *     Name mit einem der Einträge beginnt (Namen wie in bericht.txt). Die Abläufe
  *     dazwischen laufen trotzdem, weil spätere Seiten auf ihnen aufbauen.
  *   Einzeln überschreibbar: WS_ENGINES=webkit, WS_BREITEN=handy,tablet.
+ *
+ * Abbruch und Teilwiederholung (E-73):
+ *   Bricht eine Engine ab (z. B. Zeitüberschreitung), zählt das als Fehler
+ *   „abgebrochen“ mit Seite und Zeile; die übrigen Engines laufen weiter.
+ *   Im Ausgabeordner steht ergebnis.json: je Engine grün, rot oder
+ *   abgebrochen, mit Zahlen, Engine-Version und Code-Stand (Commit).
+ *   WS_WIEDERHOLEN=<alter Ausgabeordner> fährt nur die Engines neu, die dort
+ *   rot oder abgebrochen waren (gleiche Breiten und Seiten, frische
+ *   Testdatenbank), übernimmt die grünen samt Fotos und schreibt einen
+ *   gemeinsamen Bericht. Hat sich der Code seitdem geändert, nennt der
+ *   Bericht die geänderten Dateien. Feiner als je Engine geht es nicht: die
+ *   Abläufe innerhalb einer Engine bauen aufeinander auf.
+ *   Zum Prüfen: WS_TEST_ABBRUCH=firefox bricht Firefox nach der ersten Seite ab.
  */
 'use strict';
 // Eigener Ordner mit allen drei Engines (tools/browser/einrichten.sh); die
@@ -45,26 +58,54 @@ const { spawn, execFileSync } = require('child_process');
 
 const WURZEL = path.resolve(__dirname, '..', '..');
 const AUS = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'ws-browser-' + Date.now()));
+// Teilwiederholung (E-73): Ergebnis des alten Laufs; Engines, Breiten und Seiten kommen von dort
+const ALT_ORDNER = process.env.WS_WIEDERHOLEN ? path.resolve(process.env.WS_WIEDERHOLEN) : '';
+const ALT = ALT_ORDNER ? JSON.parse(fs.readFileSync(path.join(ALT_ORDNER, 'ergebnis.json'), 'utf8')) : null;
+if (ALT && (process.env.WS_ENGINES || process.env.WS_BREITEN || process.env.WS_SEITEN || process.env.WS_STUFE)) {
+  console.log('WS_WIEDERHOLEN: WS_ENGINES, WS_BREITEN, WS_SEITEN und WS_STUFE werden ignoriert (Werte aus dem alten Lauf).');
+}
+// Feste Reihenfolge: danach richten sich die Testdaten je Engine (vorbereiten.php legt drei Sätze an)
+const ALLE_ENGINES = ['chromium', 'firefox', 'webkit'];
 // WS_ENGINES=webkit (kommagetrennt) prüft nur diese Engines, z. B. zur Fehlersuche
-const STUFE2 = process.env.WS_STUFE === '2';
-const ENGINES = (process.env.WS_ENGINES || (STUFE2 ? 'chromium' : 'chromium,firefox,webkit')).split(',');
+const STUFE2 = ALT ? ALT.stufe === 2 : process.env.WS_STUFE === '2';
+const ENGINES_GESAMT = ALT ? ALT.engines_gesamt : (process.env.WS_ENGINES || (STUFE2 ? 'chromium' : 'chromium,firefox,webkit')).split(',');
+const ENGINES = ALT ? ENGINES_GESAMT.filter(e => !ALT.engines[e] || ALT.engines[e].status !== 'gruen') : ENGINES_GESAMT;
+const satz = engine => ALLE_ENGINES.indexOf(engine);
 const ALLE_BREITEN = [
   ['handy', 390, 844],
   ['tablet', 768, 1024],
   ['desktop-schmal', 1024, 768],
   ['desktop-breit', 1440, 900],
 ];
-const BREITEN_WAHL = (process.env.WS_BREITEN || (STUFE2 ? 'handy,desktop-breit' : '')).split(',').filter(Boolean);
+const BREITEN_WAHL = ALT ? ALT.breiten : (process.env.WS_BREITEN || (STUFE2 ? 'handy,desktop-breit' : '')).split(',').filter(Boolean);
 const BREITEN = BREITEN_WAHL.length ? ALLE_BREITEN.filter(b => BREITEN_WAHL.includes(b[0])) : ALLE_BREITEN;
 // Stufe 2: nur diese Seiten voll prüfen und fotografieren (Präfixe der Seitennamen)
-const SEITEN = (process.env.WS_SEITEN || '').split(',').map(x => x.trim()).filter(Boolean);
+const SEITEN = ALT ? ALT.seiten : (process.env.WS_SEITEN || '').split(',').map(x => x.trim()).filter(Boolean);
 const seiteGewaehlt = name => SEITEN.length === 0 || SEITEN.some(x => name.startsWith(x));
 
 fs.mkdirSync(AUS, { recursive: true });
 const ergebnisse = [];
+let zuletzt = '';
 function notiere(engine, breite, seite, was, ok, info = '') {
   ergebnisse.push({ engine, breite, seite, was, ok, info });
+  zuletzt = `${breite} ${seite}`;
   if (!ok) console.log(`  FEHLER ${engine} ${breite} ${seite}: ${was} ${info}`);
+}
+
+/** Code-Stand für ergebnis.json: Commit und Prüfsumme der nicht eingecheckten Änderungen. */
+function codeStand() {
+  const git = args => { try { return execFileSync('git', args, { cwd: WURZEL, encoding: 'utf8' }).trim(); } catch (e) { return ''; } };
+  const diff = git(['diff', 'HEAD']);
+  return { commit: git(['rev-parse', 'HEAD']), aenderungen: diff ? require('crypto').createHash('sha1').update(diff).digest('hex').slice(0, 12) : '' };
+}
+
+/** Dateien, die sich seit einem Code-Stand geändert haben (Teilwiederholung). */
+function geaendertSeit(stand) {
+  try {
+    return execFileSync('git', ['diff', '--name-only', stand.commit], { cwd: WURZEL, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  } catch (e) {
+    return ['(Commit ' + stand.commit.slice(0, 8) + ' nicht gefunden)'];
+  }
 }
 
 /** TOTP-Code zum Geheimnis aus der otpauth-Adresse – über tools/tests/totp_code.php (dieselbe Rechnung wie die App, V-51). */
@@ -192,6 +233,7 @@ async function ziehen(p, griff, ziel, anteil, waehrend) {
 /** Seite prüfen: Status, seitliches Scrollen, Fehler; Bildschirmfoto. */
 async function pruefeSeite(p, fehler, engine, breite, name, url) {
   fehler.length = 0;
+  zuletzt = `${breite} ${name}`;
   if (!seiteGewaehlt(name)) {
     // Stufe 2: nicht gewählte Seite nur aufrufen (der Ablauf braucht sie), nicht prüfen
     if (url) await p.goto(url, { waitUntil: 'load' });
@@ -246,8 +288,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
     { env: { ...process.env, WS_CONFIG: vor.config }, stdio: ['ignore', fs.openSync(path.join(tmp, 'server.log'), 'a'), fs.openSync(path.join(tmp, 'server.log'), 'a')] });
   await new Promise(r => setTimeout(r, 700));
 
+  const STAND = codeStand();
+  const engineInfo = {};
+  if (ENGINES.length === 0) console.log('Nichts zu wiederholen: im alten Lauf waren alle Engines grün.');
   try {
-    for (const engine of ENGINES) {
+    // Eine Engine: alle Seiten und Abläufe. merk hält Browser und Seite für den Abbruch fest.
+    const engineLauf = async (engine, merk) => {
       console.log(`== ${engine}`);
       // Jede Engine richtet den zweiten Faktor frisch ein.
       php([path.join(WURZEL, 'server/cli/konto.php'), 'zweitfaktor', vor.betreiber], vor.config);
@@ -259,11 +305,14 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       const browser = await pw[engine].launch(engine === 'chromium' ? { args: ['--lang=de-DE'], env: deUmgebung }
         : engine === 'firefox' ? { env: deUmgebung, firefoxUserPrefs: { 'intl.locale.requested': 'de-DE', 'intl.accept_languages': 'de-DE, de', 'intl.regional_prefs.use_os_locales': true } }
         : { env: deUmgebung });
+      merk.browser = browser;
       const version = browser.version();
+      merk.version = version;
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
       // Zwischenablage für „Kopieren“ auf der Status-Seite (AP-15); nur Chromium kennt diese Rechte
       if (engine === 'chromium') { await ctx.grantPermissions(['clipboard-read', 'clipboard-write']); }
       const p = await ctx.newPage();
+      merk.p = p;
       const fehler = [];
       p.on('console', m => { if (m.type() === 'error') fehler.push(m.text()); });
       p.on('pageerror', e => fehler.push(String(e)));
@@ -273,6 +322,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.setViewportSize({ width: w, height: h });
         // E-58: abgeschlossene Vorjahres-Veranstaltung unter ihrem Kürzel (nur Rückblick)
         await pruefeSeite(p, fehler, engine, breite, 'archiv', basis + '/wintersymposium2026');
+        // Prüfschalter für Abbruch und Teilwiederholung (E-73): WS_TEST_ABBRUCH=firefox
+        if (process.env.WS_TEST_ABBRUCH === engine) await p.waitForSelector('#gibt-es-nicht', { timeout: 500 });
         notiere(engine, breite, 'archiv', 'Rückblick ohne Anmeldung', (await p.textContent('body')).includes('Diese Veranstaltung ist vorbei') && !await p.isVisible('.held-knoepfe'));
         // Fortbildungsabend (Vortragsabend ohne Workshops und Essen, Beispieldaten 2026-10-31)
         await pruefeSeite(p, fehler, engine, breite, 'archiv-abend', basis + '/fortbildungsabend-notfallmedizin');
@@ -373,7 +424,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await Promise.all([p.waitForNavigation(), p.click('button:has-text("Speichern")')]);
       notiere(engine, 'desktop-breit', 'deine-anmeldung', 'Workshop-Termin gewechselt', (await p.textContent('.liste-def')).includes('20:30–21:15'));
       // Paula: offenes Angebot mit Tausch (nur ansehen und abbrechen, damit es für die nächste Engine bleibt)
-      await p.goto(basis + vor.paula_links[ENGINES.indexOf(engine)]);
+      await p.goto(basis + vor.paula_links[satz(engine)]);
       await Promise.all([p.waitForNavigation(), p.click('button:has-text("Weiter")')]);
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
@@ -393,7 +444,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Vor der Nachrück-Grenze bietet ein früherer Schritt (frei gewordener Platz) Wanda den Termin an;
       // für die Prüfung den Stand nach der Grenze herstellen: wieder auf der Warteliste
       wandaWartet(vor);
-      await p.goto(basis + vor.wanda_links[ENGINES.indexOf(engine)]);
+      await p.goto(basis + vor.wanda_links[satz(engine)]);
       await Promise.all([p.waitForNavigation(), p.click('button:has-text("Weiter")')]);
       for (const [breite, w, h] of BREITEN) {
         await p.setViewportSize({ width: w, height: h });
@@ -410,7 +461,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await ausloggen(p);
       // AP-14 (B-5): Storno mit Konto – danach weiter eingeloggt
       await p.goto(basis + '/deine-anmeldung');
-      await p.fill('#zg-lmail', vor.storno[ENGINES.indexOf(engine)]); await p.fill('#zg-pw', vor.passwort);
+      await p.fill('#zg-lmail', vor.storno[satz(engine)]); await p.fill('#zg-pw', vor.passwort);
       await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=einloggen]) button[type=submit]')]);
       await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-storno-login.png`) });
       const stornoKnopf = p.locator('button[aria-haspopup=dialog]:has-text("Anmeldung stornieren")');
@@ -1126,16 +1177,61 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       }
       besucht.clear();
       notiere(engine, '-', '-', 'Engine ' + version, true);
-      await browser.close();
+    };
+
+    for (const engine of ENGINES) {
+      const merk = {};
+      const start = ergebnisse.length;
+      let abbruch = '';
+      try {
+        await engineLauf(engine, merk);
+      } catch (e) {
+        // Abbruch zählt als Fehler mit Ort; die nächste Engine läuft trotzdem
+        const zeile = (String(e.stack || '').match(/durchlauf\.js:(\d+)/) || [])[1];
+        abbruch = `${String(e.message || e).split('\n')[0]} (bei ${zuletzt || '-'}${zeile ? ', durchlauf.js Zeile ' + zeile : ''})`;
+        notiere(engine, '-', 'abbruch', 'Lauf der Engine abgebrochen', false, abbruch);
+        if (merk.p) await merk.p.screenshot({ path: path.join(AUS, `${engine}-abbruch.png`), fullPage: true }).catch(() => {});
+        console.error(e);
+      } finally {
+        besucht.clear();
+        if (merk.browser) await merk.browser.close().catch(() => {});
+      }
+      const eigene = ergebnisse.slice(start);
+      const fz = eigene.filter(x => !x.ok).length;
+      engineInfo[engine] = { status: abbruch ? 'abgebrochen' : fz ? 'rot' : 'gruen', ok: eigene.length - fz, fehler: fz,
+        version: merk.version || '', abbruch, stand: STAND, ordner: AUS, zeit: new Date().toISOString() };
     }
   } finally {
     server.kill();
   }
 
+  // Teilwiederholung: grüne Engines aus dem alten Lauf übernehmen (Einträge und Fotos)
+  const kopf = [];
+  if (ALT) {
+    for (const engine of ENGINES_GESAMT.filter(e => !ENGINES.includes(e))) {
+      engineInfo[engine] = ALT.engines[engine];
+      ergebnisse.push(...ALT.ergebnisse.filter(x => x.engine === engine));
+      for (const datei of fs.readdirSync(ALT_ORDNER).filter(d => d.startsWith(engine + '-'))) {
+        fs.copyFileSync(path.join(ALT_ORDNER, datei), path.join(AUS, datei));
+      }
+    }
+    ergebnisse.sort((a, b) => ENGINES_GESAMT.indexOf(a.engine) - ENGINES_GESAMT.indexOf(b.engine));
+    kopf.push(`Teilwiederholung von ${ALT_ORDNER}: neu ${ENGINES.join(', ') || '-'}; übernommen ${ENGINES_GESAMT.filter(e => !ENGINES.includes(e)).join(', ') || '-'}`);
+  }
+  for (const engine of ENGINES_GESAMT) {
+    const i = engineInfo[engine];
+    if (!i) continue;
+    const anders = i.stand.commit !== STAND.commit || i.stand.aenderungen !== STAND.aenderungen;
+    kopf.push(`${engine.padEnd(8)} ${i.status.padEnd(11)} ${i.ok} ok, ${i.fehler} Fehler · ${i.version} · Stand ${i.stand.commit.slice(0, 8)}${i.stand.aenderungen ? '+' + i.stand.aenderungen : ''}${i.abbruch ? ' · Abbruch: ' + i.abbruch : ''}`);
+    if (anders) kopf.push(`         geändert gegenüber Commit ${i.stand.commit.slice(0, 8)}: ${geaendertSeit(i.stand).join(', ') || '(nur nicht eingecheckte Änderungen)'}`);
+  }
+  fs.writeFileSync(path.join(AUS, 'ergebnis.json'), JSON.stringify({ stufe: STUFE2 ? 2 : 3, engines_gesamt: ENGINES_GESAMT,
+    breiten: BREITEN.map(b => b[0]), seiten: SEITEN, stand: STAND, engines: engineInfo, ergebnisse }, null, 1));
+
   const fehlerZahl = ergebnisse.filter(e => !e.ok).length;
   const zeilen = ergebnisse.map(e => `${e.ok ? 'ok    ' : 'FEHLER'} ${e.engine.padEnd(8)} ${e.breite.padEnd(15)} ${e.seite.padEnd(16)} ${e.was}${e.ok ? '' : ' – ' + e.info}`);
-  const zusammen = `${ergebnisse.length - fehlerZahl} ok, ${fehlerZahl} Fehler (${ENGINES.length} Engines × ${BREITEN.length} Breiten${SEITEN.length ? '; Stufe 2, Seiten: ' + SEITEN.join(', ') : ''})`;
-  fs.writeFileSync(path.join(AUS, 'bericht.txt'), zeilen.join('\n') + '\n\n' + zusammen + '\n');
-  console.log('\n' + zusammen + '\nBericht und Bildschirmfotos: ' + AUS);
+  const zusammen = `${ergebnisse.length - fehlerZahl} ok, ${fehlerZahl} Fehler (${ENGINES_GESAMT.length} Engines × ${BREITEN.length} Breiten${SEITEN.length ? '; Stufe 2, Seiten: ' + SEITEN.join(', ') : ''})`;
+  fs.writeFileSync(path.join(AUS, 'bericht.txt'), zeilen.join('\n') + '\n\n' + kopf.join('\n') + '\n\n' + zusammen + '\n');
+  console.log('\n' + kopf.join('\n') + '\n\n' + zusammen + '\nBericht und Bildschirmfotos: ' + AUS);
   process.exit(fehlerZahl === 0 ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(2); });

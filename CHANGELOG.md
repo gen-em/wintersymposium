@@ -15,6 +15,7 @@ Rückmeldungen vom Admin nach AP-18 und AP-19 (Staging).
 - **Dozierende:** Suche nach Name und Funktion.
 - **Newsletter-Mailing:** Postfach newsletter@ vorausgewählt, wenn eingerichtet, sonst Hinweis.
 - **Feste Testkonten auf Staging:** BetreiberIn, Admin, Teilnehmende mit Passwort und zweitem Faktor aus der `config.php` (`testkonten`, nie im Repo); „Testdaten laden“ legt sie mit an, „Testkonten anlegen“ setzt sie einzeln zurück.
+- **Browser-Durchlauf: Abbruch und Teilwiederholung (E-73):** Bricht eine Engine ab, zählt das als Fehler mit Seite und Zeile, und die übrigen Engines laufen weiter. `ergebnis.json` hält je Engine Status, Zahlen, Version und Code-Stand fest. `WS_WIEDERHOLEN=<ordner>` fährt nur die roten oder abgebrochenen Engines neu und übernimmt die grünen samt Fotos in einen gemeinsamen Bericht; geänderte Dateien seit dem alten Stand stehen im Bericht.
 - **Diagnose:** Speichern der Kachel „Reihe & Zielgruppe“ nennt die gespeicherte Reihe; wird die Reihe nicht übernommen, steht der Grund im Fehlerprotokoll.
 
 ### Geändert
@@ -25,11 +26,12 @@ Rückmeldungen vom Admin nach AP-18 und AP-19 (Staging).
 
 ### Behoben
 
+- Vorschau der Startseite in Firefox: Kamen zwei Aktualisierungen kurz nacheinander, ging eine verloren, und die Vorschau blieb leer. Jetzt wartet die zweite, bis die erste geladen ist.
 - „Abbrechen“ in den Einstellungen schloss die Kachel nicht, wenn die Adresse schon auf die Kachel zeigte (`#anmeldung`): jetzt ein Knopf, der neu lädt. Enter speichert weiter.
 
 ### Doku
 
-- betrieb.md (Startseite, Einstellungen, Newsletter, Dozierende, Testkonten, Komponentenblatt), CLAUDE.md (Komponentenblatt-Adresse), Konzept, Prüfprotokoll T-326 bis T-330.
+- betrieb.md (Startseite, Einstellungen, Newsletter, Dozierende, Testkonten, Komponentenblatt, Teilwiederholung des Browser-Durchlaufs), CLAUDE.md (Komponentenblatt-Adresse, Teilwiederholung), Konzept (E-72, E-73), Prüfprotokoll T-326 bis T-331.
 
 ## [0.30.1] – 2026-11-01
 
