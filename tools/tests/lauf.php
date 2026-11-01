@@ -263,7 +263,7 @@ va_zwischenspeicher_leeren();
     pruefe(konto_eingabe_fehler('X', 'admin@example.org', 'admin') !== [], 'doppelte E-Mail abgelehnt');
     $t0 = 1_900_000_000;
     $tok = konto_link_erzeugen($kid, 'einrichten', null, $t0);
-    pruefe(db_wert('SELECT token_hash FROM konto_link WHERE konto_id = ?', [$kid]) === hash('sha256', $tok), 'nur Hash des Links gespeichert');
+    pruefe(db_wert('SELECT token_hash FROM link WHERE art = "konto" AND konto_id = ?', [$kid]) === hash('sha256', $tok), 'nur Hash des Links gespeichert');
     pruefe(konto_link_finden($tok, $t0 + 60) !== null, 'Link gültig');
     pruefe(konto_link_finden($tok, $t0 + KONTO_LINK_GUELTIG_S + 1) === null, 'Link nach 72 h abgelaufen');
     $tok2 = konto_link_erzeugen($kid, 'passwort', null, $t0);
@@ -440,9 +440,9 @@ va_zwischenspeicher_leeren();
     $kim = $neu('Kim', 'kim@example.org');
     pruefe(anm_laden($kim['id'])['status'] === 'unbestaetigt' && anm_symposium_status($kim['id']) === 'fest', 'neue Anmeldung unbestätigt, Platz reserviert');
     $m = db_zeile('SELECT * FROM mail_ausgang ORDER BY id DESC LIMIT 1');
-    preg_match('~/link\?t=([0-9a-f]{48})~', (string)$m['text'], $mm);
+    preg_match('~/link\?t=([A-Za-z0-9_-]{43})~', (string)$m['text'], $mm);
     pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $mails0 + 1 && $m['an'] === 'kim@example.org' && isset($mm[1]), 'Bestätigungsmail mit Link in der Warteschlange');
-    pruefe(db_wert('SELECT COUNT(*) FROM anmeldung_link WHERE token_hash = ?', [hash('sha256', $mm[1] ?? '')]) == 1 && !str_contains((string)db_wert('SELECT token_hash FROM anmeldung_link ORDER BY id DESC LIMIT 1'), $mm[1] ?? 'x'), 'Link nur als Hash gespeichert');
+    pruefe(db_wert('SELECT COUNT(*) FROM link WHERE token_hash = ?', [hash('sha256', $mm[1] ?? '')]) == 1 && !str_contains((string)db_wert('SELECT token_hash FROM link WHERE art = "anmeldung" ORDER BY id DESC LIMIT 1'), $mm[1] ?? 'x'), 'Link nur als Hash gespeichert');
     $r = anm_link_einloesen($mm[1] ?? '');
     pruefe($r !== null && anm_laden($kim['id'])['status'] === 'bestaetigt', 'Link bestätigt die Anmeldung');
     pruefe(anm_link_einloesen($mm[1] ?? '') === null, 'Link gilt nur einmal');
@@ -541,7 +541,7 @@ va_zwischenspeicher_leeren();
     pruefe($e['art'] === 'neu' && $e['bestaetigt'] === true && anm_laden($e['id'])['konto_id'] == $rita['id'], 'Anmeldung mit Konto: ohne Bestätigungsmail, verknüpft');
     // Häkchen „Konto anlegen“: nach dem Bestätigungslink Konto angelegt und verknüpft
     $e2 = anm_anlegen(anm_daten_pruefen(['vorname' => 'Kurt', 'email' => 'kurt@example.org'] + $da)['werte'], ['fest' => [], 'warte' => []], false, null, true);
-    preg_match('~/link\?t=([0-9a-f]{48})~', (string)$letzteMail('kurt@example.org')['text'], $mk);
+    preg_match('~/link\?t=([A-Za-z0-9_-]{43})~', (string)$letzteMail('kurt@example.org')['text'], $mk);
     $r = anm_link_einloesen($mk[1] ?? '');
     $kurt = konto_per_email('kurt@example.org');
     pruefe($r !== null && !empty($r['konto_neu']) && $kurt !== null && $kurt['passwort_hash'] === null && anm_laden($e2['id'])['konto_id'] == $kurt['id'], 'Häkchen beim Anmelden: Konto nach der Bestätigung, Passwort folgt');
@@ -783,7 +783,7 @@ va_zwischenspeicher_leeren();
     einstellung_setzen('reihe_name', null);
     [, $ct] = mail_vorlage('zweitfaktor_code', ['vorname' => 'Bea', 'code' => '123456']);
     pruefe(str_contains(mail_html_aus_text('zweitfaktor_code', 'Code', $ct), 'letter-spacing:6px;color:#001E3A;">123456</p>'), 'Mail-HTML: Code groß und gut lesbar');
-    pruefe(preg_match('#Ansehen: http\S+/link\?t=[0-9a-f]{48}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
+    pruefe(preg_match('#Ansehen: http\S+/link\?t=[A-Za-z0-9_-]{43}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
     pruefe(!str_contains($roh, 'Auto-Submitted') && preg_match('/^Subject: .*f=C3=BCr.*Kim|^Subject: .*f=C3=BCr/m', $roh) === 1 && !str_contains($roh, '{vorname}'), 'Rundmail ohne Auto-Submitted, Betreff mit Vorname');
     $rest = rm_fortschritt($rmId)['wartet'];
     if ($rest > 0) {
@@ -1034,7 +1034,7 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM mail_ausgang');
     nl_anfragen('Quinn@Example.org', 'Quinn', [$lw, 999], 'formular');
     $qm = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'quinn@example.org' ORDER BY id DESC LIMIT 1");
-    $qtok = preg_match('#/newsletter/bestaetigen\?t=([0-9a-f]{48})#', $qm, $m) === 1 ? $m[1] : '';
+    $qtok = preg_match('#/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})#', $qm, $m) === 1 ? $m[1] : '';
     $qp = nl_person_per_email('quinn@example.org');
     pruefe($qtok !== '' && $qp !== null && nl_abos((int)$qp['id']) === [$lw => 'offen'] && str_contains($qm, NL_EINWILLIGUNG), 'Anfrage: offen, Bestätigungsmail mit Einwilligungstext, unbekannte Liste ignoriert');
     pruefe(!in_array('quinn@example.org', array_column(nl_empfaenger([$lw]), 'email'), true), 'ohne Bestätigung kein Versand (Abnahme AP-7)');
@@ -1064,7 +1064,7 @@ va_zwischenspeicher_leeren();
     }
     $od = quoted_printable_decode($otto);
     pruefe($otto !== '' && !$quinn, 'Mail an Abonnierende, nicht an inzwischen Abgemeldete');
-    pruefe(preg_match('#^List-Unsubscribe: <https?://[^>]+/newsletter/abmelden\?t=[0-9a-f]{48}>#m', $otto) === 1 && str_contains($otto, 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'), 'List-Unsubscribe mit One-Click');
+    pruefe(preg_match('#^List-Unsubscribe: <https?://[^>]+/newsletter/abmelden\?t=[A-Za-z0-9_-]{43}>#m', $otto) === 1 && str_contains($otto, 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'), 'List-Unsubscribe mit One-Click');
     pruefe(str_contains($od, 'Hallo,') && !str_contains($od, 'Hallo ,') && str_contains($od, 'Abmelden oder Listen ändern') && str_contains($od, '/newsletter/verwalten?t='), 'ohne Vorname „Hallo,“, Abmeldelink im Fuß');
     pruefe(str_contains($otto, 'From: =?UTF-8?Q?Allg=C3=A4u=20Akut?='), 'Absendername der Liste');
     // Abmelden, Statistik, Verwalten, Aufräumen
@@ -1223,7 +1223,7 @@ va_zwischenspeicher_leeren();
     pruefe($fr === null && $fr2 !== null && (int)$fr2['veranstaltung_id'] === $v1, 'Frühere Anmeldung einer anderen Veranstaltung gefunden');
     va_mit($v2, fn() => anm_uebernehmen_senden((int)$fr2['id']));
     $tok = '';
-    if (preg_match('#/link\?t=([0-9a-f]{48})#', (string)db_wert('SELECT text FROM mail_ausgang ORDER BY id DESC LIMIT 1'), $m) === 1) {
+    if (preg_match('#/link\?t=([A-Za-z0-9_-]{43})#', (string)db_wert('SELECT text FROM mail_ausgang ORDER BY id DESC LIMIT 1'), $m) === 1) {
         $tok = $m[1];
     }
     $ein = anm_link_einloesen($tok);
@@ -1401,7 +1401,7 @@ va_zwischenspeicher_leeren();
         $tid = (int)$ws['termine'][0]['id'];
         $daten = fn(string $v, string $m) => anm_daten_pruefen(['vorname' => $v, 'nachname' => 'Gesamt', 'email' => $m, 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik', 'efn' => '802760012345673', 'beruf_sonstige' => '', 'essen' => 'egal'])['werte'];
         $mailVon = fn(string $an) => (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$an]);
-        $token = fn(string $text) => preg_match('#/link\?t=([0-9a-f]{48})#', $text, $m) === 1 ? $m[1] : '';
+        $token = fn(string $text) => preg_match('#/link\?t=([A-Za-z0-9_-]{43})#', $text, $m) === 1 ? $m[1] : '';
         // 1. Ohne Konto: anmelden mit dem einzigen Workshop-Platz, über den Link bestätigen
         $p1 = anm_anlegen($daten('Ohne', 'ohne.konto@example.org'), ['fest' => [$ws['id'] => $tid], 'warte' => []], false);
         $e['p1_bestaetigt'] = anm_link_einloesen($token($mailVon('ohne.konto@example.org')))['zweck'] ?? '';
@@ -1537,7 +1537,7 @@ va_zwischenspeicher_leeren();
     pruefe(($f['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', '(a) Team ändert Adresse einer Anmeldung mit Betreiber-Konto: abgelehnt, beides unverändert');
     pruefe(team_anm_daten($bAnm, ['vorname' => 'Beate', 'email' => 'bea.betrieb@example.org'] + $rd, false) === [] && anm_laden($bAnm)['vorname'] === 'Beate' && konto_laden($bId)['name'] === 'Bea Betrieb', 'übrige Felder änderbar, Team-Konto zieht nicht mit');
     $r = anm_daten_setzen($bAnm, ['vorname' => 'Beate', 'email' => 'bea.privat@example.org'] + $rd);
-    pruefe(($r['fehler']['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && !$r['email_link'] && (int)db_wert("SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$bAnm]) === 0 && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === 0, '(b) Team-Mitglied ändert eigene Adresse über Meine Anmeldung: abgelehnt, kein Link, keine Mail');
+    pruefe(($r['fehler']['email'] ?? '') === ANM_TEAM_ADRESSE_TEXT && !$r['email_link'] && (int)db_wert("SELECT COUNT(*) FROM link WHERE art = 'anmeldung' AND anmeldung_id = ? AND zweck = 'email'", [$bAnm]) === 0 && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === 0, '(b) Team-Mitglied ändert eigene Adresse über Meine Anmeldung: abgelehnt, kein Link, keine Mail');
     $tok = anm_link_erzeugen($bAnm, 'email', time() + 3600, 'bea.privat@example.org');
     $e = anm_link_einloesen($tok);
     pruefe($e !== null && str_contains((string)$e['meldung'], 'Team-Kontos') && konto_laden($bId)['email'] === 'bea.betrieb@example.org' && anm_laden($bAnm)['email'] === 'bea.betrieb@example.org', 'zweite Sperre: alter E-Mail-Link schreibt nicht ins Team-Konto');
@@ -1557,7 +1557,7 @@ va_zwischenspeicher_leeren();
     $nlListe = nl_liste_speichern(null, nl_liste_pruefen(['name' => 'Review-Test', 'sichtbar' => '1'])['werte'], null);
     foreach (['nl.eins', 'nl.zwei', 'nl.drei'] as $nlN) {
         nl_anfragen($nlN . '@example.org', 'NL', [$nlListe], 'formular');
-        $nlTok = preg_match('#/newsletter/bestaetigen\?t=([0-9a-f]{48})#', (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$nlN . '@example.org']), $m) === 1 ? $m[1] : '';
+        $nlTok = preg_match('#/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})#', (string)db_wert('SELECT text FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$nlN . '@example.org']), $m) === 1 ? $m[1] : '';
         nl_bestaetigen($nlTok);
     }
     db_ausfuehren('DELETE FROM mail_ausgang');
@@ -1626,7 +1626,7 @@ va_zwischenspeicher_leeren();
         $raErg[$i] = anm_daten_setzen($raP, ['vorname' => 'Rita', 'email' => 'ziel' . $i . '@example.org'] + $rd);
     }
     pruefe($raErg[10]['email_link'] && !$raErg[11]['email_link'] && !empty($raErg[11]['email_gesperrt']) && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'ziel11@example.org'") === 0, '11 Adressänderungen auf 11 Zieladressen von einer IP: die 11. gesperrt (link_ip 10/h)');
-    pruefe((int)db_wert("SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$raP]) === 1 && db_wert("SELECT neue_email FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$raP]) === 'ziel10@example.org', 'nur ein offener E-Mail-Link je Anmeldung (der neueste)');
+    pruefe((int)db_wert("SELECT COUNT(*) FROM link WHERE art = 'anmeldung' AND anmeldung_id = ? AND zweck = 'email'", [$raP]) === 1 && db_wert("SELECT JSON_UNQUOTE(JSON_EXTRACT(daten, '$.neue_email')) FROM link WHERE art = 'anmeldung' AND anmeldung_id = ? AND zweck = 'email'", [$raP]) === 'ziel10@example.org', 'nur ein offener E-Mail-Link je Anmeldung (der neueste)');
     $raN = anm_daten_setzen($raP, ['vorname' => 'Ritaneu', 'email' => 'ziel12@example.org'] + $rd);
     pruefe(!empty($raN['email_gesperrt']) && $raN['fehler'] === [] && anm_laden($raP)['vorname'] === 'Ritaneu', 'gesperrt: übrige Daten trotzdem gespeichert');
     $raErg = [];
@@ -1641,7 +1641,7 @@ va_zwischenspeicher_leeren();
     for ($i = 1; $i <= 4; $i++) {
         $raKf[$i] = tk_email_aendern($raK, 'kai.neu@example.org');
     }
-    pruefe($raKf[3] === null && $raKf[4] === ANM_ADRESSE_RATE_TEXT && (int)db_wert("SELECT COUNT(*) FROM konto_link WHERE konto_id = ? AND zweck = 'email'", [$raK]) === 1, 'Konto: Adressänderung mit Ratenschutz, ein offener Link');
+    pruefe($raKf[3] === null && $raKf[4] === ANM_ADRESSE_RATE_TEXT && (int)db_wert("SELECT COUNT(*) FROM link WHERE art = 'konto' AND konto_id = ? AND zweck = 'email'", [$raK]) === 1, 'Konto: Adressänderung mit Ratenschutz, ein offener Link');
     $raM = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'gleich@example.org' ORDER BY id DESC LIMIT 1");
     pruefe(str_starts_with($raM, "Hallo,\n") && !str_contains($raM, 'Rita'), 'Mail an die neue Adresse ohne Vornamen („Hallo,“)');
     db_ausfuehren('DELETE FROM rate_limit');
@@ -1861,6 +1861,56 @@ va_zwischenspeicher_leeren();
         unset($_SERVER['REMOTE_ADDR']);
         pruefe($um['ampel'] === 'warnung' && str_contains($um['text'], 'Ratenschutz zählt dann alle Besucher zusammen'), 'S-6: Status-Seite Zeile Umgebung zeigt die Warnung');
     }
+
+    abschnitt('Einmal-Links in einer Tabelle (AP-17 Unterpunkt 8, V-1)');
+    $lt = link_token();
+    pruefe(preg_match('/^[A-Za-z0-9_-]{43}$/', $lt) === 1 && link_token() !== $lt, 'ein Token-Format: 32 Byte Base64url (43 Zeichen)');
+    pruefe(!db_tabelle_da('konto_link') && !db_tabelle_da('anmeldung_link') && !db_tabelle_da('newsletter_link') && db_tabelle_da('link'), 'alte Link-Tabellen entfernt, eine Tabelle link (E-69 (7))');
+    // Migration der Altdaten: dieselben INSERT … SELECT wie Migration 20, auf vorübergehenden Tabellen mit den alten Namen
+    $lAnm = (int)db_wert('SELECT MIN(id) FROM anmeldung');
+    $lKonto = (int)db_wert("SELECT MIN(id) FROM konto WHERE rolle = 'teilnehmend'");
+    $lPerson = nl_person_anlegen('alt-link@example.org', 'Alt');
+    $altHex = bin2hex(random_bytes(24));
+    $altKonto = link_token();
+    $altNl = bin2hex(random_bytes(24));
+    $t0 = time();
+    db()->exec('CREATE TEMPORARY TABLE konto_link (konto_id INT UNSIGNED, token_hash CHAR(64), zweck VARCHAR(20), neue_email VARCHAR(254) NULL, gueltig_bis DATETIME, erstellt_am DATETIME)');
+    db()->exec('CREATE TEMPORARY TABLE anmeldung_link (anmeldung_id INT UNSIGNED, token_hash CHAR(64), zweck VARCHAR(20), neue_email VARCHAR(190) NULL, gueltig_bis DATETIME, erstellt_am DATETIME)');
+    db()->exec('CREATE TEMPORARY TABLE newsletter_link (person_id INT UNSIGNED, token_hash CHAR(64), zweck VARCHAR(20), gueltig_bis DATETIME)');
+    db_ausfuehren('INSERT INTO konto_link VALUES (?, ?, ?, ?, ?, ?)', [$lKonto, hash('sha256', $altKonto), 'email', 'neu-alt@example.org', db_zeit($t0 + 3600), db_zeit($t0)]);
+    db_ausfuehren('INSERT INTO anmeldung_link VALUES (?, ?, ?, NULL, ?, ?)', [$lAnm, hash('sha256', $altHex), 'zugang', db_zeit($t0 + 3600), db_zeit($t0)]);
+    db_ausfuehren('INSERT INTO newsletter_link VALUES (?, ?, ?, ?)', [$lPerson, hash('sha256', $altNl), 'verwalten', db_zeit($t0 + 3600)]);
+    foreach (array_slice(migration_katalog()[20]['sql'], 1, 3) as $sql) {
+        db()->exec($sql);
+    }
+    db()->exec('DROP TEMPORARY TABLE konto_link, anmeldung_link, newsletter_link');
+    $fk = link_finden('konto', $altKonto);
+    pruefe($fk !== null && $fk['ziel_id'] === $lKonto && $fk['zweck'] === 'email' && $fk['neue_email'] === 'neu-alt@example.org', 'Migration: Konto-Link mit neuer Adresse übernommen (Hash bleibt gültig)');
+    $fa = anm_link_finden($altHex);
+    pruefe($fa !== null && (int)$fa['anmeldung_id'] === $lAnm && $fa['zweck'] === 'zugang', 'Migration: alter Hex-Token einer Anmeldung wird gefunden');
+    pruefe(nl_link_finden($altNl, 'verwalten') !== null && nl_link_finden($altNl, 'bestaetigen') === null, 'Migration: Newsletter-Link übernommen, Zweck getrennt');
+    pruefe(link_verbrauchen((int)$fa['id']) && anm_link_finden($altHex) === null && !link_verbrauchen((int)$fa['id']), 'alter Hex-Token wird einmal verbraucht');
+    // Zweck- und Art-Trennung
+    $teamK = (int)db_wert("SELECT MIN(id) FROM konto WHERE rolle <> 'teilnehmend'");
+    $teamTok = konto_link_erzeugen($teamK, 'passwort');
+    pruefe(konto_link_finden($teamTok) !== null && tk_link_einloesen($teamTok) === null && konto_link_finden($teamTok) !== null, 'Team-Link geht nicht über /konto/link (und bleibt unverbraucht)');
+    pruefe(link_finden('anmeldung', $teamTok) === null && link_finden('newsletter', $altKonto) === null, 'Token einer Art gilt nicht für eine andere Art');
+    $tk1 = tk_link($lKonto, 'passwort', null, $t0);
+    $tk2 = tk_link($lKonto, 'bestaetigen', null, $t0);
+    $tk3 = tk_link($lKonto, 'passwort', null, $t0);
+    $tokVon = fn(array $l) => (string)substr((string)strstr($l['url'], '?t='), 3);
+    pruefe(link_finden('konto', $tokVon($tk1)) === null && link_finden('konto', $tokVon($tk2)) !== null && link_finden('konto', $tokVon($tk3)) !== null, 'Teilnehmenden-Link ersetzt nur ältere mit gleichem Zweck');
+    konto_link_erzeugen($lKonto, 'einrichten');
+    pruefe(link_finden('konto', $tokVon($tk2)) === null, 'Team-Link ersetzt alle älteren Links des Kontos');
+    // Aufräumen
+    $kurz = link_erzeugen('anmeldung', $lAnm, 'zugang', 60, [], $t0);
+    $lang = link_erzeugen('anmeldung', $lAnm, 'zugang', 7200, [], $t0);
+    $weg = link_aufraeumen($t0 + 120);
+    pruefe($weg >= 1 && link_finden('anmeldung', $kurz, null, $t0) === null && link_finden('anmeldung', $lang, null, $t0) !== null, 'Aufräumen löscht nur abgelaufene Links');
+    pruefe(str_ends_with(konto_link_url('abc'), '/einrichten?t=abc') && str_ends_with(link_url('konto', 'abc'), '/konto/link?t=abc') && str_ends_with(anm_link_url('abc'), '/link?t=abc') && str_ends_with(link_url('newsletter', 'abc', 'bestaetigen'), '/newsletter/bestaetigen?t=abc'), 'Pfade der Links unverändert (verschickte Mails gelten weiter)');
+    link_loeschen('anmeldung', $lAnm);
+    link_loeschen('konto', $lKonto);
+    link_loeschen('konto', $teamK);
 
     abschnitt('Jobs (T-105)');
     $r = jobs_lauf('test', 1_900_000_000);

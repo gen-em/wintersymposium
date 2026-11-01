@@ -45,7 +45,7 @@ $bearbeiten = isset($_GET['bearbeiten']) ? nl_liste((int)$_GET['bearbeiten']) : 
 $lf = $listeForm ?? ($bearbeiten ?? ['name' => '', 'beschreibung' => '', 'absender_name' => '', 'sichtbar' => 1, 'bei_anmeldung' => 0]);
 team_seite_kopf($konto, 'Newsletter', '/team/newsletter');
 ?>
-<p class="meta klein">Versand über <a href="/team/mailings?neu=1">Mailings</a> mit der Empfängerart „Newsletter-Listen“. Eingetragen ist nur, wer den Link in der Bestätigungsmail angeklickt hat (Double-Opt-In); unbestätigte Anfragen verschwinden nach <?= NL_BESTAETIGEN_TAGE ?> Tagen, Abgemeldete werden gelöscht.</p>
+<p class="meta klein">Versand über <a href="/team/mailings?neu=1">Mailings</a> mit der Empfängerart „Newsletter-Listen“. Eingetragen ist nur, wer den Link in der Bestätigungsmail angeklickt hat (Double-Opt-In); unbestätigte Anfragen verschwinden nach <?= intdiv(NL_BESTAETIGEN_S, 86400) ?> Tagen, Abgemeldete werden gelöscht.</p>
 <div class="kacheln">
     <?php foreach ($zahlen as $lid => $z): ?>
     <div class="kachel"><div class="lbl"><?= e($z['liste']['name']) ?><?= (int)$z['liste']['sichtbar'] === 0 ? ' · ausgeblendet' : '' ?></div><div class="zahl"><?= $z['bestaetigt'] ?></div>

@@ -63,7 +63,7 @@ if (ist_post()) {
                 anm_uebernehmen_senden((int)$frueher['id']);
             }
             rate_gleiche_dauer($beginn, 0.6);
-            fertig('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . ANM_LINK_GUELTIG_H . ' Stunden und einmal. Schau auch im Spam-Ordner.', '/deine-anmeldung');
+            fertig('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . dauer_text(ANM_LINK_GUELTIG_S) . ' und einmal. Schau auch im Spam-Ordner.', '/deine-anmeldung');
         }
     } elseif ($a === null) {
         fertig('fehler', 'Deine Sitzung ist abgelaufen. Lass dir einen neuen Link schicken.', '/deine-anmeldung');
@@ -198,7 +198,7 @@ endif; ?>
         <div class="kasten zg">
             <p class="kicker">Schon angemeldet</p>
             <h2 class="zwischen">Link per Mail</h2>
-            <p>Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt <?= ANM_LINK_GUELTIG_H ?> Stunden und nur einmal.</p>
+            <p>Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt <?= e(dauer_text(ANM_LINK_GUELTIG_S)) ?> und nur einmal.</p>
             <form method="post" action="/deine-anmeldung" class="zg-form" novalidate>
                 <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'link']) ?>
                 <?php // Honigtopf von Hand: Rahmen mit aria-hidden, ohne Klasse feld ?>

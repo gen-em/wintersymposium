@@ -138,30 +138,20 @@ function konto_link_erzeugen(int $kontoId, string $zweck, ?int $durch = null, ?i
     if (!in_array($zweck, ['einrichten', 'passwort'], true)) {
         throw new InvalidArgumentException('Unbekannter Link-Zweck.');
     }
-    $jetzt ??= time();
-    $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-    db_transaktion(function () use ($kontoId, $zweck, $token, $jetzt): void {
-        db_ausfuehren('DELETE FROM konto_link WHERE konto_id = ?', [$kontoId]);
-        db_ausfuehren(
-            'INSERT INTO konto_link (konto_id, token_hash, zweck, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?)',
-            [$kontoId, hash('sha256', $token), $zweck, db_zeit($jetzt + KONTO_LINK_GUELTIG_S), db_zeit($jetzt)]
-        );
-    });
+    // Ein neuer Team-Link ersetzt alle älteren des Kontos
+    $token = link_erzeugen('konto', $kontoId, $zweck, KONTO_LINK_GUELTIG_S, [], $jetzt, 'alle');
     audit_schreiben('konto', 'Link (' . $zweck . ') für Konto ' . $kontoId . ' erzeugt', $durch);
     return $token;
 }
 
-/** Gültigen Link zum Token finden: ['link' => …, 'konto' => …] oder null. */
+/** Gültigen Konto-Link mit aktivem Konto finden: ['link' => …, 'konto' => …] oder null. */
 function konto_link_finden(string $token, ?int $jetzt = null): ?array
 {
-    if (preg_match('/^[A-Za-z0-9_-]{40,60}$/', $token) !== 1) {
+    $l = link_finden('konto', $token, null, $jetzt);
+    if ($l === null) {
         return null;
     }
-    $l = db_zeile('SELECT * FROM konto_link WHERE token_hash = ?', [hash('sha256', $token)]);
-    if ($l === null || db_ts($l['gueltig_bis']) < ($jetzt ?? time())) {
-        return null;
-    }
-    $k = konto_laden((int)$l['konto_id']);
+    $k = konto_laden($l['ziel_id']);
     if ($k === null || (int)$k['aktiv'] !== 1) {
         return null;
     }
@@ -170,18 +160,17 @@ function konto_link_finden(string $token, ?int $jetzt = null): ?array
 
 function konto_link_verbrauchen(int $linkId): bool
 {
-    return db_ausfuehren('DELETE FROM konto_link WHERE id = ?', [$linkId])->rowCount() === 1;
+    return link_verbrauchen($linkId);
 }
 
 function konto_link_url(string $token): string
 {
-    return url('/einrichten?t=' . rawurlencode($token));
+    return link_url('konto', $token, '', true);
 }
 
-/** Abgelaufene Links löschen (Job 'aufraeumen'). */
 function konto_link_aufraeumen(?int $jetzt = null): int
 {
-    return db_ausfuehren('DELETE FROM konto_link WHERE gueltig_bis < ?', [db_zeit($jetzt ?? time())])->rowCount();
+    return link_aufraeumen($jetzt, 'konto');
 }
 
 /**

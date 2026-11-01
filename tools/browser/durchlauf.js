@@ -341,7 +341,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         }
         if (!mailText) await p.waitForTimeout(150);
       }
-      const linkPfad = (mailText.match(/\/link\?t=[0-9a-f]{48}/) || [''])[0];
+      const linkPfad = (mailText.match(/\/link\?t=[A-Za-z0-9_-]{43}/) || [''])[0];
       notiere(engine, 'handy', 'anmelden', 'Bestätigungsmail mit Link', linkPfad !== '');
       await pruefeSeite(p, fehler, engine, 'handy', 'link', basis + linkPfad);
       await Promise.all([p.waitForNavigation(), p.click('button:has-text("Anmeldung bestätigen")')]);

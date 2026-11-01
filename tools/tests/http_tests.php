@@ -250,7 +250,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Schau in dein Postfach') && $a !== null && $a['status'] === 'unbestaetigt' && $a['efn'] === '802760012345673', 'Anmeldung angelegt (unbestätigt, EFN ohne Leerzeichen)');
     pruefe(db_wert('SELECT COUNT(*) FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$a['id'] ?? 0, $t1]) == 1, 'Workshop-Platz reserviert');
     $mail = http_mail_an($tmp, 'lena.test@example.org');
-    preg_match('~(/link\?t=[0-9a-f]{48})~', $mail, $m);
+    preg_match('~(/link\?t=[A-Za-z0-9_-]{43})~', $mail, $m);
     pruefe(str_contains($mail, 'Subject: ') && preg_match('/^From: (.*) <anmeldung@ws\.test>\r?$/m', $mail, $von) === 1 && mb_decode_mimeheader($von[1]) === va_absender_name() && str_contains($mail, 'Sie gilt erst, wenn du sie') && isset($m[1]), 'Bestätigungsmail mit Link (nach der Antwort versendet), Absender ist die Veranstaltung (E-67)');
     for ($i = 0; $i < 20 && (int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") === 0; $i++) {
         usleep(100_000); // Datei ist geschrieben, der Vermerk in der Datenbank folgt gleich
@@ -258,7 +258,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     pruefe((int)db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE status = 'gesendet' AND an = ''") >= 1, 'Warteschlange: Empfänger nach dem Versand geleert');
     $link = $m[1] ?? '/link?t=x';
     $r = http_anfrage($basis, 'GET', $link, $h, [], null, $k1);
-    pruefe($r['status'] === 200 && str_contains($r['text'], 'Anmeldung bestätigen') && db_wert('SELECT COUNT(*) FROM anmeldung_link WHERE anmeldung_id = ?', [$a['id'] ?? 0]) == 1, 'Link öffnen verbraucht ihn nicht (Mail-Scanner)');
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Anmeldung bestätigen') && db_wert('SELECT COUNT(*) FROM link WHERE art = "anmeldung" AND anmeldung_id = ?', [$a['id'] ?? 0]) == 1, 'Link öffnen verbraucht ihn nicht (Mail-Scanner)');
     $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($link, 8)], $k1);
     pruefe($r['status'] === 303 && db_wert('SELECT status FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'bestaetigt', 'Klick bestätigt die Anmeldung (T-130)');
     $r = http_anfrage($basis, 'GET', $link, $h, [], null, $k1);
@@ -280,7 +280,7 @@ function anmeldung_http_tests(string $basis, string $h, string $tmp, string $b):
     db_ausfuehren("DELETE FROM va_einstellung WHERE schluessel = 'stichtag_workshop'");
     $r = http_anfrage($basis, 'POST', '/deine-anmeldung', $h, [], ['csrf' => $csrf, 'aktion' => 'daten', 'vorname' => 'Lena', 'nachname' => 'Test', 'email' => 'neu@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'ZNA Test', 'efn' => ''], $k1);
     pruefe($r['status'] === 303 && db_wert('SELECT email FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'lena.test@example.org', 'Neue Adresse gilt erst nach Bestätigung');
-    preg_match('~/link\?t=([0-9a-f]{48})~', http_mail_an($tmp, 'neu@example.org'), $m2);
+    preg_match('~/link\?t=([A-Za-z0-9_-]{43})~', http_mail_an($tmp, 'neu@example.org'), $m2);
     anm_link_einloesen($m2[1] ?? '');
     pruefe(db_wert('SELECT email FROM anmeldung WHERE id = ?', [$a['id'] ?? 0]) === 'neu@example.org', 'nach dem Link gilt die neue Adresse');
 
@@ -374,7 +374,7 @@ function konto_http_tests(string $basis, string $h, string $tmp, string $teamPw)
     einstellung_setzen('anmeldung_start', gmdate('Y-m-d H:i:s', time() - 60));
     $k5 = "$tmp/kekse-konto5.txt";
     $r = http_anmelden($basis, $h, $k5, ['vorname' => 'Hanna', 'nachname' => 'Haken', 'email' => 'hanna@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Uni', 'essen' => 'egal', 'konto' => '1']);
-    preg_match('~(/link\?t=[0-9a-f]{48})~', http_mail_an($tmp, 'hanna@example.org', 20, 'Sie gilt erst'), $mh);
+    preg_match('~(/link\?t=[A-Za-z0-9_-]{43})~', http_mail_an($tmp, 'hanna@example.org', 20, 'Sie gilt erst'), $mh);
     $r = http_anfrage($basis, 'GET', $mh[1] ?? '/link', $h, [], null, $k5);
     $r = http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($mh[1] ?? '', 8)], $k5);
     $hk = konto_per_email('hanna@example.org');
@@ -457,7 +457,7 @@ function team_ap6_http_tests(string $basis, string $h, string $tmp, string $b): 
     pruefe($r['status'] === 303 && db_wert('SELECT status FROM rundmail WHERE id = ?', [$id]) === 'versand' && (int)db_wert('SELECT empfaenger_zahl FROM rundmail WHERE id = ?', [$id]) === $soll, 'Senden: Mailing in der Warteschlange');
     $erste = rm_empfaenger('angemeldet')[0]['email'] ?? '';
     $dbgm = http_mail_an($tmp, $erste, 30, 'Ansehen');
-    pruefe(preg_match('#/link\?t=[0-9a-f]{48}#', $dbgm) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
+    pruefe(preg_match('#/link\?t=[A-Za-z0-9_-]{43}#', $dbgm) === 1, 'Mailing kommt an, mit persönlichem Einmal-Link');
     $r = http_anfrage($basis, 'GET', '/team/mailings?id=' . $id, $h, [], null, $b);
     pruefe(str_contains($r['text'], 'Empfängerliste (' . $soll . ')') && str_contains($r['text'], 'Als neue Mail kopieren') && !str_contains($r['text'], 'data-editor='), 'Gesendetes Mailing: Archiv mit Empfängerliste, nicht mehr änderbar');
     $r = http_anfrage($basis, 'POST', '/team/mailings?id=' . $id, $h, [], ['csrf' => $c, 'id' => $id, 'aktion' => 'speichern', 'betreff' => 'Geändert', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'postfach' => 'system'], $b);
@@ -491,7 +491,7 @@ function newsletter_http_tests(string $basis, string $h, string $tmp, string $b)
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Einwilligung'), 'ohne Einwilligung: Hinweis');
     $r = http_anfrage($basis, 'POST', '/newsletter', $h, [], $form + ['einwilligung' => '1'], $k);
     $mail = http_mail_an($tmp, 'sven@example.org', 20, '/newsletter/bestaetigen?t=');
-    $tok = preg_match('#/newsletter/bestaetigen\?t=([0-9a-f]{48})#', $mail, $mm) === 1 ? $mm[1] : '';
+    $tok = preg_match('#/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})#', $mail, $mm) === 1 ? $mm[1] : '';
     pruefe($r['status'] === 303 && $tok !== '', 'Bestellt: Bestätigungsmail');
     $r = http_anfrage($basis, 'GET', '/newsletter/bestaetigen?t=' . $tok, $h, [], null, $k);
     pruefe(str_contains($r['text'], 'Bestätigen') && db_wert("SELECT status FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id WHERE p.email = 'sven@example.org'") === 'offen', 'Öffnen allein bestätigt nicht (Mail-Scanner)');

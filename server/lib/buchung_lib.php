@@ -13,7 +13,7 @@ declare(strict_types=1);
  *                    Workshop-Termin aus dem veröffentlichten Programm.
  *                    Status fest (Platz), warte (Warteliste, Reihenfolge nach
  *                    seit, id) oder angebot (Nachrück-Angebot mit Frist).
- *   anmeldung_link – Einmal-Links (bestätigen, Zugang, neue Adresse), nur Hash.
+ *   link (art anmeldung, link_lib) – Einmal-Links (bestätigen, Zugang, neue Adresse, übernehmen), nur Hash.
  *
  * Plätze zählen: fest + angebot. Auch unbestätigte Anmeldungen halten ihre
  * Plätze bis zum Ende der Bestätigungsfrist (Admin 2026-10-29).
@@ -82,7 +82,7 @@ function anm_workshopwahl_html(array $wahl, array $bisher, bool $team = false): 
 }
 
 /** Einmal-Links gelten 48 Stunden und einmal (Admin 2026-10-29). */
-const ANM_LINK_GUELTIG_H = 48;
+const ANM_LINK_GUELTIG_S = 48 * 3600;
 /** Hinweis, wenn die Adresse eines Team-Kontos über eine Anmeldung geändert werden soll (E-63 (2)). */
 /** Sperre nach zu vielen Adressänderungen (Review S-2). */
 const ANM_ADRESSE_RATE_TEXT = 'Zu viele Adressänderungen. Bitte warte eine Stunde.';
@@ -508,30 +508,19 @@ function anm_uebersicht_text(int $anmId): string
 
 function anm_link_erzeugen(int $anmId, string $zweck, int $bisTs, ?string $neueEmail = null): string
 {
-    $token = bin2hex(random_bytes(24));
-    db_ausfuehren(
-        'INSERT INTO anmeldung_link (anmeldung_id, token_hash, zweck, neue_email, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)',
-        [$anmId, hash('sha256', $token), $zweck, $neueEmail, db_zeit($bisTs), db_jetzt()]
-    );
-    return $token;
+    $jetzt = time();
+    return link_erzeugen('anmeldung', $anmId, $zweck, $bisTs - $jetzt, $neueEmail !== null ? ['neue_email' => $neueEmail] : [], $jetzt);
 }
 
 function anm_link_url(string $token): string
 {
-    return url('/link?t=' . $token);
+    return link_url('anmeldung', $token);
 }
 
 /** Gültigen Link finden (ohne ihn zu verbrauchen) oder null. */
 function anm_link_finden(string $token, ?int $jetzt = null): ?array
 {
-    if (preg_match('/^[0-9a-f]{48}$/', $token) !== 1) {
-        return null;
-    }
-    $z = db_zeile('SELECT * FROM anmeldung_link WHERE token_hash = ?', [hash('sha256', $token)]);
-    if ($z === null || db_ts($z['gueltig_bis']) < ($jetzt ?? time())) {
-        return null;
-    }
-    return $z;
+    return link_finden('anmeldung', $token, null, $jetzt);
 }
 
 /** Frühere bestätigte Anmeldung dieser Adresse bei einer anderen Veranstaltung (Daten noch vorhanden) oder null. */
@@ -550,7 +539,7 @@ function anm_uebernehmen_senden(int $alteAnmId, ?int $jetzt = null): void
     if ($a === null) {
         return;
     }
-    $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_H * 3600;
+    $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_S;
     $token = anm_link_erzeugen($alteAnmId, 'uebernehmen', $bis);
     mail_vorlage_einreihen($a['email'], 'uebernehmen', ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(db_zeit($bis))]);
 }
@@ -585,7 +574,7 @@ function anm_zugang_senden(int $anmId, string $vorlage = 'zugang', ?int $jetzt =
     if ($a === null) {
         return;
     }
-    $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_H * 3600;
+    $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_S;
     $token = anm_link_erzeugen($anmId, 'zugang', $bis);
     mail_vorlage_einreihen($a['email'], $vorlage, ['vorname' => $a['vorname'], 'link' => anm_link_url($token), 'gueltig' => datum_zeit_text(db_zeit($bis))]);
 }
@@ -608,11 +597,11 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
         if ($l === null) {
             return null;
         }
-        $l = db_zeile('SELECT * FROM anmeldung_link WHERE id = ? FOR UPDATE', [$l['id']]);
+        $l = link_sperren((int)$l['id']);
         if ($l === null) {
             return null;
         }
-        db_ausfuehren('DELETE FROM anmeldung_link WHERE id = ?', [$l['id']]);
+        link_verbrauchen((int)$l['id']);
         $anmId = (int)$l['anmeldung_id'];
         $a = anm_laden($anmId);
         if ($a === null) {
@@ -621,7 +610,7 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
         $meldung = null;
         if ($l['zweck'] === 'bestaetigen' && $a['status'] === 'unbestaetigt') {
             db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL, geaendert_am = ? WHERE id = ?", [db_zeit($jetzt), db_jetzt(), $anmId]);
-            db_ausfuehren("DELETE FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'bestaetigen'", [$anmId]);
+            link_loeschen('anmeldung', $anmId, 'bestaetigen');
             audit_schreiben('anmeldung', 'Anmeldung ' . $anmId . ' bestätigt');
             // Wer jetzt bestätigt ist, kann Angebote für seine Wartelisten bekommen
             foreach (db_zeilen("SELECT termin_id FROM platz WHERE anmeldung_id = ? AND status = 'warte'", [$anmId]) as $p) {
@@ -842,8 +831,8 @@ function anm_daten_setzen(int $anmId, array $e, ?int $jetzt = null): array
         }
         // Gleiche Antwort, ob die Adresse schon vergeben ist oder nicht; geprüft wird beim Bestätigen.
         // Nur ein offener Link je Anmeldung: ältere verfallen.
-        $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_H * 3600;
-        db_ausfuehren("DELETE FROM anmeldung_link WHERE anmeldung_id = ? AND zweck = 'email'", [$anmId]);
+        $bis = ($jetzt ?? time()) + ANM_LINK_GUELTIG_S;
+        link_loeschen('anmeldung', $anmId, 'email');
         $token = anm_link_erzeugen($anmId, 'email', $bis, $w['email']);
         mail_vorlage_einreihen($w['email'], 'email_bestaetigen', ['link' => anm_link_url($token), 'gueltig' => datum_zeit_text(db_zeit($bis))]);
         $link = true;
@@ -954,7 +943,7 @@ function anm_nachruecken(int $terminId, ?int $jetzt = null): int
         db_ausfuehren("UPDATE platz SET status = 'angebot', angebot_bis = ? WHERE id = ?", [db_zeit($fristTs), $p['id']]);
         $a = anm_laden((int)$p['anmeldung_id']);
         $tausch = anm_tausch((int)$p['anmeldung_id'], $p);
-        $token = anm_link_erzeugen((int)$p['anmeldung_id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_H * 3600));
+        $token = anm_link_erzeugen((int)$p['anmeldung_id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_S));
         mail_vorlage_einreihen($a['email'], 'angebot', [
             'vorname' => $a['vorname'], 'was' => anm_termin_text($terminId), 'frist' => datum_zeit_text(db_zeit($fristTs)),
             'link' => anm_link_url($token),
@@ -1059,7 +1048,7 @@ function anm_job(int $jetzt): array
             $erg['angebote'] += anm_sperre(fn() => anm_nachruecken($tid, $jetzt));
         }
     }
-    $erg['links'] = db_ausfuehren('DELETE FROM anmeldung_link WHERE gueltig_bis < ?', [$jetztDb])->rowCount();
+    $erg['links'] = link_aufraeumen($jetzt, 'anmeldung');
     return $erg;
 }
 

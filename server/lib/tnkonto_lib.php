@@ -15,7 +15,7 @@ declare(strict_types=1);
  *   - Gibt es zu einer bestätigten Konto-Adresse eine Anmeldung, werden beide
  *     verknüpft (Admin 2026-10-29).
  *   - Konto löschen: wahlweise mit oder ohne Anmeldung (Admin 2026-10-29).
- * Links (Bestätigen, Passwort, neue Adresse) nutzen konto_link wie beim Team.
+ * Links (Bestätigen, Passwort, neue Adresse) nutzen link_lib (Art konto) wie beim Team.
  */
 
 /** Mindestlänge für Passwörter Teilnehmender (Admin 2026-10-29; Team bleibt bei 12). */
@@ -162,15 +162,9 @@ function tk_anlegen_aus_anmeldung(int $anmId): ?int
 function tk_link(int $kontoId, string $zweck, ?string $neueEmail = null, ?int $jetzt = null): array
 {
     $jetzt ??= time();
-    $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-    db_transaktion(function () use ($kontoId, $zweck, $neueEmail, $token, $jetzt): void {
-        db_ausfuehren('DELETE FROM konto_link WHERE konto_id = ? AND zweck = ?', [$kontoId, $zweck]);
-        db_ausfuehren(
-            'INSERT INTO konto_link (konto_id, token_hash, zweck, neue_email, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)',
-            [$kontoId, hash('sha256', $token), $zweck, $neueEmail, db_zeit($jetzt + TK_LINK_GUELTIG_S), db_zeit($jetzt)]
-        );
-    });
-    return ['url' => url('/konto/link?t=' . $token), 'gueltig' => datum_zeit_text(db_zeit($jetzt + TK_LINK_GUELTIG_S))];
+    // ersetzt nur ältere Links mit demselben Zweck
+    $token = link_erzeugen('konto', $kontoId, $zweck, TK_LINK_GUELTIG_S, $neueEmail !== null ? ['neue_email' => $neueEmail] : [], $jetzt, 'zweck');
+    return ['url' => link_url('konto', $token), 'gueltig' => datum_zeit_text(db_zeit($jetzt + TK_LINK_GUELTIG_S))];
 }
 
 /**

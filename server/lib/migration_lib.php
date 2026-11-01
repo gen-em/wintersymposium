@@ -579,6 +579,38 @@ function migration_katalog(): array
                 "ALTER TABLE mail_ausgang ADD COLUMN absender_name VARCHAR(120) NULL AFTER html",
             ],
         ],
+        20 => [
+            'beschreibung' => 'Einmal-Links in einer Tabelle (AP-17, V-1): konto_link, anmeldung_link und newsletter_link übernommen und entfernt (E-69 (7))',
+            'sql' => [
+                "CREATE TABLE link (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    art          ENUM('konto','anmeldung','newsletter') NOT NULL,
+                    konto_id     INT UNSIGNED NULL,
+                    anmeldung_id INT UNSIGNED NULL,
+                    person_id    INT UNSIGNED NULL,
+                    zweck        VARCHAR(20)  NOT NULL,
+                    token_hash   CHAR(64)     NOT NULL,
+                    daten        JSON         NULL,
+                    gueltig_bis  DATETIME     NOT NULL,
+                    erstellt_am  DATETIME     NOT NULL,
+                    UNIQUE KEY uq_link_token (token_hash),
+                    KEY ix_link_gueltig (gueltig_bis),
+                    CONSTRAINT fk_link_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_link_anmeldung FOREIGN KEY (anmeldung_id) REFERENCES anmeldung (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_link_person FOREIGN KEY (person_id) REFERENCES newsletter_person (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Altdaten mit ihren Hashes: verschickte Links gelten weiter
+                "INSERT INTO link (art, konto_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'konto', konto_id, zweck, token_hash, IF(neue_email IS NULL, NULL, JSON_OBJECT('neue_email', neue_email)), gueltig_bis, erstellt_am FROM konto_link",
+                "INSERT INTO link (art, anmeldung_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'anmeldung', anmeldung_id, zweck, token_hash, IF(neue_email IS NULL, NULL, JSON_OBJECT('neue_email', neue_email)), gueltig_bis, erstellt_am FROM anmeldung_link",
+                "INSERT INTO link (art, person_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'newsletter', person_id, zweck, token_hash, NULL, gueltig_bis, UTC_TIMESTAMP() FROM newsletter_link",
+                "DROP TABLE konto_link",
+                "DROP TABLE anmeldung_link",
+                "DROP TABLE newsletter_link",
+            ],
+        ],
     ];
 }
 

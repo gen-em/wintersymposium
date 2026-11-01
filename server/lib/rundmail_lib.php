@@ -372,7 +372,7 @@ function rm_werte(array $a, bool $mitLink): array
 {
     $link = url('/deine-anmeldung');
     if ($mitLink) {
-        $token = anm_link_erzeugen((int)$a['id'], 'zugang', time() + ANM_LINK_GUELTIG_H * 3600);
+        $token = anm_link_erzeugen((int)$a['id'], 'zugang', time() + ANM_LINK_GUELTIG_S);
         $link = anm_link_url($token);
     }
     return [

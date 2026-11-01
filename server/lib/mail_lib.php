@@ -652,7 +652,7 @@ function mail_vorlage_roh(string $name, array $d): array
             return ['Bitte bestätige deinen Newsletter',
                 'Hallo' . (($d['vorname'] ?? '') !== '' ? ' ' . $d['vorname'] : '') . ",\n\n"
                 . 'du möchtest diese Newsletter bekommen: ' . $d['listen'] . ". Bestätige das über diesen Link:\n\n" . $d['link']
-                . "\n\nDer Link gilt " . NL_BESTAETIGEN_TAGE . ' Tage. Ohne Bestätigung tragen wir dich nicht ein und löschen die Anfrage.'
+                . "\n\nDer Link gilt " . dauer_text(NL_BESTAETIGEN_S) . '. Ohne Bestätigung tragen wir dich nicht ein und löschen die Anfrage.'
                 . "\n\nMit der Bestätigung willigst du ein: „" . $d['einwilligung'] . '“'
                 . "\n\nDu hast dich nicht eingetragen? Dann ignoriere diese Mail." . mail_gruss()];
         case 'newsletter_schon':

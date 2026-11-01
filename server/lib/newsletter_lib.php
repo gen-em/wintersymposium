@@ -18,8 +18,8 @@ declare(strict_types=1);
  *   bestätigt eintragen.
  */
 
-const NL_BESTAETIGEN_TAGE = 7;
-const NL_VERWALTEN_TAGE = 400;
+const NL_BESTAETIGEN_S = 7 * 86400;
+const NL_VERWALTEN_S = 400 * 86400;
 const NL_EINWILLIGUNG = 'Ich möchte die ausgewählten Newsletter per E-Mail erhalten. Die Einwilligung kann ich jederzeit über den Link in jeder Mail widerrufen. Gespeichert werden meine Adresse, mein Vorname (falls angegeben), die gewählten Listen sowie Zeitpunkt und Fassung dieser Einwilligung.';
 
 /* ---- Listen ---------------------------------------------------------------- */
@@ -114,31 +114,23 @@ function nl_person_anlegen(string $email, string $vorname): int
 
 function nl_link_erzeugen(int $personId, string $zweck, ?int $jetzt = null): string
 {
-    $jetzt ??= time();
-    $token = bin2hex(random_bytes(24));
-    $tage = $zweck === 'bestaetigen' ? NL_BESTAETIGEN_TAGE : NL_VERWALTEN_TAGE;
-    db_ausfuehren('INSERT INTO newsletter_link (person_id, token_hash, zweck, gueltig_bis) VALUES (?, ?, ?, ?)',
-        [$personId, hash('sha256', $token), $zweck, db_zeit($jetzt + $tage * 86400)]);
-    return $token;
+    return link_erzeugen('newsletter', $personId, $zweck, $zweck === 'bestaetigen' ? NL_BESTAETIGEN_S : NL_VERWALTEN_S, [], $jetzt);
 }
 
 /** Gültigen Link finden: ['link' => …, 'person' => …] oder null. */
 function nl_link_finden(string $token, ?string $zweck = null): ?array
 {
-    if (preg_match('/^[0-9a-f]{48}$/', $token) !== 1) {
+    $l = link_finden('newsletter', $token, $zweck);
+    if ($l === null) {
         return null;
     }
-    $l = db_zeile('SELECT * FROM newsletter_link WHERE token_hash = ?', [hash('sha256', $token)]);
-    if ($l === null || db_ts($l['gueltig_bis']) < time() || ($zweck !== null && $l['zweck'] !== $zweck)) {
-        return null;
-    }
-    $p = nl_person((int)$l['person_id']);
+    $p = nl_person($l['ziel_id']);
     return $p === null ? null : ['link' => $l, 'person' => $p];
 }
 
 function nl_verwalten_url(int $personId): string
 {
-    return url('/newsletter/verwalten?t=' . nl_link_erzeugen($personId, 'verwalten'));
+    return link_url('newsletter', nl_link_erzeugen($personId, 'verwalten'), 'verwalten');
 }
 
 /* ---- Eintragen, bestätigen, abmelden ------------------------------------- */
@@ -177,7 +169,7 @@ function nl_anfragen(string $email, string $vorname, array $listeIds, string $qu
     }
     $namen = array_map(fn($l) => $l['name'], array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $neu, true)));
     mail_vorlage_einreihen($email, 'newsletter_bestaetigen', ['vorname' => $p['vorname'], 'listen' => implode(', ', $namen),
-        'link' => url('/newsletter/bestaetigen?t=' . nl_link_erzeugen($pid, 'bestaetigen')), 'einwilligung' => NL_EINWILLIGUNG]);
+        'link' => link_url('newsletter', nl_link_erzeugen($pid, 'bestaetigen'), 'bestaetigen'), 'einwilligung' => NL_EINWILLIGUNG]);
     audit_schreiben('newsletter', 'Eintrag angefragt (' . $quelle . ') für Person ' . $pid . ': ' . implode(', ', $namen), $kontoId);
 }
 
@@ -190,7 +182,7 @@ function nl_bestaetigen(string $token): ?array
     }
     $pid = (int)$f['person']['id'];
     $n = db_ausfuehren("UPDATE newsletter_abo SET status = 'bestaetigt', bestaetigt_am = ?, fassung = ? WHERE person_id = ? AND status = 'offen'", [db_jetzt(), nl_fassung(), $pid])->rowCount();
-    db_ausfuehren("DELETE FROM newsletter_link WHERE person_id = ? AND zweck = 'bestaetigen'", [$pid]);
+    link_loeschen('newsletter', $pid, 'bestaetigen');
     if ($n > 0) {
         audit_schreiben('newsletter', 'Person ' . $pid . ': ' . $n . ' Liste(n) bestätigt (Double-Opt-In)');
     }
@@ -342,9 +334,9 @@ function nl_aufraeumen(int $jetzt): array
     if (!db_tabelle_da('newsletter_abo')) {
         return [];
     }
-    $grenze = db_zeit($jetzt - NL_BESTAETIGEN_TAGE * 86400);
+    $grenze = db_zeit($jetzt - NL_BESTAETIGEN_S);
     $offen = db_ausfuehren("DELETE FROM newsletter_abo WHERE status = 'offen' AND angefragt_am < ?", [$grenze])->rowCount();
-    $links = db_ausfuehren('DELETE FROM newsletter_link WHERE gueltig_bis < ?', [db_zeit($jetzt)])->rowCount();
+    $links = link_aufraeumen($jetzt, 'newsletter');
     $leer = db_ausfuehren('DELETE p FROM newsletter_person p LEFT JOIN newsletter_abo a ON a.person_id = p.id WHERE a.person_id IS NULL')->rowCount();
     return ['offen' => $offen, 'links' => $links, 'personen' => $leer];
 }

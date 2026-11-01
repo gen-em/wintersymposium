@@ -257,7 +257,7 @@ function team_angebot(int $platzId): ?string
         $fristTs = $jetzt + va_zahl('nachrueck_frist_h') * 3600;
         db_ausfuehren("UPDATE platz SET status = 'angebot', angebot_bis = ? WHERE id = ?", [db_zeit($fristTs), $platzId]);
         $tausch = anm_tausch((int)$a['id'], $p);
-        $token = anm_link_erzeugen((int)$a['id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_H * 3600));
+        $token = anm_link_erzeugen((int)$a['id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_S));
         mail_vorlage_einreihen($a['email'], 'angebot', [
             'vorname' => $a['vorname'], 'was' => anm_termin_text($tid), 'frist' => datum_zeit_text(db_zeit($fristTs)), 'link' => anm_link_url($token),
             'tausch' => $tausch === [] ? '' : 'Nimmst du an, fällt dafür weg: ' . implode('; ', array_map(fn($x) => anm_termin_text((int)$x['termin_id']), $tausch)) . '.',
