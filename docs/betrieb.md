@@ -60,7 +60,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
    - `umgebung`: `staging` bzw. `produktion`
    - `db`: Zugangsdaten aus Schritt 2
    - `geheimnis`, `installations_schluessel`, `jobs_token`, `health_token`: je eine zufällige Zeichenkette mit mindestens 32 Zeichen (Passwortmanager, nur Buchstaben und Ziffern), je Umgebung verschieden
-   - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 12). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
+   - `mail`: SMTP-Server, Port und Verschlüsselung des Hosters, Benutzer und Passwort des Postfachs `anmeldung@` (Abschnitt 13). Ohne diesen Eintrag bleiben Mails in der Warteschlange, und der Team-Bereich zeigt eine rote Meldung.
 5. **Installer:** `https://<domain>/install` öffnen. Er zeigt an, falls in der `config.php` etwas fehlt. Installationsschlüssel, Name, E-Mail und Passwort (mind. 12 Zeichen) des ersten Betreibers eingeben; optional weitere Hostnamen (z. B. `www.…`). Der aufgerufene Host wird Haupt-Host. Danach ist der Installer gesperrt (`var/install.lock`).
 6. **Cron einrichten:** Team-Bereich → Betrieb → **Status**, Zeile „Cron“ → „Details und Einrichtung“: dort stehen Zeitplan und Befehl mit dem richtigen Zielordner zum Kopieren (AP-15, E-65). In der Verwaltung des Hosters einen Shell-Cronjob alle 5 Minuten mit diesem Befehl anlegen (`php <Zielordner>/cli/jobs.php`, E-64). Nur wenn der Cron keine Befehle starten kann: URL-Cronjob auf `https://<domain>/jobs?token=<jobs_token>`; die Seite zeigt die URL erst nach Klick auf „URL mit Token anzeigen“ und protokolliert das. Der Token steht dann in Zugriffslogs, deshalb nur als Ausweichweg.
 7. **Prüfen:** Betrieb → Status zeigt nach dem ersten Cron-Lauf und der ersten automatischen Sicherung „Alles in Ordnung“ (Fehlerprotokoll gegebenenfalls ansehen und leeren). Dasselbe liefert `https://<domain>/health?token=<health_token>` als JSON mit `"status": "ok"`.
@@ -87,7 +87,7 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
 
 ## 5. Health-Endpunkt
 
-`GET https://<domain>/health` mit Kopfzeile `X-Health-Token: <health_token>` oder `?token=<health_token>`. Ohne oder mit falschem Token: 404 (nach 10 Fehlversuchen in 10 Minuten ist die Herkunft für 10 Minuten gesperrt). Antwort (seit AP-15 aus derselben Quelle wie die Seite Betrieb → Status, Abschnitt 16b):
+`GET https://<domain>/health` mit Kopfzeile `X-Health-Token: <health_token>` oder `?token=<health_token>`. Ohne oder mit falschem Token: 404 (nach 10 Fehlversuchen in 10 Minuten ist die Herkunft für 10 Minuten gesperrt). Antwort (seit AP-15 aus derselben Quelle wie die Seite Betrieb → Status, Abschnitt 19):
 
 ```json
 {"status": "ok", "ampel": "warnung", "version": "…", "umgebung": "staging", "zeit": "…",
@@ -181,7 +181,7 @@ Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenübersc
 - Fremdbestandteil: `assets/vendor/qrcode.js` (qrcode-generator 2.0.4, Kazuhiko Arase, MIT; Lizenz in `assets/vendor/LIZENZ-qrcode-generator.txt`), übernommen aus NAdoku.
 - Fremdbestandteil: `lib/vendor/tfpdf/` (tFPDF 1.34, LGPL-2.1, unverändert; Herkunft, Prüfsummen und Aktualisierung in `HERKUNFT.md`) für die PDF-Exporte (E-56). Schriften und Logo der PDFs liegen in `server/pdf/` (SIL OFL 1.1, Lizenzen daneben); tFPDF speichert Schriftmaße im Laufzeitordner unter `pdf/unifont/` (wird neu erzeugt, wenn er fehlt).
 
-## 9a. Mehrere Veranstaltungen (E-58)
+## 9. Mehrere Veranstaltungen (E-58)
 
 - **Eine aktuelle:** Startseite, `/anmelden` und „Meine Anmeldung“ zeigen immer die aktuelle Veranstaltung. Jede Veranstaltung ist außerdem unter `https://<domain>/<kürzel>` erreichbar; das Kürzel steht unter Einstellungen (Kleinbuchstaben, Ziffern, Bindestrich; Adressen der Seite wie `team` sind gesperrt).
 - **Team-Bereich:** Der Wechsler rechts neben dem Seitentitel (AP-12, E-60; vorher eine Leiste unter der Navigation) zeigt die gewählte Veranstaltung mit Status; aufgeklappt die Veranstaltungen, für die man freigeschaltet ist, für BetreiberInnen dazu „Neue Veranstaltung“ und „Alle Veranstaltungen verwalten“. Alle Seiten (Personen, Workshops, Teilnahme, Programm, Texte der Startseite, Einstellungen, Statistik, Exporte, Mailings an Angemeldete) gelten für diese. Gemeinsam bleiben Konten, Team, Newsletter, Impressum, Datenschutz, Dozierende, Absender und Hostnamen.
@@ -191,11 +191,11 @@ Gespeichert wird bereinigtes HTML aus wenigen Elementen (Absatz, Zwischenübersc
 - **Bausteine** (Einstellungen): Essenswahl, Fortbildungspunkte (EFN, CME-Liste) und Teilnahmebescheinigung je ja/nein; Workshops gibt es, sobald das Programm welche enthält. **Kurzname** und **Art** bestimmen Texte in Mails, Kopfzeilen und Seitentiteln.
 - **Teilnehmende:** „Mein Konto“ zeigt alle Veranstaltungen mit Stand und Zertifikat. Wer ohne Konto wiederkommt und unter „Meine Anmeldung“ einen Link anfordert, bekommt – wenn es für die aktuelle Veranstaltung noch keine Anmeldung gibt – einen Link „Daten übernehmen“; das Formular ist dann vorausgefüllt – 30 Minuten lang und nur bis zum Absenden (AP-14).
 
-## 9. Veranstaltungs-Einstellungen
+## 10. Veranstaltungs-Einstellungen
 
 Team-Bereich → „Einstellungen“ (Admin und BetreiberIn), je Veranstaltung (E-58). Alles, was die Veranstaltung betrifft (R-11): Kürzel, Kurzname, Art, Bausteine, Name, Auflage, Datum, Zeit, Ort, Kapazität, CME-Angaben (Punkte, Kategorie, Kammer, VNR), Angaben unter der Unterschrift des Zertifikats, Anmeldezeitraum, Workshop-Limit und -Pflicht, Nachrücken, Stichtage, Berufsgruppen. Zeiten werden in Ortszeit eingegeben. Stichtage gelten bis einschließlich des genannten Tages; leere Stichtage gelten bis zur Veranstaltung. Bis jemand speichert, gelten die Startwerte aus `server/lib/veranstaltung_lib.php`. Änderungen stehen im Audit-Protokoll und erscheinen sofort auf der Startseite. Die Werte zur Anmeldung wirken ab AP-4. Die Seite ist zuerst **gesperrt** (Balken oben, Felder grau); „Entsperren“ schaltet die Felder frei, nach dem Speichern ist sie wieder gesperrt (Rückmeldung 2026-10-30).
 
-## 10. Programm
+## 11. Programm
 
 Team-Bereich → „Programm“ (Admin und BetreiberIn).
 
@@ -206,7 +206,7 @@ Team-Bereich → „Programm“ (Admin und BetreiberIn).
 - **Termine:** „+ Termin“ fügt eine leere Zeile an, „Duplizieren“ den nächsten Termin im Anschluss (mit Plätzen und Dozierenden), „Entfernen“ nimmt eine neue Zeile weg; gespeicherte Termine „entfernen“ anhaken und speichern. Höchstens 12 Termine je Workshop. **Dozierende je Termin:** nur wenn ein Termin abweicht (z. B. Pause einer Dozentin) – nichts gewählt heißt „wie beim Workshop“; die Startseite zeigt dann „mit …“ beim Termin. Plätze lassen sich nicht unter die vergebenen senken (wirkt mit AP-4).
 - **Dozierende:** „Dozierende verwalten“; Foto optional (JPG, PNG oder WebP, höchstens 8 MB), wird quadratisch auf 480 px verkleinert und ohne Metadaten in `var/bilder/` gespeichert. Nur mit Einverständnis der Person. Fotos ohne Zuordnung räumt der Job „aufraeumen“ weg; als genutzt zählen auch Fotos in veröffentlichten Ständen vergangener Veranstaltungen (Archivseiten) und an Workshop-Terminen (AP-16, Review B-8). Ohne die PHP-Erweiterung GD ist der Upload ausgeblendet.
 
-## 11. Anmeldung (AP-4)
+## 12. Anmeldung (AP-4)
 
 - **Ablauf:** `/anmelden` → Mail mit Bestätigungslink → erst der Klick macht die Anmeldung gültig. Bis dahin hält sie ihre Plätze (Einstellung „Bestätigungsfrist“, Start 48 h, so lange wie der Link gilt); danach löscht der Job sie und die Plätze gehen ans Nachrücken.
 - **„Anmelden“ / „Meine Anmeldung“** (`/deine-anmeldung`, Rückmeldung 2026-10-30): Wer nicht erkannt ist, sieht in der Navigation den grünen Knopf „Anmelden“; die Seite dahinter bietet „Neu anmelden“, „Link per Mail“ und „Einloggen“. Vor dem Anmeldestart steht statt der ersten beiden Kacheln „Anmeldung noch nicht möglich – öffnet am …“. Erkannte Personen (Link, Konto, Team) sehen „Meine Anmeldung“. Einstieg mit „Link per Mail“ (gleiche Antwort für jede Adresse); nach dem Link Übersicht, Workshops, Essen und Daten ändern (eine neue Adresse gilt nach dem Link an die neue Adresse; Adressänderungen zählen wie „Link per Mail“: höchstens 10 je Stunde und Herkunft, 3 je Zieladresse, danach werden nur die übrigen Daten gespeichert; die Adresse eines Team-Kontos lässt sich hier nicht ändern, AP-14), stornieren (wer mit Konto oder im Team eingeloggt ist, bleibt danach eingeloggt und sieht „Jetzt anmelden“, E-63), Nachrück-Angebote annehmen oder ablehnen; nach dem Symposium die Teilnahmebescheinigung herunterladen, sobald das Team sie freigeschaltet hat (AP-10). Einmal-Links gelten 48 Stunden und einmal; erst der Klick auf „Weiter“ auf der Link-Seite verbraucht sie. Danach endet die Sitzung nach 30 min ohne Aktivität.
@@ -216,9 +216,9 @@ Team-Bereich → „Programm“ (Admin und BetreiberIn).
 - **Jobs** (Cron alle 5 Minuten): `anmeldung` (Fristen, abgelaufene Angebote, Nachrücken, alte Links) und `mail` (Warteschlange) jede Minute fällig, `aufraeumen` stündlich.
 - **Team:** Reiter „Anmeldungen“ zeigt Zahlen, Workshop-Termine und alle Anmeldungen (nur lesen; Bearbeiten mit AP-5).
 - **Spamschutz:** Honigtopf, Formular mindestens 4 s offen, Rechenaufgabe im Browser (JavaScript nötig), Ratenschutz je Herkunft, Wegwerfadressen. Greift eine Bremse, sieht die Antwort aus wie bei Erfolg.
-- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung und die Konten beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; Konten: Löschfrist nach E-54; weitere Fristen in Abschnitt 16a). Textvorschlag: `docs/datenschutz-vorschlag.md`.
+- **Datenschutz:** Die Datenschutzerklärung (pflegbarer Text, Abschnitt 7) muss die Anmeldung und die Konten beschreiben: Felder, Zweck, Mails, Löschung (Storno und verfallene Bestätigung löschen die Anmeldung sofort; Konten: Löschfrist nach E-54; weitere Fristen in Abschnitt 18). Textvorschlag: `docs/datenschutz-vorschlag.md`.
 
-## 12. Mailversand
+## 13. Mailversand
 
 Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`):
 
@@ -231,7 +231,7 @@ Konfiguration in `config.php`, Abschnitt `mail` (Vorlage in `config.example.php`
 | `antwort_an` | optional, Antwortadresse (z. B. `admin@…`) |
 | `tageslimit` | Mails je Tag (Start 450); System-Mails gehen immer raus, Mailings über dieses Postfach nur bis 80 %, der Rest am nächsten Tag |
 | `newsletter` | optional, zweites Postfach für Mailings (AP-6): `benutzer`, `passwort`, `absender`, `absender_name`, `tageslimit`; Server wie oben. Fehlt der Eintrag, gehen Mailings über anmeldung@ |
-| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 16) |
+| `umleiten_an` | nur Staging: alle Mails an diese Adresse, Empfänger im Betreff (Abschnitt 17) |
 
 **Prüfen:** Team-Bereich → „Betrieb“ → Kasten „Mailversand“ zeigt, ob der Versand eingerichtet ist, Absender, Warteschlange und den letzten Fehler; „Testmail an mich“ versendet sofort und zeigt die Antwort des Mailservers (ohne Passwort).
 
@@ -245,11 +245,11 @@ Jede Mail geht zuerst in die Warteschlange und wird direkt nach der Antwort an d
 
 **Team-Mails:** Neue Team-Konten bekommen die Einladung per Mail (oder der Link wird angezeigt, „Keine Mail“). „Passwort vergessen?“ beim Einloggen gilt auch für Team-Konten; der zweite Faktor bleibt.
 
-## 13. Team-Bereich (AP-5)
+## 14. Team-Bereich (AP-5)
 
 **Nachfragen** (löschen, verwerfen, senden …) erscheinen überall als derselbe Dialog über der Seite (Rückmeldung 2026-10-30, Entwurf C): Rahmen grün = bestätigen, rot = löschen/verwerfen, lila = Info; auf dem Handy von unten mit großen Knöpfen. Ohne JavaScript bleibt die Nachfrage zum Aufklappen.
 
-Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter angehängt die Unterseiten des aktiven Bereichs: **Übersicht** · **Anmeldungen** (Personen, Workshops, Teilnahme) · **Programm** (Programm, Dozierende) · **Mailings** (Abschnitt 12) · **Statistik** · **Verwaltung** (Einstellungen, Startseite, Protokoll) · **Betrieb**, nur für BetreiberInnen, alles, was für alle Veranstaltungen gilt (Status – Abschnitt 16b, Veranstaltungen – Abschnitt 9a, Team-Konten, Newsletter – Abschnitt 14, Texte, Betrieb).
+Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter angehängt die Unterseiten des aktiven Bereichs: **Übersicht** · **Anmeldungen** (Personen, Workshops, Teilnahme) · **Programm** (Programm, Dozierende) · **Mailings** (Abschnitt 13) · **Statistik** · **Verwaltung** (Einstellungen, Startseite, Protokoll) · **Betrieb**, nur für BetreiberInnen, alles, was für alle Veranstaltungen gilt (Status – Abschnitt 19, Veranstaltungen – Abschnitt 9, Team-Konten, Newsletter – Abschnitt 15, Texte, Betrieb).
 
 **Rechte je Veranstaltung** (AP-12, E-60): BetreiberInnen sehen und dürfen alles. Admins sind unter Betrieb → Team-Konten → „Bearbeiten“ → „Veranstaltungen …“ (AP-13: je Zeile ein Menü, jede Aktion im Dialog) für **alle, auch künftige** oder **nur ausgewählte** Veranstaltungen freigeschaltet. Sie sehen dann im Wechsler, in Personen, Workshops, Teilnahme, Programm, Mailings, Statistik, Exporten und im Protokoll nur diese; bei Konten nur Personen, die in einer dieser Veranstaltungen angemeldet sind. Eine fremde Veranstaltung per Adresse (`?va=`) wird abgewiesen, Nummern fremder Anmeldungen oder Plätze ergeben 404. Ohne Freischaltung sehen sie einen Hinweis statt des Team-Bereichs. Mailings an Newsletter-Listen, der Newsletter und sein Export sind nur für BetreiberInnen. „Mein Konto“ steckt im Personen-Menü oben rechts.
 
@@ -259,11 +259,11 @@ Bereiche (Admin 2026-10-30, Variante A; neu geordnet mit AP-12, E-60), darunter 
 - **Teilnahme** (AP-10, E-57): Alle mit Platz gelten als anwesend; eingetragen wird nur „nicht erschienen“ – beim Symposium oder je Workshop („doch da“ nimmt es zurück). Suche und Filter, auf dem Handy bedienbar, alles im Protokoll (Art „Teilnahme“, ohne Namen: „Anmeldung N: …“, AP-16, Review S-11). **Listen:** Unterschriftenliste als PDF – alle (mit Berufsgruppe) oder nur ÄrztInnen mit der EFN als Barcode (Code 128, Inhalt `*EFN*`; ohne EFN ein Feld fürs Etikett), sortiert nach Nachname, Vorname oder Berufsgruppe; CME-Liste (nur Anwesende). **Zertifikate:** Vorschau mit Beispiel und je Person; „Freischalten“ einzeln oder „Alle freischalten“ – erst ab dem Veranstaltungstag, wahlweise ohne Mail; die Person bekommt „Deine Teilnahmebescheinigung ist da“ mit einem Link (30 Tage, einmal) und lädt das PDF unter „Meine Anmeldung“ herunter (mit Konto jederzeit). Wer als „nicht erschienen“ markiert ist, bekommt keins – auch nicht nach der Freischaltung. „Zurücknehmen“ sperrt den Download wieder. **Unterschrift:** PNG mit durchsichtigem Hintergrund (oder JPG auf Weiß), höchstens 4 MB; liegt im Laufzeitordner unter `zertifikat/` und ist Teil der Sicherung. Was sonst auf dem Zertifikat steht (Name der Veranstaltung, Auflage, Punkte, Kategorie, Kammer, VNR, Name und Rolle unter der Unterschrift), steht unter Einstellungen.
 - **Statistik:** Kennzahlen, Verlauf, Termine, Berufsgruppen, Institutionen, Essen; Filter nach Berufsgruppe. **Export** je Liste in drei Formaten (E-56): **CSV** (Semikolon, UTF-8 mit BOM, für andere Programme), **Excel** (xlsx: Kopfzeile fixiert und mit Filter, Datum als Datum; braucht die PHP-Erweiterung zip, sonst fehlt der Knopf) und **PDF** (A4 im Branding zum Ausdrucken; Teilnehmende quer und ohne E-Mail, je Termin bzw. Essen eine Seite; nicht für Newsletter): Teilnehmende, Listen und Wartelisten je Termin, Essen, CME (Name, Berufsgruppe, EFN der anwesenden ÄrztInnen), Statistik, Newsletter. Die Kachel „Anwesenheit“ zeigt anwesend / mit Platz und die freigeschalteten Zertifikate. Exporte stehen mit Format im Protokoll.
 - **Einstellungen** (Verwaltung): Eckdaten und Texte der Startseite der gewählten Veranstaltung auf einer Seite (E-68); die frühere Seite „Startseite“ leitet dorthin. **Texte** (Betrieb, nur BetreiberInnen): Impressum und Datenschutz.
-- **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Filter nach Veranstaltung: gewählte, alle (Admins: alle ihre), für BetreiberInnen auch „ohne Veranstaltung“ (Konten, Newsletter, Logins, Betrieb). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und Teilnahme ihrer Veranstaltungen, keine Einträge ohne Veranstaltung (AP-12); BetreiberInnen sehen alles und können Einträge **ausblenden** (dann nur noch für BetreiberInnen sichtbar, markiert, wieder einblendbar). Löschen geht nicht von Hand; nach 14 Monaten (Logins nach 90 Tagen) löscht der Job `datenschutz` (Abschnitt 16a).
-- **Status** (BetreiberIn, erste Seite unter Betrieb, AP-15): Ampel für Cron, Jobs, Mailversand, Datenbank, Sicherung, Fehlerprotokoll und Umgebung (Abschnitt 16b). Rote Zeilen erscheinen BetreiberInnen auch unter „Zu erledigen“ auf der Übersicht (statt der Mail-Aufgaben, die Admins weiter sehen).
+- **Protokoll:** Filter-Knöpfe nach Art mit Anzahl, Suche (z. B. „Anmeldung 12“). Filter nach Veranstaltung: gewählte, alle (Admins: alle ihre), für BetreiberInnen auch „ohne Veranstaltung“ (Konten, Newsletter, Logins, Betrieb). Admins sehen Anmeldungen, Nachrücken, Programm, Einstellungen, Texte, Exporte, Mailings und Teilnahme ihrer Veranstaltungen, keine Einträge ohne Veranstaltung (AP-12); BetreiberInnen sehen alles und können Einträge **ausblenden** (dann nur noch für BetreiberInnen sichtbar, markiert, wieder einblendbar). Löschen geht nicht von Hand; nach 14 Monaten (Logins nach 90 Tagen) löscht der Job `datenschutz` (Abschnitt 18).
+- **Status** (BetreiberIn, erste Seite unter Betrieb, AP-15): Ampel für Cron, Jobs, Mailversand, Datenbank, Sicherung, Fehlerprotokoll und Umgebung (Abschnitt 19). Rote Zeilen erscheinen BetreiberInnen auch unter „Zu erledigen“ auf der Übersicht (statt der Mail-Aufgaben, die Admins weiter sehen).
 - **Betrieb** (BetreiberIn): Testmail und Umleitung (Zahlen zum Mailversand unter Status), Hostnamen (hinzufügen, Haupt-Host, abschalten), Absender je Postfach (System und Newsletter, vor config.php), Sicherung, Testdaten (nur Staging).
 
-## 14. Newsletter (AP-7)
+## 15. Newsletter (AP-7)
 
 Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
 
@@ -274,7 +274,7 @@ Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
 - **Versand:** Mailings → Empfänger „Newsletter-Listen“ (eine oder mehrere; jede Person einmal), am besten über newsletter@. Abmeldelink und List-Unsubscribe hängt die App an; ohne Vorname lautet die Anrede „Hallo,“. Archiv der Empfängerliste 14 Monate ab Versand.
 - **Datenschutz:** gespeichert werden Adresse, Vorname (falls angegeben), Listen, Zeitpunkt und Fassung der Einwilligung (Wortlaut in der Datenbank), keine IP-Adresse. Die Datenschutzerklärung muss das beschreiben.
 
-## 15. Konten für Teilnehmende (AP-4b)
+## 16. Konten für Teilnehmende (AP-4b)
 
 - **Freiwillig:** Anmelden und Ändern geht weiter ohne Konto über Einmal-Links.
 - **Anlegen:** Häkchen „Konto anlegen“ beim Anmelden (Passwort nach dem Bestätigungslink), Kasten „Konto anlegen?“ auf „Meine Anmeldung“ oder ohne Anmeldung unter `/konto/neu` (Bestätigung per Mail; unbestätigte Konten löscht der Job nach 48 h).
@@ -285,7 +285,7 @@ Listen mit Double-Opt-In, unabhängig von der Anmeldung (E-52).
 - Bestätigtes Konto und Anmeldung mit derselben Adresse werden verknüpft. Eingeloggt anmelden: Angaben vorausgefüllt, keine zweite Bestätigung.
 - **Testdaten:** Lea (`lea@example.org`) hat ein Konto; das erfundene Test-Passwort steht in `server/testdaten/beispieldaten.php` (`BEISPIEL_PASSWORT`). Nur auf Staging.
 
-## 16. Betrieb: Sicherung, Wiederherstellung, Testdaten
+## 17. Betrieb: Sicherung, Wiederherstellung, Testdaten
 
 Team-Bereich → „Betrieb“ (nur BetreiberInnen, E-47; bis 0.8 „Daten“).
 
@@ -297,7 +297,7 @@ Team-Bereich → „Betrieb“ (nur BetreiberInnen, E-47; bis 0.8 „Daten“).
 - **Automatisch** (AP-9, E-59): Der Job `sicherung` legt alle 3 Stunden (8× am Tag, über den Cron) eine Sicherung mit Anlass „automatisch“ an und räumt danach auf: behalten werden alle der letzten 3 Tage, bis 7 Tage die neueste je Tag, bis 14 Tage die neueste je 3 Tage, bis 28 Tage die neueste je Woche; ältere automatische werden gelöscht. Von Hand angelegte (auch „vor dem Wiederherstellen“, „vor dem Laden der Testdaten“) werden nach 90 Tagen gelöscht. Automatische Sicherungen und ihr Aufräumen stehen nicht im Protokoll. Für länger: herunterladen und verschlüsselt aufbewahren. Auf zusätzliche Sicherungen des Hosters verlassen wir uns nicht. Im Ordner liegen so etwa 30 automatische Sicherungen gleichzeitig.
 - Einzelne Sicherungen lassen sich jederzeit über „Löschen“ entfernen.
 
-## 16a. Fristen und Datenschutz (AP-9, E-24, E-59)
+## 18. Fristen und Datenschutz (AP-9, E-24, E-59)
 
 Der Job `datenschutz` läuft stündlich (über den Cron) und wendet diese Fristen an:
 
@@ -305,16 +305,16 @@ Der Job `datenschutz` läuft stündlich (über den Cron) und wendet diese Friste
 |---|---|---|
 | Anmeldungen ohne Konto | 14 Monate nach der Veranstaltung | Name, Adresse, Institution, EFN, Freitext geleert, Links gelöscht, Name in den Mailing-Empfängerlisten entfernt; Berufsgruppe, Essen und Plätze bleiben für die Statistik. Im Team-Bereich „(Daten geleert)“. Protokoll-Art „Datenschutz“. |
 | Anmeldungen mit Konto | solange das Konto besteht | danach wie ohne Konto |
-| Konten Teilnehmender | 14 Monate ohne Login, Erinnerung 30 Tage vorher | E-54, Abschnitt 15 |
+| Konten Teilnehmender | 14 Monate ohne Login, Erinnerung 30 Tage vorher | E-54, Abschnitt 16 |
 | CME-Nachweise | 10 Jahre nach der Veranstaltung | beim Leeren abgelegt: nur anwesende, bestätigte ÄrztInnen einer Veranstaltung mit Fortbildungspunkten (Name, EFN, Veranstaltung, Datum, VNR, Punkte, Kammer). Betrieb → Kasten „CME-Nachweise“ mit Export (nur BetreiberInnen). |
 | Protokoll | 14 Monate, Logins 90 Tage | gelöscht |
 | Mailing-Empfängerlisten | 14 Monate nach Veranstaltung bzw. Versand | E-50 |
 | Mail-Warteschlange | sofort nach dem Versand | Empfänger und Inhalt geleert |
-| Sicherungen | automatisch höchstens 28 Tage, von Hand 90 Tage | Abschnitt 16 |
+| Sicherungen | automatisch höchstens 28 Tage, von Hand 90 Tage | Abschnitt 17 |
 
 Die Fristen sind feste Regeln aus dem Löschkonzept (E-24, E-59), keine Einstellungen. Ein **Textvorschlag für die Datenschutzerklärung**, abgestimmt auf diese Fristen, liegt in `docs/datenschutz-vorschlag.md` (kein Rechtsrat; Platzhalter füllen, prüfen lassen, unter Texte → Datenschutz einfügen).
 
-## 16b. Status (AP-15, E-65)
+## 19. Status (AP-15, E-65)
 
 Team-Bereich → Betrieb → **Status** (nur BetreiberInnen). Oben stehen die Zeilen, die Aufmerksamkeit brauchen (rot vor gelb), darunter „In Ordnung“; alles grün: „Alles in Ordnung, Stand …“. Jede Zeile hat aufklappbare Details. „Jetzt prüfen“ lädt neu (die Seite wird nie zwischengespeichert).
 
@@ -334,6 +334,6 @@ Die Grenzen sind technische Werte in `server/lib/betrieb_lib.php` (R-11, E-64 (3
 - **Proxy-Warnung (Umgebung gelb):** „Anfragen kommen über einen Proxy; der Ratenschutz zählt dann alle Besucher zusammen. Beim Hoster klären.“ Der Ratenschutz (Login, Anmeldung, Link per Mail) zählt je Absenderadresse; hinter einem Proxy ist das für alle dieselbe, 30 Fehlversuche sperrten dann den Login für alle. In der Entwicklung zählt 127/8 nicht (lokaler Server).
 - **Fehlerprotokoll:** Größe und Zahl der Einträge seit dem letzten Leeren; „Letzte 30 Zeilen anzeigen“ zeigt sie (jede höchstens 500 Zeichen); „Leeren“ (mit Nachfrage) kürzt die Datei auf 0 Byte und schreibt „Fehlerprotokoll geleert“ ins Protokoll.
 
-## 17. Fehlerprotokoll
+## 20. Fehlerprotokoll
 
-PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (über HTTP nicht erreichbar). Ansehen und leeren unter Betrieb → Status (Abschnitt 16b), sonst per FTP.
+PHP-Fehler landen in `var/logs/php-fehler.log` im Zielordner (über HTTP nicht erreichbar). Ansehen und leeren unter Betrieb → Status (Abschnitt 19), sonst per FTP.

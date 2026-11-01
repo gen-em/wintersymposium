@@ -184,28 +184,30 @@ mail:
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
+Stand der Ziel-Dateien nach AP-17 (`ziel`): Dateinamen ohne Ordner liegen in `server/lib/`, Pfade mit Ordner relativ zu `server/`.
+
 ```yaml
 direkt_uebernehmen:
-  - {baustein: "email_lib.php + wegwerfdomains.txt (8 883 Domains, CC0)", zweck: "Adresse normalisieren/prüfen, Wegwerfadressen ablehnen"}
-  - {baustein: "konfig_lib.php", zweck: "Konfiguration lesen"}
-  - {baustein: "transaktion_lib.php", zweck: "verschachtelungsfeste DB-Transaktionen (wichtig fürs Nachrücken)"}
-  - {baustein: "format_lib.php", zweck: "deutsche Datums-/Zahlenformate"}
-  - {baustein: "session_lib.php: csrf_token/csrf_field/csrf_ok, flash_setzen/holen", zweck: "CSRF-Schutz, Post/Redirect/Get"}
+  - {baustein: "email_lib.php + wegwerfdomains.txt (8 883 Domains, CC0)", ziel: "mail_lib.php (mail_adresse), spamschutz_lib.php (spam_wegwerf), daten/wegwerfdomains.txt", zweck: "Adresse normalisieren/prüfen, Wegwerfadressen ablehnen"}
+  - {baustein: "konfig_lib.php", ziel: "konfig_lib.php", zweck: "Konfiguration lesen"}
+  - {baustein: "transaktion_lib.php", ziel: "transaktion_lib.php", zweck: "verschachtelungsfeste DB-Transaktionen (wichtig fürs Nachrücken)"}
+  - {baustein: "format_lib.php", ziel: "format_lib.php", zweck: "deutsche Datums-/Zahlenformate"}
+  - {baustein: "session_lib.php: csrf_token/csrf_field/csrf_ok, flash_setzen/holen", ziel: "sitzung_lib.php (csrf_*, flash_*)", zweck: "CSRF-Schutz, Post/Redirect/Get"}
 uebernehmen_mit_anpassung:
-  - {baustein: "sitzung_lib.php", anpassung: "auf zwei Sitzungsarten kürzen (Team, Einmal-Link); eigene Ablage im Webspace, eigenes Aufräumen"}
-  - {baustein: "registrieren.php: Honeypot, HMAC-Zeitstempel (4 s–2 h), Proof-of-Work (assets/pow.js, pow-worker.js)", anpassung: "für Anmelde- und Newsletter-Formular; eine Antwort für alle Fälle"}
-  - {baustein: "ratelimit_lib.php", anpassung: "nur Kern (rate_erlaubt, rate_misserfolg, rate_gleiche_dauer, Tabelle), ohne Sperrleiter und Mail-Alarm"}
-  - {baustein: "Token-Muster (konto_lib.php reset_token_ausstellen)", anpassung: "für Einmal-Links, Nachrück-Angebote und Newsletter-Bestätigung; sha256 in der DB, Ablauf, Einmalverwendung"}
-  - {baustein: "totp_lib.php (RFC 6238, Wiederholungsschutz, Wiederherstellungscodes)", anpassung: "Kern ohne Demo/Gerät-merken; Geheimnis versiegelt (sk_versiegeln)"}
-  - {baustein: "passkey_lib.php", anpassung: "übernommen, Signatur über OpenSSL statt phpseclib (E-55)"}
-  - {baustein: "serverkrypto_lib.php: sk_versiegeln/sk_oeffnen (AES-256-GCM)", anpassung: "nur für TOTP-Geheimnisse und SMTP-Passwörter"}
-  - {baustein: "smtp.php", anpassung: "Message-ID, Reply-To, List-Unsubscribe, optional HTML, mehrere Mails je Verbindung"}
-  - {baustein: "jobs_lib.php (Rahmen jobs_lauf/jobs_einen_lauf)", anpassung: "nur Rahmen; Auslöser Cron (CLI/Token-URL) und huckepack"}
-  - {baustein: "kopfzeilen_lib.php", anpassung: "CSP mit Nonce, Sicherheits-Header; ohne Geocoder/Karten"}
-  - {baustein: "rechtstexte_lib.php, rechtstext_seite.php", anpassung: "nur Impressum und Datenschutz; Editor vereinfacht"}
-  - {baustein: "einwilligung_lib.php", anpassung: "Einwilligung je Anmeldung/Newsletter statt je Konto"}
-  - {baustein: "validate_lib.php (pruef_text/zahl/flag/kalendertag)", anpassung: "nur generische Prüfungen; EFN-Prüfung neu"}
-  - {baustein: "config.example.php, .github/workflows/auslieferung.yml", anpassung: "stark gekürzt: FTPS-Sync mit Ausnahmeliste, Staging und Produktion"}
+  - {baustein: "sitzung_lib.php", ziel: "sitzung_lib.php", anpassung: "auf zwei Sitzungsarten kürzen (Team, Einmal-Link); eigene Ablage im Webspace, eigenes Aufräumen"}
+  - {baustein: "registrieren.php: Honeypot, HMAC-Zeitstempel (4 s–2 h), Proof-of-Work (assets/pow.js, pow-worker.js)", ziel: "spamschutz_lib.php, public/assets/pow.js, public/assets/pow-worker.js", anpassung: "für Anmelde- und Newsletter-Formular; eine Antwort für alle Fälle"}
+  - {baustein: "ratelimit_lib.php", ziel: "ratelimit_lib.php", anpassung: "nur Kern (rate_erlaubt, rate_misserfolg, rate_gleiche_dauer, Tabelle), ohne Sperrleiter und Mail-Alarm"}
+  - {baustein: "Token-Muster (konto_lib.php reset_token_ausstellen)", ziel: "link_lib.php (eine Tabelle link für alle Einmal-Links, AP-17)", anpassung: "für Einmal-Links, Nachrück-Angebote und Newsletter-Bestätigung; sha256 in der DB, Ablauf, Einmalverwendung"}
+  - {baustein: "totp_lib.php (RFC 6238, Wiederholungsschutz, Wiederherstellungscodes)", ziel: "totp_lib.php, zweitfaktor_lib.php", anpassung: "Kern ohne Demo/Gerät-merken; Geheimnis versiegelt (sk_versiegeln)"}
+  - {baustein: "passkey_lib.php", ziel: "passkey_lib.php", anpassung: "übernommen, Signatur über OpenSSL statt phpseclib (E-55)"}
+  - {baustein: "serverkrypto_lib.php: sk_versiegeln/sk_oeffnen (AES-256-GCM)", ziel: "krypto_lib.php", anpassung: "nur für TOTP-Geheimnisse und SMTP-Passwörter"}
+  - {baustein: "smtp.php", ziel: "mail_lib.php (smtp_*)", anpassung: "Message-ID, Reply-To, List-Unsubscribe, optional HTML, mehrere Mails je Verbindung"}
+  - {baustein: "jobs_lib.php (Rahmen jobs_lauf/jobs_einen_lauf)", ziel: "jobs_lib.php", anpassung: "nur Rahmen; Auslöser Cron (CLI/Token-URL) und huckepack"}
+  - {baustein: "kopfzeilen_lib.php", ziel: "kopfzeilen_lib.php", anpassung: "CSP mit Nonce, Sicherheits-Header; ohne Geocoder/Karten"}
+  - {baustein: "rechtstexte_lib.php, rechtstext_seite.php", ziel: "inhalt_lib.php, seiten/rechtstext.php", anpassung: "nur Impressum und Datenschutz; Editor vereinfacht"}
+  - {baustein: "einwilligung_lib.php", ziel: "Spalte fassung an Anmeldung und Newsletter-Abo (anmeldung_lib.php, newsletter_lib.php)", anpassung: "Einwilligung je Anmeldung/Newsletter statt je Konto"}
+  - {baustein: "validate_lib.php (pruef_text/zahl/flag/kalendertag)", ziel: "die *_pruefen-Funktionen der Fach-Libs, format_lib.php (efn_*)", anpassung: "nur generische Prüfungen; EFN-Prüfung neu"}
+  - {baustein: "config.example.php, .github/workflows/auslieferung.yml", ziel: "config.example.php, .github/workflows/auslieferung.yml", anpassung: "stark gekürzt: FTPS-Sync mit Ausnahmeliste, Staging und Produktion"}
 nur_als_muster:
   - "mail_lib.php (Katalog, Warteschlange, Wiederholungen, Inhalt nach Versand leeren) – neu schreiben mit Prioritäten und Tageszähler"
   - "migration_lib.php, install.php – kleiner Migrationskatalog und Installer"

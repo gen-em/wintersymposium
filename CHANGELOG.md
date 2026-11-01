@@ -41,7 +41,7 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
   - Die Töne der Meldungen stehen an einer Stelle.
 - Feste Zahlen in Texten (72 Stunden, 15 Minuten, 4 MB …) kommen aus den Konstanten (V-9).
 
-### Geändert (sichtbar, gewollt)
+Sichtbar (gewollt):
 
 - **Umbruchpunkte** (E-69 (6)): 760 und 1000 px statt sieben verschiedener. Folgen bei Zwischenbreiten:
   - 600 bis 759 px: Formularpaare stehen untereinander, der Bestätigungsdialog kommt von unten.
@@ -93,7 +93,14 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 
 ## [0.26.0] – 2026-11-01
 
-### Behoben (AP-16, Review-Behebung 2)
+### Geändert
+
+- Neues Skript `assets/zweitfaktor.js` (Knöpfe im Bestätigungsdialog), neue Aktion `bestaetigen` in `/passkey`; Ratenschutz-Töpfe `mailcode` und `mailcode_minute`.
+- Test-Beispieldatensatz: `beispieldaten_review2()` (unbestätigte Anmeldung mit Adas Adresse, Lea auf der ausgeblendeten Liste „Referierende (intern)“); Browser-Durchlauf prüft Bestätigung mit Mail-Code und Passkey, Adas „Meine Anmeldung“ und Startseite ohne Veranstaltung.
+
+### Behoben
+
+AP-16, Review-Behebung 2:
 
 - **B-4:** „Meine Anmeldung“ zeigt immer die aktuelle Veranstaltung. Vorher legte eine Team-Seite oder Archivseite einer alten Veranstaltung deren Anmeldung in die Sitzung. Der Sitzungseintrag kennt jetzt seine Veranstaltung; abgeleitet wird nur auf öffentlichen Seiten der aktuellen. Ein Einmal-Link (z. B. aus der Zertifikat-Mail) öffnet weiter die Anmeldung einer vergangenen Veranstaltung (E-58).
 - **B-6:** Newsletter speichern („Mein Konto“, Verwalten-Link) meldet nicht mehr still von ausgeblendeten Listen ab; nichts angekreuzt in „Mein Konto“ meldet nur von den sichtbaren ab.
@@ -109,14 +116,10 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 - **S-6:** Status → Umgebung warnt, wenn Anfragen über einen Proxy kommen und `https_ueber_proxy` aus ist.
 - **S-12:** geprüft, kein Fehler: eine erfundene Sitzungs-ID im Keks wird nicht übernommen (`use_strict_mode` wirkt); dazu ein Test.
 
-### Geändert
-
-- Neues Skript `assets/zweitfaktor.js` (Knöpfe im Bestätigungsdialog), neue Aktion `bestaetigen` in `/passkey`; Ratenschutz-Töpfe `mailcode` und `mailcode_minute`.
-- Test-Beispieldatensatz: `beispieldaten_review2()` (unbestätigte Anmeldung mit Adas Adresse, Lea auf der ausgeblendeten Liste „Referierende (intern)“); Browser-Durchlauf prüft Bestätigung mit Mail-Code und Passkey, Adas „Meine Anmeldung“ und Startseite ohne Veranstaltung.
-
 ### Doku
 
 - Konzept: AP-16 umgesetzt (status, ergebnis, probleme); betrieb.md (zweiter Faktor beim Bestätigen, Mail-Code-Grenze, keine aktuelle Veranstaltung, Proxy-Warnung, Newsletter, Fotos); Prüfprotokoll T-288 bis T-296; Review-Dokument Abschnitt 5.
+
 ## [0.25.0] – 2026-10-31
 
 ### Geändert
@@ -127,7 +130,14 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 
 ## [0.24.0] – 2026-10-31
 
-### Behoben (AP-14, Review-Behebung 1)
+### Geändert
+
+- Neue Mail-Vorlage „Adresse geändert“ (an die alte Adresse); neue CSS-Regel für schreibgeschützte Felder (`.feld input[readonly]`).
+- Test-Beispieldatensatz: `beispieldaten_warteliste()`; Browser-Durchlauf prüft Warte-Kästchen (Team und Teilnehmende) und Storno mit Konto.
+
+### Behoben
+
+AP-14, Review-Behebung 1:
 
 - **S-1 / B-9:** Die Login-Adresse eines Team-Kontos lässt sich nicht mehr über eine Anmeldung ändern – weder vom Team unter „Personen“ noch von der Person unter „Meine Anmeldung → Daten“ oder über einen alten Bestätigungslink. Das Feld ist dort schreibgeschützt mit Hinweis. Ändert das Team die Adresse einer Anmeldung mit Teilnehmenden-Konto, bekommt die alte Adresse eine Hinweis-Mail; das Protokoll vermerkt „Konto N: Adresse vom Team geändert“.
 - **B-1:** Newsletter-Mails in der Warteschlange gingen verloren, wenn eine Admin-Aktion den Versand anstieß. Mailings laden jetzt ohne Rechteprüfung (die Team-Seiten prüfen mit `rm_sichtbar()`); fehlt ein Mailing, ist das ein Fehler mit Wiederholung statt Löschen.
@@ -135,11 +145,6 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 - **S-2:** Adressänderungen (Meine Anmeldung, Mein Konto) haben einen Ratenschutz wie „Link per Mail“ (10 je Stunde und Herkunft, 3 je Zieladresse); nur ein offener Bestätigungslink; die Bestätigungsmail beginnt mit „Hallo,“ ohne Vornamen.
 - **B-5:** Ein Storno auf „Meine Anmeldung“ loggt nicht mehr aus; Konto- und Team-Login bleiben (E-63).
 - **B-13:** Die Vorlage „Daten übernehmen“ gilt 30 Minuten und ist nach dem Absenden der Anmeldung weg.
-
-### Geändert
-
-- Neue Mail-Vorlage „Adresse geändert“ (an die alte Adresse); neue CSS-Regel für schreibgeschützte Felder (`.feld input[readonly]`).
-- Test-Beispieldatensatz: `beispieldaten_warteliste()`; Browser-Durchlauf prüft Warte-Kästchen (Team und Teilnehmende) und Storno mit Konto.
 
 ### Doku
 
@@ -215,10 +220,6 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 
 ## [0.21.3] – 2026-10-31
 
-### Behoben
-
-- **Startseite zeigte eingeloggt den ausgeloggten Kopf** (Rückmeldung 2026-10-31, Staging, alle Browser): Der Seitenkopf schickte den Anfang der Seite, bevor er die Sitzung öffnete. Beim Hoster ist der Ausgabepuffer aus, danach lässt sich keine Sitzung mehr starten. Die Erkennung von Login, Konto und Einmal-Link läuft jetzt vor der ersten Ausgabe.
-
 ### Geändert
 
 - Testserver (`lauf.php` und Browser-Durchlauf) laufen wie der Hoster ohne Ausgabepuffer (`output_buffering=0`), damit solche Fehler im Test auffallen. Der Browser-Durchlauf prüft die Startseite nach dem Team-Login direkt, über das Logo und nach Zurück/Vor.
@@ -226,7 +227,13 @@ AP-17 Vereinheitlichung, erster Teil (Unterpunkte 1 bis 6, E-69 (5)): reiner Umb
 - **Impressum und Datenschutz** haben dieselbe Werkzeugleiste wie die Mailings, mit Knopf (Link als Schaltfläche) und HTML-Quelltext (Admin 2026-10-31). Knöpfe bleiben auf der Webseite Knöpfe.
 - **Mailings:** Der Hilfetext unter dem Editor ist kürzer und erklärt die Platzhalter `{vorname}`, `{nachname}`, `{workshops}` und `{link}`.
 
-### Auf Halde (offene Punkte im Konzept)
+### Behoben
+
+- **Startseite zeigte eingeloggt den ausgeloggten Kopf** (Rückmeldung 2026-10-31, Staging, alle Browser): Der Seitenkopf schickte den Anfang der Seite, bevor er die Sitzung öffnete. Beim Hoster ist der Ausgabepuffer aus, danach lässt sich keine Sitzung mehr starten. Die Erkennung von Login, Konto und Einmal-Link läuft jetzt vor der ersten Ausgabe.
+
+### Doku
+
+Offene Punkte im Konzept:
 
 - O-40: Mails im Erscheinungsbild Allgäu Akut.
 - O-41: Eigene Workshops (angemeldet, Warteliste) im Programm der Startseite markieren – Mockup mit 2–3 Varianten.
@@ -502,15 +509,15 @@ AP-5: Team-Bereich (E-49).
 
 Rückmeldungen des Admins.
 
-### Geändert
-
-- Programm: Ziehen fügt jetzt **zwischen** zwei Punkte ein (grüne Linie zeigt davor oder dahinter). Der Punkt beginnt, wo der darüber endet; nachfolgende Vorträge, Fälle, Pausen und Workshop-Blöcke (samt Terminen und Stationen) rücken nach hinten, bis eine Lücke reicht.
-- Abstand der Zwischentitel auf den Team-Seiten (z. B. „Workshop-Termine“, „Personen“).
-
 ### Neu
 
 - Team-Bereich → „Daten“: Kasten „Mailversand“ mit Stand (eingerichtet, Absender, Warteschlange, letzter Fehler) und „Testmail an mich“, die sofort versendet und die Antwort des Mailservers zeigt.
 - Versionsanzeige in der Fußzeile außerhalb der Produktion und auf der Team-Übersicht.
+
+### Geändert
+
+- Programm: Ziehen fügt jetzt **zwischen** zwei Punkte ein (grüne Linie zeigt davor oder dahinter). Der Punkt beginnt, wo der darüber endet; nachfolgende Vorträge, Fälle, Pausen und Workshop-Blöcke (samt Terminen und Stationen) rücken nach hinten, bis eine Lücke reicht.
+- Abstand der Zwischentitel auf den Team-Seiten (z. B. „Workshop-Termine“, „Personen“).
 
 ## [0.8.0] – 2026-10-29
 
@@ -622,13 +629,13 @@ AP-3 Schritt 2: Veranstaltungs-Einstellungen.
 
 ## [0.3.1] – 2026-10-29
 
-### Behoben
-
-- Bitwarden füllte den Code aus der Authenticator-App in Firefox nicht ein: Die Code-Felder heißen jetzt `totp` statt `code`. Firefox gibt `autocomplete="one-time-code"` nicht an Erweiterungen weiter, Bitwarden sucht dann nach Stichwörtern wie `totp` (Lösung aus dem Familien-Server, dort `docs/erkenntnis-bitwarden-einmalcode.md`).
-
 ### Neu
 
 - Browser-Durchlauf prüft auf jeder Seite, dass Code-Felder ein solches Stichwort tragen und kein Passwortfeld sind.
+
+### Behoben
+
+- Bitwarden füllte den Code aus der Authenticator-App in Firefox nicht ein: Die Code-Felder heißen jetzt `totp` statt `code`. Firefox gibt `autocomplete="one-time-code"` nicht an Erweiterungen weiter, Bitwarden sucht dann nach Stichwörtern wie `totp` (Lösung aus dem Familien-Server, dort `docs/erkenntnis-bitwarden-einmalcode.md`).
 
 ## [0.3.0] – 2026-10-29
 
