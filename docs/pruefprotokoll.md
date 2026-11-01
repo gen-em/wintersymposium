@@ -968,7 +968,7 @@ Nach dem Merge auf Staging (Claude, mit den Testkonten).
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
-| T-334 bis T-338 | 2026-11-01 | claude-dev | bestanden | ERGEBNIS_LAUF | Chromiums simuliertes Gerät beantwortet eine Adressfeld-Abfrage sofort; der Durchlauf hält sie deshalb offen und stellt Blockade und Abbruch nach (`ws-test-pk` in `durchlauf.js`). WebKit unter Linux hat auf localhost kein `navigator.credentials`; dort bleibt der Passkey-Bereich verborgen wie bisher. Firefox (headless) lässt eine normale Abfrage ohne Gerät offen, deshalb läuft die automatische Abfrage nur in Chromium. |
+| T-334 bis T-338 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1193 ok, 0 Fehler; Browser **Stufe 3** (Login und JavaScript sind gemeinsame Teile) `node tools/browser/durchlauf.js` → 9376 ok, 0 Fehler (3 Engines × 4 Breiten); vorher gezielt Stufe 2 mit allen drei Engines (`passkey,einloggen,konto`) → 904 ok, 0 Fehler; Fotos angesehen (Login in allen Engines, Knopf hervorgehoben oben auf dem Handy, Passkey-Liste) | Chromiums simuliertes Gerät beantwortet eine Adressfeld-Abfrage sofort; der Durchlauf hält sie deshalb offen und stellt Blockade und Abbruch nach (`ws-test-pk` in `durchlauf.js`). WebKit unter Linux hat auf localhost kein `navigator.credentials`; dort bleibt der Passkey-Bereich verborgen wie bisher. Firefox (headless) lässt eine normale Abfrage ohne Gerät offen, deshalb läuft die automatische Abfrage nur in Chromium. |
 
 ### Noch zu prüfen
 
