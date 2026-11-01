@@ -6,8 +6,9 @@ declare(strict_types=1);
  * Mailversand stehen seit AP-15 auf der Status-Seite (E-65).
  * Herunterladen und Wiederherstellen verlangen den eigenen zweiten Faktor
  * (Code aus App oder Mail, Wiederherstellungscode oder Passkey; wie der
- * Rollenwechsel, E-41, Review B-7). Testdaten laden gibt es nur
- * auf Staging und in der Entwicklung, nie auf Produktion.
+ * Rollenwechsel, E-41, Review B-7). Testdaten laden und Staging
+ * zurücksetzen (mit Code) gibt es nur auf Staging und in der Entwicklung,
+ * nie auf Produktion.
  */
 
 $konto = team_tor(['betreiber']);
@@ -73,6 +74,22 @@ if (ist_post()) {
                 fertig('ok', 'Testdaten geladen. Der Stand davor ist gesichert als ' . $s . '.', '/team/daten');
             }
             break;
+        case 'zuruecksetzen':
+            // Staging auf den Ausgangsstand (Admin 2026-11-01): ohne Beispieldaten und Testkonten
+            if (!testdaten_moeglich()) {
+                $fehler[] = 'Zurücksetzen gibt es nur auf Staging.';
+            } elseif (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                $fehler[] = $f;
+            } else {
+                $s = testdaten_zuruecksetzen($ich, post_haken('testkonten'));
+                if (konto_laden($ich) === null) {
+                    // Das eigene Konto gehörte zu den Testdaten: abmelden
+                    sitzung_beenden();
+                    umleiten('/einloggen');
+                }
+                fertig('ok', 'Staging ist zurückgesetzt. Der Stand davor ist gesichert als ' . $s . '.', '/team/daten');
+            }
+            break;
         case 'testkonten':
             // Feste Testkonten aus der config.php (nur Staging, Rückmeldung nach AP-19)
             $tk = testdaten_konten($ich);
@@ -103,6 +120,9 @@ team_seite_kopf($konto, 'Betrieb', '/team/daten', ['skripte' => ['zweitfaktor.js
         <?= aktion_knopf('/team/daten', 'testkonten', [], 'Testkonten anlegen') ?>
         <?php endif; ?>
         <?= bestaetigung_html('Testdaten laden', 'Programm, Anmeldungen und Einstellungen werden ersetzt. Zurück geht es über die Sicherung, die dabei entsteht.', 'Ja, Testdaten laden', ['aktion' => 'testdaten'], ['ziel' => '/team/daten', 'knopfklasse' => 'knopf gefahr']) ?>
+        <p class="meta klein abstand-oben-klein">Zurücksetzen: Staging wie nach der Installation, ohne Beispieldaten und Testkonten. Es bleiben die übrigen Team-Konten, die Betriebs-Einstellungen, die Hostnamen sowie Impressum und Datenschutz. Vorher wird automatisch gesichert.</p>
+        <?= bestaetigung_html('Staging zurücksetzen', 'Veranstaltungen, Programm, Anmeldungen, Teilnehmenden-Konten, Newsletter, Mailings und Protokoll werden gelöscht; es bleibt eine leere Veranstaltung in der Reihe Wintersymposium. Zurück geht es über die Sicherung, die dabei entsteht.', 'Ja, zurücksetzen', ['aktion' => 'zuruecksetzen'],
+            ['ziel' => '/team/daten', 'titel' => 'Staging zurücksetzen?', 'knopfklasse' => 'knopf gefahr', 'inhalt_html' => (konfig('testkonten', []) !== [] ? feld('testkonten', 'Testkonten aus der config.php danach neu anlegen', ['typ' => 'haken', 'id' => 'zr-testkonten']) : '') . $codeFeld('totp-zr')]) ?>
     </div>
     <?php endif; ?>
 </div>

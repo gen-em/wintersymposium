@@ -42,6 +42,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | umgesetzt, Staging offen | lokal T-317 bis T-325 | Staging (siehe unten) |
 | E-72 | Rückmeldungen nach AP-18/AP-19 | umgesetzt, Staging offen | lokal T-326 bis T-330 | Staging (siehe unten) |
 | E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
+| E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen | umgesetzt, Staging offen | lokal T-332, T-333 | Staging: Reihe wechseln, Durchklicken (siehe unten) |
 
 ## Wie geprüft wird
 
@@ -918,10 +919,33 @@ Nach dem Merge auf Staging. Ziel: Reihen und Newsletter so, wie in E-71 beschrie
 
 Nach dem Merge auf Staging.
 
-1. **Reihe (E-72 (11)):** Einstellungen → Reihe & Zielgruppe → Reihe wechseln → Speichern. Erwartet: Meldung „… Reihe: <Name>.“ Springt sie zurück: Betrieb → Fehlerprotokoll, Zeile „Einstellungen: Reihe nicht übernommen (…)“ – den Text bitte an Claude geben.
+1. **Reihe (E-72 (11)):** Ursache 2026-11-01 auf Staging gefunden (Claude, Chromium, 0.30.2): gesendet wurde `reihe_id=Wintersymposium`, Meldung „Nichts geändert. Reihe: einzeln.“, keine Zeile im Fehlerprotokoll. Behoben in E-74; Prüfung auf Staging dort.
 2. **Testkonten:** In der `config.php` von Staging `testkonten` eintragen (Vorlage in `config.example.php`), dann Betrieb → Betrieb → „Testkonten anlegen“. Erwartet: „3 Testkonten gesetzt.“ Zugangsdaten bei Bedarf an Claude im Chat geben, nicht ins Repo.
 3. **Startseite bearbeiten:** scrollen (Speichern bleibt unten sichtbar), speichern (Seite bleibt an der Stelle), Zoom 100 % und „Groß ansehen“ ausprobieren, Überschrift „Merke“ ändern.
 4. **Einstellungen:** eine Kachel öffnen, etwas ändern, „Abbrechen“ → Kachel zu, nichts geändert.
 5. **Mailings → Neu → Newsletter-Listen:** „Allgäu Akut“ oben und hervorgehoben, Absender newsletter@ (oder Hinweis).
 6. **Dozierende:** Suche nach einem Teil von Name oder Funktion.
 
+
+## Auswahlfelder ohne Raten, Staging zurücksetzen (E-74)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-332, ap: E-74, was: "Auswahlfelder: Schlüssel bleiben Werte, Textlisten über liste", wie: "formular_helfer: optionen [0 => …, 1 => …, 2 => …] behalten 0, 1, 2 als Werte, liste hängt sich an; konventionen.php: keine Listen in optionen, kein array_is_list in formular_lib; http_tests (ap19): Reihen in Nummern-Reihenfolge wie auf Staging → Optionen tragen die Nummer; Name statt Nummer → „Unbekannte Reihe.“, nichts gespeichert; Gegenprobe mit dem alten feld(): drei Prüfungen rot", status: "ok"}
+- {id: T-333, ap: E-74, was: "Staging zurücksetzen", wie: "lauf.php (12_sicherung): vorher Sicherung; nur das Team-Konto außerhalb der Testdaten bleibt (mit Codes, Rechten für die erste Veranstaltung und die Reihe Wintersymposium); Anmeldungen, Programm, Dozierende, Mailings, Newsletter leer; eine Veranstaltung in der Reihe Wintersymposium; Impressum, Betriebs-Einstellungen, Hostnamen bleiben; Kontonummern nicht neu vergeben; Protokoll-Eintrag. http_tests (daten): ohne Code abgelehnt, mit Code zurückgesetzt, eigenes Testkonto abgemeldet. Browser: Dialog mit Code-Feld (rot)", status: "ok"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-332, T-333 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1183 ok, 0 Fehler; Gegenprobe mit altem `feld()` (WS_HTTP=ap19) → 3 Fehler wie erwartet | Ursache vorher live auf Staging nachgestellt (Chromium, Testkonto BetreiberIn): POST `gruppe=reihe&reihe_id=Wintersymposium&zielgruppe=beide`, Meldung „Nichts geändert. Reihe: einzeln.“ – nicht browserabhängig, sondern abhängig von der Reihenfolge der Reihen-Nummern |
+
+### Noch zu prüfen
+
+Nach dem Merge auf Staging (Claude, mit den Testkonten).
+
+1. **Reihe:** Einstellungen → Reihe & Zielgruppe → „Wintersymposium“ → Speichern. Erwartet: „Gespeichert (…). Reihe: Wintersymposium.“
+2. **Durchklicken (E-74 (3)):** alle Funktionen mit BetreiberIn, Admin und Teilnehmender; Bericht an den Admin.
+3. **Staging zurücksetzen:** danach Betrieb → Betrieb → „Staging zurücksetzen“ mit Code. Erwartet: Testkonten und Beispieldaten weg, Reihe Wintersymposium mit leerer Veranstaltung, eigene Konten des Admins bleiben.

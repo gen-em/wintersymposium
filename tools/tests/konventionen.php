@@ -131,6 +131,8 @@ const KONV_TEST_ANLEGEN_ERLAUBT = [
     'lauf/08_team.php' => ['team_anlegen' => 'Anlegen durch das Team (bestätigt, doppelt, Warteliste, Überbuchen)'],
     'lauf/09_mailings.php' => ['rm_speichern' => 'Mailings sind Gegenstand', 'programm_punkt_speichern' => 'Block-Zuordnung der Empfänger', 'dozent_speichern' => 'Block-Zuordnung der Empfänger', 'INSERT mail_ausgang' => 'schon gesendete Mails des Tages (Tageslimit)'],
     'lauf/10_newsletter.php' => ['anm_anlegen' => 'Newsletter-Häkchen beim Anmelden', 'rm_speichern' => 'Newsletter-Mailing'],
+    'lauf/12_sicherung.php' => ['konto_anlegen' => 'Team-Konto außerhalb der Testdaten (example.net), das beim Zurücksetzen bleibt – der Beispieldatensatz hat nur example.org; Nummernvergabe danach',
+        'INSERT konto_code' => 'Wiederherstellungscode, der beim Zurücksetzen mit dem Konto bleibt'],
     'lauf/13_fristen.php' => ['INSERT audit' => 'zurückdatierte Einträge für die Protokoll-Frist'],
     'lauf/14_gesamtablauf.php' => ['va_anlegen' => 'Gesamtablauf T-202', 'programm_punkt_speichern' => 'Gesamtablauf T-202', 'anm_anlegen' => 'Gesamtablauf T-202', 'rm_speichern' => 'Gesamtablauf T-202'],
     'lauf/15_status.php' => ['INSERT job' => 'Fehlerzustände der Ampeln', 'INSERT mail_ausgang' => 'Fehlerzustände der Ampeln', 'INSERT schema_migration' => 'Stand nach der Prüfung wiederherstellen'],
@@ -291,6 +293,19 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden($auditInSeiten, 'K-d: Protokoll (audit_schreiben) nur in Libs, nicht in Seiten');
     konv_melden($closures, 'Unterpunkt 4: keine Feld-Closures ($fehlerFeld, $ungueltig) in Seiten');
     konv_melden($einknopf, 'Unterpunkt 4: Einknopf-Formulare über aktion_knopf(), nicht von Hand');
+
+    // Auswahlfelder (Reihe-Fehler auf Staging): feld() rät nicht, ob optionen eine Liste ist; Textlisten über 'liste'
+    $optListen = [];
+    foreach (array_merge(glob("$wurzel/server/seiten/*.php") ?: [], glob("$wurzel/server/lib/*.php") ?: []) as $p) {
+        $quelle = (string)file_get_contents($p);
+        if (preg_match_all("~'optionen' => (?:va_liste\\(|\\[\\s*'[^'\\n]*'\\s*[,\\]])~", $quelle, $m, PREG_OFFSET_CAPTURE)) {
+            foreach ($m[0] as [$x, $pos]) {
+                $optListen[] = basename($p) . ':' . (substr_count($quelle, "\n", 0, $pos) + 1);
+            }
+        }
+    }
+    konv_melden($optListen, "Auswahlfelder: Textlisten als 'liste' übergeben, 'optionen' ist immer [wert => text]");
+    pruefe(!str_contains((string)file_get_contents("$wurzel/server/lib/formular_lib.php"), 'array_is_list('), 'Auswahlfelder: feld() vermutet keine Liste (kein array_is_list in formular_lib)');
 
     // Unterpunkt 5 (V-29): jede Klasse in site.css kommt in PHP/JS vor und umgekehrt
     $css = (string)preg_replace('~/\*.*?\*/~s', '', (string)file_get_contents("$wurzel/server/public/assets/site.css"));

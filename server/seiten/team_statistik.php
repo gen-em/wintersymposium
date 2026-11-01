@@ -16,7 +16,7 @@ $d = stat_daten($bg);
 team_seite_kopf($konto, 'Statistik', '/team/statistik');
 ?>
 <?= filter_leiste(['ziel' => '/team/statistik', 'knopf' => 'Filtern', 'nach_html' => '<a class="klein-link" href="#export">Zum Export</a>',
-    'felder' => feld('bg', 'Berufsgruppe', ['typ' => 'auswahl', 'optionen' => va_liste('berufsgruppen'), 'leer' => 'Alle Berufsgruppen', 'wert' => $bg, 'sr' => true, 'ohne_rahmen' => true])]) ?>
+    'felder' => feld('bg', 'Berufsgruppe', ['typ' => 'auswahl', 'liste' => va_liste('berufsgruppen'), 'leer' => 'Alle Berufsgruppen', 'wert' => $bg, 'sr' => true, 'ohne_rahmen' => true])]) ?>
 <p class="meta klein">Stand <?= e(jetzt_text()) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
 
 <div class="kacheln">

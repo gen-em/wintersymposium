@@ -2,6 +2,27 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.3] – 2026-11-01
+
+Ursache des Reihe-Fehlers auf Staging (E-72 (11)) gefunden und gründlich behoben; Staging lässt sich zurücksetzen (E-74).
+
+### Neu
+
+- **Staging zurücksetzen** (Betrieb → Betrieb, nur Staging und Entwicklung, mit Code): Stand wie nach der Installation, ohne Beispieldaten und Testkonten. Es bleiben die eigenen Team-Konten, Betriebs-Einstellungen, Hostnamen, Impressum, Datenschutz und die Reihe Wintersymposium mit einer leeren Veranstaltung; vorher automatische Sicherung. Wahlweise legt es danach die Testkonten aus der `config.php` neu an.
+- `feld()`: Option `liste` für Auswahlfelder, deren Werte zugleich der Text sind (Berufsgruppen).
+
+### Geändert
+
+- `feld()` vermutet nicht mehr, ob `optionen` eine Textliste ist: die Schlüssel sind immer die Werte, auch bei 0, 1, 2 …; Berufsgruppen (Anmeldung, Statistik, Mailings) über `liste`. Ein Test in `konventionen.php` verhindert das Raten.
+
+### Behoben
+
+- **Reihe sprang beim Speichern auf „einzeln“ zurück** (Staging): Lagen die Nummern der Reihen alphabetisch hintereinander (1, 2, 3), hielt `feld()` die Auswahl samt „einzeln“ (0) für eine Textliste und schrieb den Namen statt der Nummer in die Optionen; der Server las den Namen als 0. Nicht browserabhängig. Ein Wert, der keine Nummer ist, wird jetzt mit „Unbekannte Reihe.“ abgewiesen.
+
+### Doku
+
+- betrieb.md (Staging zurücksetzen), Konzept (E-72 (11) Ursache, E-74), Prüfprotokoll T-332, T-333.
+
 ## [0.30.2] – 2026-11-01
 
 Rückmeldungen vom Admin nach AP-18 und AP-19 (Staging).

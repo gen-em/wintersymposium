@@ -898,6 +898,16 @@ function http_bereich_daten(array $u): void
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'wiederherstellen', 'name' => $vorTest, 'totp' => strtolower($codes[0])], $b);
     pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt') == 0 && db_wert('SELECT COUNT(*) FROM anmeldung') == 0 && !str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Wiederherstellen: Stand vor den Testdaten zurück');
     pruefe(count(sicherung_liste()) === $sich + 2 && http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 200, 'davor automatisch gesichert, Team bleibt eingeloggt');
+
+    abschnitt('HTTP: Staging zurücksetzen (Admin 2026-11-01)');
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'Staging zurücksetzen') && str_contains($r['text'], 'name="totp"'), 'Knopf mit Feld für den Code');
+    $csrf = http_csrf($r['text']);
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'zuruecksetzen', 'totp' => '000000'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code stimmt nicht oder ist abgelaufen') && konto_per_email(TEST_BETREIBER) !== null, 'ohne gültigen Code: nichts zurückgesetzt');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'zuruecksetzen', 'totp' => strtolower($codes[1])], $b);
+    pruefe($r['status'] === 303 && str_ends_with($r['kopf']['location'] ?? '', '/einloggen') && konto_per_email(TEST_BETREIBER) === null, 'mit Code: zurückgesetzt; das eigene Konto gehörte zu den Testdaten (example.org), daher abgemeldet');
+    pruefe(http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 303, 'alte Sitzung gilt nicht mehr');
 }
 
 /** Betrieb mit den Beispieldaten: Status-Seite, Komponentenblatt und alle Seiten aus ROUTEN (V-52). */
@@ -1784,6 +1794,15 @@ function http_bereich_ap19(array $u): void
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => '0', 'zielgruppe' => 'klinik'], $b);
     pruefe($r['status'] === 303 && va_reihe_von($vAkt) === null && va('zielgruppe') === 'klinik', 'BetreiberIn ändert Reihe und Zielgruppe');
     $wid = (int)array_column(va_reihen(), 'id', 'name')['Wintersymposium'];
+    // Reihe-Fehler auf Staging: Nummern in alphabetischer Reihenfolge (Schlüssel 0, 1, 2 …) machten aus der Nummer den Namen
+    db_ausfuehren("UPDATE reihe SET name = CONCAT(LPAD(id, 3, '0'), ' ', name)");
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    preg_match_all('#<select id="reihe_id"[^>]*>(.*?)</select>#s', $r['text'], $sel);
+    preg_match_all('#<option value="([^"]*)"#', $sel[1][0] ?? '', $werte);
+    pruefe($werte[1] === array_merge(['0'], array_map('strval', array_column(va_reihen(), 'id'))), 'Reihen in Nummern-Reihenfolge: Optionen tragen die Nummer, nicht den Namen (Rückmeldung Staging)');
+    db_ausfuehren("UPDATE reihe SET name = SUBSTRING(name, 5)");
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => 'Wintersymposium', 'zielgruppe' => 'klinik'], $b);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Unbekannte Reihe.') && va_reihe_von($vAkt) === null && va('zielgruppe') === 'klinik', 'Reihe als Name statt Nummer: Fehler „Unbekannte Reihe“, nichts gespeichert');
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => (string)$wid, 'zielgruppe' => 'beide'], $b);
     pruefe($r['status'] === 303 && (va_reihe_von($vAkt)['id'] ?? null) === $wid, 'von „einzeln“ zurück zur Reihe Wintersymposium (Rückmeldung Staging)');
 
