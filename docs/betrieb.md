@@ -49,7 +49,7 @@ tools/browser/          → Browser-Durchlauf (R-12)
 
 **Gestaltung:** `assets/site.css` ist die einzige Quelle (E-64), nach Komponenten gegliedert (Inhaltsverzeichnis am Dateianfang), Farben und Maße als Tokens in `:root`, Umbruchpunkte 760 px und 1000 px. Das Komponentenblatt unter Betrieb → Komponenten (`/team/komponenten`, nur BetreiberInnen) zeigt jede Komponente mit Varianten und Aufruf; der Browser-Durchlauf fotografiert es in allen Engines und Breiten. `docs/mockups/` ist Archiv.
 
-Zielordner auf dem Webspace (E-32): je Umgebung ein eigener Ordner (`<Zielordner Staging>`, `<Zielordner Produktion>`); die Domain zeigt jeweils auf dessen Unterordner `public/` (E-34) – Staging `test.winter-notfallsymposium.de`, Produktion `winter-notfallsymposium.de`. Die echten Ordnernamen stehen nur in der Verwaltung des Hosters und im Auslieferungs-Workflow, nicht in der Doku (R-10).
+Zielordner auf dem Webspace (E-32): je Umgebung ein eigener Ordner (`<Zielordner Staging>`, `<Zielordner Produktion>`); die Domain zeigt jeweils auf dessen Unterordner `public/` (E-34) – Staging `test.winter-notfallsymposium.de`, Produktion `winter-notfallsymposium.de`. Die echten Ordnernamen stehen nur in der Verwaltung des Hosters und als Repository-Variablen `FTP_ZIEL_STAGING` und `FTP_ZIEL_PRODUKTION` (Pfad vom FTP-Login aus, mit `/` am Anfang und Ende; GitHub → Settings → Secrets and variables → Actions → Variables), nicht im Repo (R-10). Fehlt eine Variable, bricht die Auslieferung vor jeder Übertragung ab.
 
 ## 2. Ersteinrichtung je Umgebung
 
