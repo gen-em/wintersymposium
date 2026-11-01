@@ -50,6 +50,16 @@ AP-18 Startseite mit Vorschau, Einstellungen als Übersicht (E-70, Mockup Varian
 - betrieb.md: Startseite mit Titel-Regeln und Vorschau (Abschnitt 7), keine aktuelle Veranstaltung (9), Einstellungen als Übersicht (10), Team-Bereich (14), Aufbau, Beispieldatensatz.
 - Konzept: AP-18 status, fortschritt, ergebnis, probleme; E-70 und E-68 mit Stand. Prüfprotokoll: AP-18 mit T-309 bis T-316.
 
+## [0.28.1] – 2026-11-01
+
+### Behoben
+
+- **Auslieferung nach 0.28.0 brach vor dem Abgleich ab:** Der neue Schritt im Prüf-Workflow installierte `poppler-utils` ohne aktuellen Paketindex, der Runner bekam 404 auf einen älteren Paketstand. Jetzt läuft vorher `apt-get update`. Übertragen wurde nichts; Staging blieb auf 0.27.0.
+
+### Doku
+
+- Prüfprotokoll und Konzept (AP-17, Probleme) zur abgebrochenen Auslieferung.
+
 ## [0.28.0] – 2026-11-01
 
 AP-17 Vereinheitlichung, zweiter Teil und Abschluss (Unterpunkte 7 bis 12, E-69): reiner Umbau; Seiten und Abläufe bleiben gleich. Sichtbar anders sind nur die Protokolltexte (einheitliches Muster).
