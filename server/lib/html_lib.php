@@ -20,7 +20,8 @@ function e(mixed $wert): string
  * $opt: 'akzent' => 'lila'|'rot', 'aktiv' => Pfad des aktiven Menüpunkts,
  *       'nav' => false für Seiten ohne Navigation (Installer, Fehler),
  *       'konto' => angemeldetes Konto (zeigt Name und „Ausloggen“, E-40/E-42),
- *       'skripte' => Liste eigener Skripte unter /assets/.
+ *       'skripte' => Liste eigener Skripte unter /assets/,
+ *       'meldung' => true: Flash-Meldung aus der Umleitung unter dem Kopf ausgeben.
  */
 function seite_kopf(string $titel, array $opt = []): void
 {
@@ -106,6 +107,17 @@ function seite_kopf(string $titel, array $opt = []): void
             . '<details class="menue"><summary>Menü</summary><ul class="nav-liste">' . $liste . $flach . '</ul></details></nav>';
     }
     echo '</div></header><main id="inhalt">';
+    if (!empty($opt['meldung'])) {
+        // Flash-Meldung aus der Umleitung gleich unter dem Kopf (V-18)
+        echo '<div class="innen">' . meldung_html(flash_holen()) . '</div>';
+    }
+}
+
+/** Seitenfuß ausgeben und die Seite beenden (statt „seite_fuss(); return;“, V-26). */
+function seite_ende(): never
+{
+    seite_fuss();
+    exit;
 }
 
 function seite_fuss(): void
@@ -241,23 +253,34 @@ function team_seite_fuss(): void
     seite_fuss();
 }
 
-/** Meldung (ok, fehler, hinweis) als HTML; null → ''. */
-function meldung_html(?array $m): string
+/** Standardtext über einem Formular mit Fehlern (V-18). */
+const NICHT_GESPEICHERT_TEXT = 'Nicht gespeichert. Bitte prüf die markierten Angaben.';
+
+/**
+ * Meldung als HTML (V-18): ein Text mit Ton (ok, fehler, hinweis), eine Flash-
+ * Meldung ['ton' => …, 'text' => …] oder eine Liste von Texten (als Aufzählung).
+ * null, '' und [] → ''. $opt: klasse (weitere Klassen), text_html (Inhalt roh).
+ */
+function meldung_html(string|array|null $m, string $ton = 'hinweis', array $opt = []): string
 {
-    if ($m === null) {
+    if ($m === null || $m === '' || $m === []) {
         return '';
     }
-    $ton = in_array($m['ton'] ?? '', ['ok', 'fehler', 'hinweis'], true) ? $m['ton'] : 'hinweis';
-    return '<div class="meldung ' . $ton . '" role="' . ($ton === 'fehler' ? 'alert' : 'status') . '">' . e($m['text']) . '</div>';
+    if (is_array($m) && isset($m['text']) && !array_is_list($m)) {
+        $ton = (string)($m['ton'] ?? 'hinweis');
+        $m = (string)$m['text'];
+    }
+    $ton = in_array($ton, ['ok', 'fehler', 'hinweis'], true) ? $ton : 'hinweis';
+    $inhalt = $opt['text_html'] ?? (is_array($m)
+        ? '<ul>' . implode('', array_map(fn($f) => '<li>' . e($f) . '</li>', array_values($m))) . '</ul>'
+        : e($m));
+    return '<div class="meldung ' . $ton . (isset($opt['klasse']) ? ' ' . e($opt['klasse']) : '') . '" role="' . ($ton === 'fehler' ? 'alert' : 'status') . '">' . $inhalt . '</div>';
 }
 
-/** Fehlerliste als HTML. */
+/** Fehlerliste als HTML (auch mit Feldnamen als Schlüssel). */
 function fehler_html(array $fehler): string
 {
-    if ($fehler === []) {
-        return '';
-    }
-    return '<div class="meldung fehler" role="alert"><ul>' . implode('', array_map(fn($f) => '<li>' . e($f) . '</li>', $fehler)) . '</ul></div>';
+    return meldung_html(array_values($fehler), 'fehler');
 }
 
 /** Eine einfache Meldungsseite mit Statuscode. */

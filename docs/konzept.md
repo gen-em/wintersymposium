@@ -687,6 +687,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
   fortschritt:
     - {nr: 1, stand: "erledigt", notiz: "Abschnitt 5a (K-a bis K-h, Präfix-Tabelle); tools/tests/konventionen.php in lauf.php (Typografie K-g ohne Funde; Wortliste K-f mit 5 Ausnahmen für Unterpunkt 4); CLAUDE.md verweist"}
     - {nr: 2, stand: "erledigt", notiz: "db_zeit/db_ts/db_tag/db_zahl/db_gibt_es (Libs umgestellt, gmdate außerhalb db_lib 4×, Grep-Test ≤ 5); format_lib: datum_zeit_text(uhr:), dauer_text, bytes_text (ersetzt betrieb_groesse_text), person_name (18 Stellen), hm/minuten/hm_aus_minuten aus programm_lib; rate_text/rate_warten_text (8 Stellen); anm_nummer; konto_profil_setzen/anm_profil_setzen (vier Spaltenlisten); feste Zahlen in Texten über Konstanten; 15 Unit-Tests"}
+    - {nr: 3, stand: "erledigt", notiz: "server/lib/formular_lib.php: feld (alle Typen, aria-describedby auf Hilfe und Fehler), wert, profil_felder_html, attr_html, versteckt_html, aktion_knopf, bestaetigung_html (auch im umgebenden Formular), kachel, chip mit VA/PLATZ/RM/ANM_STATUS_CHIP und BETRIEB_AMPEL_CHIP, filter_chips, filter_leiste, leer_hinweis, seiten_kopfzeile, ist_post, aktion, post_text/post_zahl/post_haken, fertig, fertig_oder_fehler; html_lib: meldung_html für Text/Flash/Liste, NICHT_GESPEICHERT_TEXT, seite_kopf-Option meldung, seite_ende; 23 Tests in tools/tests/formular_helfer.php (eigener Prozess wegen Sitzung)"}
   ergebnis: null
   probleme: []
 

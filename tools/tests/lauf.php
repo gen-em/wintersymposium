@@ -103,6 +103,13 @@ pruefe(rate_text('login') === 'Zu viele Versuche. Bitte warte 15 Minuten und ver
 pruefe(rate_text('notzugang', 'falsche Codes') === 'Zu viele falsche Codes. Bitte warte eine Stunde und versuche es dann noch einmal.', 'rate_text mit eigenem Wort');
 pruefe(anm_nummer(12) === '0012' && anm_nummer(12345) === '12345', 'anm_nummer');
 
+abschnitt('Formular-Helfer (AP-17 Unterpunkt 3)');
+// Eigener Prozess: csrf_feld() braucht eine Sitzung, die nach der ersten Ausgabe nicht mehr startet
+foreach (explode("\n", trim((string)shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/formular_helfer.php') . ' 2>&1'))) as $zeile) {
+    [$ok, $was] = array_pad(explode('|', $zeile, 2), 2, $zeile);
+    pruefe($ok === 'ok', $was);
+}
+
 abschnitt('Hostnamen (E-27)');
 pruefe(host_normalisieren('Winter-Notfallsymposium.DE') === 'winter-notfallsymposium.de', 'Kleinschreibung');
 pruefe(host_normalisieren('test.winter-notfallsymposium.de:443') === 'test.winter-notfallsymposium.de', 'Port entfernt');
