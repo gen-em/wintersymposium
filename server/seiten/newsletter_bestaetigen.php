@@ -12,7 +12,7 @@ $token = is_string($_REQUEST['t'] ?? null) ? $_REQUEST['t'] : '';
 if (ist_post()) {
     $p = nl_bestaetigen($token);
     if ($p === null) {
-        fertig('fehler', 'Dieser Link gilt nicht mehr (schon benutzt oder älter als ' . NL_BESTAETIGEN_TAGE . ' Tage). Trag dich einfach noch einmal ein.', '/newsletter');
+        fertig('fehler', 'Dieser Link gilt nicht mehr (schon benutzt oder älter als ' . dauer_text(NL_BESTAETIGEN_S) . '). Trag dich einfach noch einmal ein.', '/newsletter');
     }
     seite_kopf('Newsletter bestätigt', ['nav' => false]);
     echo seiten_kopfzeile('Danke!', 'Newsletter', 'Du bist eingetragen. Abmelden oder Listen ändern kannst du jederzeit über den Link in jeder Newsletter-Mail.', true)
@@ -22,7 +22,7 @@ if (ist_post()) {
 $f = nl_link_finden($token, 'bestaetigen');
 seite_kopf('Newsletter bestätigen', ['nav' => false]);
 if ($f === null) {
-    echo seiten_kopfzeile('Link abgelaufen', 'Newsletter', 'Dieser Link gilt nicht mehr: Er war schon benutzt oder ist älter als ' . NL_BESTAETIGEN_TAGE . ' Tage.', true)
+    echo seiten_kopfzeile('Link abgelaufen', 'Newsletter', 'Dieser Link gilt nicht mehr: Er war schon benutzt oder ist älter als ' . dauer_text(NL_BESTAETIGEN_S) . '.', true)
         . '<p><a class="knopf" href="/newsletter">Noch einmal eintragen</a></p></div>';
     seite_ende();
 }

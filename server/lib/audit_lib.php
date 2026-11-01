@@ -2,31 +2,56 @@
 declare(strict_types=1);
 
 /*
- * Audit-Protokoll: einfache Tabelle audit(zeit, konto_id, art, text)
- * (Muster aus NAdoku protokoll_lib.php). Keine personenbezogenen Inhalte
- * über das Nötige hinaus in den Text schreiben (R-02).
+ * Audit-Protokoll: Tabelle audit(zeit, konto_id, art, text, veranstaltung_id,
+ * objekt_art, objekt_id) (Muster aus NAdoku protokoll_lib.php). Keine Namen
+ * und Adressen in den Text, nur Nummern (R-02). Protokolliert wird nur in
+ * Libs, nicht in Seiten (Konzept 5a K-d).
+ *
+ * Objektbezug (AP-17 Unterpunkt 9, V-8): Ein Eintrag hat höchstens einen
+ * Hauptbezug, z. B. ['anmeldung' => 12]; weitere Nummern stehen im Text.
+ * Texte mit Bezug nach dem Muster „Anmeldung 12: storniert“ (audit_text).
  */
+
+/** Objekt-Arten des Protokolls mit ihrer Bezeichnung im Text. */
+const AUDIT_OBJEKTE = [
+    'anmeldung' => 'Anmeldung', 'konto' => 'Konto', 'rundmail' => 'Mailing', 'veranstaltung' => 'Veranstaltung',
+    'programmpunkt' => 'Programmpunkt', 'termin' => 'Termin', 'dozent' => 'Dozent·in', 'liste' => 'Liste', 'person' => 'Person',
+    'host' => 'Host', 'sicherung' => 'Sicherung', 'audit' => 'Eintrag',
+];
+
+/** Einheitlicher Text mit Bezug: „Anmeldung 12: storniert“. */
+function audit_text(string $objekt, int|string $id, string $was): string
+{
+    return (AUDIT_OBJEKTE[$objekt] ?? $objekt) . ' ' . $id . ': ' . $was;
+}
 
 /**
  * Eintrag schreiben. Arten, die eine Veranstaltung betreffen (AUDIT_ARTEN_VA),
  * bekommen die Veranstaltung des Kontexts (AP-12, E-60); $vaId setzt sie
  * ausdrücklich, 0 = keine (z. B. Mailing an Newsletter-Listen).
+ * $bezug: ['anmeldung' => 12] – Objekt-Art aus AUDIT_OBJEKTE und Nummer.
  */
-function audit_schreiben(string $art, string $text, ?int $kontoId = null, int $vaId = -1): void
+function audit_schreiben(string $art, string $text, ?int $durch = null, array $bezug = [], int $vaId = -1): void
 {
+    $objektArt = $bezug !== [] ? (string)array_key_first($bezug) : null;
+    if ($objektArt !== null && !isset(AUDIT_OBJEKTE[$objektArt])) {
+        throw new InvalidArgumentException('Unbekannte Objekt-Art im Protokoll: ' . $objektArt);
+    }
+    $objektId = $objektArt !== null && is_numeric($bezug[$objektArt]) ? (int)$bezug[$objektArt] : null;
     if (function_exists('va_rechte_da') && va_rechte_da()) {
         if ($vaId < 0) {
             $vaId = in_array($art, AUDIT_ARTEN_VA, true) && va_tabellen_da() ? va_id() : 0;
         }
+        $mitObjekt = db_spalte_da('audit', 'objekt_art');
         db_ausfuehren(
-            'INSERT INTO audit (zeit, konto_id, art, text, veranstaltung_id) VALUES (?, ?, ?, ?, ?)',
-            [db_jetzt(), $kontoId, mb_substr($art, 0, 64), $text, $vaId > 0 ? $vaId : null]
+            'INSERT INTO audit (zeit, konto_id, art, text, veranstaltung_id' . ($mitObjekt ? ', objekt_art, objekt_id' : '') . ') VALUES (?, ?, ?, ?, ?' . ($mitObjekt ? ', ?, ?' : '') . ')',
+            array_merge([db_jetzt(), $durch, mb_substr($art, 0, 64), $text, $vaId > 0 ? $vaId : null], $mitObjekt ? [$objektArt, $objektId] : [])
         );
         return;
     }
     db_ausfuehren(
         'INSERT INTO audit (zeit, konto_id, art, text) VALUES (?, ?, ?, ?)',
-        [db_jetzt(), $kontoId, mb_substr($art, 0, 64), $text]
+        [db_jetzt(), $durch, mb_substr($art, 0, 64), $text]
     );
 }
 
@@ -82,24 +107,24 @@ function audit_ausblenden(int $id, bool $aus, int $kontoId): bool
         [$aus ? $kontoId : null, $aus ? db_jetzt() : null, $id, 'protokoll']
     )->rowCount();
     if ($n === 1) {
-        audit_schreiben('protokoll', 'Eintrag ' . $id . ($aus ? ' ausgeblendet' : ' wieder eingeblendet'), $kontoId);
+        audit_schreiben('protokoll', audit_text('audit', $id, $aus ? 'ausgeblendet' : 'wieder eingeblendet'), $kontoId, ['audit' => $id]);
     }
     return $n === 1;
 }
 
-/** Letzter Protokolleintrag zu einer Anmeldung: ['zeit', 'text', 'name'] oder null. */
-function audit_letzte_anmeldung(int $anmId): ?array
+/** Letzter Protokolleintrag zu einem Objekt (z. B. Anmeldung): ['zeit', 'text', 'name'] oder null (über objekt_art/objekt_id statt LIKE, V-8). */
+function audit_letzter(string $objekt, int $id): ?array
 {
-    return db_zeile("SELECT a.zeit, a.text, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id WHERE a.text LIKE ? OR a.text LIKE ? ORDER BY a.id DESC LIMIT 1",
-        ['Anmeldung ' . $anmId . ' %', '%Anmeldung ' . $anmId]);
+    return db_zeile('SELECT a.zeit, a.text, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id WHERE a.objekt_art = ? AND a.objekt_id = ? ORDER BY a.id DESC LIMIT 1',
+        [$objekt, $id]);
 }
 
 /**
  * Protokoll für die Seite: Einträge, die das Konto sehen darf, gefiltert nach
- * Veranstaltung ($vf: '' gewählte, 'alle', 'ohne'), Suchtext und Art, eine
+ * Veranstaltung ($vf: '' gewählte, 'alle', 'ohne'), Objekt ([art, id]), Suchtext und Art, eine
  * Seite davon. Gibt ['zahlen' => [art => n], 'gesamt' => n, 'zeilen' => […]] zurück.
  */
-function audit_suchen(array $konto, string $vf, string $q, string $art, int $seite, int $proSeite): array
+function audit_suchen(array $konto, string $vf, string $q, string $art, int $seite, int $proSeite, ?array $objekt = null): array
 {
     [$sicht, $sichtPar] = audit_sichtbar($konto);
     $wo = [$sicht];
@@ -109,6 +134,11 @@ function audit_suchen(array $konto, string $vf, string $q, string $art, int $sei
         $par[] = va_id();
     } elseif (va_rechte_da() && $vf === 'ohne') {
         $wo[] = 'a.veranstaltung_id IS NULL';
+    }
+    if ($objekt !== null) {
+        // Einträge zu einem Objekt (z. B. aus Personen: „Protokoll ansehen“)
+        $wo[] = 'a.objekt_art = ? AND a.objekt_id = ?';
+        array_push($par, $objekt[0], $objekt[1]);
     }
     if ($q !== '') {
         $wo[] = 'a.text LIKE ?';

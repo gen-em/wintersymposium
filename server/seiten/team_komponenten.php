@@ -100,7 +100,7 @@ team_seite_kopf($konto, 'Komponenten', '/team/komponenten');
     . '<dl class="liste-def abstand-oben-klein"><div><dt>Liste</dt><dd>Begriff und Wert</dd></div><div><dt>Status</dt><dd>' . chip('offen', 'offen') . '</dd></div></dl>',
     '<div class="tabelle-wrap"><table class="t karten [karten-immer]"> … <td data-label="Status"> …' . "\n" . '<tr class="gewaehlt">, <dl class="liste-def">') ?>
 
-<?= $abschnitt('dialoge', 'Dialoge', 'bestaetigung_html(): ohne JavaScript aufklappbar, mit JavaScript der einheitliche Dialog (dialog.js). Rot = löschen, grün = bestätigen, lila = Info.') ?>
+<?= $abschnitt('dialoge', 'Dialoge', 'bestaetigung_html(): ohne JavaScript aufklappbar, mit JavaScript der einheitliche Dialog (basis.js). Rot = löschen, grün = bestätigen, lila = Info.') ?>
 <?= $muster('<div class="aktionen">'
     . bestaetigung_html('Löschen …', 'Der Eintrag wird gelöscht.', 'Ja, löschen', ['aktion' => 'beispiel'], ['ziel' => $ziel, 'titel' => 'Eintrag löschen?'])
     . bestaetigung_html('Freischalten …', 'Alle bekommen eine Mail.', 'Ja, freischalten', ['aktion' => 'beispiel'], ['ziel' => $ziel, 'art' => 'gruen', 'titel' => 'Freischalten?', 'inhalt_html' => feld('kb_ohne_mail', 'ohne Mail', ['typ' => 'haken'])])

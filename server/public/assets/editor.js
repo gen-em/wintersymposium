@@ -219,14 +219,13 @@
                 var fd = new FormData();
                 fd.append("bild", datei.files[0]);
                 melden("Bild wird hochgeladen …");
-                fetch(bildUrl, { method: "POST", body: fd, headers: { "X-CSRF": csrfFeld ? csrfFeld.value : "" }, credentials: "same-origin" })
-                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-                    .then(function (x) {
-                        if (!x.ok) { melden(x.d.fehler || "Das Bild ließ sich nicht hochladen."); return; }
-                        einfuegen('<p><img src="' + esc(x.d.url) + '" alt="" data-breite="100"></p>');
+                if (csrfFeld) { fd.append("csrf", csrfFeld.value); }
+                ws.post(bildUrl, fd)
+                    .then(function (d) {
+                        if (!d.ok) { melden(d.fehler || "Das Bild ließ sich nicht hochladen."); return; }
+                        einfuegen('<p><img src="' + esc(d.url) + '" alt="" data-breite="100"></p>');
                         melden("Bild eingefügt. Klick aufs Bild: halbe oder volle Breite.");
                     })
-                    .catch(function () { melden("Das Bild ließ sich nicht hochladen. Bitte die Seite neu laden."); })
                     .then(function () { datei.value = ""; });
             });
         }
@@ -260,7 +259,7 @@
                 ta.hidden = !htmlModus;
                 ed.hidden = htmlModus;
                 b.setAttribute("aria-pressed", htmlModus ? "true" : "false");
-                Array.prototype.forEach.call(leiste.querySelectorAll("button"), function (x) { if (x !== b) { x.disabled = htmlModus; } });
+                leiste.querySelectorAll("button").forEach(function (x) { if (x !== b) { x.disabled = htmlModus; } });
                 (htmlModus ? ta : ed).focus();
                 return;
             }
@@ -290,12 +289,8 @@
     }
 
     function alle() {
-        Array.prototype.forEach.call(document.querySelectorAll("textarea[data-editor]"), bauen);
+        document.querySelectorAll("textarea[data-editor]").forEach(bauen);
     }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", alle);
-    } else {
-        alle();
-    }
+    alle();
     window.wsEditor = alle;
 }());

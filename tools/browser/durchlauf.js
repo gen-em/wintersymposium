@@ -41,7 +41,6 @@ const RM_LEISTE = RM_FELD + ' .werkzeug';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
 const { spawn, execFileSync } = require('child_process');
 
 const WURZEL = path.resolve(__dirname, '..', '..');
@@ -68,17 +67,21 @@ function notiere(engine, breite, seite, was, ok, info = '') {
   if (!ok) console.log(`  FEHLER ${engine} ${breite} ${seite}: ${was} ${info}`);
 }
 
-function b32(s) {
-  const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = '';
-  for (const c of s) bits += a.indexOf(c).toString(2).padStart(5, '0');
-  const out = []; for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2));
-  return Buffer.from(out);
+/** TOTP-Code zum Geheimnis aus der otpauth-Adresse – über tools/tests/totp_code.php (dieselbe Rechnung wie die App, V-51). */
+/** Seitenliste aus ROUTEN (tools/tests/seiten.php, V-52) und besuchte Pfade für die Abdeckung. */
+const SEITENLISTE = JSON.parse(execFileSync('php', [path.join(WURZEL, 'tools/tests/seiten.php')], { encoding: 'utf8' }));
+const besucht = new Set();
+
+/** Mit Adresse und Passwort einloggen (erster Schritt; den zweiten Faktor macht der Aufrufer). */
+async function einloggenAls(p, basis, wer) {
+  await p.goto(basis + '/einloggen');
+  await p.fill('#email', wer.email); await p.fill('#passwort', wer.passwort);
+  await p.click('form:has(input[value=passwort]) button');
 }
-function totp(key, t) {
-  const b = Buffer.alloc(8); b.writeBigUInt64BE(BigInt(Math.floor(t / 30)));
-  const h = crypto.createHmac('sha1', key).update(b).digest(); const o = h[19] & 15;
-  const n = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
-  return String(n % 1e6).padStart(6, '0');
+
+function totpCode(uri) {
+  const geheim = new URL(uri.replace('otpauth://', 'http://')).searchParams.get('secret');
+  return execFileSync('php', [path.join(WURZEL, 'tools/tests/totp_code.php'), geheim], { encoding: 'utf8' }).trim();
 }
 
 function php(args, config) {
@@ -194,6 +197,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
     return;
   }
   const antwort = url ? await p.goto(url, { waitUntil: 'load' }) : null;
+  besucht.add(new URL(p.url()).pathname);
   await p.waitForTimeout(150);
   if (antwort) notiere(engine, breite, name, 'Status', antwort.status() < 400, String(antwort.status()));
   const m = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth,
@@ -294,8 +298,9 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           await p.click('dialog[open] [data-schliessen]');
           notiere(engine, breite, 'start', `${name}: ✕ schließt`, await p.locator('dialog[open]').count() === 0);
         }
-        for (const s of ['impressum', 'datenschutz', 'einloggen', 'notzugang']) {
-          await pruefeSeite(p, fehler, engine, breite, s, basis + '/' + s);
+        // Öffentliche Seiten aus der Seitenliste, die kein eigener Ablauf unten prüft
+        for (const pfad of SEITENLISTE.oeffentlich.filter(x => !['/', '/anmelden', '/deine-anmeldung', '/konto', '/konto/neu', '/konto/passwort-vergessen', '/newsletter'].includes(x))) {
+          await pruefeSeite(p, fehler, engine, breite, pfad.slice(1).replace(/\//g, '-'), basis + pfad);
         }
       }
 
@@ -341,7 +346,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         }
         if (!mailText) await p.waitForTimeout(150);
       }
-      const linkPfad = (mailText.match(/\/link\?t=[0-9a-f]{48}/) || [''])[0];
+      const linkPfad = (mailText.match(/\/link\?t=[A-Za-z0-9_-]{43}/) || [''])[0];
       notiere(engine, 'handy', 'anmelden', 'Bestätigungsmail mit Link', linkPfad !== '');
       await pruefeSeite(p, fehler, engine, 'handy', 'link', basis + linkPfad);
       await Promise.all([p.waitForNavigation(), p.click('button:has-text("Anmeldung bestätigen")')]);
@@ -502,15 +507,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
 
       // Login mit Einrichtung des zweiten Faktors (Handybreite)
       await p.setViewportSize({ width: 390, height: 844 });
-      await p.goto(basis + '/einloggen');
-      await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
-      await p.click('form:has(input[value=passwort]) button');
+      await einloggenAls(p, basis, { email: vor.betreiber, passwort: vor.passwort });
       await p.waitForSelector('svg.qr:not([hidden]) path', { timeout: 5000 }).catch(() => {});
       notiere(engine, 'handy', 'einrichtung', 'QR-Code gezeichnet', await p.isVisible('svg.qr path'));
       await pruefeSeite(p, fehler, engine, 'handy', 'einrichtung', null);
       const uri = await p.getAttribute('svg.qr', 'data-qr');
-      const key = b32(new URL(uri.replace('otpauth://', 'http://')).searchParams.get('secret'));
-      await p.fill('#totp', totp(key, Date.now() / 1000));
+      await p.fill('#totp', totpCode(uri));
       await p.click('form:has(input[value=einrichten]) button');
       await p.waitForLoadState('load');
       const codes = await p.locator('ul.codes li').allTextContents();
@@ -949,9 +951,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const cdpZ = await ctx.newCDPSession(p);
         await cdpZ.send('WebAuthn.enable');
         const { authenticatorId: zfGeraet } = await cdpZ.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
-        await p.goto(lokal + '/einloggen');
-        await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
-        await p.click('form:has(input[value=passwort]) button');
+        await einloggenAls(p, lokal, { email: vor.betreiber, passwort: vor.passwort });
         await p.waitForLoadState('load');
         await p.fill('#totp', codes[1]);
         await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=code]) button')]);
@@ -976,13 +976,10 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       for (const [breite, w, h] of [['handy', 390, 844], ['desktop-breit', 1440, 900]]) {
         await p.setViewportSize({ width: w, height: h });
         if (breite === 'handy') {
-          await p.goto(basis + '/einloggen');
-          await p.fill('#email', vor.ada.email); await p.fill('#passwort', vor.ada.passwort);
-          await p.click('form:has(input[value=passwort]) button');
+          await einloggenAls(p, basis, { email: vor.ada.email, passwort: vor.ada.passwort });
           await p.waitForSelector('svg.qr:not([hidden]) path', { timeout: 5000 }).catch(() => {});
           const uriA = await p.getAttribute('svg.qr', 'data-qr');
-          const keyA = b32(new URL(uriA.replace('otpauth://', 'http://')).searchParams.get('secret'));
-          await p.fill('#totp', totp(keyA, Date.now() / 1000));
+          await p.fill('#totp', totpCode(uriA));
           await p.click('form:has(input[value=einrichten]) button');
           await p.waitForLoadState('load');
           await p.click('a.knopf');
@@ -1015,6 +1012,12 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         vaStatus('aktuell');
       }
 
+      // Abdeckung (V-52): jede HTML-Seite aus ROUTEN wurde in dieser Engine aufgerufen (nicht bei Stufe 2 mit Seitenauswahl)
+      if (!SEITEN.length) {
+        const fehlt = [...SEITENLISTE.oeffentlich, ...SEITENLISTE.team, ...SEITENLISTE.betreiber].filter(x => !besucht.has(x));
+        notiere(engine, '-', 'abdeckung', 'jede Seite aus ROUTEN besucht', fehlt.length === 0, fehlt.join(', '));
+      }
+      besucht.clear();
       notiere(engine, '-', '-', 'Engine ' + version, true);
       await browser.close();
     }

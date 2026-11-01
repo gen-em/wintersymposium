@@ -20,8 +20,7 @@ if (ist_post()) {
     switch (aktion()) {
         case 'host_neu':
             try {
-                host_anlegen(post_text('host'));
-                audit_schreiben('host', 'Host ' . post_text('host') . ' hinzugefügt', $ich);
+                host_anlegen(post_text('host'), false, $ich);
             } catch (InvalidArgumentException) {
                 fertig('fehler', 'Das ist kein gültiger Hostname (z. B. www.winter-notfallsymposium.de).', '/team/daten');
             }
@@ -30,27 +29,13 @@ if (ist_post()) {
         case 'host_aus':
             fertig(host_aendern(post_text('host'), aktion() === 'host_haupt' ? 'haupt' : 'aus', $ich) ? 'ok' : 'fehler', 'Gespeichert.', '/team/daten');
         case 'absender':
-            // Je Postfach (E-27, E-50): System (anmeldung@) oder Newsletter (newsletter@)
-            $nl = post_text('postfach') === 'newsletter' ? '_newsletter' : '';
-            $adr = trim(post_text('mail_absender'));
-            $nam = trim(preg_replace('/\s+/u', ' ', post_text('mail_absender_name')) ?? '');
-            if ($adr !== '' && mail_adresse($adr) === null) {
-                fertig('fehler', 'Die Absenderadresse ist keine gültige Adresse.', '/team/daten');
+            $f = mail_absender_setzen(post_text('postfach'), post_text('mail_absender'), post_text('mail_absender_name'), post_text('reihe_name'), $ich);
+            if ($f !== null) {
+                fertig('fehler', $f, '/team/daten');
             }
-            einstellung_setzen('mail_absender' . $nl, $adr === '' ? null : mail_adresse($adr));
-            if ($nl !== '') {
-                einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
-            } else {
-                // System-Postfach: Name der Reihe (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
-                $reihe = trim(preg_replace('/\s+/u', ' ', post_text('reihe_name')) ?? '');
-                einstellung_setzen('reihe_name', $reihe === '' ? null : mb_substr($reihe, 0, 60));
-                einstellung_setzen('mail_absender_name', null);
-            }
-            audit_schreiben('mail', 'Absender ' . ($nl !== '' ? 'Newsletter' : 'System') . ' geändert: ' . ($adr ?: 'aus config.php'), $ich);
             fertig('ok', 'Absender gespeichert. Prüf ihn mit „Testmail an mich“.', '/team/daten');
         case 'testmail':
-            $grund = mail_testen((string)$konto['email']);
-            audit_schreiben('mail', 'Testmail ' . ($grund === null ? 'versendet' : 'fehlgeschlagen: ' . $grund), $ich);
+            $grund = mail_testen((string)$konto['email'], $ich);
             fertig($grund === null ? 'ok' : 'fehler', $grund === null
                 ? 'Testmail an ' . $konto['email'] . ' ist beim Mailserver angenommen. Kommt sie nicht an, liegt es beim Empfang (Spam-Ordner, Absender-Einträge der Domain).'
                 : 'Testmail ging nicht raus: ' . $grund, '/team/daten');
@@ -64,13 +49,8 @@ if (ist_post()) {
             } elseif (($f = zweitfaktor_aus_formular($ich)) !== null) {
                 $fehler[] = $f;
             } else {
-                audit_schreiben('sicherung', 'Sicherung heruntergeladen: ' . $name, $ich);
-                header('Content-Type: ' . (str_ends_with($name, '.gz') ? 'application/gzip' : 'application/x-ndjson'));
-                header('Content-Disposition: attachment; filename="' . $name . '"');
-                header('Content-Length: ' . filesize($p));
-                header('Cache-Control: no-store');
-                readfile($p);
-                exit;
+                sicherung_herunterladen_protokollieren($name, $ich);
+                bild_senden($p, str_ends_with($name, '.gz') ? 'application/gzip' : 'application/x-ndjson', 'no-store', $name);
             }
             break;
         case 'wiederherstellen':

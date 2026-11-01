@@ -7,48 +7,24 @@
  *   Passkey: /passkey bestaetigen_optionen → navigator.credentials.get →
  *     bestaetigen; danach wird das Formular ohne Code abgeschickt (die
  *     Bestätigung liegt 5 Minuten in der Sitzung).
- * Ereignisse am document, weil dialog.js die Formulare in Dialoge umbaut.
+ * Ereignisse am document, weil basis.js die Formulare in Dialoge umbaut.
  */
 (function () {
     "use strict";
     var webauthn = !!(window.PublicKeyCredential && navigator.credentials);
 
-    function zeigen() {
-        Array.prototype.forEach.call(document.querySelectorAll("[data-zf-wege]"), function (w) {
-            w.hidden = false;
-            Array.prototype.forEach.call(w.querySelectorAll("[data-zf-passkey]"), function (b) { b.hidden = !webauthn; });
-        });
-    }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", zeigen);
-    } else {
-        zeigen();
-    }
+    document.querySelectorAll("[data-zf-wege]").forEach(function (w) {
+        w.hidden = false;
+        w.querySelectorAll("[data-zf-passkey]").forEach(function (b) { b.hidden = !webauthn; });
+    });
 
-    function b64u(buf) {
-        var b = new Uint8Array(buf), s = "";
-        for (var i = 0; i < b.length; i++) { s += String.fromCharCode(b[i]); }
-        return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
-    function bytes(text) {
-        var s = atob(text.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text.length + 3) % 4));
-        var b = new Uint8Array(s.length);
-        for (var i = 0; i < s.length; i++) { b[i] = s.charCodeAt(i); }
-        return b.buffer;
-    }
-    function json(r) {
-        return r.json().catch(function () { return { ok: false, fehler: "Unerwartete Antwort. Bitte die Seite neu laden." }; });
-    }
+    var b64u = ws.b64u, bytes = ws.bytes;
     function melden(knopf, text) {
         var feld = knopf.closest("[data-zf-wege]");
-        var m = feld && feld.nextElementSibling && feld.nextElementSibling.hasAttribute("data-zf-meldung") ? feld.nextElementSibling : null;
-        if (m) { m.textContent = text || ""; m.hidden = !text; }
+        ws.melden(feld && feld.nextElementSibling && feld.nextElementSibling.hasAttribute("data-zf-meldung") ? feld.nextElementSibling : null, text);
     }
     function passkeyFrage(felder, csrf) {
-        var fd = new FormData();
-        fd.append("csrf", csrf);
-        Object.keys(felder).forEach(function (k) { fd.append(k, felder[k]); });
-        return fetch("/passkey", { method: "POST", body: fd, credentials: "same-origin", headers: { "Accept": "application/json" } }).then(json);
+        return ws.post("/passkey", Object.assign({ csrf: csrf }, felder));
     }
 
     document.addEventListener("click", function (ev) {
@@ -64,10 +40,8 @@
         if (knopf.hasAttribute("data-zf-mailcode")) {
             var fd = new FormData(form);
             fd.append("zf_mailcode", "1");
-            fetch(form.getAttribute("action") || window.location.href, { method: "POST", body: fd, credentials: "same-origin", headers: { "Accept": "application/json" } })
-                .then(json)
+            ws.post(form.getAttribute("action") || window.location.href, fd)
                 .then(function (d) { melden(knopf, d.text || d.fehler || "Das hat nicht geklappt."); })
-                .catch(function () { melden(knopf, "Das hat nicht geklappt. Bitte die Seite neu laden."); })
                 .then(function () { knopf.disabled = false; });
             return;
         }

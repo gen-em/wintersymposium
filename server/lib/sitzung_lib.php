@@ -23,6 +23,28 @@ const SITZUNG_ARTEN = [
 /** Ablauf ohne Aktivität in Sekunden. Technische Sicherheitsgrenze, keine Veranstaltungseinstellung. */
 const SITZUNG_LEERLAUF_S = 1800;
 
+/* Schlüssel der Sitzung (Konzept 5a K-e): nur über diese Konstanten */
+const SITZUNG_SCHLUESSEL_ANM = 'anm'; // Anmeldung der Teilnehmenden (Einmal-Link oder Konto)
+const SITZUNG_SCHLUESSEL_ANM_VORLAGE = 'anm_vorlage'; // „Daten übernehmen“ für Wiederkehrende (E-58)
+const SITZUNG_SCHLUESSEL_HALB = 'halb'; // halbe Team-Anmeldung (Passwort richtig, Faktor fehlt)
+const SITZUNG_SCHLUESSEL_KONTO = 'konto'; // volle Team-Anmeldung
+const SITZUNG_SCHLUESSEL_ZF_MAIL = 'zf_mail'; // Mail-Code beim Einloggen (Zeit)
+const SITZUNG_SCHLUESSEL_TK_PW = 'tk_pw'; // nach Link: neues Passwort festlegen
+const SITZUNG_SCHLUESSEL_TEAM_VA = 'team_va'; // gewählte Veranstaltung im Team-Bereich
+const SITZUNG_SCHLUESSEL_ZF_BESTAETIGT = 'zf_bestaetigt'; // heikle Aktion mit zweitem Faktor bestätigt (Zeit)
+const SITZUNG_SCHLUESSEL_TK = 'tk'; // Konto der Teilnehmenden
+const SITZUNG_SCHLUESSEL_POW = 'pow'; // Rechenaufgabe des Spamschutzes
+const SITZUNG_SCHLUESSEL_PK_CODES = 'pk_codes'; // Wiederherstellungscodes nach Passkey-Einrichtung
+const SITZUNG_SCHLUESSEL_PK = 'pk'; // laufende Passkey-Abfrage
+const SITZUNG_SCHLUESSEL_CSRF = 'csrf'; // CSRF-Token
+const SITZUNG_SCHLUESSEL_APP_EINRICHTEN = 'app_einrichten'; // Einrichtung der Authenticator-App
+const SITZUNG_SCHLUESSEL_NEUER_LINK = 'neuer_link'; // gerade erzeugter Link zum Weitergeben (Team-Konten)
+const SITZUNG_SCHLUESSEL_FLASH = 'flash'; // Meldung über die Umleitung
+const SITZUNG_SCHLUESSEL_ABGELAUFEN = '_abgelaufen'; // Sitzung war abgelaufen
+const SITZUNG_SCHLUESSEL_ZF_MAIL_HALB = 'zf_mail_halb'; // Mail-Code bei halber Anmeldung
+const SITZUNG_SCHLUESSEL_ZULETZT = '_zuletzt'; // letzte Aktivität
+const SITZUNG_SCHLUESSEL_ART = '_art'; // Art der Sitzung
+
 function sitzung_ablage_pfad(): string
 {
     return laufzeit_pfad('sitzungen');
@@ -60,15 +82,15 @@ function sitzung_starten(string $art): void
     session_start();
 
     $jetzt = time();
-    $zuletzt = (int)($_SESSION['_zuletzt'] ?? 0);
+    $zuletzt = (int)($_SESSION[SITZUNG_SCHLUESSEL_ZULETZT] ?? 0);
     if ($zuletzt > 0 && $jetzt - $zuletzt > SITZUNG_LEERLAUF_S) {
         // Abgelaufen: alles verwerfen, neue leere Sitzung.
         $_SESSION = [];
         session_regenerate_id(true);
-        $_SESSION['_abgelaufen'] = true;
+        $_SESSION[SITZUNG_SCHLUESSEL_ABGELAUFEN] = true;
     }
-    $_SESSION['_art'] = $art;
-    $_SESSION['_zuletzt'] = $jetzt;
+    $_SESSION[SITZUNG_SCHLUESSEL_ART] = $art;
+    $_SESSION[SITZUNG_SCHLUESSEL_ZULETZT] = $jetzt;
 }
 
 /**
@@ -79,7 +101,7 @@ function sitzung_wechseln(string $art): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         // Gleicher Keks (E-54): es ist dieselbe Sitzung, nichts zu wechseln
-        if (($_SESSION['_art'] ?? '') === $art || session_name() === SITZUNG_ARTEN[$art]['name']) {
+        if (($_SESSION[SITZUNG_SCHLUESSEL_ART] ?? '') === $art || session_name() === SITZUNG_ARTEN[$art]['name']) {
             return;
         }
         session_write_close();
@@ -103,8 +125,8 @@ function sitzung_erneuern(): void
 /** War die vorige Sitzung wegen Leerlauf abgelaufen? (einmalig abfragbar) */
 function sitzung_war_abgelaufen(): bool
 {
-    $war = !empty($_SESSION['_abgelaufen']);
-    unset($_SESSION['_abgelaufen']);
+    $war = !empty($_SESSION[SITZUNG_SCHLUESSEL_ABGELAUFEN]);
+    unset($_SESSION[SITZUNG_SCHLUESSEL_ABGELAUFEN]);
     return $war;
 }
 
@@ -146,10 +168,10 @@ function csrf_token(): string
     if (session_status() !== PHP_SESSION_ACTIVE) {
         throw new LogicException('CSRF-Token ohne Sitzung.');
     }
-    if (empty($_SESSION['csrf'])) {
-        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    if (empty($_SESSION[SITZUNG_SCHLUESSEL_CSRF])) {
+        $_SESSION[SITZUNG_SCHLUESSEL_CSRF] = bin2hex(random_bytes(32));
     }
-    return (string)$_SESSION['csrf'];
+    return (string)$_SESSION[SITZUNG_SCHLUESSEL_CSRF];
 }
 
 function csrf_feld(): string
@@ -163,7 +185,7 @@ function csrf_ok(): bool
     if (!is_string($mit) || $mit === '') {
         return false;
     }
-    $soll = (string)($_SESSION['csrf'] ?? '');
+    $soll = (string)($_SESSION[SITZUNG_SCHLUESSEL_CSRF] ?? '');
     return $soll !== '' && hash_equals($soll, $mit);
 }
 
@@ -184,12 +206,12 @@ function flash_setzen(string $ton, string $text): void
     if (!in_array($ton, FLASH_TOENE, true)) {
         throw new InvalidArgumentException('Unbekannter Meldungston: ' . $ton);
     }
-    $_SESSION['flash'] = ['ton' => $ton, 'text' => $text];
+    $_SESSION[SITZUNG_SCHLUESSEL_FLASH] = ['ton' => $ton, 'text' => $text];
 }
 
 function flash_holen(): ?array
 {
-    $f = $_SESSION['flash'] ?? null;
-    unset($_SESSION['flash']);
+    $f = $_SESSION[SITZUNG_SCHLUESSEL_FLASH] ?? null;
+    unset($_SESSION[SITZUNG_SCHLUESSEL_FLASH]);
     return is_array($f) && isset($f['ton'], $f['text']) ? $f : null;
 }

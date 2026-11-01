@@ -43,8 +43,7 @@ if (ist_post()) {
             if (post_text('block') !== '' && in_array(programm_typ($pid), PROGRAMM_IM_BLOCK, true)) {
                 programm_zuordnen($pid, post_zahl('block') ?: null, $ich);
             }
-            $neu = programm_verschieben($art, post_zahl('id'), post_text('beginn'), $ich, post_haken('nachruecken'));
-            $nr = (int)($GLOBALS['programm_nachgerueckt'] ?? 0);
+            $neu = programm_verschieben($art, post_zahl('id'), post_text('beginn'), $ich, post_haken('nachruecken'), $nr);
             fertig($neu === null ? 'fehler' : 'hinweis', $neu === null ? 'Verschieben ging nicht.' : "Neue Uhrzeit vorgeschlagen: $neu – bitte prüfen." . ($nr > 0 ? ' ' . ($nr === 1 ? 'Ein Punkt rückt' : "$nr Punkte rücken") . ' dahinter nach hinten.' : '') . ' Gespeichert, noch nicht veröffentlicht.',
                 '/team/programm' . ($pid > 0 ? '?id=' . $pid : ''));
         case 'zuordnen':

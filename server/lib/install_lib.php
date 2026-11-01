@@ -103,4 +103,5 @@ function install_ausfuehren_gesperrt(string $hauptHost, array $e): void
 function install_sperre_wiederherstellen(): void
 {
     @file_put_contents(install_sperrdatei(), gmdate('c') . " wiederhergestellt\n");
+    audit_schreiben('installation', 'install.lock fehlte und wurde neu angelegt');
 }

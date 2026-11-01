@@ -84,20 +84,8 @@ if (ist_post()) {
     }
 }
 
-/** Link erzeugen und per Mail schicken oder (nur_anzeigen) einmal anzeigen. */
-function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich): void
-{
-    $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
-    if ($perMail && mail_eingerichtet()) {
-        mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
-        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . ').');
-        return;
-    }
-    $_SESSION['neuer_link'] = ['name' => $k['name'], 'url' => $url];
-}
-
-$link = $_SESSION['neuer_link'] ?? null;
-unset($_SESSION['neuer_link']);
+$link = $_SESSION[SITZUNG_SCHLUESSEL_NEUER_LINK] ?? null;
+unset($_SESSION[SITZUNG_SCHLUESSEL_NEUER_LINK]);
 
 team_seite_kopf($konto, 'Team-Konten', '/team/konten', ['skripte' => ['zweitfaktor.js']]);
 echo fehler_html($fehler);

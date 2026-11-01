@@ -13,7 +13,4 @@ if (preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|text-[0-9a-f]{16}\.(jpg|png))$/'
     nicht_gefunden();
 }
 kopf_gemeinsam();
-header('Content-Type: ' . (str_ends_with($name, '.png') ? 'image/png' : 'image/jpeg'));
-header('Cache-Control: public, max-age=31536000, immutable');
-header('Content-Length: ' . filesize(foto_ordner() . '/' . $name));
-readfile(foto_ordner() . '/' . $name);
+bild_senden(foto_ordner() . '/' . $name, str_ends_with($name, '.png') ? 'image/png' : 'image/jpeg', 'public, max-age=31536000, immutable');

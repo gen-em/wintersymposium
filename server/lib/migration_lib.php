@@ -579,6 +579,57 @@ function migration_katalog(): array
                 "ALTER TABLE mail_ausgang ADD COLUMN absender_name VARCHAR(120) NULL AFTER html",
             ],
         ],
+        20 => [
+            'beschreibung' => 'Einmal-Links in einer Tabelle (AP-17, V-1): konto_link, anmeldung_link und newsletter_link übernommen und entfernt (E-69 (7))',
+            'sql' => [
+                "CREATE TABLE link (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    art          ENUM('konto','anmeldung','newsletter') NOT NULL,
+                    konto_id     INT UNSIGNED NULL,
+                    anmeldung_id INT UNSIGNED NULL,
+                    person_id    INT UNSIGNED NULL,
+                    zweck        VARCHAR(20)  NOT NULL,
+                    token_hash   CHAR(64)     NOT NULL,
+                    daten        JSON         NULL,
+                    gueltig_bis  DATETIME     NOT NULL,
+                    erstellt_am  DATETIME     NOT NULL,
+                    UNIQUE KEY uq_link_token (token_hash),
+                    KEY ix_link_gueltig (gueltig_bis),
+                    CONSTRAINT fk_link_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_link_anmeldung FOREIGN KEY (anmeldung_id) REFERENCES anmeldung (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_link_person FOREIGN KEY (person_id) REFERENCES newsletter_person (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Altdaten mit ihren Hashes: verschickte Links gelten weiter
+                "INSERT INTO link (art, konto_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'konto', konto_id, zweck, token_hash, IF(neue_email IS NULL, NULL, JSON_OBJECT('neue_email', neue_email)), gueltig_bis, erstellt_am FROM konto_link",
+                "INSERT INTO link (art, anmeldung_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'anmeldung', anmeldung_id, zweck, token_hash, IF(neue_email IS NULL, NULL, JSON_OBJECT('neue_email', neue_email)), gueltig_bis, erstellt_am FROM anmeldung_link",
+                "INSERT INTO link (art, person_id, zweck, token_hash, daten, gueltig_bis, erstellt_am)
+                    SELECT 'newsletter', person_id, zweck, token_hash, NULL, gueltig_bis, UTC_TIMESTAMP() FROM newsletter_link",
+                "DROP TABLE konto_link",
+                "DROP TABLE anmeldung_link",
+                "DROP TABLE newsletter_link",
+            ],
+        ],
+        21 => [
+            'beschreibung' => 'Protokoll mit Objektbezug (AP-17, V-8): objekt_art, objekt_id; Altdaten aus dem Text zugeordnet, soweit erkennbar',
+            'sql' => [
+                "ALTER TABLE audit ADD COLUMN objekt_art VARCHAR(20) NULL, ADD COLUMN objekt_id INT UNSIGNED NULL, ADD KEY ix_audit_objekt (objekt_art, objekt_id)",
+                // Reihenfolge = Vorrang: der fachliche Hauptbezug je Art zuerst
+                "UPDATE audit SET objekt_art = 'anmeldung', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Anmeldung [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('anmeldung', 'nachruecken', 'teilnahme') AND text REGEXP 'Anmeldung [0-9]+'",
+                "UPDATE audit SET objekt_art = 'rundmail', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, '(Mailing|Entwurf) [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('mailing') AND text REGEXP '(Mailing|Entwurf) [0-9]+'",
+                "UPDATE audit SET objekt_art = 'programmpunkt', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Programmpunkt [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Programmpunkt [0-9]+'",
+                "UPDATE audit SET objekt_art = 'termin', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Termin [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Termin [0-9]+'",
+                "UPDATE audit SET objekt_art = 'dozent', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Dozent·in [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('programm') AND text REGEXP 'Dozent·in [0-9]+'",
+                "UPDATE audit SET objekt_art = 'veranstaltung', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Veranstaltung [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('einstellungen') AND text REGEXP 'Veranstaltung [0-9]+'",
+                "UPDATE audit SET objekt_art = 'person', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Person [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('newsletter') AND text REGEXP 'Person [0-9]+'",
+                "UPDATE audit SET objekt_art = 'liste', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Liste [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('newsletter') AND text REGEXP 'Liste [0-9]+'",
+                "UPDATE audit SET objekt_art = 'audit', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Eintrag [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('protokoll') AND text REGEXP 'Eintrag [0-9]+'",
+                "UPDATE audit SET objekt_art = 'konto', objekt_id = CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(text, 'Konto [0-9]+'), '[0-9]+') AS UNSIGNED) WHERE objekt_art IS NULL AND art IN ('konto', 'notzugang', 'zweitfaktor', 'login') AND text REGEXP 'Konto [0-9]+'",
+                // Einträge über das eigene Konto ohne Nummer im Text (Passwort gesetzt, Ausgeloggt …)
+                "UPDATE audit SET objekt_art = 'konto', objekt_id = konto_id WHERE objekt_art IS NULL AND konto_id IS NOT NULL AND art IN ('konto', 'login', 'zweitfaktor')",
+            ],
+        ],
     ];
 }
 

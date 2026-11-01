@@ -135,7 +135,7 @@ function team_anm_daten(int $anmId, array $e, bool $mail): array
     if ($neueAdresse && $kontoMit) {
         // Login-Adresse eines Kontos geändert: Hinweis an die alte Adresse, Protokoll ohne Adressen (R-02)
         mail_vorlage_einreihen($a['email'], 'adresse_vom_team', ['vorname' => $w['vorname']]);
-        audit_schreiben('konto', 'Konto ' . (int)$a['konto_id'] . ': Adresse vom Team geändert', anm_team_konto());
+        audit_schreiben('konto', audit_text('konto', (int)$a['konto_id'], 'Adresse vom Team geändert'), anm_team_konto(), ['konto' => (int)$a['konto_id']]);
     }
     anm_geaendert_melden($anmId, 'deine Angaben sind aktualisiert.', $mail, true);
     return [];
@@ -168,7 +168,7 @@ function team_anlegen(array $e, bool $ueberbuchen, bool $mail): array
         $id = (int)db()->lastInsertId();
         $fest = anm_frei(0) > 0 || $ueberbuchen;
         anm_platz_anlegen($id, 0, $fest ? 'fest' : 'warte', time());
-        audit_schreiben('anmeldung', 'Anmeldung ' . $id . ' vom Team angelegt' . ($fest ? '' : ' (Warteliste)') . ($mail ? '' : ', ohne Mail'), anm_team_konto());
+        audit_schreiben('anmeldung', audit_text('anmeldung', $id, 'vom Team angelegt' . ($fest ? '' : ' (Warteliste)') . ($mail ? '' : ', ohne Mail')), anm_team_konto(), ['anmeldung' => $id]);
         if ($mail) {
             mail_vorlage_einreihen($w['email'], 'bestaetigt', ['vorname' => $w['vorname'], 'uebersicht' => anm_uebersicht_text($id)]);
         }
@@ -225,7 +225,7 @@ function team_platz_geben(int $anmId, int $terminId, bool $bestaetigt, bool $mai
         foreach ($tausch as $x) {
             anm_nachruecken((int)$x['termin_id']);
         }
-        audit_schreiben('nachruecken', 'Team: Platz für Termin ' . $terminId . ' an Anmeldung ' . $anmId . ' vergeben' . ($frage !== [] ? ' (bestätigt: ' . implode(' ', $frage) . ')' : ''), anm_team_konto());
+        audit_schreiben('nachruecken', audit_text('anmeldung', $anmId, 'Platz für Termin ' . $terminId . ' vom Team vergeben' . ($frage !== [] ? ' (bestätigt: ' . implode(' ', $frage) . ')' : '')), anm_team_konto(), ['anmeldung' => $anmId]);
         if ($mail && $a['status'] === 'bestaetigt') {
             mail_vorlage_einreihen($a['email'], 'platz_erhalten', ['vorname' => $a['vorname'], 'was' => anm_termin_text($terminId), 'uebersicht' => anm_uebersicht_text($anmId)]);
         }
@@ -257,12 +257,12 @@ function team_angebot(int $platzId): ?string
         $fristTs = $jetzt + va_zahl('nachrueck_frist_h') * 3600;
         db_ausfuehren("UPDATE platz SET status = 'angebot', angebot_bis = ? WHERE id = ?", [db_zeit($fristTs), $platzId]);
         $tausch = anm_tausch((int)$a['id'], $p);
-        $token = anm_link_erzeugen((int)$a['id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_H * 3600));
+        $token = anm_link_erzeugen((int)$a['id'], 'zugang', max($fristTs, $jetzt + ANM_LINK_GUELTIG_S));
         mail_vorlage_einreihen($a['email'], 'angebot', [
             'vorname' => $a['vorname'], 'was' => anm_termin_text($tid), 'frist' => datum_zeit_text(db_zeit($fristTs)), 'link' => anm_link_url($token),
             'tausch' => $tausch === [] ? '' : 'Nimmst du an, fällt dafür weg: ' . implode('; ', array_map(fn($x) => anm_termin_text((int)$x['termin_id']), $tausch)) . '.',
         ]);
-        audit_schreiben('nachruecken', 'Team: Angebot an Anmeldung ' . $a['id'] . ' für Termin ' . $tid, anm_team_konto());
+        audit_schreiben('nachruecken', audit_text('anmeldung', (int)$a['id'], 'Angebot für Termin ' . $tid . ' vom Team'), anm_team_konto(), ['anmeldung' => (int)$a['id']]);
         return null;
     });
 }
@@ -334,7 +334,7 @@ function team_termin_personen(int $terminId): array
 function team_aufgaben(?int $jetzt = null, ?string $rolle = null): array
 {
     $jetzt ??= time();
-    $rolle ??= (string)($GLOBALS['ws_team_rolle'] ?? '');
+    $rolle ??= (string)(ctx('team_rolle') ?? '');
     $auf = [];
     $grenzeVorbei = $jetzt + va_zahl('nachrueck_frist_h') * 3600 > anm_grenze_ts();
     foreach (team_termine() as $t) {
@@ -382,7 +382,7 @@ function team_passwort_link(int $kontoId): bool
     }
     $l = tk_link($kontoId, 'passwort');
     mail_vorlage_einreihen($k['email'], 'konto_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $l['url'], 'gueltig' => $l['gueltig']]);
-    audit_schreiben('konto', 'Team: Passwort-Link an Konto ' . $kontoId . ' geschickt', anm_team_konto());
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Passwort-Link vom Team geschickt'), anm_team_konto(), ['konto' => $kontoId]);
     return true;
 }
 
@@ -406,23 +406,6 @@ function team_rolle_vergeben(int $kontoId, string $rolle): bool
 
 /* ---- CSV ----------------------------------------------------------------- */
 
-/** CSV für Excel: Semikolon, UTF-8 mit BOM; Zellen mit = + - @ am Anfang werden entschärft. */
-function csv_text(array $kopf, array $zeilen): string
-{
-    $zelle = function ($w): string {
-        $w = (string)$w;
-        if ($w !== '' && strpbrk($w[0], "=+-@\t\r") !== false) {
-            $w = "'" . $w;
-        }
-        return '"' . str_replace('"', '""', $w) . '"';
-    };
-    $out = "\u{FEFF}" . implode(';', array_map($zelle, $kopf)) . "\r\n";
-    foreach ($zeilen as $z) {
-        $out .= implode(';', array_map($zelle, $z)) . "\r\n";
-    }
-    return $out;
-}
-
 /** Bestätigte Anmeldungen der Veranstaltung seit einem Zeitpunkt (Übersicht „seit gestern“). */
 function team_bestaetigt_seit(int $ts): int
 {
@@ -437,4 +420,23 @@ function team_essen_zahlen(): array
         $essen[$z['essen']] = (int)$z['n'];
     }
     return $essen;
+}
+
+/** Einmal-Link an eine Anmeldung schicken (Team, Personen) und protokollieren. */
+function team_link_senden(int $anmId, int $durch): void
+{
+    anm_zugang_senden($anmId);
+    audit_schreiben('anmeldung', audit_text('anmeldung', $anmId, 'Einmal-Link vom Team geschickt'), $durch, ['anmeldung' => $anmId]);
+}
+
+/** Link erzeugen und per Mail schicken oder (nur_anzeigen) einmal anzeigen. */
+function team_link_weitergeben(array $k, string $zweck, bool $perMail, int $ich): void
+{
+    $url = konto_link_url(konto_link_erzeugen((int)$k['id'], $zweck, $ich));
+    if ($perMail && mail_eingerichtet()) {
+        mail_vorlage_einreihen($k['email'], $zweck === 'einrichten' ? 'team_einladung' : 'team_passwort', ['vorname' => tk_namen($k)['vorname'], 'link' => $url, 'rolle' => ROLLEN[$k['rolle']] ?? $k['rolle']]);
+        flash_setzen('ok', ($zweck === 'einrichten' ? 'Einladung' : 'Passwort-Link') . ' an ' . $k['email'] . ' geschickt (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . ').');
+        return;
+    }
+    $_SESSION[SITZUNG_SCHLUESSEL_NEUER_LINK] = ['name' => $k['name'], 'url' => $url];
 }

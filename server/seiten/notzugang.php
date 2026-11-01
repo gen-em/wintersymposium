@@ -27,13 +27,7 @@ if (ist_post()) {
         rate_gleiche_dauer($beginn);
         if ($schluesselOk && $k !== null && $k['rolle'] === 'betreiber') {
             rate_erfolg('notzugang', $ip);
-            $id = (int)$k['id'];
-            totp_zuruecksetzen($id, 'Notzugang mit Installationsschlüssel');
-            if ((int)$k['aktiv'] !== 1) {
-                konto_aktiv_setzen($id, true, null);
-            }
-            $link = konto_link_url(konto_link_erzeugen($id, $k['passwort_hash'] === null ? 'einrichten' : 'passwort'));
-            audit_schreiben('notzugang', 'Notzugang benutzt für Konto ' . $id);
+            $link = konto_notzugang($k);
         } else {
             rate_misserfolg('notzugang', $ip);
             $fehler[] = 'Installationsschlüssel oder E-Mail-Adresse stimmt nicht.';

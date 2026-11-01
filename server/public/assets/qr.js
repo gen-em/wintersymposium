@@ -19,53 +19,49 @@
  * ihn am Rand der Karte nicht.
  */
 (function () {
-  'use strict';
+    "use strict";
 
-  var RUHE = 4;
+    var RUHE = 4;
 
-  function zeichnen(svg) {
-    var text = svg.getAttribute('data-qr') || '';
-    if (text === '' || typeof qrcode !== 'function') { return; }
-    var qr = qrcode(0, 'M');
-    qr.addData(text, 'Byte');
-    qr.make();
-    var n = qr.getModuleCount();
-    var seite = n + 2 * RUHE;
-    var d = '';
-    for (var r = 0; r < n; r++) {
-      for (var c = 0; c < n; c++) {
-        if (qr.isDark(r, c)) {
-          d += 'M' + (c + RUHE) + ' ' + (r + RUHE) + 'h1v1h-1z';
+    function zeichnen(svg) {
+        var text = svg.getAttribute("data-qr") || "";
+        if (text === "" || typeof qrcode !== "function") { return; }
+        var qr = qrcode(0, "M");
+        qr.addData(text, "Byte");
+        qr.make();
+        var n = qr.getModuleCount();
+        var seite = n + 2 * RUHE;
+        var d = "";
+        for (var r = 0; r < n; r++) {
+            for (var c = 0; c < n; c++) {
+                if (qr.isDark(r, c)) {
+                    d += "M" + (c + RUHE) + " " + (r + RUHE) + "h1v1h-1z";
+                }
+            }
         }
-      }
-    }
-    /* Der Namensraum des `<svg>`, das schon im Markup steht — nicht als
+        /* Der Namensraum des `<svg>`, das schon im Markup steht — nicht als
        Adresse im Text: Eine absolute Adresse im eigenen Quelltext ist fuer
        die Zusage „keine fremde Quelle" ein Treffer, auch wenn sie nie
        abgerufen wird. */
-    var ns = svg.namespaceURI;
-    var grund = document.createElementNS(ns, 'rect');
-    grund.setAttribute('class', 'qr-grund');
-    grund.setAttribute('width', String(seite));
-    grund.setAttribute('height', String(seite));
-    var modul = document.createElementNS(ns, 'path');
-    modul.setAttribute('class', 'qr-modul');
-    modul.setAttribute('d', d);
-    while (svg.firstChild) { svg.removeChild(svg.firstChild); }
-    svg.setAttribute('viewBox', '0 0 ' + seite + ' ' + seite);
-    svg.appendChild(grund);
-    svg.appendChild(modul);
-    svg.removeAttribute('hidden');
-  }
+        var ns = svg.namespaceURI;
+        var grund = document.createElementNS(ns, "rect");
+        grund.setAttribute("class", "qr-grund");
+        grund.setAttribute("width", String(seite));
+        grund.setAttribute("height", String(seite));
+        var modul = document.createElementNS(ns, "path");
+        modul.setAttribute("class", "qr-modul");
+        modul.setAttribute("d", d);
+        while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+        svg.setAttribute("viewBox", "0 0 " + seite + " " + seite);
+        svg.appendChild(grund);
+        svg.appendChild(modul);
+        svg.removeAttribute("hidden");
+    }
 
-  function alle() {
-    var liste = document.querySelectorAll('svg.qr[data-qr]');
-    for (var i = 0; i < liste.length; i++) { zeichnen(liste[i]); }
-  }
+    function alle() {
+        var liste = document.querySelectorAll("svg.qr[data-qr]");
+        for (var i = 0; i < liste.length; i++) { zeichnen(liste[i]); }
+    }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', alle);
-  } else {
     alle();
-  }
 })();

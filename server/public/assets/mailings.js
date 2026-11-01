@@ -21,24 +21,23 @@
     // Empfängerart (AP-7): Teilnehmende oder Newsletter-Listen; nur die passenden Felder zeigen
     function art() { var r = form.querySelector("input[name=art]:checked"); return r ? r.value : "teilnehmende"; }
     function artZeigen() {
-        Array.prototype.forEach.call(form.querySelectorAll("[data-empfaenger]"), function (el) { el.hidden = el.getAttribute("data-empfaenger") !== art(); });
+        form.querySelectorAll("[data-empfaenger]").forEach(function (el) { el.hidden = el.getAttribute("data-empfaenger") !== art(); });
     }
     function auswahlWert() {
         if (art() !== "newsletter") { return form.auswahl.value; }
-        var ids = Array.prototype.map.call(form.querySelectorAll("input[name='listen[]']:checked"), function (c) { return c.value; });
+        var ids = Array.from(form.querySelectorAll("input[name='listen[]']:checked"), function (c) { return c.value; });
         return "nl:" + ids.join(",");
     }
-    Array.prototype.forEach.call(form.querySelectorAll("input[name=art], input[name='listen[]']"), function (el) {
+    form.querySelectorAll("input[name=art], input[name='listen[]']").forEach(function (el) {
         el.addEventListener("change", function () { artZeigen(); zaehlen(); });
     });
     artZeigen();
     function zaehlen() {
         if (auswahlWert() === "nl:") { zahl.textContent = "0"; zahl2.textContent = "0"; senden.textContent = "An 0 senden"; return; }
         var q = "auswahl=" + encodeURIComponent(auswahlWert()) + "&bg=" + encodeURIComponent(art() === "newsletter" ? "" : form.berufsgruppe.value);
-        fetch("/team/mailings/empfaenger?" + q, { credentials: "same-origin" })
-            .then(function (r) { return r.ok ? r.json() : null; })
+        ws.get("/team/mailings/empfaenger?" + q)
             .then(function (d) {
-                if (!d) { return; }
+                if (!d.ok) { return; } // Zahl bleibt beim gespeicherten Stand
                 zahl.textContent = d.zahl;
                 zahl2.textContent = d.zahl;
                 senden.textContent = "An " + d.zahl + " senden";
@@ -47,8 +46,7 @@
                     liste.textContent = "";
                     d.namen.forEach(function (n) { var li = document.createElement("li"); li.textContent = n; liste.appendChild(li); });
                 }
-            })
-            .catch(function () { /* Zahl bleibt beim gespeicherten Stand */ });
+            });
     }
     form.auswahl.addEventListener("change", zaehlen);
     form.berufsgruppe.addEventListener("change", zaehlen);
@@ -58,10 +56,10 @@
     function vorschauBreite() {
         var rahmen = document.getElementById("rm-vorschau");
         if (!rahmen) { return; }
-        Array.prototype.forEach.call(document.querySelectorAll("[data-breite]"), function (b) {
+        document.querySelectorAll("[data-breite]").forEach(function (b) {
             if (b.tagName !== "BUTTON") { return; }
             b.addEventListener("click", function () {
-                Array.prototype.forEach.call(document.querySelectorAll("button[data-breite]"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); x.classList.toggle("zweit", x !== b); });
+                document.querySelectorAll("button[data-breite]").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); x.classList.toggle("zweit", x !== b); });
                 rahmen.className = "ml-vorschau-rahmen " + b.getAttribute("data-breite");
             });
         });

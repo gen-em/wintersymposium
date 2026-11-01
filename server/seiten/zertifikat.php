@@ -27,9 +27,4 @@ if (!zertifikat_verfuegbar($a)) {
 va_kontext((int)$a['veranstaltung_id']);
 $inhalt = zertifikat_pdf_fuer($a);
 $name = preg_replace('/[^A-Za-z0-9-]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $a['nachname']) ?: 'teilnahme');
-header('Content-Type: application/pdf');
-header('Content-Disposition: attachment; filename="Teilnahmebescheinigung-' . trim((string)$name, '-') . '-' . substr(va('veranstaltung_datum'), 0, 4) . '.pdf"');
-header('Content-Length: ' . strlen($inhalt));
-header('Cache-Control: private, no-store');
-header('X-Content-Type-Options: nosniff');
-echo $inhalt;
+datei_senden($inhalt, 'application/pdf', 'Teilnahmebescheinigung-' . trim((string)$name, '-') . '-' . substr(va('veranstaltung_datum'), 0, 4) . '.pdf', true, 'private, no-store');

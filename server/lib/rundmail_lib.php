@@ -74,7 +74,7 @@ function rm_nl_listen(string $auswahl): ?array
 /** Mailings an Newsletter-Listen: nur Betreiber (AP-12, E-60); außerhalb des Team-Bereichs (Jobs) erlaubt. */
 function rm_newsletter_erlaubt(): bool
 {
-    return !isset($GLOBALS['ws_team_rolle']) || $GLOBALS['ws_team_rolle'] === 'betreiber';
+    return !ctx_da('team_rolle') || ctx('team_rolle') === 'betreiber';
 }
 
 function rm_auswahl_gueltig(string $auswahl): bool
@@ -372,7 +372,7 @@ function rm_werte(array $a, bool $mitLink): array
 {
     $link = url('/deine-anmeldung');
     if ($mitLink) {
-        $token = anm_link_erzeugen((int)$a['id'], 'zugang', time() + ANM_LINK_GUELTIG_H * 3600);
+        $token = anm_link_erzeugen((int)$a['id'], 'zugang', time() + ANM_LINK_GUELTIG_S);
         $link = anm_link_url($token);
     }
     return [
@@ -478,7 +478,7 @@ function rm_pruefen(array $e): array
     }
     $w = [
         'betreff' => trim(mb_substr(preg_replace('/[\r\n]+/', ' ', (string)($e['betreff'] ?? '')) ?? '', 0, 200)),
-        'html' => rm_html_bereinigen((string)($e['html'] ?? '')),
+        'html' => html_bereinigen((string)($e['html'] ?? ''), 'mail'),
         'auswahl' => (string)($e['auswahl'] ?? 'angemeldet'),
         'berufsgruppe' => (string)($e['berufsgruppe'] ?? ''),
         'postfach' => (string)($e['postfach'] ?? 'system'),
@@ -578,7 +578,7 @@ function rm_einreihen(int $id, ?int $kontoId, ?int $jetzt = null): ?int
         return count($liste);
     });
     if ($zahl !== null) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' an ' . $zahl . ' Empfänger in die Warteschlange gestellt', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'an ' . $zahl . ' Empfänger in die Warteschlange gestellt'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         mail_nach_antwort_vormerken();
     }
     return $zahl;
@@ -589,7 +589,7 @@ function rm_planen(int $id, string $utc, int $kontoId): bool
 {
     $n = db_ausfuehren("UPDATE rundmail SET status = 'geplant', geplant_fuer = ?, gesendet_von = ?, geaendert_am = ? WHERE id = ? AND status IN ('entwurf','geplant')", [$utc, $kontoId, db_jetzt(), $id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Mailing ' . $id . ' geplant für ' . datum_zeit_text($utc), $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'geplant für ' . datum_zeit_text($utc)), $kontoId, ['rundmail' => $id], rm_va((int)$id));
     }
     return $n === 1;
 }
@@ -606,7 +606,7 @@ function rm_abbrechen(int $id, int $kontoId): ?string
     }
     if ($rm['status'] === 'geplant') {
         db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL, geaendert_am = ? WHERE id = ?", [db_jetzt(), $id]);
-        audit_schreiben('mailing', 'Planung von Mailing ' . $id . ' aufgehoben', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Planung aufgehoben'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         return 'Planung aufgehoben – das Mailing ist wieder ein Entwurf.';
     }
     if ($rm['status'] === 'versand') {
@@ -621,7 +621,7 @@ function rm_abbrechen(int $id, int $kontoId): ?string
             db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
             return [$weg, $raus];
         });
-        audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId, rm_va((int)$id));
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Versand abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht'), $kontoId, ['rundmail' => $id], rm_va((int)$id));
         return 'Versand abgebrochen: ' . $weg . ' Mails gehen nicht mehr raus.';
     }
     return null;
@@ -654,7 +654,7 @@ function rm_loeschen(int $id, int $kontoId): bool
     $va = rm_va($id);
     $n = db_ausfuehren("DELETE FROM rundmail WHERE id = ? AND status = 'entwurf'", [$id])->rowCount();
     if ($n === 1) {
-        audit_schreiben('mailing', 'Entwurf ' . $id . ' gelöscht', $kontoId, $va);
+        audit_schreiben('mailing', audit_text('rundmail', $id, 'Entwurf gelöscht'), $kontoId, ['rundmail' => $id], $va);
     }
     return $n === 1;
 }
@@ -682,7 +682,7 @@ function rm_job(int $jetzt): array
         } else {
             // Nicht mehr sendbar (z. B. keine Empfänger): zurück zum Entwurf, im Protokoll vermerkt
             db_ausfuehren("UPDATE rundmail SET status = 'entwurf', geplant_fuer = NULL WHERE id = ? AND status = 'geplant'", [$r['id']]);
-            audit_schreiben('mailing', 'Geplantes Mailing ' . $r['id'] . ' nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf', null, rm_va((int)$r['id']));
+            audit_schreiben('mailing', audit_text('rundmail', (int)$r['id'], 'geplant, aber nicht gesendet (keine Empfänger oder unvollständig) – wieder Entwurf'), null, ['rundmail' => (int)$r['id']], rm_va((int)$r['id']));
         }
     }
     $erg['fertig'] = db_ausfuehren(
@@ -736,89 +736,6 @@ function rm_bild_aus_daten(string $daten, ?int $kontoId): array
     $b = bild_verkleinert_speichern($daten, 'mail');
     db_ausfuehren('INSERT INTO rundmail_bild (datei, typ, breite, hoehe, erstellt_von, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)', [$b['datei'], $b['typ'], $b['breite'], $b['hoehe'], $kontoId, db_jetzt()]);
     return rm_bild((int)db()->lastInsertId());
-}
-
-/**
- * Bild prüfen (JPG/PNG), auf höchstens 1200 px verkleinern, neu schreiben
- * (ohne Metadaten) und als <praefix>-<16 hex>.jpg|png in var/bilder ablegen.
- * Für Mailings (mail-) und Texte der Webseite (text-). Wirft RuntimeException.
- */
-function bild_verkleinert_speichern(string $daten, string $praefix): array
-{
-    if (!foto_moeglich()) {
-        throw new RuntimeException('Bilder werden auf diesem Server nicht unterstützt (PHP-Erweiterung GD fehlt).');
-    }
-    $info = @getimagesizefromstring($daten);
-    if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG], true) || $info[0] * $info[1] > 40_000_000) {
-        throw new RuntimeException('Bitte ein Bild als JPG oder PNG hochladen.');
-    }
-    $bild = @imagecreatefromstring($daten);
-    if ($bild === false) {
-        throw new RuntimeException('Das Bild lässt sich nicht lesen.');
-    }
-    $w = imagesx($bild);
-    $h = imagesy($bild);
-    $f = min(1, RM_BILD_MAX_KANTE / max($w, $h));
-    $nw = max(1, (int)round($w * $f));
-    $nh = max(1, (int)round($h * $f));
-    $png = $info[2] === IMAGETYPE_PNG;
-    $ziel = imagecreatetruecolor($nw, $nh);
-    if ($png) {
-        imagealphablending($ziel, false);
-        imagesavealpha($ziel, true);
-    }
-    imagecopyresampled($ziel, $bild, 0, 0, 0, 0, $nw, $nh, $w, $h);
-    $name = $praefix . '-' . bin2hex(random_bytes(8)) . ($png ? '.png' : '.jpg');
-    $ok = $png ? imagepng($ziel, foto_ordner() . '/' . $name, 6) : imagejpeg($ziel, foto_ordner() . '/' . $name, 85);
-    imagedestroy($bild);
-    imagedestroy($ziel);
-    if (!$ok) {
-        throw new RuntimeException('Das Bild konnte nicht gespeichert werden.');
-    }
-    return ['datei' => $name, 'typ' => $png ? 'png' : 'jpeg', 'breite' => $nw, 'hoehe' => $nh];
-}
-
-/** Hochgeladene Datei prüfen und lesen (gemeinsam für Mailings und Texte). */
-function bild_upload_lesen(array $upload): string
-{
-    $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE || (int)($upload['size'] ?? 0) > RM_BILD_MAX_BYTES) {
-        throw new RuntimeException('Das Bild ist zu groß (höchstens ' . bytes_text(RM_BILD_MAX_BYTES) . ').');
-    }
-    if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
-        throw new RuntimeException('Das Bild kam nicht an. Bitte noch einmal versuchen.');
-    }
-    return (string)file_get_contents((string)$upload['tmp_name']);
-}
-
-/** Bild für einen Text der Webseite hochladen. Gibt den öffentlichen Pfad zurück. */
-function text_bild_speichern(array $upload, int $kontoId): string
-{
-    $b = bild_verkleinert_speichern(bild_upload_lesen($upload), 'text');
-    audit_schreiben('texte', 'Bild hochgeladen: ' . $b['datei'], $kontoId);
-    return '/bild/' . $b['datei'];
-}
-
-/**
- * Text-Bilder, die nach einem Tag nirgends vorkommen, löschen. Gesucht wird in
- * den Texten, im Programm (auch im veröffentlichten Stand) und bei den Dozierenden.
- */
-function text_bilder_aufraeumen(int $jetzt): int
-{
-    $quellen = ['inhalt' => 'text', 'programmpunkt' => 'beschreibung', 'dozent' => 'kurzbio', 'programm_stand' => 'daten'];
-    $alle = '';
-    foreach ($quellen as $tabelle => $spalte) {
-        if (db_tabelle_da($tabelle)) {
-            $alle .= str_replace('\\/', '/', implode("\n", array_column(db_zeilen("SELECT $spalte AS t FROM $tabelle WHERE $spalte LIKE '%text-%'"), 't'))) . "\n";
-        }
-    }
-    $n = 0;
-    foreach (array_merge(glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: []) as $d) {
-        if (!str_contains($alle, '/bild/' . basename($d)) && filemtime($d) < $jetzt - 86400 && @unlink($d)) {
-            $n++;
-        }
-    }
-    return $n;
 }
 
 /** Bilder, die nach einem Tag in keinem Mailing vorkommen, löschen. */

@@ -150,9 +150,9 @@ function mail_einreihen(string $an, string $betreff, string $text, int $prio = M
 /** Im Web nach der Antwort senden (auch nach einer Umleitung mit exit); Jobs und Tests senden selbst. */
 function mail_nach_antwort_vormerken(): void
 {
-    $GLOBALS['ws_mail_neu'] = true;
-    if (PHP_SAPI !== 'cli' && empty($GLOBALS['ws_mail_shutdown'])) {
-        $GLOBALS['ws_mail_shutdown'] = true;
+    ctx_setzen('mail_neu', true);
+    if (PHP_SAPI !== 'cli' && empty(ctx('mail_shutdown'))) {
+        ctx_setzen('mail_shutdown', true);
         register_shutdown_function('mail_nach_antwort');
     }
 }
@@ -262,10 +262,10 @@ function mail_senden_faellige(int $max = 20, float $budget = 20.0, ?int $jetzt =
  */
 function mail_nach_antwort(): void
 {
-    if (empty($GLOBALS['ws_mail_neu'])) {
+    if (empty(ctx('mail_neu'))) {
         return;
     }
-    $GLOBALS['ws_mail_neu'] = false;
+    ctx_setzen('mail_neu', false);
     antwort_abschliessen();
     try {
         mail_senden_faellige(5, 12.0);
@@ -517,13 +517,19 @@ function mail_stand(): array
 }
 
 /** Testmail sofort zustellen (ohne Warteschlange). Gibt null bei Erfolg zurück, sonst den Grund. */
-function mail_testen(string $an): ?string
+/** Testmail sofort zustellen; null = angenommen, sonst der Grund. Mit $durch protokolliert. */
+function mail_testen(string $an, ?int $durch = null): ?string
 {
     if (!mail_eingerichtet()) {
-        return 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+        $grund = 'Der Mailversand ist nicht eingerichtet: In der config.php fehlt im Abschnitt mail der Eintrag host.';
+    } else {
+        [$betreff, $text] = mail_vorlage('test', []);
+        $grund = mail_zustellen($an, $betreff, $text);
     }
-    [$betreff, $text] = mail_vorlage('test', []);
-    return mail_zustellen($an, $betreff, $text);
+    if ($durch !== null) {
+        audit_schreiben('mail', 'Testmail ' . ($grund === null ? 'versendet' : 'fehlgeschlagen: ' . $grund), $durch);
+    }
+    return $grund;
 }
 
 /* ---- Vorlagen (R-09: Deutsch, Ton nach zina-branding: du, klar, kurz) ---- */
@@ -542,12 +548,6 @@ function reihe_name(): string
 {
     $n = trim((string)(einstellung('reihe_name') ?? ''));
     return $n !== '' ? $n : 'Allgäu Akut';
-}
-
-/** Name der Veranstaltung als Absender (E-67): voller Name, sonst Kurzname. */
-function va_absender_name(): string
-{
-    return va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz();
 }
 
 /** Vorlagen, die für alle Veranstaltungen gelten (E-67): Absender, Betreff, Kicker und Gruß mit dem Namen der Reihe. */
@@ -652,7 +652,7 @@ function mail_vorlage_roh(string $name, array $d): array
             return ['Bitte bestätige deinen Newsletter',
                 'Hallo' . (($d['vorname'] ?? '') !== '' ? ' ' . $d['vorname'] : '') . ",\n\n"
                 . 'du möchtest diese Newsletter bekommen: ' . $d['listen'] . ". Bestätige das über diesen Link:\n\n" . $d['link']
-                . "\n\nDer Link gilt " . NL_BESTAETIGEN_TAGE . ' Tage. Ohne Bestätigung tragen wir dich nicht ein und löschen die Anfrage.'
+                . "\n\nDer Link gilt " . dauer_text(NL_BESTAETIGEN_S) . '. Ohne Bestätigung tragen wir dich nicht ein und löschen die Anfrage.'
                 . "\n\nMit der Bestätigung willigst du ein: „" . $d['einwilligung'] . '“'
                 . "\n\nDu hast dich nicht eingetragen? Dann ignoriere diese Mail." . mail_gruss()];
         case 'newsletter_schon':
@@ -685,4 +685,30 @@ function mail_vorlage_roh(string $name, array $d): array
             return ['Testmail von ' . reihe_name(), "Diese Mail prüft den Versand. Sie kam an – alles gut." . mail_gruss()];
     }
     throw new InvalidArgumentException('Unbekannte Mail-Vorlage: ' . $name);
+}
+
+/**
+ * Absender je Postfach speichern (Betrieb, E-27, E-50, E-67): System
+ * (anmeldung@, mit Name der Reihe) oder Newsletter (newsletter@, mit eigenem
+ * Namen). Gibt null oder eine Fehlermeldung zurück; protokolliert.
+ */
+function mail_absender_setzen(string $postfach, string $adresse, string $name, string $reihe, ?int $durch): ?string
+{
+    $nl = $postfach === 'newsletter' ? '_newsletter' : '';
+    $adr = trim($adresse);
+    $nam = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+    if ($adr !== '' && mail_adresse($adr) === null) {
+        return 'Die Absenderadresse ist keine gültige Adresse.';
+    }
+    einstellung_setzen('mail_absender' . $nl, $adr === '' ? null : mail_adresse($adr));
+    if ($nl !== '') {
+        einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
+    } else {
+        // System-Postfach: Name der Reihe (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
+        $reihe = trim(preg_replace('/\s+/u', ' ', $reihe) ?? '');
+        einstellung_setzen('reihe_name', $reihe === '' ? null : mb_substr($reihe, 0, 60));
+        einstellung_setzen('mail_absender_name', null);
+    }
+    audit_schreiben('mail', 'Absender ' . ($nl !== '' ? 'Newsletter' : 'System') . ' geändert: ' . ($adr ?: 'aus config.php'), $durch);
+    return null;
 }

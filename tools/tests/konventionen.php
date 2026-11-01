@@ -106,16 +106,53 @@ const KONV_WORT_AUSNAHMEN = [
 /** Klassen, die nur dynamisch entstehen oder JS/Tests als Haken dienen (V-29); je mit Grund. */
 const KONV_CSS_OHNE_VORKOMMEN = [
     'akzent-rot' => 'seite_kopf setzt akzent-<farbe>',
-    'dlg-gruen' => 'dialog.js setzt dlg-<art>',
-    'dlg-lila' => 'dialog.js setzt dlg-<art>',
+    'dlg-gruen' => 'basis.js setzt dlg-<art>',
+    'dlg-lila' => 'basis.js setzt dlg-<art>',
 ];
 const KONV_KLASSE_OHNE_CSS = [
-    'dlg-nein' => 'Haken in dialog.js',
+    'dlg-nein' => 'Haken in basis.js',
     'personen' => 'Haken im Browser-Durchlauf (table.personen)',
     'rm-form' => 'Haken in mailings.js',
     'vorlage' => 'Haken in programm-team.js',
     'vor' => 'Vergleichswert in programm-team.js (wo === \'vor\'), keine Klasse',
 ];
+
+/* ---- Tests legen nur an, wo das Anlegen geprüft wird (V-50) ---------------
+ * Alles andere kommt aus server/testdaten/beispieldaten.php. Je Datei die
+ * erlaubten Aufrufe mit Grund; ein Eintrag ohne Fundstelle gilt als veraltet. */
+const KONV_TEST_ANLEGEN_MUSTER = '/\b(anm_anlegen|konto_anlegen|team_anlegen|tk_registrieren|tk_anlegen_aus_anmeldung|va_anlegen|nl_person_anlegen|nl_liste_speichern|rm_speichern|programm_punkt_speichern|dozent_speichern)\(|INSERT INTO ([a-z_]+)/';
+const KONV_TEST_ANLEGEN_ERLAUBT = [
+    'lauf/00_migration.php' => ['INSERT einstellung' => 'alter Stand vor AP-3', 'INSERT schema_migration' => 'alter Stand vor AP-3', 'INSERT team_konto' => 'alter Stand vor AP-3'],
+    'lauf/02_konten.php' => ['konto_anlegen' => 'Normierung der Adresse beim Anlegen'],
+    'lauf/03_veranstaltung.php' => ['va_anlegen' => 'Kopieren, Entwurf, Löschen neuer Veranstaltungen', 'anm_anlegen' => 'eine Anmeldung je Veranstaltung und Adresse'],
+    'lauf/05_beispieldaten.php' => ['programm_punkt_speichern' => 'Einfügen mit Nachrücken im Beispielprogramm'],
+    'lauf/06_anmeldung.php' => ['anm_anlegen' => 'Regeln von anm_anlegen, Paralleltest T-137'],
+    'lauf/07_tn_konten.php' => ['anm_anlegen' => 'Anmelden mit Konto und mit Häkchen „Konto anlegen“', 'tk_registrieren' => 'Registrieren, Team-Adresse, Verknüpfung (E-48)'],
+    'lauf/08_team.php' => ['team_anlegen' => 'Anlegen durch das Team (bestätigt, doppelt, Warteliste, Überbuchen)'],
+    'lauf/09_mailings.php' => ['rm_speichern' => 'Mailings sind Gegenstand', 'programm_punkt_speichern' => 'Block-Zuordnung der Empfänger', 'dozent_speichern' => 'Block-Zuordnung der Empfänger', 'INSERT mail_ausgang' => 'schon gesendete Mails des Tages (Tageslimit)'],
+    'lauf/10_newsletter.php' => ['anm_anlegen' => 'Newsletter-Häkchen beim Anmelden', 'rm_speichern' => 'Newsletter-Mailing'],
+    'lauf/13_fristen.php' => ['INSERT audit' => 'zurückdatierte Einträge für die Protokoll-Frist'],
+    'lauf/14_gesamtablauf.php' => ['va_anlegen' => 'Gesamtablauf T-202', 'programm_punkt_speichern' => 'Gesamtablauf T-202', 'anm_anlegen' => 'Gesamtablauf T-202', 'rm_speichern' => 'Gesamtablauf T-202'],
+    'lauf/15_status.php' => ['INSERT job' => 'Fehlerzustände der Ampeln', 'INSERT mail_ausgang' => 'Fehlerzustände der Ampeln', 'INSERT schema_migration' => 'Stand nach der Prüfung wiederherstellen'],
+    'lauf/16_review1.php' => ['INSERT mail_ausgang' => 'Mail ohne Mailing', 'rm_speichern' => 'Versand und Sichtbarkeit von Mailings'],
+    'lauf/17_review2.php' => ['anm_anlegen' => 'anm_anlegen ohne aktuelle Veranstaltung', 'team_anlegen' => 'Anmeldung mitten im Ablauf', 'rm_speichern' => 'Abbruch eines laufenden Versands'],
+    'lauf/18_vereinheitlichung.php' => ['INSERT anmeldung_link' => 'Altdaten für Migration 20', 'INSERT konto_link' => 'Altdaten für Migration 20', 'INSERT newsletter_link' => 'Altdaten für Migration 20', 'INSERT audit' => 'Altdaten für Migration 21'],
+];
+
+/** Aufrufe, die in Tests Daten anlegen, als ['datei' => ['aufruf' => Anzahl]]. */
+function konv_test_anlegen(string $wurzel): array
+{
+    $r = [];
+    foreach (array_merge(glob("$wurzel/tools/tests/lauf/*.php") ?: [], ["$wurzel/tools/tests/http_tests.php"]) as $p) {
+        preg_match_all(KONV_TEST_ANLEGEN_MUSTER, (string)@file_get_contents($p), $m, PREG_SET_ORDER);
+        foreach ($m as $x) {
+            $a = ($x[2] ?? '') !== '' ? 'INSERT ' . $x[2] : $x[1];
+            $d = substr($p, strlen("$wurzel/tools/tests/"));
+            $r[$d][$a] = ($r[$d][$a] ?? 0) + 1;
+        }
+    }
+    return $r;
+}
 
 /** Klassen aus class="…"-Angaben in PHP und JS (nur feste Teile, dynamische Stücke entfallen). */
 function konv_klassen_im_code(string $wurzel): array
@@ -124,7 +161,7 @@ function konv_klassen_im_code(string $wurzel): array
     $k = [];
     foreach ($dateien as $p) {
         $q = (string)file_get_contents($p);
-        preg_match_all('/class(?:Name)?\s*=\s*\\?"([^"]*)\\?"|class=\'([^\']*)\'|classList\.(?:add|remove|toggle)\(([^)]*)\)|\'(?:knopf|klasse|knopfklasse|form_klasse|ja_klasse)\'\s*=>\s*\'([^\']*)\'/', $q, $m, PREG_SET_ORDER);
+        preg_match_all('/class(?:Name)?\s*=\s*\\\\?"([^"]*)\\\\?"|class=\'([^\']*)\'|classList\.(?:add|remove|toggle)\(([^)]*)\)|\'(?:knopf|klasse|knopfklasse|form_klasse|ja_klasse)\'\s*=>\s*\'([^\']*)\'/', $q, $m, PREG_SET_ORDER);
         foreach ($m as $x) {
             if (($x[3] ?? '') !== '') {
                 // classList.add/remove/toggle: nur die Zeichenketten, keine Ausdrücke
@@ -144,6 +181,64 @@ function konv_klassen_im_code(string $wurzel): array
     }
     return array_keys($k);
 }
+
+/**
+ * Präfix-Tabelle (Konzept 5a K-h): erlaubtes erstes Wort jedes Funktionsnamens
+ * je Lib. Neue Präfixe nur mit Eintrag hier und im Konzept.
+ */
+const KONV_PRAEFIXE = [
+    'anmeldung_lib' => ['anm'],
+    'audit_lib' => ['audit'],
+    'betrieb_lib' => ['betrieb'],
+    'bild_lib' => ['bild', 'datei', 'foto', 'text'],
+    'datenschutz_lib' => ['ds'],
+    'db_lib' => ['db', 'einstellung'],
+    'export_lib' => ['csv', 'export', 'xlsx'],
+    'format_lib' => ['bytes', 'datum', 'dauer', 'efn', 'hm', 'iso', 'jetzt', 'lokal', 'minuten', 'person', 'tag', 'zahl', 'zeit'],
+    'formular_lib' => ['aktion', 'attr', 'bestaetigung', 'chip', 'feld', 'fertig', 'filter', 'ist', 'kachel', 'leer', 'post', 'profil', 'seiten', 'versteckt', 'wert'],
+    'host_lib' => ['basis', 'host', 'url'],
+    'html_lib' => ['e', 'fehler', 'icon', 'json', 'meldung', 'nicht', 'seite', 'seiten', 'team', 'umleiten'],
+    'inhalt_lib' => ['editor', 'html', 'inhalt', 'start'],
+    'install_lib' => ['install', 'installiert'],
+    'jobs_lib' => ['job', 'jobs'],
+    'konfig_lib' => ['app', 'entwicklung', 'konfig', 'laufzeit', 'umgebung'],
+    'kontext_lib' => ['ctx'],
+    'konto_lib' => ['konto', 'passwort'],
+    'kopfzeilen_lib' => ['https', 'kopf', 'kopfzeilen'],
+    'krypto_lib' => ['krypto', 'oeffnen', 'versiegeln'],
+    'link_lib' => ['link'],
+    'login_lib' => ['anmeldung', 'ich', 'passwort', 'team'],
+    'mail_html_lib' => ['mail'],
+    'mail_lib' => ['antwort', 'mail', 'reihe', 'smtp'],
+    'migration_lib' => ['migration'],
+    'newsletter_lib' => ['nl'],
+    'passkey_lib' => ['pk'],
+    'programm_lib' => ['dozent', 'kuerzel', 'programm', 'termin'],
+    'ratelimit_lib' => ['rate'],
+    'rundmail_lib' => ['rm'],
+    'sicherung_lib' => ['sicherung', 'testdaten'],
+    'sitzung_lib' => ['csrf', 'flash', 'sitzung'],
+    'spamschutz_lib' => ['spam'],
+    'statistik_lib' => ['stat'],
+    'team_lib' => ['team'],
+    'teilnahme_lib' => ['tn'],
+    'tnkonto_lib' => ['tk'],
+    'totp_lib' => ['totp'],
+    'transaktion_lib' => ['db'],
+    'veranstaltung_lib' => ['va'],
+    'wartung_lib' => ['wartung'],
+    'zertifikat_lib' => ['code128', 'unterschrift', 'unterschriftenliste', 'zertifikat'],
+    'zweitfaktor_lib' => ['mailcode', 'zweitfaktor'],
+];
+
+/** Präfixe in mehreren Libs, mit Grund. */
+const KONV_PRAEFIX_GETEILT = [
+    'db' => 'db_lib (Zugriff) und transaktion_lib (db_transaktion)',
+    'passwort' => 'konto_lib (Regeln, Setzen) und login_lib (passwort_bestaetigen im Team-Login)',
+    'team' => 'team_lib (Team-Aktionen), login_lib (team_tor, team_sitzung) und html_lib (team_seite_kopf, team_reiter)',
+    'seiten' => 'html_lib (seiten_name) und formular_lib (seiten_kopfzeile)',
+    'mail' => 'mail_lib (Warteschlange, Versand) und mail_html_lib (HTML-Fassung) – ein Teilsystem in zwei Dateien',
+];
 
 function konventionen_pruefen(string $wurzel): void
 {
@@ -168,12 +263,16 @@ function konventionen_pruefen(string $wurzel): void
     $dbInSeiten = [];
     $closures = [];
     $einknopf = [];
+    $auditInSeiten = [];
     foreach (glob("$wurzel/server/seiten/*.php") ?: [] as $p) {
         $quelle = (string)file_get_contents($p);
         $tok = token_get_all($quelle);
         foreach ($tok as $i => $t) {
             if (is_array($t) && $t[0] === T_STRING && str_starts_with($t[1], 'db_')) {
                 $dbInSeiten[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
+            }
+            if (is_array($t) && $t[0] === T_STRING && $t[1] === 'audit_schreiben') {
+                $auditInSeiten[] = basename($p) . ':' . $t[2];
             }
             if (is_array($t) && $t[0] === T_VARIABLE && in_array($t[1], ['$fehlerFeld', '$ungueltig'], true)) {
                 $closures[] = basename($p) . ':' . $t[2] . ': ' . $t[1];
@@ -186,6 +285,7 @@ function konventionen_pruefen(string $wurzel): void
         }
     }
     konv_melden($dbInSeiten, 'K-d: keine db_*-Aufrufe in server/seiten');
+    konv_melden($auditInSeiten, 'K-d: Protokoll (audit_schreiben) nur in Libs, nicht in Seiten');
     konv_melden($closures, 'Unterpunkt 4: keine Feld-Closures ($fehlerFeld, $ungueltig) in Seiten');
     konv_melden($einknopf, 'Unterpunkt 4: Einknopf-Formulare über aktion_knopf(), nicht von Hand');
 
@@ -202,6 +302,61 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden($ohne, 'V-29: jede Klasse in site.css wird in PHP/JS verwendet (' . count($cssKlassen) . ' Klassen)');
     $fehlt = array_values(array_filter(konv_klassen_im_code($wurzel), fn($k) => !in_array($k, $cssKlassen, true) && !isset(KONV_KLASSE_OHNE_CSS[$k])));
     konv_melden($fehlt, 'V-29: jede Klasse im Markup hat eine Regel in site.css');
+    // Ausnahmelisten ohne veraltete Einträge
+    $imCode = konv_klassen_im_code($wurzel);
+    $alt = array_merge(
+        array_keys(array_filter(KONV_CSS_OHNE_VORKOMMEN, fn($_, $k) => !in_array($k, $cssKlassen, true) || preg_match('/(?<![\w-])' . preg_quote($k, '/') . '(?![\w-])/', $code) === 1, ARRAY_FILTER_USE_BOTH)),
+        array_keys(array_filter(KONV_KLASSE_OHNE_CSS, fn($_, $k) => in_array($k, $cssKlassen, true) || !in_array($k, $imCode, true), ARRAY_FILTER_USE_BOTH))
+    );
+    konv_melden($alt, 'V-29: Ausnahmelisten der Klassen ohne veraltete Einträge');
+
+    // V-50: Tests legen nur an, wo das Anlegen geprüft wird
+    $funde = [];
+    $gefunden = konv_test_anlegen($wurzel);
+    foreach ($gefunden as $d => $aufrufe) {
+        foreach ($aufrufe as $a => $n) {
+            if (!isset(KONV_TEST_ANLEGEN_ERLAUBT[$d][$a])) {
+                $funde[] = "$d: $a ({$n}×)";
+            }
+        }
+    }
+    konv_melden($funde, 'V-50: Tests nehmen den Beispieldatensatz, eigenes Anlegen nur mit Grund');
+    $alt = [];
+    foreach (KONV_TEST_ANLEGEN_ERLAUBT as $d => $aufrufe) {
+        foreach (array_keys($aufrufe) as $a) {
+            if (!isset($gefunden[$d][$a])) {
+                $alt[] = "$d: $a";
+            }
+        }
+    }
+    konv_melden($alt, 'V-50: Ausnahmeliste fürs Anlegen ohne veraltete Einträge');
+
+    // K-h Präfixe: jede Funktion liegt in der Lib ihres Präfixes
+    $falsch = [];
+    foreach (glob("$wurzel/server/lib/*.php") ?: [] as $p) {
+        $lib = basename($p, '.php');
+        preg_match_all('/^function ([a-z0-9_]+)/m', (string)file_get_contents($p), $m);
+        foreach ($m[1] as $fn) {
+            if (!in_array(explode('_', $fn)[0], KONV_PRAEFIXE[$lib] ?? [], true)) {
+                $falsch[] = "$lib: $fn";
+            }
+        }
+    }
+    konv_melden($falsch, 'K-h: Funktionen nach der Präfix-Tabelle in ihrer Lib');
+    // … und jedes Präfix gehört zu genau einer Lib (z. B. anm_* nur anmeldung_lib, tk_* nur tnkonto_lib)
+    $wo = [];
+    foreach (KONV_PRAEFIXE as $lib => $px) {
+        foreach ($px as $x) {
+            $wo[$x][] = $lib;
+        }
+    }
+    $doppelt = [];
+    foreach ($wo as $x => $libs) {
+        if (count($libs) > 1 && !isset(KONV_PRAEFIX_GETEILT[$x])) {
+            $doppelt[] = $x . ': ' . implode(', ', $libs);
+        }
+    }
+    konv_melden($doppelt, 'K-h: jedes Präfix in genau einer Lib (Ausnahmen begründet)');
 
     // K-f Wortliste
     $verboten = ['Endgültig löschen', 'Ja, Konto löschen', 'Von der Liste nehmen'];

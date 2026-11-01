@@ -10,12 +10,12 @@ declare(strict_types=1);
  *     Bestätigung per Mail). Erst eine bestätigte Adresse macht das Konto gültig.
  *   - Einloggen über denselben Login wie das Team (/einloggen oder Kasten auf
  *     „Deine Anmeldung“); Teilnehmende ohne zweiten Faktor (E-11).
- *   - Sitzung 'link' (wie nach einem Einmal-Link): $_SESSION['tk'] = Konto,
- *     $_SESSION['anm'] = verknüpfte Anmeldung.
+ *   - Sitzung 'link' (wie nach einem Einmal-Link): $_SESSION[SITZUNG_SCHLUESSEL_TK] = Konto,
+ *     $_SESSION[SITZUNG_SCHLUESSEL_ANM] = verknüpfte Anmeldung.
  *   - Gibt es zu einer bestätigten Konto-Adresse eine Anmeldung, werden beide
  *     verknüpft (Admin 2026-10-29).
  *   - Konto löschen: wahlweise mit oder ohne Anmeldung (Admin 2026-10-29).
- * Links (Bestätigen, Passwort, neue Adresse) nutzen konto_link wie beim Team.
+ * Links (Bestätigen, Passwort, neue Adresse) nutzen link_lib (Art konto) wie beim Team.
  */
 
 /** Mindestlänge für Passwörter Teilnehmender (Admin 2026-10-29; Team bleibt bei 12). */
@@ -38,7 +38,7 @@ const TK_LINK_GUELTIG_S = 48 * 3600;
  */
 function tk_aktuell(): ?array
 {
-    $s = $_SESSION['tk'] ?? null;
+    $s = $_SESSION[SITZUNG_SCHLUESSEL_TK] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['version'])) {
         return null;
     }
@@ -46,7 +46,7 @@ function tk_aktuell(): ?array
     $ok = $k !== null && (int)$k['aktiv'] === 1 && (int)$k['sitzung_version'] === (int)$s['version']
         && (konto_ist_team($k) ? (int)(anmeldung_konto()['id'] ?? 0) === (int)$k['id'] : ($k['rolle'] === 'teilnehmend' && $k['email_bestaetigt_am'] !== null));
     if (!$ok) {
-        unset($_SESSION['tk']);
+        unset($_SESSION[SITZUNG_SCHLUESSEL_TK]);
         return null;
     }
     return $k;
@@ -55,9 +55,10 @@ function tk_aktuell(): ?array
 /** Konto in der Sitzung merken (nach Login, Bestätigung oder neuem Passwort). */
 function tk_einloggen(array $k): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     sitzung_erneuern();
     $k = konto_laden((int)$k['id']) ?? $k;
-    $_SESSION['tk'] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
+    $_SESSION[SITZUNG_SCHLUESSEL_TK] = ['id' => (int)$k['id'], 'version' => (int)$k['sitzung_version']];
     // Login setzt die Löschfrist neu (14 Monate ohne Login, E-54)
     db_ausfuehren('UPDATE konto SET letzte_anmeldung = ?, loesch_erinnert_am = NULL WHERE id = ?', [db_jetzt(), (int)$k['id']]);
     $a = tk_anmeldung((int)$k['id']);
@@ -69,9 +70,10 @@ function tk_einloggen(array $k): void
 /** Ausloggen: beendet die ganze Sitzung (Team, Konto und Link, E-54) und startet eine leere. */
 function tk_ausloggen(): void
 {
+    ctx_weg('ich', 'anmeldung_konto'); // Wer bin ich neu bestimmen
     $k = tk_aktuell();
     if ($k !== null && konto_ist_team($k)) {
-        audit_schreiben('login', 'Ausgeloggt', (int)$k['id']);
+        audit_schreiben('login', audit_text('konto', (int)$k['id'], 'ausgeloggt'), (int)$k['id'], ['konto' => (int)$k['id']]);
     }
     sitzung_beenden();
     sitzung_starten('link');
@@ -124,7 +126,7 @@ function tk_verknuepfen(int $kontoId): void
     }
     db_ausfuehren('UPDATE anmeldung SET konto_id = ? WHERE id = ?', [$kontoId, $a['id']]);
     konto_profil_setzen($kontoId, $a);
-    audit_schreiben('konto', 'Konto ' . $kontoId . ' mit Anmeldung ' . $a['id'] . ' verknüpft', $kontoId);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'mit Anmeldung ' . $a['id'] . ' verknüpft'), $kontoId, ['konto' => $kontoId]);
 }
 
 /**
@@ -162,15 +164,9 @@ function tk_anlegen_aus_anmeldung(int $anmId): ?int
 function tk_link(int $kontoId, string $zweck, ?string $neueEmail = null, ?int $jetzt = null): array
 {
     $jetzt ??= time();
-    $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-    db_transaktion(function () use ($kontoId, $zweck, $neueEmail, $token, $jetzt): void {
-        db_ausfuehren('DELETE FROM konto_link WHERE konto_id = ? AND zweck = ?', [$kontoId, $zweck]);
-        db_ausfuehren(
-            'INSERT INTO konto_link (konto_id, token_hash, zweck, neue_email, gueltig_bis, erstellt_am) VALUES (?, ?, ?, ?, ?, ?)',
-            [$kontoId, hash('sha256', $token), $zweck, $neueEmail, db_zeit($jetzt + TK_LINK_GUELTIG_S), db_zeit($jetzt)]
-        );
-    });
-    return ['url' => url('/konto/link?t=' . $token), 'gueltig' => datum_zeit_text(db_zeit($jetzt + TK_LINK_GUELTIG_S))];
+    // ersetzt nur ältere Links mit demselben Zweck
+    $token = link_erzeugen('konto', $kontoId, $zweck, TK_LINK_GUELTIG_S, $neueEmail !== null ? ['neue_email' => $neueEmail] : [], $jetzt, 'zweck');
+    return ['url' => link_url('konto', $token), 'gueltig' => datum_zeit_text(db_zeit($jetzt + TK_LINK_GUELTIG_S))];
 }
 
 /**
@@ -239,7 +235,7 @@ function tk_link_einloesen(string $token): ?array
     switch ($f['link']['zweck']) {
         case 'bestaetigen':
             db_ausfuehren('UPDATE konto SET email_bestaetigt_am = COALESCE(email_bestaetigt_am, ?) WHERE id = ?', [db_jetzt(), $id]);
-            audit_schreiben('konto', 'Adresse bestätigt', $id);
+            audit_schreiben('konto', audit_text('konto', $id, 'Adresse bestätigt'), $id, ['konto' => $id]);
             tk_verknuepfen($id);
             $meldung = 'Deine Adresse ist bestätigt. Leg jetzt dein Passwort fest.';
             break;
@@ -258,7 +254,7 @@ function tk_link_einloesen(string $token): ?array
                         db_ausfuehren('UPDATE anmeldung SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, db_jetzt(), $a['id']]);
                     }
                 });
-                audit_schreiben('konto', 'Neue Adresse bestätigt', $id);
+                audit_schreiben('konto', audit_text('konto', $id, 'neue Adresse bestätigt'), $id, ['konto' => $id]);
                 $meldung = 'Deine neue Adresse gilt ab jetzt' . ($a !== null ? ', auch für deine Anmeldung.' : '.');
             }
             break;
@@ -326,7 +322,7 @@ function tk_profil_setzen(int $kontoId, array $e): array
     }
     $w = $r['werte'];
     konto_profil_setzen($kontoId, $w);
-    audit_schreiben('konto', 'Profil geändert', $kontoId);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Profil geändert'), $kontoId, ['konto' => $kontoId]);
     return [];
 }
 
@@ -341,7 +337,7 @@ function tk_email_aendern(int $kontoId, string $neu): ?string
     if ($neu === $k['email']) {
         return null;
     }
-    if (!adresse_aendern_erlaubt($neu)) {
+    if (!anm_adresse_aendern_erlaubt($neu)) {
         return ANM_ADRESSE_RATE_TEXT;
     }
     // tk_link löscht ältere Links desselben Zwecks; Anrede ohne Namen (Review S-2)
@@ -364,7 +360,7 @@ function tk_loeschen(int $kontoId, bool $anmeldungAuch): ?string
         anm_stornieren((int)$a['id']);
     }
     db_ausfuehren("DELETE FROM konto WHERE id = ? AND rolle = 'teilnehmend'", [$kontoId]);
-    audit_schreiben('konto', 'Konto ' . $kontoId . ' gelöscht' . ($a !== null ? ($anmeldungAuch ? ' (Anmeldung storniert)' : ' (Anmeldung bleibt)') : ''));
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'gelöscht' . ($a !== null ? ($anmeldungAuch ? ' (Anmeldung storniert)' : ' (Anmeldung bleibt)') : '')), null, ['konto' => $kontoId]);
     return null;
 }
 

@@ -30,7 +30,7 @@ if (ist_post()) {
         $geaendert = va_speichern($r['werte'], (int)$konto['id']);
         [$textGeaendert] = start_texte_speichern($_POST, (int)$konto['id']);
         if ($textGeaendert !== []) {
-            audit_schreiben('texte', 'Startseite geändert: ' . implode(', ', $textGeaendert), (int)$konto['id'], -1);
+            inhalt_protokollieren('Startseite geändert', $textGeaendert, (int)$konto['id'], true);
             $geaendert = array_merge($geaendert, $textGeaendert);
         }
         if ($kuerzel !== va_zeile()['kuerzel']) {

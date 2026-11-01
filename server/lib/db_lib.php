@@ -110,6 +110,20 @@ function db_tabelle_da(string $tabelle): bool
  * Veranstaltung in va_einstellung und gelten für die Veranstaltung des
  * Kontexts (va_id()).
  */
+/** Ob eine Spalte existiert (für Code, der vor einer Migration laufen kann); nur „ja“ wird je Anfrage gemerkt. */
+function db_spalte_da(string $tabelle, string $spalte): bool
+{
+    static $da = [];
+    if (isset($da["$tabelle.$spalte"])) {
+        return true;
+    }
+    $ja = db_gibt_es('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?', [$tabelle, $spalte]);
+    if ($ja) {
+        $da["$tabelle.$spalte"] = true;
+    }
+    return $ja;
+}
+
 function einstellung(string $schluessel): ?string
 {
     if (einstellung_je_veranstaltung($schluessel)) {

@@ -140,10 +140,10 @@ mail:
 | E-28 | Staging | Testumgebung unter `test.<domain>` mit eigener Datenbank und eigenem Webspace-Ordner | Admin 2026-10-29 |
 | E-29 | Kaneo-Subdomain | entfallen (E-15: bestehendes Kaneo, keine eigene Subdomain) | Admin 2026-10-29 |
 | E-30 | Optionales Konto für Teilnehmende | Registrierung **möglich, nicht nötig**: Konto mit E-Mail und Passwort (kein zweiter Faktor, der bleibt Admin/Betreiber), Passwort-Zurücksetzen per Mail. Profil: E-Mail (neue Adresse erst nach Bestätigung gültig), Passwort, Berufsgruppe, Institution, EFN, Anmeldung, Workshops, Essen, Newsletter. Konto kann **beim Anmelden, nachträglich über den Einmal-Link oder ohne Symposium-Anmeldung** (z. B. nur Newsletter) angelegt werden. Ohne Konto bleibt alles über Einmal-Links erreichbar | Admin 2026-10-29 |
-| E-32 | Auslieferung (FTP) | GitHub-Secrets `FTP_SERVER`, `FTP_USER`, `FTP_PASSWORD` sind im Repo angelegt (Werte nur dort). Zielordner auf dem Webspace: `/wintersymposium/staging` (erreichbar als `test.winter-notfallsymposium.de`) und `/wintersymposium/produktiv` (`winter-notfallsymposium.de`). Push auf `main` → Staging automatisch; Produktion über ein Tag (E-35). Ein FTP-Zugang für beide Ziele; er landet im Ordner `wintersymposium`, die Pfade vom FTP-Login aus sind daher `/staging` und `/produktiv`. Laufzeitordner und `config.php` je Ziel auf der Ausnahmeliste | Admin 2026-10-29 (Secrets und Ordner angelegt; FTP-Sicht nachgetragen nach der ersten Auslieferung) |
+| E-32 | Auslieferung (FTP) | GitHub-Secrets `FTP_SERVER`, `FTP_USER`, `FTP_PASSWORD` sind im Repo angelegt (Werte nur dort). Zielordner auf dem Webspace: je Umgebung ein eigener Ordner (`<Zielordner Staging>` für `test.winter-notfallsymposium.de`, `<Zielordner Produktion>` für `winter-notfallsymposium.de`; Namen nur beim Hoster und als Repository-Variablen FTP_ZIEL_STAGING/FTP_ZIEL_PRODUKTION, R-10). Push auf `main` → Staging automatisch; Produktion über ein Tag (E-35). Ein FTP-Zugang für beide Ziele; die Zielpfade (Repository-Variablen) gelten vom FTP-Login aus. Laufzeitordner und `config.php` je Ziel auf der Ausnahmeliste | Admin 2026-10-29 (Secrets und Ordner angelegt; FTP-Sicht nachgetragen nach der ersten Auslieferung) |
 | E-33 | Plan B Konten | Reicht die Zeit für AP-4b nicht bis zum 25.11., startet die Anmeldung ohne Konten (nur Einmal-Links); Konten folgen direkt danach und werden nachträglich über den Einmal-Link angelegt | Admin 2026-10-29 (bestätigt) |
 | E-31 | Stichtage für Teilnehmende | In den Veranstaltungs-Einstellungen getrennte Stichtage, ab denen Teilnehmende (mit Konto und per Einmal-Link) nichts mehr ändern können: **Anmeldeschluss**, **Workshop-Änderungen**, **Essens-Änderungen**, **Storno**. Das Team kann danach weiterhin alles ändern; die Oberfläche zeigt den Stichtag an | Admin 2026-10-29 |
-| E-34 | Webroot | Die Domains zeigen auf den Unterordner **`public/`** des jeweiligen Zielordners (`/wintersymposium/staging/public`, `/wintersymposium/produktiv/public`). Bibliotheken, `config.php` und der Laufzeitordner `var/` liegen außerhalb des Webroots; zusätzlich sperrt eine `.htaccess` den Zielordner, falls die Zuordnung doch auf ihn zeigt | Admin 2026-10-29 |
+| E-34 | Webroot | Die Domains zeigen auf den Unterordner **`public/`** des jeweiligen Zielordners (`<Zielordner>/public`). Bibliotheken, `config.php` und der Laufzeitordner `var/` liegen außerhalb des Webroots; zusätzlich sperrt eine `.htaccess` den Zielordner, falls die Zuordnung doch auf ihn zeigt | Admin 2026-10-29 |
 | E-35 | Freigabe Produktion | Produktion wird über ein **Tag `vX.Y.Z`** ausgeliefert (Admin ist Tags gewohnt). Der Lauf bricht ab, wenn das Tag nicht zur Datei `VERSION` passt oder nicht auf `main` liegt. Environment „produktiv“ in GitHub; ein Pflicht-Prüfer dort ist optional | Admin 2026-10-29 (ersetzt den Vorschlag „manueller Lauf“ aus E-32) |
 | E-36 | Gestaltung | **Variante A „Plakat“** aus den Mockups: dunkler Modus, Lila als Hauptakzent, Workshop-Inhalte in Signalrot, Sticker/Zettel/Klebeband nach Erscheinungsbild; Varianten B und C verworfen. Mockups liegen in `docs/mockups/` und sind Vorlage für alle Seiten (öffentlich, Teilnehmende, Team) | Admin 2026-10-29 (Mockups freigegeben) |
 | E-37 | Sprache | **Du-Ansprache überall** (Seiten, Formulare, Mails); Rechtstexte neutral. Gendern mit **Binnen-I** („ÄrztInnen“, „NotfallsanitäterIn“) nach Erscheinungsbild | Admin 2026-10-29 |
@@ -184,28 +184,30 @@ mail:
 
 ### E-18: Bausteine aus NAdoku (`gen-em/einsatzdoku-luftrettung`, Ordner `server/`)
 
+Stand der Ziel-Dateien nach AP-17 (`ziel`): Dateinamen ohne Ordner liegen in `server/lib/`, Pfade mit Ordner relativ zu `server/`.
+
 ```yaml
 direkt_uebernehmen:
-  - {baustein: "email_lib.php + wegwerfdomains.txt (8 883 Domains, CC0)", zweck: "Adresse normalisieren/prüfen, Wegwerfadressen ablehnen"}
-  - {baustein: "konfig_lib.php", zweck: "Konfiguration lesen"}
-  - {baustein: "transaktion_lib.php", zweck: "verschachtelungsfeste DB-Transaktionen (wichtig fürs Nachrücken)"}
-  - {baustein: "format_lib.php", zweck: "deutsche Datums-/Zahlenformate"}
-  - {baustein: "session_lib.php: csrf_token/csrf_field/csrf_ok, flash_setzen/holen", zweck: "CSRF-Schutz, Post/Redirect/Get"}
+  - {baustein: "email_lib.php + wegwerfdomains.txt (8 883 Domains, CC0)", ziel: "mail_lib.php (mail_adresse), spamschutz_lib.php (spam_wegwerf), daten/wegwerfdomains.txt", zweck: "Adresse normalisieren/prüfen, Wegwerfadressen ablehnen"}
+  - {baustein: "konfig_lib.php", ziel: "konfig_lib.php", zweck: "Konfiguration lesen"}
+  - {baustein: "transaktion_lib.php", ziel: "transaktion_lib.php", zweck: "verschachtelungsfeste DB-Transaktionen (wichtig fürs Nachrücken)"}
+  - {baustein: "format_lib.php", ziel: "format_lib.php", zweck: "deutsche Datums-/Zahlenformate"}
+  - {baustein: "session_lib.php: csrf_token/csrf_field/csrf_ok, flash_setzen/holen", ziel: "sitzung_lib.php (csrf_*, flash_*)", zweck: "CSRF-Schutz, Post/Redirect/Get"}
 uebernehmen_mit_anpassung:
-  - {baustein: "sitzung_lib.php", anpassung: "auf zwei Sitzungsarten kürzen (Team, Einmal-Link); eigene Ablage im Webspace, eigenes Aufräumen"}
-  - {baustein: "registrieren.php: Honeypot, HMAC-Zeitstempel (4 s–2 h), Proof-of-Work (assets/pow.js, pow-worker.js)", anpassung: "für Anmelde- und Newsletter-Formular; eine Antwort für alle Fälle"}
-  - {baustein: "ratelimit_lib.php", anpassung: "nur Kern (rate_erlaubt, rate_misserfolg, rate_gleiche_dauer, Tabelle), ohne Sperrleiter und Mail-Alarm"}
-  - {baustein: "Token-Muster (konto_lib.php reset_token_ausstellen)", anpassung: "für Einmal-Links, Nachrück-Angebote und Newsletter-Bestätigung; sha256 in der DB, Ablauf, Einmalverwendung"}
-  - {baustein: "totp_lib.php (RFC 6238, Wiederholungsschutz, Wiederherstellungscodes)", anpassung: "Kern ohne Demo/Gerät-merken; Geheimnis versiegelt (sk_versiegeln)"}
-  - {baustein: "passkey_lib.php", anpassung: "übernommen, Signatur über OpenSSL statt phpseclib (E-55)"}
-  - {baustein: "serverkrypto_lib.php: sk_versiegeln/sk_oeffnen (AES-256-GCM)", anpassung: "nur für TOTP-Geheimnisse und SMTP-Passwörter"}
-  - {baustein: "smtp.php", anpassung: "Message-ID, Reply-To, List-Unsubscribe, optional HTML, mehrere Mails je Verbindung"}
-  - {baustein: "jobs_lib.php (Rahmen jobs_lauf/jobs_einen_lauf)", anpassung: "nur Rahmen; Auslöser Cron (CLI/Token-URL) und huckepack"}
-  - {baustein: "kopfzeilen_lib.php", anpassung: "CSP mit Nonce, Sicherheits-Header; ohne Geocoder/Karten"}
-  - {baustein: "rechtstexte_lib.php, rechtstext_seite.php", anpassung: "nur Impressum und Datenschutz; Editor vereinfacht"}
-  - {baustein: "einwilligung_lib.php", anpassung: "Einwilligung je Anmeldung/Newsletter statt je Konto"}
-  - {baustein: "validate_lib.php (pruef_text/zahl/flag/kalendertag)", anpassung: "nur generische Prüfungen; EFN-Prüfung neu"}
-  - {baustein: "config.example.php, .github/workflows/auslieferung.yml", anpassung: "stark gekürzt: FTPS-Sync mit Ausnahmeliste, Staging und Produktion"}
+  - {baustein: "sitzung_lib.php", ziel: "sitzung_lib.php", anpassung: "auf zwei Sitzungsarten kürzen (Team, Einmal-Link); eigene Ablage im Webspace, eigenes Aufräumen"}
+  - {baustein: "registrieren.php: Honeypot, HMAC-Zeitstempel (4 s–2 h), Proof-of-Work (assets/pow.js, pow-worker.js)", ziel: "spamschutz_lib.php, public/assets/pow.js, public/assets/pow-worker.js", anpassung: "für Anmelde- und Newsletter-Formular; eine Antwort für alle Fälle"}
+  - {baustein: "ratelimit_lib.php", ziel: "ratelimit_lib.php", anpassung: "nur Kern (rate_erlaubt, rate_misserfolg, rate_gleiche_dauer, Tabelle), ohne Sperrleiter und Mail-Alarm"}
+  - {baustein: "Token-Muster (konto_lib.php reset_token_ausstellen)", ziel: "link_lib.php (eine Tabelle link für alle Einmal-Links, AP-17)", anpassung: "für Einmal-Links, Nachrück-Angebote und Newsletter-Bestätigung; sha256 in der DB, Ablauf, Einmalverwendung"}
+  - {baustein: "totp_lib.php (RFC 6238, Wiederholungsschutz, Wiederherstellungscodes)", ziel: "totp_lib.php, zweitfaktor_lib.php", anpassung: "Kern ohne Demo/Gerät-merken; Geheimnis versiegelt (sk_versiegeln)"}
+  - {baustein: "passkey_lib.php", ziel: "passkey_lib.php", anpassung: "übernommen, Signatur über OpenSSL statt phpseclib (E-55)"}
+  - {baustein: "serverkrypto_lib.php: sk_versiegeln/sk_oeffnen (AES-256-GCM)", ziel: "krypto_lib.php", anpassung: "nur für TOTP-Geheimnisse und SMTP-Passwörter"}
+  - {baustein: "smtp.php", ziel: "mail_lib.php (smtp_*)", anpassung: "Message-ID, Reply-To, List-Unsubscribe, optional HTML, mehrere Mails je Verbindung"}
+  - {baustein: "jobs_lib.php (Rahmen jobs_lauf/jobs_einen_lauf)", ziel: "jobs_lib.php", anpassung: "nur Rahmen; Auslöser Cron (CLI/Token-URL) und huckepack"}
+  - {baustein: "kopfzeilen_lib.php", ziel: "kopfzeilen_lib.php", anpassung: "CSP mit Nonce, Sicherheits-Header; ohne Geocoder/Karten"}
+  - {baustein: "rechtstexte_lib.php, rechtstext_seite.php", ziel: "inhalt_lib.php, seiten/rechtstext.php", anpassung: "nur Impressum und Datenschutz; Editor vereinfacht"}
+  - {baustein: "einwilligung_lib.php", ziel: "Spalte fassung an Anmeldung und Newsletter-Abo (anmeldung_lib.php, newsletter_lib.php)", anpassung: "Einwilligung je Anmeldung/Newsletter statt je Konto"}
+  - {baustein: "validate_lib.php (pruef_text/zahl/flag/kalendertag)", ziel: "die *_pruefen-Funktionen der Fach-Libs, format_lib.php (efn_*)", anpassung: "nur generische Prüfungen; EFN-Prüfung neu"}
+  - {baustein: "config.example.php, .github/workflows/auslieferung.yml", ziel: "config.example.php, .github/workflows/auslieferung.yml", anpassung: "stark gekürzt: FTPS-Sync mit Ausnahmeliste, Staging und Produktion"}
 nur_als_muster:
   - "mail_lib.php (Katalog, Warteschlange, Wiederholungen, Inhalt nach Versand leeren) – neu schreiben mit Prioritäten und Tageszähler"
   - "migration_lib.php, install.php – kleiner Migrationskatalog und Installer"
@@ -247,53 +249,55 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
 | K-e | Zustand | Sitzungsschlüssel stehen als Konstanten `SITZUNG_SCHLUESSEL_*` in `sitzung_lib`; Zustand je Anfrage über `kontext_lib` (`ctx()`), nicht über `$GLOBALS`; Ergebnisse als Rückgabe, nicht als globaler Ausgabeparameter. Statische Caches haben eine Leer-Funktion für Tests. |
 | K-f | Wortliste | Knöpfe und Meldungen: **Speichern** (Formular sichern; mit Objekt nur, wenn mehrere Formulare auf einer Seite stehen: „Passwort speichern“), **Abbrechen** (Dialog/Formular ohne Änderung verlassen), **Entfernen** (Eintrag aus einer Liste oder Zuordnung nehmen, der Datensatz bleibt), **Löschen** (Datensatz ist weg), **„Ja, löschen“** als Ja im Lösch-Dialog (andere Dialoge: „Ja, <Verb>“ wie „Ja, stornieren“), **Schließen** (Hinweis ohne Entscheidung), **Verstanden** (Hinweis bestätigen). Menüpunkte und Knöpfe, die erst einen Dialog öffnen, enden auf „…“. Nicht verwenden: „Endgültig löschen“, „Ja, Konto löschen“, „Von der Liste nehmen“. |
 | K-g | Typografie | Auslassung „…“ (nie `...`), Gedankenstrich „ – “ (nie ` - ` zwischen Wörtern), deutsche Anführungszeichen „…“, Uhrzeiten mit „Uhr“ über `datum_zeit_text(…, uhr: true)` bzw. `zeit_lokal(…) . ' Uhr'`. Gilt für Texte in PHP (Zeichenketten und HTML) und JavaScript, nicht für Code-Kommentare. |
-| K-h | Präfixe | Jede Funktion beginnt mit dem Präfix ihrer Lib (Tabelle unten, Zielzustand nach AP-17 Unterpunkt 10). Allgemeine Helfer ohne Präfix stehen nur in `html_lib`, `formular_lib`, `format_lib`, `konfig_lib`, `sitzung_lib` und `kontext_lib`. |
+| K-h | Präfixe | Jede Funktion beginnt mit einem Präfix ihrer Lib (Tabelle unten); ein Präfix gehört zu genau einer Lib. Kurze allgemeine Helfer (`e`, `icon`, `feld`, `chip`, `hm` …) stehen nur in `html_lib`, `formular_lib` und `format_lib`. |
 
-**Präfix-Tabelle (Zielzustand)**
+**Präfix-Tabelle** (Stand nach AP-17 Unterpunkt 10; maschinell geprüft in `tools/tests/konventionen.php`, Konstante `KONV_PRAEFIXE`; Präfixe in mehreren Libs nur mit Grund in `KONV_PRAEFIX_GETEILT`: `db`, `passwort`, `team`, `seiten`, `mail`)
 
-| Lib | Präfixe | Inhalt |
+| Lib | Präfixe (erstes Wort des Namens) | Inhalt |
 |---|---|---|
-| `anmeldung_lib` (bisher `buchung_lib`) | `anm_` | Anmeldungen, Plätze, Warteliste, Einmal-Links der Anmeldung |
-| `login_lib` (bisher `anmeldung_lib`) | `login_`, `team_sitzung`, `team_tor`, `team_gesehen`, `anmeldung_halb*`, `anmeldung_voll`, `anmeldung_beenden`, `ich` | Team-Login, halbe Anmeldung, „Wer bin ich“ |
-| `audit_lib` | `audit_` | Protokoll |
-| `betrieb_lib` | `betrieb_` | Betriebsseite |
-| `bild_lib` (neu) | `bild_`, `datei_senden` | Upload, Verkleinern, Ausliefern |
-| `datenschutz_lib` | `ds_` | Löschfristen, Auskunft |
-| `db_lib` | `db_`, `einstellung*` | Datenbank, Einstellungen |
-| `export_lib` | `export_`, `xlsx_`, `csv_` | Exporte |
-| `format_lib` | `datum_`, `zeit_`, `tag_`, `zahl_`, `dauer_`, `bytes_`, `person_`, `hm`, `minuten`, `efn_`, `iso_`, `lokal_` | Formatieren, Ortszeit |
-| `formular_lib` (neu) | `feld`, `wert`, `profil_`, `aktion_`, `bestaetigung_`, `kachel`, `chip`, `filter_`, `leer_`, `seiten_kopfzeile`, `ist_post`, `aktion`, `post_`, `fertig` | Formulare und Seitenbausteine |
-| `host_lib` | `host_`, `url_`, `basis_` | Hostnamen |
-| `html_lib` | `e`, `seite_`, `team_seite_`, `team_reiter`, `team_veranstaltung_`, `icon`, `meldung_`, `fehler_`, `umleiten`, `json_`, `nicht_gefunden`, `seiten_name` | Seitengerüst |
-| `inhalt_lib` | `inhalt_`, `editor_`, `start_`, `html_bereinigen` | Pflegbare Texte, HTML-Bereiniger |
-| `install_lib` | `install_`, `installiert` | Installer |
-| `jobs_lib` | `job_`, `jobs_` | Hintergrundjobs |
-| `kontext_lib` (neu) | `ctx` | Zustand je Anfrage |
-| `konfig_lib` | `konfig_`, `laufzeit_`, `umgebung`, `entwicklung`, `app_` | Konfiguration |
-| `konto_lib` | `konto_`, `passwort_` | Konten |
-| `kopfzeilen_lib` | `kopf_`, `kopfzeilen_`, `https_` | HTTP-Kopfzeilen |
-| `krypto_lib` | `krypto_`, `versiegeln`, `oeffnen` | Verschlüsselung |
-| `link_lib` (neu) | `link_` | Einmal-Links |
-| `mail_lib`, `mail_html_lib` | `mail_`, `smtp_`, `reihe_`, `va_mail*`, `antwort_` | Mails |
-| `migration_lib` | `migration_` | Datenbank-Schema |
-| `newsletter_lib` | `nl_` | Newsletter |
-| `passkey_lib` | `pk_` | Passkeys |
-| `programm_lib` | `programm_`, `dozent_`, `foto_`, `termin_`, `kuerzel_` | Programm |
-| `ratelimit_lib` | `rate_` | Ratenschutz |
-| `rundmail_lib` | `rm_` | Mailings |
-| `sicherung_lib` | `sicherung_`, `testdaten_` | Sicherungen |
-| `sitzung_lib` | `sitzung_`, `csrf_`, `flash_` | Sitzung, CSRF, Flash |
-| `spamschutz_lib` | `spam_` | Spamschutz |
-| `statistik_lib` | `stat_` | Statistik |
-| `team_lib` | `team_` | Team-Funktionen an Anmeldungen |
-| `teilnahme_lib` | `tn_` | Teilnahme vor Ort |
-| `tnkonto_lib` | `tk_` | Teilnehmenden-Konten |
-| `totp_lib` | `totp_` | TOTP (nur RFC 6238 und Codes) |
-| `transaktion_lib` | `db_transaktion` | Transaktionen |
-| `veranstaltung_lib` | `va_` | Veranstaltungen |
-| `wartung_lib` | `wartung_` | Wartung |
-| `zertifikat_lib` (neu) | `zertifikat_`, `unterschrift_`, `code128_` | Teilnahmebescheinigung |
-| `zweitfaktor_lib` (neu) | `zweitfaktor_`, `mailcode_` | Zweiter Faktor (Wahl, Mail-Code, Bestätigung) |
+| `anmeldung_lib` | `anm` | Anmeldungen, Plätze, Warteliste, Sitzung der Teilnehmenden |
+| `audit_lib` | `audit` | Protokoll mit Objektbezug |
+| `betrieb_lib` | `betrieb` | Betrieb → Status |
+| `bild_lib` | `bild`, `datei`, `foto`, `text` | Bilder hochladen, verkleinern, ausliefern; Fotos der Dozierenden, Bilder der Texte; Dateien senden |
+| `datenschutz_lib` | `ds` | Löschfristen |
+| `db_lib` | `db`, `einstellung` | Datenbank, Einstellungen |
+| `export_lib` | `csv`, `export`, `xlsx` | Exporte (CSV, xlsx, PDF) |
+| `format_lib` | `bytes`, `datum`, `dauer`, `efn`, `hm`, `iso`, `jetzt`, `lokal`, `minuten`, `person`, `tag`, `zahl`, `zeit` | Formatieren, Ortszeit, Dauern, Größen, Namen, EFN |
+| `formular_lib` | `aktion`, `attr`, `bestaetigung`, `chip`, `feld`, `fertig`, `filter`, `ist`, `kachel`, `leer`, `post`, `profil`, `seiten`, `versteckt`, `wert` | Formulare und Seitenbausteine, Seitenablauf |
+| `host_lib` | `basis`, `host`, `url` | Hostnamen |
+| `html_lib` | `e`, `fehler`, `icon`, `json`, `meldung`, `nicht`, `seite`, `seiten`, `team`, `umleiten` | Seitengerüst, Meldungen, Icons |
+| `inhalt_lib` | `editor`, `html`, `inhalt`, `start` | Pflegbare Texte, Editor, HTML-Bereiniger (html_bereinigen) |
+| `install_lib` | `install`, `installiert` | Installer |
+| `jobs_lib` | `job`, `jobs` | Hintergrundjobs |
+| `konfig_lib` | `app`, `entwicklung`, `konfig`, `laufzeit`, `umgebung` | Konfiguration |
+| `kontext_lib` | `ctx` | Zustand je Anfrage (ctx) |
+| `konto_lib` | `konto`, `passwort` | Konten |
+| `kopfzeilen_lib` | `https`, `kopf`, `kopfzeilen` | HTTP-Kopfzeilen |
+| `krypto_lib` | `krypto`, `oeffnen`, `versiegeln` | Verschlüsselung |
+| `link_lib` | `link` | Einmal-Links |
+| `login_lib` | `anmeldung`, `ich`, `passwort`, `team` | Team-Login, halbe Anmeldung, ich() |
+| `mail_html_lib` | `mail` | HTML-Fassung der Mails |
+| `mail_lib` | `antwort`, `mail`, `reihe`, `smtp` | Mails, Warteschlange, SMTP |
+| `migration_lib` | `migration` | Datenbank-Schema |
+| `newsletter_lib` | `nl` | Newsletter |
+| `passkey_lib` | `pk` | Passkeys |
+| `programm_lib` | `dozent`, `kuerzel`, `programm`, `termin` | Programm, Dozierende |
+| `ratelimit_lib` | `rate` | Ratenschutz |
+| `rundmail_lib` | `rm` | Mailings |
+| `sicherung_lib` | `sicherung`, `testdaten` | Sicherungen, Testdaten |
+| `sitzung_lib` | `csrf`, `flash`, `sitzung` | Sitzung, CSRF, Flash, Sitzungsschlüssel |
+| `spamschutz_lib` | `spam` | Spamschutz |
+| `statistik_lib` | `stat` | Statistik |
+| `team_lib` | `team` | Team-Aktionen an Anmeldungen und Konten |
+| `teilnahme_lib` | `tn` | Anwesenheit |
+| `tnkonto_lib` | `tk` | Teilnehmenden-Konten |
+| `totp_lib` | `totp` | TOTP (RFC 6238), Wiederherstellungscodes |
+| `transaktion_lib` | `db` | Transaktionen |
+| `veranstaltung_lib` | `va` | Veranstaltungen |
+| `wartung_lib` | `wartung` | Wartungsmodus |
+| `zertifikat_lib` | `code128`, `unterschrift`, `unterschriftenliste`, `zertifikat` | Teilnahmebescheinigung, Unterschrift, Unterschriftenliste |
+| `zweitfaktor_lib` | `mailcode`, `zweitfaktor` | Zweiter Faktor: Mail-Code, Bestätigung heikler Aktionen |
+
 
 ## 6. Arbeitspakete
 
@@ -308,7 +312,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - Sitzungen, CSRF, Sicherheits-Header/CSP, Ratenschutz-Kern, Audit-Tabelle, Wartungsmodus, Health-Endpunkt
     - Job-Rahmen mit Cron-Auslöser
     - Grundlage für mehrere Hostnamen (E-27): erlaubte Hosts in der DB, Basis-URL je Anfrage
-    - "Auslieferung per GitHub Actions (FTPS) nach E-32: Secrets FTP_SERVER/FTP_USER/FTP_PASSWORD, Ziele /wintersymposium/staging und /wintersymposium/produktiv, Ausnahmeliste (config.php, install.lock, Laufzeitordner); Freigabe Produktion per Tag (E-35)"
+    - "Auslieferung per GitHub Actions (FTPS) nach E-32: Secrets FTP_SERVER/FTP_USER/FTP_PASSWORD, Ziele Staging und Produktion, Ausnahmeliste (config.php, install.lock, Laufzeitordner); Freigabe Produktion per Tag (E-35)"
   nadoku_bausteine: [konfig_lib, transaktion_lib, format_lib, session_lib (CSRF/Flash), sitzung_lib, kopfzeilen_lib, ratelimit_lib (Kern), jobs_lib (Rahmen), migration_lib/install (Muster)]
   abnahmekriterien:
     - Installer legt Datenbank und ersten Betreiber an und sperrt sich danach
@@ -337,7 +341,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {problem: "Ein Team-Login gibt es erst mit AP-5; T-108 verlangt „Team-Login weiter möglich“", loesung: "Der Wartungsmodus nimmt /team bereits aus (getestet); der Login-Teil von T-108 wird nach AP-5 geprüft"}
     - {problem: "Eine Regel „Punktdateien sperren“ hätte auch /.well-known/ gesperrt, über das Zertifikate ausgestellt werden können", loesung: ".well-known ist in der .htaccess ausgenommen"}
     - {problem: "In der Arbeitsumgebung gibt es MySQL nur als 8.0, auf dem Webspace läuft 8.4", loesung: "Lokal gegen 8.0 getestet; der Prüf-Workflow testet gegen MySQL 8.4"}
-    - {problem: "Erste Auslieferung nach dem Merge brach ab (curl 9, Verzeichniswechsel verweigert): der FTP-Zugang landet bereits im Ordner wintersymposium, der Workflow verlangte aber /wintersymposium/staging/. Zusätzlich lief das Prüfskript mit bash -e und stieg ohne verständliche Meldung aus", loesung: "Zielpfade auf /staging/ und /produktiv/ geändert (Auskunft Admin); Skript wertet curl-Codes selbst aus und meldet Zielordner nicht erreichbar, Anmeldung abgelehnt oder anderen Code – ohne Server-Meldungen und Ordnerlisten, weil die Logs öffentlich sind (R-10)"}
+    - {problem: "Erste Auslieferung nach dem Merge brach ab (curl 9, Verzeichniswechsel verweigert): der Workflow verlangte den Pfad vom Wurzelordner des Webspace aus, der FTP-Zugang landet aber schon eine Ebene tiefer. Zusätzlich lief das Prüfskript mit bash -e und stieg ohne verständliche Meldung aus", loesung: "Zielpfade relativ zum FTP-Login gesetzt (Auskunft Admin); Skript wertet curl-Codes selbst aus und meldet Zielordner nicht erreichbar, Anmeldung abgelehnt oder anderen Code – ohne Server-Meldungen und Ordnerlisten, weil die Logs öffentlich sind (R-10)"}
     - {problem: "Bei der Vorab-Prüfung wurde die Reihenfolge im Änderungsprotokoll (Abschnitt 11) für einen Widerspruch gehalten", loesung: "War keiner: unter der Erstfassung steht der neueste Eintrag zuerst; Hinweis über der Tabelle ergänzt"}
 
 - id: AP-2
@@ -815,7 +819,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - "V-4 (Zweitfaktor-Helfer): in AP-16 erledigt"
     - "V-40 Mockup-Anbindung: entfällt durch E-64 (1), Mockups sind Archiv (Unterpunkt 6)"
     - "O-47 (Aussperren je Adresse): eigene Entscheidung, nicht Teil der Vereinheitlichung"
-  status: "in Umsetzung seit 2026-11-01 (E-69 (5) bis (8)); Unterpunkte 1 bis 6 im Zwischen-PR, Unterpunkt 7 lokal fertig, 8 bis 12 folgen im zweiten PR"
+  status: "umgesetzt 2026-11-01 (Teil 1 mit Unterpunkt 1 bis 6 gemergt, Teil 2 mit Unterpunkt 7 bis 12 im zweiten PR); Staging offen"
   fortschritt:
     - {nr: 1, stand: "erledigt", notiz: "Abschnitt 5a (K-a bis K-h, Präfix-Tabelle); tools/tests/konventionen.php in lauf.php (Typografie K-g ohne Funde; Wortliste K-f mit 5 Ausnahmen für Unterpunkt 4); CLAUDE.md verweist"}
     - {nr: 2, stand: "erledigt", notiz: "db_zeit/db_ts/db_tag/db_zahl/db_gibt_es (Libs umgestellt, gmdate außerhalb db_lib 4×, Grep-Test ≤ 5); format_lib: datum_zeit_text(uhr:), dauer_text, bytes_text (ersetzt betrieb_groesse_text), person_name (18 Stellen), hm/minuten/hm_aus_minuten aus programm_lib; rate_text/rate_warten_text (8 Stellen); anm_nummer; konto_profil_setzen/anm_profil_setzen (vier Spaltenlisten); feste Zahlen in Texten über Konstanten; 15 Unit-Tests"}
@@ -823,8 +827,21 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {nr: 4, stand: "erledigt", notiz: "Alle Seiten auf die Helfer umgestellt (vier parallele Teilaufträge mit eigener Testdatenbank, je Bildvergleich gegen den Ausgangsstand); DB-Zugriffe aus Seiten in Libs (team_bestaetigt_seit, team_essen_zahlen, dozent_da, programm_punkt_von_termin, programm_typ, rm_bild_anhaengen, rm_empfaenger_archiv, audit_letzte_anmeldung, audit_suchen, anm_id_von_platz, va_bestaetigte_zahlen (eine Abfrage statt N+1), tk_eigene_anmeldung, konto_irgendeins_da, install_sperre_wiederherstellen, jetzt_text, jetzt_iso, va_anmeldung_vor_start); teil_workshopwahl/teil_programm als anm_workshopwahl_html/anm_wahl_aus_plaetzen/programm_html; Inline-SVG über icon() (key, lock, lock-open); Grep-Tests: kein db_ in Seiten, keine Feld-Closures, keine Einknopf-Formulare von Hand; Ausnahmeliste der Wortliste leer"}
     - {nr: 5, stand: "erledigt", notiz: "site.css nach 17 Abschnitten gegliedert (Inhaltsverzeichnis); Tokens (Scheine über color-mix, Backdrop, Papier, Lila-/Rot-Stufen, --h-knopf/--h-knopf-klein/--h-feld, Radien), keine rgba/Hex außerhalb :root; 15 tote Regeln entfernt, 9 doppelte zusammengeführt; Umbruchpunkte 760/1000 (E-69 (6)); Etikett-Gruppe (.etikett, .etikett-mono); .menue-karte; details-Reset in einer Regel (details.schlicht); .karten-immer; .knopf.klein statt .klein-knopf; .gefahr-kasten; .seitenkopf; .chip.rolle/.chip.rolle-leise; Meldungstöne an einer Stelle; Grep-Test CSS-Klassen ↔ Markup (Ausnahmen: drei dynamische, vier JS/Test-Haken); Zählung: 878 Zeilen, 705 Regeln, 357 Klassen (vorher 877/768/366)"}
     - {nr: 6, stand: "erledigt", notiz: "Betrieb → Komponenten (/team/komponenten, nur BetreiberInnen): 11 Abschnitte mit Beispiel und Aufruf; Beispielformulare ändern nichts; Browser-Durchlauf fotografiert die Seite; http_tests: Admin 403, Betreiber alle Abschnitte, POST ohne Wirkung; docs/mockups/README.md (Archiv); CLAUDE.md nennt das Komponentenblatt als Vorlage"}
-  ergebnis: null
+    - {nr: 7, stand: "erledigt", notiz: "assets/basis.js (aus dialog.js und kopf.js, zuerst geladen) mit window.ws: csrf (aus <meta name=\"csrf\">, nur mit Sitzung), post/get mit einheitlicher Antwort {ok, fehler, …}, melden, dialog (einheitlicher Dialog), oeffnen (Programm-Popups), minuten/hm, b64u/bytes; passkey.js, zweitfaktor.js, mailings.js, editor.js, programm.js, programm-team.js darauf; readyState-Boilerplate weg; ein Codestil (doppelte Anführungszeichen, 4 Leerzeichen, NodeList.forEach) in allen Dateien, Umformung mit acorn-Syntaxbaum vorher/nachher geprüft"}
+    - {nr: 8, stand: "erledigt", notiz: "server/lib/link_lib.php (link_token, link_erzeugen, link_finden, link_sperren, link_verbrauchen, link_loeschen, link_url, link_aufraeumen, LINK_ARTEN); Migration 20: Tabelle link, Altdaten aus konto_link, anmeldung_link, newsletter_link mit ihren Hashes übernommen, alte Tabellen gelöscht (E-69 (7)); konto_link_*, tk_link, anm_link_*, nl_link_* sind dünne Aufrufe; Gültigkeiten in Sekunden (ANM_LINK_GUELTIG_S, NL_BESTAETIGEN_S, NL_VERWALTEN_S); Pfade unverändert; 12 neue Tests"}
+    - {nr: 9, stand: "erledigt", notiz: "Migration 21: audit.objekt_art, audit.objekt_id mit Index; Altdaten per Regex zugeordnet (Hauptbezug je Art, eigene Konto-Einträge über konto_id); audit_schreiben($art, $text, $durch, $bezug, vaId:), audit_text() für „Anmeldung 12: storniert“, AUDIT_OBJEKTE; alle Aufrufe mit Bezug und nach dem Muster, Passkey-Bezeichnungen nicht mehr im Text (R-02); Aufrufe aus neun Seiten in Libs (pk_login_protokollieren, host_anlegen mit $durch, mail_absender_setzen, mail_testen mit $durch, sicherung_herunterladen_protokollieren, team_link_senden, export_protokollieren, konto_notzugang, inhalt_protokollieren); Personen „Letzte Änderung“ über audit_letzter(), Protokoll-Filter ?o=anmeldung-12; Grep-Test: kein audit_schreiben in Seiten; 8 neue Tests"}
+    - {nr: 10, stand: "erledigt", notiz: "anmeldung_lib → login_lib, buchung_lib → anmeldung_lib (je ein Commit, git mv); neue Libs zweitfaktor_lib (aus totp_lib), zertifikat_lib (aus teilnahme_lib), bild_lib (Fotos, Bilder, bild_upload_lesen, bild_verkleinern, bild_schreiben, bild_senden, datei_senden; drei Upload-Wege und sechs Auslieferungen darauf), kontext_lib (ctx, ctx_setzen, ctx_da, ctx_weg, ctx_leeren; alle $GLOBALS['ws_*'] und programm_nachgerueckt als Rückgabeparameter); efn_* → format_lib, csv_text/export_erzeugen/export_termin_info → export_lib, va_absender_name → veranstaltung_lib, team_link_weitergeben/zweitfaktor_codes_seite aus Seiten in Libs, anm_adresse_aendern_erlaubt; ich() mit Cache je Anfrage in seite_kopf; DB-abhängige Caches im Kontext; Sitzungsschlüssel als SITZUNG_SCHLUESSEL_*; html_bereinigen() mit Profilen inline, block, mail; Präfix-Tabelle maschinell geprüft (beide Richtungen); 12 neue Tests"}
+    - {nr: 11, stand: "erledigt", notiz: "DB-Tests in 19 Bereichen tools/tests/lauf/NN_name.php (je test_name()), jeder beginnt mit test_frisch() aus tools/tests/basis.php (leere DB, Migrationen, Installation mit BetreiberIn und Admin, beispieldaten_laden(); ca. 2 s); Migrationstest vom alten Stand bleibt eigener Bereich; Auswahl WS_TESTS; HTTP-Teil: Installer auf leerer DB, dann 17 Bereiche mit http_frisch() (WS_HTTP); neue Fabriken im Beispieldatensatz (warteliste_voll, nur_konto, angemeldete, fristen, team_anmeldung, konto_abend, entwurf, cme_nachweis, ada_abend, newsletter_mailing, sicherung, betreiberin_passkey), beispieldaten_laden() unverändert; Prüfungen durchgesehen: Testaufbau-Prüfungen und Platzhalter entfernt, viele geschärft (genaue Werte, ||-Schlupflöcher, Zähler relativ); Grep-Test KONV_TEST_ANLEGEN_ERLAUBT (eigenes Anlegen nur mit Grund, http_tests.php ohne); test_pdf_text, test_link_aus_mail, test_termin, test_workshop, test_mail_an; TOTP über tools/tests/totp_code.php, Seitenliste aus server/routen.php (tools/tests/seiten.php), einloggenAls und Abdeckung im Browser-Durchlauf; Doku: Prüfprotokoll je AP, betrieb.md 1 bis 20, CHANGELOG mit fünf Abschnitten, E-18 mit Ziel-Dateien"}
+    - {nr: 12, stand: "erledigt", notiz: "Version zweite Stelle, CHANGELOG, betrieb.md (Aufbau, Tests), CLAUDE.md (JS-Stil, ctx, Tests), Prüfprotokoll T-303 bis T-308, Review-Dokument mit Zahlen nachher; Klassen-Test korrigiert und um veraltete Ausnahmen ergänzt; lauf.php 1047 ok; Browser-Durchlauf Stufe 3 8570 ok in 3 Engines × 4 Breiten, Fotos angesehen; Serverordner aus der Doku und FTP-Ziele als Repository-Variablen (R-10, Admin 2026-11-01)"}
+  ergebnis: "Alle zwölf Unterpunkte umgesetzt, in zwei PRs (E-69 (5)). Konventionen stehen in Abschnitt 5a und werden per Grep-Test geprüft (Typografie, Wortliste, Präfixe, keine db_* und kein audit_schreiben in Seiten, CSS-Klassen in beide Richtungen, eigenes Anlegen in Tests). Seiten bauen sich aus formular_lib; site.css ist ein System mit Tokens und zwei Umbruchpunkten, das Komponentenblatt ist die Vorlage; eine JS-Basis, eine Link-Tabelle, Protokoll mit Objektbezug, Libs nach Präfix, Anfrage-Zustand über ctx(). Tests laufen je Bereich auf frischem Stand mit dem Beispieldatensatz. Gegenüber dem Review: Libs 36 → 42 Dateien (Aufteilung), Seiten 5 298 → 5 094 Zeilen, Link-Systeme 4 → 1, gmdate in Libs 49 → 8, audit_schreiben in Seiten 11 → 0, $GLOBALS-Schlüssel 11 → 0, <form in Seiten 102 → 52, Bestätigungs-details von Hand 28 → 2 (30 über bestaetigung_html), rgba/Hex außerhalb :root 38 → 0, Umbruchpunkte 7 → 2, fetch-Aufrufe 3 → 2 (beide in basis.js), pruefe-Aufrufe im Code lauf/http 421/388 → 562/442 (1 047 ausgeführte Prüfungen). Kein Verhalten geändert außer den gewollten Punkten im CHANGELOG 0.27.0 und den Protokolltexten"
   probleme:
+    - {problem: "Die Tests bauten aufeinander auf (jeder Abschnitt nutzte den Zustand der vorigen) und legten Daten selbst an", loesung: "erst mechanisch in Bereichsdateien zerlegt, dann je Bereich auf test_frisch() umgestellt (vier parallele Teilaufträge für die DB-Bereiche, einer für den HTTP-Teil, je eigene Testdatenbank); fehlende Daten als Fabrik-Funktionen im Beispieldatensatz, beispieldaten_laden() unverändert, damit der Browser-Durchlauf gleich bleibt"}
+    - {problem: "Beim Durchsehen fielen Prüfungen auf, die nichts bewiesen: Testaufbau statt Verhalten, ||-Bedingungen, die immer wahr waren, >= 1 auf Daten, die schon da waren, eine „ohne Pfad“-Prüfung, die nie anschlagen konnte (json_encode maskiert /), ein Zufallszweig, Platzhalter hinter function_exists, Kürzel-Abfragen, die nur über die ID-Reihenfolge stimmten", loesung: "geschärft oder entfernt (Beispiele im CHANGELOG 0.28.0 unter Behoben); kein App-Fehler gefunden"}
+    - {problem: "Der Klassen-Test aus Unterpunkt 5 erkannte class=\"…\" nicht: ein Escape-Fehler im Muster machte aus dem optionalen Backslash ein wörtliches Fragezeichen; geprüft wurden nur 30 statt 329 Klassen", loesung: "Muster korrigiert, alle Klassen haben eine Regel; zusätzlich prüft ein Test, dass die Ausnahmelisten keine veralteten Einträge haben"}
+    - {problem: "PDF-Prüfungen (Exporte, Zertifikat, Unterschriftenliste) liefen nur, wenn pdftotext installiert war, sonst still nicht", loesung: "test_pdf_text() meldet ein fehlendes pdftotext als Fehler; der Prüf-Workflow installiert poppler-utils"}
+    - {problem: "Ein frischer Stand je Bereich verlängert den Lauf (HTTP-Teil 45 s → 101 s, gesamt etwa 2,5 Minuten)", loesung: "hingenommen: Unabhängige Bereiche sind wichtiger; einzelne Bereiche laufen mit WS_TESTS/WS_HTTP. Möglich später: test_frisch() ohne neue Installation (nur Daten leeren)"}
+    - {problem: "betrieb.md, Konzept, CHANGELOG und Prüfprotokoll nannten die Serverordner, der Auslieferungs-Workflow die FTP-Pfade (R-10)", loesung: "Admin 2026-11-01: in der Doku Platzhalter <Zielordner Staging>/<Zielordner Produktion>; im Workflow Repository-Variablen FTP_ZIEL_STAGING und FTP_ZIEL_PRODUKTION (vom Admin angelegt); die git-Historie enthält die alten Angaben weiter"}
+    - {problem: "Auf einem Handy-Foto des Browser-Durchlaufs stehen Kopfleiste und „Menü“-Knopf zugleich", loesung: "Aufnahme während der Animation nach einem Scroll; die ausdrückliche Prüfung „Leiste weg, Menü-Knopf da“ ist in allen Engines grün"}
     - {problem: "Konzept nannte für konto_profil_setzen/anm_profil_setzen einen Parameter ?int $durch; das Protokoll schreibt aber der Aufrufer", loesung: "ohne $durch (ein ungenutzter Parameter wäre irreführend); Adresse nur ausdrücklich über $email, weil Anmeldungs-Datensätze immer 'email' tragen – sonst hätte das Verknüpfen eines Kontos dessen Adresse überschrieben"}
     - {problem: "Sperr-Meldungen in vier Fassungen (V-48)", loesung: "rate_text() aus der Sperrdauer des Topfs; drei Stellen hatten nur „Bitte warte 15 Minuten.“, jetzt überall „… und versuche es dann noch einmal.“ (kleine Textänderung)"}
     - {problem: "Grep-Test „gmdate in Libs ≤ 5“ zählte die Helfer selbst mit", loesung: "gezählt wird außerhalb von db_lib; übrig sind Dateinamen und Zeitstempel in Dateien"}
@@ -838,6 +855,15 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {problem: "Umsortieren der site.css nach Komponenten ändert die Reihenfolge von Regeln gleicher Spezifität", loesung: "Regelmenge vorher/nachher maschinell verglichen (705 gleich), Paare mit getauschter Reihenfolge und gleichen Eigenschaften gesucht; drei echte Fälle korrigiert (Gefahrenzone nach .detail .unterkopf, :where(.popup-innen) > * für die Abstände im Programm-Popup, Sticker im Status-Band nach .sticker.hinweis); Bildvergleich Chromium in vier Breiten"}
     - {problem: "Rollen-Etikett als Chip und der neue Menüpunkt „Komponenten“ ändern Höhen (Mein Konto 8 px, Betriebsseiten auf Handy/Tablet 42 px durch den Umbruch der Unterzeile)", loesung: "gewollt (V-35, Unterpunkt 6), im CHANGELOG unter „Geändert (sichtbar)“"}
     - {problem: "Der Browser-Durchlauf auf dem Ausgangsstand brach am Ende in WebKit/breiter Desktop mit „WebKit encountered an internal error“ ab", loesung: "Sandbox-Schwäche; der Lauf nach Unterpunkt 4 lief in allen Engines und Breiten durch (8351 ok, 0 Fehler)"}
+    - {problem: "Programm-Popups und das Link-Feld im Editor sollten laut Plan ws.dialog nutzen; beide haben aber ein eigenes Aussehen bzw. einen eigenen Ablauf (Popup mit Inhalt der Seite, Eingabefeld im Editor)", loesung: "nicht in den Bestätigungsdialog umgebaut (Grundsatz (4)); die Popups nutzen ws.oeffnen (gemeinsame Öffnen-/Schließen-Logik), das Link-Feld bleibt im Editor"}
+    - {problem: "Ein CSS-Commit nahm versehentlich die vorgemerkte Löschung von dialog.js und kopf.js mit; der erste volle Browser-Lauf vor dem Zwischen-PR lief deshalb ohne diese Skripte", loesung: "Commit vor dem Push korrigiert, Lauf verworfen; die Löschung steht als eigener Commit in Teil 2"}
+    - {problem: "Eine Tabelle link mit ziel_id verliert die Fremdschlüssel (Links blieben nach dem Löschen eines Kontos, einer Anmeldung oder Person stehen)", loesung: "je Art eine eigene Spalte mit Fremdschlüssel und ON DELETE CASCADE (konto_id, anmeldung_id, person_id) statt ziel_id; link_finden liefert ziel_id trotzdem"}
+    - {problem: "Teilnehmenden- und Team-Links teilen sich die Art konto und den Zweck passwort", loesung: "Trennung wie bisher über die Rolle des Kontos (/einrichten nur Team, /konto/link nur teilnehmend); Test: Team-Token über /konto/link abgewiesen und nicht verbraucht"}
+    - {problem: "audit_schreiben hatte schon einen vierten Parameter (Veranstaltung)", loesung: "neue Signatur ($art, $text, $durch, $bezug, $vaId); die sieben Aufrufe mit Veranstaltung nutzen das benannte Argument vaId:"}
+    - {problem: "Protokolltexte ändern sich durch das einheitliche Muster; ältere Einträge behalten ihren alten Text", loesung: "gewollt (V-8); Altdaten bekommen den Bezug per Migration, der Filter arbeitet über den Bezug, nicht über den Text"}
+    - {problem: "Die zwei HTML-Bereiniger (Editor, Mailings) unterscheiden sich in Einzelheiten (leere Absätze mit <br>, leere Listen, erlaubte Bilder), und der Mailing-Durchlauf erzeugt zugleich Text- und HTML-Mail", loesung: "html_bereinigen($html, $profil) ist der eine Einstieg (inline, block, mail); dahinter bleiben beide Durchläufe, damit gespeichertes HTML gleich bleibt. Ein gemeinsamer Durchlauf wäre eine sichtbare Änderung an Mailings – offen, falls gewünscht"}
+    - {problem: "Die drei Bild-Pipelines verkleinern verschieden (längste Kante, quadratisch, nur Breite mit Transparenz)", loesung: "bild_verkleinern() mit Optionen (quadrat, nur_breite, transparent, typen); Rundung der Höhe wie vorher je Fall, Test mit demselben Bild für alle drei"}
+    - {problem: "Ein Cache, der nach Ein- oder Ausloggen in derselben Anfrage veraltet wäre (ich(), anmeldung_konto())", loesung: "im Kontext gespeichert; tk_einloggen/tk_ausloggen, anmeldung_voll/anmeldung_beenden, anm_einloggen/anm_ausloggen vergessen ihn"}
 
 - id: AP-16
   titel: "Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (Review AP-R2)"
@@ -1227,6 +1253,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-31 | Editor überall mit derselben Leiste (zentral festgelegt), Bilder und Knöpfe auch im Programm und in Kurzbios; obere Navigationsleiste bleibt wie sie ist (Admin). |
 | 2026-10-31 | „Meine Anmeldung“ zeigt dem Team-Konto den Team-Bereich in der Leiste. |
 | 2026-10-31 | Startseite erkennt Login auch ohne Ausgabepuffer (Sitzung vor der ersten Ausgabe öffnen, Testserver ohne Puffer); O-40 (Mails im Branding) und O-41 (eigene Workshops im Programm markieren) auf Halde; Impressum und Datenschutz mit derselben Werkzeugleiste wie die Mailings (Knopf, HTML), Platzhalter unter dem Mail-Editor erklärt. |
+| 2026-11-01 | AP-17 abgeschlossen (Teil 2: Unterpunkte 7 bis 12): status, ergebnis, probleme; Fortschritt 11 und 12; E-18 mit Ziel-Dateien; Serverordner in E-32, E-34 und AP-1 durch Platzhalter ersetzt, FTP-Ziele als Repository-Variablen (R-10, Admin 2026-11-01). |
 | 2026-11-01 | E-70 (Startseite mit Vorschau, Einstellungen als Übersicht, Variante B nach Mockup) und E-71 (Veranstaltungsreihen, Newsletter je Reihe, Allgäu Akut mit Klinik/Präklinik, Admin-Rechte je Reihe) neu; AP-18 und AP-19 geplant (nach AP-17); O-49 bis O-54 neu und am selben Tag wie vorgeschlagen entschieden. E-68 (1) bis (3) werden mit AP-18 teilweise ersetzt. |
 | 2026-11-01 | AP-17 Vereinheitlichung (Review AP-R3 bis AP-R9 in einem Paket, zwölf Unterpunkte) geplant; E-69 (ein Paket, vor Einstellungen/Startseite/Newsletter, eine Code-Instanz zur Zeit). |
 | 2026-11-01 | AP-16 umgesetzt (Review B-4, B-6, B-7, B-8, B-10, B-12, B-14, S-3 bis S-6, S-9, S-11, S-12, V-4): status, ergebnis, probleme eingetragen; Abweichungen vom Plan dort begründet (Einmal-Link bleibt bei B-4, konto_zweitfaktor mit Passwort, Mail-Code-Knopf nur mit JavaScript, Formular nach Passkey direkt abgeschickt, 127/8 in der Entwicklung). |
@@ -1256,7 +1283,7 @@ Unter der Erstfassung steht der neueste Eintrag zuerst.
 | 2026-10-29 | Prüfprotokoll: doppelt vergebene Nummern der AP-3-Prüfungen (T-130 bis T-136) in T-216 bis T-222 umbenannt (Admin); AP-4 behält T-130 bis T-144. |
 | 2026-10-29 | AP-3 Schritt 3 umgesetzt: E-45 (Programm-Pflege und -Anzeige) neu; AP-3 Status, Ergebnis und Probleme; Beispielprogramm entfernt; Test-Beispieldatensatz (Wunsch des Admins). |
 | 2026-10-29 | AP-1 auf Staging abgenommen: Status und Ergebnis ergänzt; Hinweis auf das Hoster-Cookie `_lcp` in AP-2 (Datenschutz). |
-| 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Zugang landet im Ordner wintersymposium, Pfade /staging und /produktiv), Problem und Lösung der ersten Auslieferung eingetragen. |
+| 2026-10-29 | AP-1 Nachtrag: FTP-Pfade der Auslieferung (E-32: Pfade relativ zum FTP-Login), Problem und Lösung der ersten Auslieferung eingetragen. |
 | 2026-10-29 | Umsetzung AP-1: Status, Ergebnis und Probleme eingetragen; E-34 (Webroot public/) und E-35 (Produktion per Tag) neu, E-32 angepasst, O-22 um public/ ergänzt; Widersprüche bereinigt (E-07 und E-11 an E-30 angeglichen, Logo-Stand in Abschnitt 2, O-08); noindex bis zum Start in AP-2 und Checkliste aufgenommen; YAML-Fehler in O-19 behoben (Wert mit Doppelpunkt in Anführungszeichen). |
 | 2026-10-29 | E-32 (Auslieferung: Secrets, Zielordner staging/produktiv, Zuordnung der Domains), E-33 (Plan B Konten bestätigt), O-22 (Einrichtung beim Hoster) neu; O-10 Repo wird öffentlich. |
 | 2026-10-29 | Domain winter-notfallsymposium.de und Postfächer eingetragen (E-05, E-13; O-01, O-02 erledigt); E-24: Anmeldungen ohne Konto nach 14 Monaten anonymisieren (O-21); Zertifikat-Entwurf kommt vom Admin (E-22, O-19); Logo auf main (O-20 erledigt); R-10 präzisiert. |

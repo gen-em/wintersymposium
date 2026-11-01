@@ -69,7 +69,7 @@ function ds_anmeldung_leeren(int $anmId, int $jetzt): void
                 sitzung_version = sitzung_version + 1, anonymisiert_am = ?, geaendert_am = ? WHERE id = ?",
             ['geleert-' . $anmId . '@anonym.invalid', db_zeit($jetzt), db_zeit($jetzt), $anmId]
         );
-        db_ausfuehren('DELETE FROM anmeldung_link WHERE anmeldung_id = ?', [$anmId]);
+        link_loeschen('anmeldung', $anmId);
         db_ausfuehren('UPDATE rundmail_empfaenger SET name = ?, email = ? WHERE anmeldung_id = ?', ['–', '', $anmId]);
     });
 }

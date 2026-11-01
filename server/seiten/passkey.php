@@ -55,7 +55,7 @@ try {
             if ($k === null || (int)$k['aktiv'] !== 1 || (!konto_ist_team($k) && $k['email_bestaetigt_am'] === null)) {
                 $nein('Dieses Konto ist gesperrt oder noch nicht bestätigt.');
             }
-            audit_schreiben('login', 'Anmeldung mit Passkey', $kontoId);
+            pk_login_protokollieren($kontoId);
             if (konto_ist_team($k)) {
                 anmeldung_voll($k); // Passkey = Besitz + Fingerabdruck/PIN: Passwort und zweiter Faktor (E-55)
                 json_antwort(200, ['ok' => true, 'ziel' => '/team']);
@@ -87,7 +87,7 @@ try {
                 $codes = totp_codes_erzeugen();
                 totp_codes_schreiben($kid, $codes);
                 anmeldung_voll(konto_laden($kid));
-                $_SESSION['pk_codes'] = $codes;
+                $_SESSION[SITZUNG_SCHLUESSEL_PK_CODES] = $codes;
                 json_antwort(200, ['ok' => true, 'ziel' => '/einloggen?codes=1']);
             }
             flash_setzen('ok', 'Passkey gespeichert. Ab jetzt kannst du dich damit ohne Passwort einloggen.');

@@ -14,16 +14,12 @@ if ($pfad === '/team/teilnahme/unterschrift') {
     if (!unterschrift_da()) {
         nicht_gefunden();
     }
-    header('Content-Type: image/png');
-    header('Cache-Control: private, no-store');
-    header('X-Content-Type-Options: nosniff');
-    readfile(unterschrift_pfad());
-    exit;
+    bild_senden(unterschrift_pfad(), 'image/png');
 }
 if ($pfad === '/team/teilnahme/liste') {
     $aerzte = ($_GET['liste'] ?? '') === 'aerzte';
     $inhalt = unterschriftenliste_pdf($aerzte, (string)($_GET['sort'] ?? 'nachname'));
-    audit_schreiben('export', 'Unterschriftenliste' . ($aerzte ? ' ÄrztInnen' : '') . ' als PDF', (int)$konto['id']);
+    export_protokollieren('Unterschriftenliste' . ($aerzte ? ' ÄrztInnen' : '') . ' als PDF', (int)$konto['id']);
     $datei = 'unterschriftenliste' . ($aerzte ? '-aerztinnen' : '') . '-' . va('veranstaltung_datum') . '.pdf';
     $art = 'attachment';
 } else {
@@ -40,9 +36,4 @@ if ($pfad === '/team/teilnahme/liste') {
     }
     $art = 'inline';
 }
-header('Content-Type: application/pdf');
-header('Content-Disposition: ' . $art . '; filename="' . $datei . '"');
-header('Content-Length: ' . strlen($inhalt));
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
-echo $inhalt;
+datei_senden($inhalt, 'application/pdf', $datei, $art === 'attachment');

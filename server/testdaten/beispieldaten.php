@@ -177,7 +177,7 @@ function beispieldaten_mailings(): array
     }
     $gesendet = rm_speichern(null, [
         'betreff' => 'Anfahrt und Parken',
-        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Parken kannst du im Parkhaus P2 (kostenlos mit Einfahrtsticket).</p><p>Deine Workshops:<br>{workshops}</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+        'html' => html_bereinigen('<p>Hallo {vorname},</p><p>in zwei Wochen ist es so weit. Parken kannst du im Parkhaus P2 (kostenlos mit Einfahrtsticket).</p><p>Deine Workshops:<br>{workshops}</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>', 'mail'),
         'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
     ], null);
     rm_einreihen($gesendet, null);
@@ -185,9 +185,9 @@ function beispieldaten_mailings(): array
     db_ausfuehren("UPDATE rundmail SET status = 'gesendet' WHERE id = ?", [$gesendet]);
     $entwurf = rm_speichern(null, [
         'betreff' => 'WS 01 Atemweg: Raumänderung',
-        'html' => rm_html_bereinigen('<p>Hallo {vorname},</p><p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>'
+        'html' => html_bereinigen('<p>Hallo {vorname},</p><p>dein Workshop <strong>WS 01 Atemweg. Plan B.</strong> findet nicht im Skills-Lab 1 statt, sondern im <strong>Hörsaal-Nebenraum (EG)</strong>. Der Weg ist ausgeschildert:</p>'
             . ($bild !== null ? '<p><img src="/team/mailings/bild?id=' . $bild['id'] . '" alt="Lageplan" data-breite="100"></p>' : '')
-            . '<p>Alles andere bleibt. Wir freuen uns auf dich!</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>'),
+            . '<p>Alles andere bleibt. Wir freuen uns auf dich!</p><p><a class="knopf" href="{link}">Deine Anmeldung ansehen</a></p><p>Dein Orga-Team</p>', 'mail'),
         'auswahl' => $termin > 0 ? 'termin:' . $termin : 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system',
     ], null);
     return ['gesendet' => $gesendet, 'entwurf' => $entwurf, 'bild' => $bild['id'] ?? null];
@@ -394,6 +394,270 @@ function beispieldaten_warteliste(): array
     anm_platz_anlegen($e['id'], $termin, 'warte', time() - 3 * 86400);
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['wanda' => $e['id'], 'termin' => $termin];
+}
+
+/**
+ * Warteliste eines vollen Termins (AP-5, Team-Prüfungen): Wilma (bestätigt)
+ * steht auf der Warteliste von WS 02 20:30, hinter Paulas offenem Angebot.
+ * Nicht Teil von beispieldaten_laden(). Es geht keine Mail raus.
+ * Gibt ['wilma' => Anmeldung, 'termin' => Termin, 'platz' => Warte-Platz] zurück.
+ */
+function beispieldaten_warteliste_voll(): array
+{
+    $termin = 0;
+    $workshop = 0;
+    foreach (anm_workshops(true) as $w) {
+        foreach ($w['termine'] as $t) {
+            if ($w['kuerzel'] === 'WS 02' && $t['beginn'] === '20:30') {
+                [$termin, $workshop] = [(int)$t['id'], (int)$w['id']];
+            }
+        }
+    }
+    if ($termin === 0 || anm_frei($termin) > 0) {
+        throw new RuntimeException('Beispieldaten Warteliste voll: WS 02 20:30 fehlt oder ist nicht voll');
+    }
+    $r = anm_daten_pruefen(['vorname' => 'Wilma', 'nachname' => 'Wartend', 'email' => 'wilma@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Klinik am Probeberg', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal']);
+    $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => [$termin]], false);
+    if ($e['art'] !== 'neu') {
+        throw new RuntimeException('Beispieldaten Warteliste voll: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+    }
+    anm_link_einloesen(anm_link_erzeugen($e['id'], 'bestaetigen', time() + 3600));
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['wilma' => $e['id'], 'termin' => $termin, 'workshop' => $workshop,
+        'platz' => (int)db_wert('SELECT id FROM platz WHERE anmeldung_id = ? AND termin_id = ?', [$e['id'], $termin])];
+}
+
+/**
+ * Konto ohne Anmeldung (AP-4b/AP-5): Nils hat sich nur registriert und die
+ * Adresse noch nicht bestätigt – für Personenliste, Filter und „Rolle
+ * vergeben“. Nicht Teil von beispieldaten_laden(). Es geht keine Mail raus.
+ * Gibt die Konto-ID zurück.
+ */
+function beispieldaten_nur_konto(): int
+{
+    tk_registrieren('Nils Nurkonto', 'nils.nurkonto@example.org');
+    db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'nils.nurkonto@example.org'");
+    return (int)konto_per_email('nils.nurkonto@example.org')['id'];
+}
+
+/**
+ * Weitere Angemeldete (AP-6, Mailing-Prüfungen): acht bestätigte Personen mit
+ * Platz beim Symposium, ohne Workshops – genug Empfänger für Tageslimits.
+ * Mit Lea und Paula sind dann zehn angemeldet, zwei davon StudentIn (Sam,
+ * Stella). Nicht Teil von beispieldaten_laden(). Es geht keine Mail raus.
+ * Gibt die Anmelde-IDs zurück.
+ */
+function beispieldaten_angemeldete(): array
+{
+    $ids = [];
+    foreach ([['Anton', 'Acht', 'NotfallsanitäterIn'], ['Berta', 'Brief', 'Pflege/MFA'], ['Carl', 'Christ', 'ÄrztIn'], ['Dora', 'Dorf', 'NotfallsanitäterIn'],
+        ['Emil', 'Eck', 'Pflege/MFA'], ['Frida', 'Fels', 'NotfallsanitäterIn'], ['Sam', 'Studi', 'StudentIn'], ['Stella', 'Studi', 'StudentIn']] as [$vor, $nach, $beruf]) {
+        $r = anm_daten_pruefen(['vorname' => $vor, 'nachname' => $nach, 'email' => strtolower($vor) . '.' . strtolower($nach) . '@example.org', 'berufsgruppe' => $beruf,
+            'institution' => 'Rettungswache Musterdorf', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal']);
+        if ($r['fehler'] !== []) {
+            throw new RuntimeException('Beispieldaten Angemeldete: ' . json_encode($r['fehler'], JSON_UNESCAPED_UNICODE));
+        }
+        $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => []], false);
+        anm_link_einloesen(anm_link_erzeugen($e['id'], 'bestaetigen', time() + 3600));
+        $ids[] = (int)$e['id'];
+    }
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return $ids;
+}
+
+/**
+ * Löschfristen (AP-9, E-59): „Altes Symposium“ vor 15 Monaten mit drei
+ * bestätigten, anwesenden Personen – Ada Altdaten (Ärztin mit EFN, ohne
+ * Konto), Pia Pflege (ohne Konto) und Kai Konto (Arzt mit Teilnehmenden-
+ * Konto) – sowie „Neues Symposium“ vor 13 Monaten mit Nora Neu (ohne Konto).
+ * Nicht Teil von beispieldaten_laden(): der Datenschutz-Job leerte die alten
+ * Anmeldungen sofort. Es geht keine Mail raus.
+ * Gibt ['alt' => …, 'neu' => … (Veranstaltungen), 'ada', 'pia', 'kai', 'nora' (Anmeldungen), 'kai_konto' => …] zurück.
+ */
+function beispieldaten_fristen(): array
+{
+    $person = function (int $vid, array $d): int {
+        return va_mit($vid, function () use ($d): int {
+            $r = anm_daten_pruefen($d + ['beruf_sonstige' => '', 'essen' => 'egal']);
+            if ($r['fehler'] !== []) {
+                throw new RuntimeException('Beispieldaten Fristen: ' . json_encode($r['fehler'], JSON_UNESCAPED_UNICODE));
+            }
+            $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => []], false);
+            db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL WHERE id = ?", [db_jetzt(), $e['id']]);
+            return (int)$e['id'];
+        });
+    };
+    $va = function (string $kuerzel, string $name, int $monate): int {
+        $r = va_anlegen($kuerzel, $name, null, null);
+        if (!isset($r['id'])) {
+            throw new RuntimeException('Beispieldaten Fristen: ' . ($r['fehler'] ?? ''));
+        }
+        va_mit((int)$r['id'], function () use ($monate): void {
+            foreach (['veranstaltung_datum' => ds_vor_monaten($monate, time()), 'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
+                'cme_punkte' => '4', 'cme_veranstaltungsnummer' => '2760001', 'cme_kammer' => 'Beispielkammer'] as $k => $w) {
+                einstellung_setzen($k, $w);
+            }
+        });
+        return (int)$r['id'];
+    };
+    $alt = $va('altes-symposium', 'Altes Symposium', 15);
+    $neu = $va('neues-symposium', 'Neues Symposium', 13);
+    $ids = ['alt' => $alt, 'neu' => $neu,
+        'ada' => $person($alt, ['vorname' => 'Ada', 'nachname' => 'Altdaten', 'email' => 'ada.alt@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik A', 'efn' => '802760012345673']),
+        'pia' => $person($alt, ['vorname' => 'Pia', 'nachname' => 'Pflege', 'email' => 'pia.alt@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Klinik B', 'efn' => '']),
+        'kai' => $person($alt, ['vorname' => 'Kai', 'nachname' => 'Konto', 'email' => 'kai.alt@example.org', 'berufsgruppe' => 'ÄrztIn', 'institution' => 'Klinik C', 'efn' => '']),
+        'nora' => $person($neu, ['vorname' => 'Nora', 'nachname' => 'Neu', 'email' => 'nora.neu@example.org', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Klinik D', 'efn' => ''])];
+    // verknüpft wird im Kontext der Veranstaltung der Anmeldung
+    $ids['kai_konto'] = (int)va_mit($alt, fn() => tk_anlegen_aus_anmeldung($ids['kai']));
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return $ids;
+}
+
+/**
+ * Team-Mitglied mit eigener Anmeldung (AP-14, Review S-1): Olaf Orga, Admin
+ * für die aktuelle Veranstaltung, hat sich selbst angemeldet (vom Team
+ * angelegt, bestätigt); die Anmeldung ist mit seinem Team-Konto verknüpft.
+ * Ihre Adresse ist die Login-Adresse und darf sich über die Anmeldung nicht
+ * ändern. Nicht Teil von beispieldaten_laden(). Es geht keine Mail raus.
+ * Gibt ['konto' => Konto, 'anmeldung' => Anmeldung] zurück.
+ */
+function beispieldaten_team_anmeldung(): array
+{
+    $konto = konto_anlegen('Olaf Orga', 'olaf.orga@example.org', 'admin');
+    va_rechte_setzen($konto, false, [va_id()], null);
+    $e = team_anlegen(['vorname' => 'Olaf', 'nachname' => 'Orga', 'email' => 'olaf.orga@example.org', 'berufsgruppe' => 'NotfallsanitäterIn',
+        'institution' => 'Rettungswache Musterdorf', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal'], true, false);
+    if (!isset($e['id'])) {
+        throw new RuntimeException('Beispieldaten Team-Anmeldung: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+    }
+    tk_verknuepfen($konto);
+    if ((int)(anm_laden($e['id'])['konto_id'] ?? 0) !== $konto) {
+        throw new RuntimeException('Beispieldaten Team-Anmeldung: nicht mit dem Konto verknüpft');
+    }
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return ['konto' => $konto, 'anmeldung' => (int)$e['id']];
+}
+
+/**
+ * Konto nur mit früherer Anmeldung (AP-16, Review B-4): Kai (beim
+ * Fortbildungsabend dabei) legt nachträglich ein Teilnehmenden-Konto an. In
+ * der aktuellen Veranstaltung hat er keine Anmeldung. Braucht die IDs aus
+ * beispieldaten_abend(). Nicht Teil von beispieldaten_laden(). Keine Mails.
+ * Gibt die Konto-ID zurück.
+ */
+function beispieldaten_konto_abend(array $abend): int
+{
+    $konto = va_mit((int)$abend['id'], fn() => tk_anlegen_aus_anmeldung((int)$abend['kai']));
+    if ($konto === null || (int)anm_laden((int)$abend['kai'])['konto_id'] !== $konto) {
+        throw new RuntimeException('Beispieldaten Konto Abend: Kai nicht verknüpft');
+    }
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return $konto;
+}
+
+/**
+ * Leere Entwurfs-Veranstaltung (HTTP-Prüfungen Programm und Rechte, AP-12):
+ * „Sommerfest Notfallmedizin“ unter /sommerfest, ohne Programm und ohne
+ * Anmeldungen, noch nicht öffentlich. Nicht Teil von beispieldaten_laden().
+ * Gibt die ID der Veranstaltung zurück.
+ */
+function beispieldaten_entwurf(): int
+{
+    $r = va_anlegen('sommerfest', 'Sommerfest Notfallmedizin', null, null);
+    if (!isset($r['id'])) {
+        throw new RuntimeException('Beispieldaten Entwurf: ' . ($r['fehler'] ?? ''));
+    }
+    return (int)$r['id'];
+}
+
+/**
+ * CME-Nachweis (AP-9, HTTP-Prüfung Seite „Daten“): ein abgelegter Nachweis von
+ * Pia Probe aus einer längst geleerten Veranstaltung (Januar 2025), wie ihn der
+ * Datenschutz-Job schreibt; die Anmeldung dazu gibt es nicht mehr.
+ * Nicht Teil von beispieldaten_laden(). Gibt die ID des Nachweises zurück.
+ */
+function beispieldaten_cme_nachweis(): int
+{
+    db_ausfuehren(
+        "INSERT INTO cme_nachweis (veranstaltung_id, anmeldung_id, veranstaltung, datum, nachname, vorname, efn, vnr, punkte, kammer, erstellt_am)
+         VALUES (?, 999999, 'Wintersymposium 2025', '2025-01-15', 'Probe', 'Pia', '802760098765437', '2760000000000000', '6', 'Beispiel-Landesärztekammer', ?)",
+        [va_id(), db_jetzt()]
+    );
+    return (int)db()->lastInsertId();
+}
+
+/**
+ * Ada beim Fortbildungsabend (AP-16, Review B-4): Ada Abend (Admin nur für den
+ * Abend) war dort selbst angemeldet und bestätigt, mit ihrer Team-Adresse
+ * (Institution „Abendklinik“ zur Unterscheidung). Braucht die IDs aus
+ * beispieldaten_abend(). Nicht Teil von beispieldaten_laden(). Keine Mails.
+ * Gibt die Anmelde-ID zurück.
+ */
+function beispieldaten_ada_abend(array $abend): int
+{
+    $id = va_mit((int)$abend['id'], function (): int {
+        $r = anm_daten_pruefen(['vorname' => 'Ada', 'nachname' => 'Abend', 'email' => 'ada.abend@example.org', 'berufsgruppe' => 'Pflege/MFA',
+            'institution' => 'Abendklinik', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal']);
+        $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => []], false);
+        if (!in_array($e['art'], ['neu', 'vorhanden'], true)) {
+            throw new RuntimeException('Beispieldaten Ada Abend: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+        }
+        db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt', bestaetigt_am = ?, bestaetigen_bis = NULL WHERE id = ?", [db_jetzt(), $e['id']]);
+        return (int)$e['id'];
+    });
+    db_ausfuehren('DELETE FROM mail_ausgang');
+    return $id;
+}
+
+/**
+ * Newsletter-Mailing mit Bild (AP-16, Review S-5): Entwurf an die Liste
+ * „Wintersymposium“ (gehört zu keiner Veranstaltung) mit einem erfundenen
+ * Plakat. Admins dürfen das Bild nicht abrufen, BetreiberInnen schon. Braucht
+ * GD (foto_moeglich()). Nicht Teil von beispieldaten_laden(). Keine Mails.
+ * Gibt ['mailing' => …, 'bild' => …] zurück, ohne GD null.
+ */
+function beispieldaten_newsletter_mailing(): ?array
+{
+    if (!foto_moeglich()) {
+        return null;
+    }
+    $g = imagecreatetruecolor(320, 160);
+    imagefill($g, 0, 0, imagecolorallocate($g, 180, 140, 255));
+    imagestring($g, 5, 20, 20, 'Plakat', imagecolorallocate($g, 0, 30, 58));
+    ob_start();
+    imagepng($g);
+    $bild = rm_bild_aus_daten((string)ob_get_clean(), null);
+    imagedestroy($g);
+    $liste = (int)(array_column(nl_listen(), 'id', 'name')['Wintersymposium'] ?? 0);
+    $id = rm_speichern(null, [
+        'betreff' => 'Neues vom Wintersymposium',
+        'html' => html_bereinigen('<p>Hallo,</p><p><img src="/team/mailings/bild?id=' . $bild['id'] . '" alt="Plakat" data-breite="100"></p>', 'mail'),
+        'auswahl' => 'nl:' . $liste, 'berufsgruppe' => '', 'postfach' => 'newsletter',
+    ], null);
+    return ['mailing' => (int)$id, 'bild' => (int)$bild['id']];
+}
+
+/**
+ * Sicherung (AP-9, AP-16): eine von Hand angelegte Sicherung des Datensatzes,
+ * damit „Daten“ eine Tabelle mit Aktionen zeigt und Herunterladen geprüft
+ * werden kann. Nicht Teil von beispieldaten_laden(). Gibt den Dateinamen zurück.
+ */
+function beispieldaten_sicherung(): string
+{
+    return sicherung_anlegen('Beispieldaten', null);
+}
+
+/** Passwort von Petra Passkey, zweite BetreiberIn (erfunden, nur Testdaten). */
+const BEISPIEL_PASSWORT_PASSKEY = 'beispiel-petra-passkey-2026';
+
+/**
+ * Zweite BetreiberIn ohne zweiten Faktor (AP-16, Review B-7): Petra Passkey
+ * richtet beim ersten Login einen Passkey ein und bestätigt damit heikle
+ * Aktionen. Nicht Teil von beispieldaten_laden(). Gibt die Konto-ID zurück.
+ */
+function beispieldaten_betreiberin_passkey(): int
+{
+    return konto_anlegen('Petra Passkey', 'petra.passkey@example.org', 'betreiber', BEISPIEL_PASSWORT_PASSKEY, null);
 }
 
 /**

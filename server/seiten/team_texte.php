@@ -33,7 +33,7 @@ if (ist_post()) {
             $fehler[] = $titel . ': zu lang.';
             continue;
         }
-        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : editor_bereinigen($roh, $art, $art === 'block');
+        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
         if ($neu !== inhalt($k)) {
             inhalt_setzen($k, $neu, (int)$konto['id']);
             $geaendert[] = $k;
@@ -41,7 +41,7 @@ if (ist_post()) {
     }
     if ($fehler === []) {
         if ($geaendert !== []) {
-            audit_schreiben('texte', 'Geändert: ' . implode(', ', $geaendert), (int)$konto['id'], $startseite ? -1 : 0);
+            inhalt_protokollieren('Geändert', $geaendert, (int)$konto['id'], $startseite);
         }
         fertig('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.', $textSeite);
     }

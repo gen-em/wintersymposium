@@ -63,7 +63,7 @@ if (ist_post()) {
                 anm_uebernehmen_senden((int)$frueher['id']);
             }
             rate_gleiche_dauer($beginn, 0.6);
-            fertig('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . ANM_LINK_GUELTIG_H . ' Stunden und einmal. Schau auch im Spam-Ordner.', '/deine-anmeldung');
+            fertig('ok', 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs. Er gilt ' . dauer_text(ANM_LINK_GUELTIG_S) . ' und einmal. Schau auch im Spam-Ordner.', '/deine-anmeldung');
         }
     } elseif ($a === null) {
         fertig('fehler', 'Deine Sitzung ist abgelaufen. Lass dir einen neuen Link schicken.', '/deine-anmeldung');
@@ -117,7 +117,7 @@ if (ist_post()) {
                 }
                 anm_stornieren($id);
                 // Nur die Anmeldung aus der Sitzung nehmen; Konto- und Team-Login bleiben (E-63 (3), Review B-5)
-                unset($_SESSION['anm']);
+                unset($_SESSION[SITZUNG_SCHLUESSEL_ANM]);
                 fertig('ok', 'Deine Anmeldung ist storniert. Danke, dass du abgesagt hast – dein Platz geht an die Warteliste.', '/deine-anmeldung');
             case 'annehmen':
                 $r = anm_angebot_annehmen($id, post_zahl('platz'), post_haken('tausch'));
@@ -136,7 +136,7 @@ if (ist_post()) {
                     fertig('fehler', 'Für diese Adresse lässt sich hier kein Konto anlegen.', '/deine-anmeldung');
                 }
                 tk_einloggen(konto_laden($kid));
-                $_SESSION['tk_pw'] = true;
+                $_SESSION[SITZUNG_SCHLUESSEL_TK_PW] = true;
                 fertig('ok', 'Dein Konto ist angelegt. Leg jetzt dein Passwort fest.', '/konto');
             case 'ablehnen':
                 anm_angebot_ablehnen($id, post_zahl('platz'));
@@ -198,7 +198,7 @@ endif; ?>
         <div class="kasten zg">
             <p class="kicker">Schon angemeldet</p>
             <h2 class="zwischen">Link per Mail</h2>
-            <p>Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt <?= ANM_LINK_GUELTIG_H ?> Stunden und nur einmal.</p>
+            <p>Gib deine Adresse ein. Wenn wir sie kennen, schicken wir dir einen Link, mit dem du deine Anmeldung ansiehst und änderst. Er gilt <?= e(dauer_text(ANM_LINK_GUELTIG_S)) ?> und nur einmal.</p>
             <form method="post" action="/deine-anmeldung" class="zg-form" novalidate>
                 <?= csrf_feld() ?><?= versteckt_html(['aktion' => 'link']) ?>
                 <?php // Honigtopf von Hand: Rahmen mit aria-hidden, ohne Klasse feld ?>

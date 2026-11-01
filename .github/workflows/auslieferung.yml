@@ -40,15 +40,26 @@ jobs:
           fetch-depth: 0
 
       - name: Ziel bestimmen
+        # Zielordner vom FTP-Login aus stehen als Repository-Variablen
+        # FTP_ZIEL_STAGING und FTP_ZIEL_PRODUKTION (Settings → Secrets and
+        # variables → Actions → Variables), nicht im öffentlichen Repo (R-10).
+        env:
+          ZIEL_STAGING: ${{ vars.FTP_ZIEL_STAGING }}
+          ZIEL_PRODUKTION: ${{ vars.FTP_ZIEL_PRODUKTION }}
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "ZIEL=/produktiv/" >> "$GITHUB_ENV"
-            echo "Ziel: Produktion"
+            ziel="$ZIEL_PRODUKTION"; name=Produktion; variable=FTP_ZIEL_PRODUKTION
           else
-            echo "ZIEL=/staging/" >> "$GITHUB_ENV"
-            echo "Ziel: Staging"
+            ziel="$ZIEL_STAGING"; name=Staging; variable=FTP_ZIEL_STAGING
           fi
+          if [ -z "$ziel" ]; then
+            echo "::error::Repository-Variable $variable fehlt (Zielordner vom FTP-Login aus, mit / am Anfang und Ende)."
+            exit 1
+          fi
+          case "$ziel" in /*/) ;; *) echo "::error::$variable muss mit / beginnen und enden."; exit 1 ;; esac
+          echo "ZIEL=$ziel" >> "$GITHUB_ENV"
+          echo "Ziel: $name"
 
       - name: Tag prüfen (nur Produktion)
         if: startsWith(github.ref, 'refs/tags/')
@@ -94,7 +105,7 @@ jobs:
             exit 0
           fi
           if [ "$rc" -eq 9 ]; then
-            echo "::error::Zielordner ${ZIEL} ist vom FTP-Login aus nicht erreichbar (curl 9). Ordner anlegen oder Zielpfad im Workflow prüfen. Abbruch vor jeder Änderung."
+            echo "::error::Zielordner ${ZIEL} ist vom FTP-Login aus nicht erreichbar (curl 9). Ordner anlegen oder Repository-Variable FTP_ZIEL_STAGING bzw. FTP_ZIEL_PRODUKTION prüfen. Abbruch vor jeder Änderung."
             exit 1
           fi
           if [ "$rc" -eq 67 ]; then

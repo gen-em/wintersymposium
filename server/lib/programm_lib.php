@@ -271,7 +271,7 @@ function programm_punkt_pruefen(array $e, ?int $id = null): array
         'kuerzel' => $text('kuerzel', 12),
         'titel' => $text('titel', 160),
         'untertitel' => $text('untertitel', 200),
-        'beschreibung' => editor_bereinigen((string)($e['beschreibung'] ?? ''), 'block', true),
+        'beschreibung' => html_bereinigen((string)($e['beschreibung'] ?? ''), 'block', true),
         'ort' => $text('ort', 120),
         'bring' => $text('bring', 160),
         'notiz' => $text('notiz', 300),
@@ -502,7 +502,7 @@ function programm_punkt_speichern(?int $id, array $r, ?int $kontoId): int
         foreach ($r['dozenten'] as $pos => $d) {
             db_ausfuehren('INSERT INTO punkt_dozent (punkt_id, dozent_id, pos) VALUES (?, ?, ?)', [$id, $d, $pos]);
         }
-        audit_schreiben('programm', 'Programmpunkt ' . $id . ' gespeichert (' . $w['typ'] . ')', $kontoId);
+        audit_schreiben('programm', audit_text('programmpunkt', $id, 'gespeichert (' . $w['typ'] . ')'), $kontoId, ['programmpunkt' => $id]);
         return $id;
     });
 }
@@ -519,22 +519,23 @@ function programm_punkt_loeschen(int $id, ?int $kontoId): bool
     }
     db_ausfuehren('UPDATE programmpunkt SET block_id = NULL WHERE block_id = ?', [$id]);
     db_ausfuehren('DELETE FROM programmpunkt WHERE id = ?', [$id]);
-    audit_schreiben('programm', 'Programmpunkt ' . $id . ' gelöscht', $kontoId);
+    audit_schreiben('programm', audit_text('programmpunkt', $id, 'gelöscht'), $kontoId, ['programmpunkt' => $id]);
     return true;
 }
 
 /**
  * Verschieben im Plan (Ziehen): neuer Beginn, die Dauer bleibt. Art 'punkt' oder 'termin'.
  * Ein Block nimmt alle Termine und Stationen in seiner Zeit mit. Punkte ohne Uhrzeit
- * bekommen 30 Minuten. Gibt den neuen Zeitraum als Text zurück oder null.
+ * bekommen 30 Minuten. Gibt den neuen Zeitraum als Text zurück oder null;
+ * $nachgerueckt bekommt die Zahl der Punkte, die dahinter nach hinten rückten.
  */
-function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId, bool $nachruecken = false): ?string
+function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoId, bool $nachruecken = false, ?int &$nachgerueckt = null): ?string
 {
     if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $beginn) !== 1) {
         return null;
     }
-    $GLOBALS['programm_nachgerueckt'] = 0;
-    return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken): ?string {
+    $nachgerueckt = 0;
+    return db_transaktion(function () use ($art, $id, $beginn, $kontoId, $nachruecken, &$nachgerueckt): ?string {
         if ($art === 'termin') {
             $t = db_zeile('SELECT t.* FROM workshop_termin t JOIN programmpunkt p ON p.id = t.punkt_id WHERE t.id = ? AND p.veranstaltung_id = ?', [$id, va_id()]);
             if ($t === null) {
@@ -544,7 +545,7 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             $ende = hm_aus_minuten(minuten($beginn) + $dauer);
             db_ausfuehren('UPDATE workshop_termin SET beginn = ?, ende = ? WHERE id = ?', [$beginn, $ende, $id]);
             db_ausfuehren('UPDATE programmpunkt SET geaendert_am = ? WHERE id = ?', [db_jetzt(), (int)$t['punkt_id']]);
-            audit_schreiben('programm', 'Termin ' . $id . ' verschoben auf ' . $beginn, $kontoId);
+            audit_schreiben('programm', audit_text('termin', $id, 'verschoben auf ' . $beginn), $kontoId, ['termin' => $id]);
             return "{$beginn}–{$ende}";
         }
         $p = db_zeile('SELECT * FROM programmpunkt WHERE id = ? AND veranstaltung_id = ?', [$id, va_id()]);
@@ -574,10 +575,10 @@ function programm_verschieben(string $art, int $id, string $beginn, ?int $kontoI
             }
         }
         db_ausfuehren('UPDATE programmpunkt SET beginn = ?, ende = ?, geaendert_am = ? WHERE id = ?', [$beginn, $ende, db_jetzt(), $id]);
-        audit_schreiben('programm', 'Programmpunkt ' . $id . ' verschoben auf ' . $beginn, $kontoId);
+        audit_schreiben('programm', audit_text('programmpunkt', $id, 'verschoben auf ' . $beginn), $kontoId, ['programmpunkt' => $id]);
         // Im Block läuft ein Punkt parallel: dann rückt die Hauptspur nicht nach
         if ($nachruecken && $p['block_id'] === null && in_array($p['typ'], PROGRAMM_HAUPTSPUR, true)) {
-            $GLOBALS['programm_nachgerueckt'] = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
+            $nachgerueckt = programm_nachruecken_kette($id, $beginn, $ende, $kontoId);
         }
         return "{$beginn}–{$ende}";
     });
@@ -653,7 +654,7 @@ function programm_zuordnen(int $punktId, ?int $blockId, ?int $kontoId): bool
         return false;
     }
     db_ausfuehren('UPDATE programmpunkt SET block_id = ?, geaendert_am = ? WHERE id = ?', [$blockId, db_jetzt(), $punktId]);
-    audit_schreiben('programm', 'Programmpunkt ' . $punktId . ($blockId !== null ? ' dem Block ' . $blockId . ' zugeordnet' : ' aus dem Block gelöst'), $kontoId);
+    audit_schreiben('programm', audit_text('programmpunkt', $punktId, $blockId !== null ? 'dem Block ' . $blockId . ' zugeordnet' : 'aus dem Block gelöst'), $kontoId, ['programmpunkt' => $punktId]);
     return true;
 }
 
@@ -740,7 +741,7 @@ function dozent_pruefen(array $e): array
     $w = [
         'name' => trim(preg_replace('/\s+/u', ' ', (string)($e['name'] ?? '')) ?? ''),
         'funktion' => trim(preg_replace('/\s+/u', ' ', (string)($e['funktion'] ?? '')) ?? ''),
-        'kurzbio' => editor_bereinigen((string)($e['kurzbio'] ?? ''), 'block', true),
+        'kurzbio' => html_bereinigen((string)($e['kurzbio'] ?? ''), 'block', true),
     ];
     $f = [];
     if ($w['name'] === '' || mb_strlen($w['name']) > 120) {
@@ -764,112 +765,17 @@ function dozent_speichern(?int $id, array $w, ?int $kontoId): int
     } else {
         db_ausfuehren('UPDATE dozent SET name = ?, funktion = ?, kurzbio = ?, geaendert_am = ? WHERE id = ?', [$w['name'], $w['funktion'], $w['kurzbio'], $jetzt, $id]);
     }
-    audit_schreiben('programm', 'Dozent·in ' . $id . ' gespeichert', $kontoId);
+    audit_schreiben('programm', audit_text('dozent', $id, 'gespeichert'), $kontoId, ['dozent' => $id]);
     return $id;
 }
 
 function dozent_loeschen(int $id, ?int $kontoId): void
 {
     db_ausfuehren('DELETE FROM dozent WHERE id = ?', [$id]);
-    audit_schreiben('programm', 'Dozent·in ' . $id . ' gelöscht', $kontoId);
+    audit_schreiben('programm', audit_text('dozent', $id, 'gelöscht'), $kontoId, ['dozent' => $id]);
 }
 
 /* ---- Fotos der Dozierenden ----------------------------------------------- */
-
-const FOTO_MAX_BYTES = 8 * 1024 * 1024;
-const FOTO_KANTE = 480;
-
-function foto_moeglich(): bool
-{
-    return function_exists('imagecreatefromstring') && function_exists('imagejpeg');
-}
-
-function foto_ordner(): string
-{
-    return laufzeit_pfad('bilder');
-}
-
-/**
- * Hochgeladenes Bild prüfen, quadratisch zuschneiden, auf FOTO_KANTE verkleinern
- * und als JPEG neu schreiben (entfernt Metadaten). Gibt den Dateinamen zurück
- * oder wirft eine RuntimeException mit einem Text für die Oberfläche.
- */
-function foto_speichern(int $dozentId, array $upload): string
-{
-    if (!foto_moeglich()) {
-        throw new RuntimeException('Fotos werden auf diesem Server nicht unterstützt (PHP-Erweiterung GD fehlt).');
-    }
-    $fehler = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE) {
-        throw new RuntimeException('Das Foto ist zu groß.');
-    }
-    if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file((string)$upload['tmp_name'])) {
-        throw new RuntimeException('Das Foto kam nicht an. Bitte noch einmal versuchen.');
-    }
-    if ((int)$upload['size'] > FOTO_MAX_BYTES) {
-        throw new RuntimeException('Das Foto ist zu groß (höchstens ' . bytes_text(FOTO_MAX_BYTES) . ').');
-    }
-    $daten = (string)file_get_contents((string)$upload['tmp_name']);
-    $info = @getimagesizefromstring($daten);
-    if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true) || $info[0] * $info[1] > 40_000_000) {
-        throw new RuntimeException('Bitte ein Foto als JPG, PNG oder WebP hochladen.');
-    }
-    $bild = @imagecreatefromstring($daten);
-    if ($bild === false) {
-        throw new RuntimeException('Das Foto lässt sich nicht lesen.');
-    }
-    $w = imagesx($bild);
-    $h = imagesy($bild);
-    $seite = min($w, $h);
-    $ziel = imagecreatetruecolor(FOTO_KANTE, FOTO_KANTE);
-    imagecopyresampled($ziel, $bild, 0, 0, intdiv($w - $seite, 2), intdiv($h - $seite, 2), FOTO_KANTE, FOTO_KANTE, $seite, $seite);
-    $name = 'dozent-' . $dozentId . '-' . bin2hex(random_bytes(6)) . '.jpg';
-    if (!imagejpeg($ziel, foto_ordner() . '/' . $name, 85)) {
-        throw new RuntimeException('Das Foto konnte nicht gespeichert werden.');
-    }
-    imagedestroy($bild);
-    imagedestroy($ziel);
-    db_ausfuehren('UPDATE dozent SET foto = ?, geaendert_am = ? WHERE id = ?', [$name, db_jetzt(), $dozentId]);
-    return $name;
-}
-
-function foto_entfernen(int $dozentId): void
-{
-    db_ausfuehren('UPDATE dozent SET foto = NULL, geaendert_am = ? WHERE id = ?', [db_jetzt(), $dozentId]);
-}
-
-/** Fotos löschen, die weder im Arbeitsstand noch im veröffentlichten Stand vorkommen (Job 'aufraeumen'). */
-function foto_aufraeumen(): int
-{
-    if (!db_tabelle_da('dozent')) {
-        return 0;
-    }
-    // Genutzt: Dozierende und alle veröffentlichten Stände aller Veranstaltungen, auch
-    // die Dozierenden an Terminen – Archivseiten zeigen sie weiter (Review B-8)
-    $genutzt = array_filter(array_column(db_zeilen('SELECT foto FROM dozent'), 'foto'));
-    $sammeln = function (mixed $knoten) use (&$sammeln, &$genutzt): void {
-        if (!is_array($knoten)) {
-            return;
-        }
-        foreach ($knoten as $schluessel => $wert) {
-            if ($schluessel === 'foto' && is_string($wert) && $wert !== '') {
-                $genutzt[] = $wert;
-            } else {
-                $sammeln($wert);
-            }
-        }
-    };
-    foreach (db_zeilen('SELECT daten FROM programm_stand') as $z) {
-        $sammeln(json_decode((string)$z['daten'], true));
-    }
-    $n = 0;
-    foreach (glob(foto_ordner() . '/dozent-*.jpg') ?: [] as $datei) {
-        if (!in_array(basename($datei), $genutzt, true) && filemtime($datei) < time() - 3600 && @unlink($datei)) {
-            $n++;
-        }
-    }
-    return $n;
-}
 
 /** Programm-Anzeige als HTML (V-27; Vorlage seiten/teil_programm.php). */
 function programm_html(array $punkte): string

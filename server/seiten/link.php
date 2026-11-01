@@ -20,14 +20,14 @@ if (ist_post()) {
     }
     if ($r['zweck'] === 'uebernehmen') {
         // Daten einer früheren Anmeldung ins Formular der aktuellen Veranstaltung (E-58)
-        $_SESSION['anm_vorlage'] = ['id' => (int)$r['anm'], 'zeit' => time()]; // gilt 30 Minuten (Review B-13)
+        $_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE] = ['id' => (int)$r['anm'], 'zeit' => time()]; // gilt 30 Minuten (Review B-13)
         fertig('ok', 'Deine Angaben vom letzten Mal sind eingetragen. Prüf sie, wähl Workshops und schick die Anmeldung ab.', '/anmelden');
     }
     anm_einloggen($r['anm']);
     if (!empty($r['konto_neu'])) {
         // Häkchen „Konto anlegen“ beim Anmelden: jetzt Passwort festlegen (E-48)
         tk_einloggen(konto_laden((int)$r['konto_neu']));
-        $_SESSION['tk_pw'] = true;
+        $_SESSION[SITZUNG_SCHLUESSEL_TK_PW] = true;
         fertig('ok', 'Deine Anmeldung ist bestätigt und dein Konto angelegt. Leg jetzt dein Passwort fest.', '/konto');
     }
     if ($r['meldung'] !== null) {

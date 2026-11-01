@@ -211,7 +211,7 @@ function aktion_knopf(string $ziel, string $aktion, array $felder, string $text,
 
 /**
  * Nachfrage vor einer Aktion (V-19): <details class="bestaetigen"> mit
- * Formular; dialog.js macht daraus den einheitlichen Dialog.
+ * Formular; basis.js macht daraus den einheitlichen Dialog.
  *
  *   $knopf  Text des Auslösers (Menüpunkte, die einen Dialog öffnen, enden auf „…“)
  *   $frage  Text im Dialog (escaped) – roh über $opt['frage_html']; '' = ohne
@@ -221,7 +221,7 @@ function aktion_knopf(string $ziel, string $aktion, array $felder, string $text,
  * $opt:
  *   ziel        Formularziel (Standard: aktueller Pfad)
  *   art         rot (Standard) | gruen | lila – Farbe des Dialogs
- *   titel       Überschrift im Dialog (Standard bei dialog.js: Auslöser mit „?“)
+ *   titel       Überschrift im Dialog (Standard in basis.js: Auslöser mit „?“)
  *   ausloeser   id eines anderen Knopfs, der den Dialog öffnet
  *   knopfklasse Klasse des Auslösers (Standard: knopf zweit klein)
  *   ja_klasse   Klasse des Ja-Knopfs (Standard: rot → knopf gefahr, sonst knopf)

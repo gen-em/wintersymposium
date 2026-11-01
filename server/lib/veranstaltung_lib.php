@@ -105,22 +105,22 @@ const VA_KUERZEL_VERBOTEN = ['team', 'konto', 'anmelden', 'link', 'deine-anmeldu
 
 function va_tabellen_da(): bool
 {
-    if (empty($GLOBALS['ws_va_tab'])) {
-        $GLOBALS['ws_va_tab'] = db_tabelle_da('veranstaltung') && db_tabelle_da('va_einstellung') && db_tabelle_da('inhalt')
-            && db_gibt_es("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'inhalt' AND column_name = 'veranstaltung_id'");
+    if (empty(ctx('va_tab'))) {
+        ctx_setzen('va_tab', db_tabelle_da('veranstaltung') && db_tabelle_da('va_einstellung') && db_tabelle_da('inhalt')
+            && db_gibt_es("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'inhalt' AND column_name = 'veranstaltung_id'"));
     }
-    return $GLOBALS['ws_va_tab'];
+    return ctx('va_tab');
 }
 
 /** Nach Migrationen oder geleerter Datenbank neu nachsehen. */
 function va_zwischenspeicher_leeren(): void
 {
-    unset($GLOBALS['ws_va_tab'], $GLOBALS['ws_va_aktuell'], $GLOBALS['ws_inhalt_cache'], $GLOBALS['ws_va_rechte']);
+    ctx_weg('va_tab', 'va_aktuell', 'inhalt_cache', 'va_rechte');
 }
 
 function va_kontext(int $id): void
 {
-    $GLOBALS['ws_va_id'] = $id;
+    ctx_setzen('va_id', $id);
 }
 
 /**
@@ -131,8 +131,8 @@ function va_kontext(int $id): void
  */
 function va_id(): int
 {
-    if (isset($GLOBALS['ws_va_id'])) {
-        return (int)$GLOBALS['ws_va_id'];
+    if (ctx_da('va_id')) {
+        return (int)ctx('va_id');
     }
     return va_aktuell_id() ?? (va_tabellen_da() ? VA_KEINE : 1);
 }
@@ -151,9 +151,9 @@ function va_aktuell_id(): ?int
     }
     if (!array_key_exists('ws_va_aktuell', $GLOBALS)) {
         $id = db_wert("SELECT id FROM veranstaltung WHERE status = 'aktuell' ORDER BY id LIMIT 1");
-        $GLOBALS['ws_va_aktuell'] = $id === null ? null : (int)$id;
+        ctx_setzen('va_aktuell', $id === null ? null : (int)$id);
     }
-    return $GLOBALS['ws_va_aktuell'];
+    return ctx('va_aktuell');
 }
 
 /** Zeile einer Veranstaltung (Standard: Kontext) oder null. */
@@ -179,13 +179,13 @@ function va_abgeschlossen(?int $id = null): bool
 /** Ein Wert einer anderen Veranstaltung lesen, ohne den Kontext zu wechseln. */
 function va_von(int $id, string $schluessel): string
 {
-    $alt = $GLOBALS['ws_va_id'] ?? null;
+    $alt = ctx('va_id') ?? null;
     va_kontext($id);
     try {
         return va($schluessel);
     } finally {
         if ($alt === null) {
-            unset($GLOBALS['ws_va_id']);
+            ctx_weg('va_id');
         } else {
             va_kontext((int)$alt);
         }
@@ -195,13 +195,13 @@ function va_von(int $id, string $schluessel): string
 /** Code im Kontext einer anderen Veranstaltung ausführen (Jobs, Profil, Mailings). */
 function va_mit(int $id, callable $fn): mixed
 {
-    $alt = $GLOBALS['ws_va_id'] ?? null;
+    $alt = ctx('va_id') ?? null;
     va_kontext($id);
     try {
         return $fn();
     } finally {
         if ($alt === null) {
-            unset($GLOBALS['ws_va_id']);
+            ctx_weg('va_id');
         } else {
             va_kontext((int)$alt);
         }
@@ -251,7 +251,7 @@ function va_kuerzel_setzen(int $id, string $kuerzel, ?int $kontoId): ?string
     $alt = (string)db_wert('SELECT kuerzel FROM veranstaltung WHERE id = ?', [$id]);
     if ($alt !== $kuerzel) {
         db_ausfuehren('UPDATE veranstaltung SET kuerzel = ? WHERE id = ?', [$kuerzel, $id]);
-        audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ': Kürzel ' . $alt . ' → ' . $kuerzel, $kontoId);
+        audit_schreiben('einstellungen', audit_text('veranstaltung', $id, 'Kürzel ' . $alt . ' → ' . $kuerzel), $kontoId, ['veranstaltung' => $id]);
     }
     return null;
 }
@@ -281,7 +281,7 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
         return $id;
     });
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : ''), $kontoId);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, 'angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : '')), $kontoId, ['veranstaltung' => $id]);
     return ['id' => $id];
 }
 
@@ -297,8 +297,8 @@ function va_aktuell_machen(int $id, ?int $kontoId): ?string
         return 'Es gibt schon eine aktuelle Veranstaltung. Schließ sie zuerst ab.';
     }
     db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell' WHERE id = ?", [$id]);
-    unset($GLOBALS['ws_va_aktuell']);
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') ist jetzt die aktuelle', $kontoId);
+    ctx_weg('va_aktuell');
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ' ist jetzt die aktuelle'), $kontoId, ['veranstaltung' => $id]);
     return null;
 }
 
@@ -310,8 +310,8 @@ function va_abschliessen(int $id, ?int $kontoId): ?string
         return 'Diese Veranstaltung ist schon abgeschlossen.';
     }
     db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen', abgeschlossen_am = ? WHERE id = ?", [db_jetzt(), $id]);
-    unset($GLOBALS['ws_va_aktuell']);
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ') abgeschlossen', $kontoId);
+    ctx_weg('va_aktuell');
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ' abgeschlossen'), $kontoId, ['veranstaltung' => $id]);
     return null;
 }
 
@@ -354,10 +354,10 @@ function va_loeschen(int $id, ?int $kontoId, string $bestaetigung = ''): ?string
     if (is_file($unterschrift)) {
         @unlink($unterschrift);
     }
-    if (($GLOBALS['ws_va_id'] ?? null) === $id) {
-        unset($GLOBALS['ws_va_id']);
+    if ((ctx('va_id') ?? null) === $id) {
+        ctx_weg('va_id');
     }
-    audit_schreiben('einstellungen', 'Veranstaltung ' . $id . ' (' . $v['kuerzel'] . ', ' . VA_STATUS[$v['status']] . ') gelöscht: ' . count($anm) . ' Anmeldungen; vorher gesichert: ' . $sicherung, $kontoId, 0);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $id, $v['kuerzel'] . ', ' . VA_STATUS[$v['status']] . ', gelöscht: ' . count($anm) . ' Anmeldungen; vorher gesichert: ' . $sicherung), $kontoId, ['veranstaltung' => $id], 0);
     return null;
 }
 
@@ -545,10 +545,10 @@ function va_eckdaten(): array
 /** Rechte-Spalten da? (vor Migration 17 gelten alle Team-Konten für alle Veranstaltungen) */
 function va_rechte_da(): bool
 {
-    if (empty($GLOBALS['ws_va_rechte'])) {
-        $GLOBALS['ws_va_rechte'] = db_tabelle_da('konto_veranstaltung');
+    if (empty(ctx('va_rechte'))) {
+        ctx_setzen('va_rechte', db_tabelle_da('konto_veranstaltung'));
     }
-    return $GLOBALS['ws_va_rechte'];
+    return ctx('va_rechte');
 }
 
 /** IDs der Veranstaltungen, die dieses Team-Konto sehen darf; null = alle. */
@@ -604,7 +604,7 @@ function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch): vo
         }
     });
     $namen = $alle ? 'alle, auch künftige' : (implode(', ', array_map(fn($i) => va_zeile($i)['kuerzel'] ?? (string)$i, $ids)) ?: 'keine');
-    audit_schreiben('konto', 'Veranstaltungen von Konto ' . $kontoId . ': ' . $namen, $durch);
+    audit_schreiben('konto', audit_text('konto', $kontoId, 'Veranstaltungen: ' . $namen), $durch, ['konto' => $kontoId]);
 }
 
 /** Kurzbeschreibung der Rechte für Listen („alle“, „Kürzel, Kürzel“, „keine“). */
@@ -660,4 +660,10 @@ function va_anmeldung_vor_start(?int $jetzt = null): bool
 {
     $ab = va('anmeldung_start');
     return $ab !== '' && db_ts($ab) > ($jetzt ?? time());
+}
+
+/** Name der Veranstaltung als Absender (E-67): voller Name, sonst Kurzname. */
+function va_absender_name(): string
+{
+    return va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz();
 }

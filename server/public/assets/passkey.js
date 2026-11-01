@@ -1,6 +1,6 @@
 /*
  * Passkeys (O-14, E-55): Einloggen ohne Passwort und Passkey anlegen.
- * Spricht mit /passkey (JSON, CSRF über das Formularfeld). Ohne WebAuthn im
+ * Spricht mit /passkey über ws.post (basis.js, JSON, CSRF). Ohne WebAuthn im
  * Browser bleiben die Bereiche [data-passkey-login] und [data-passkey-anlage]
  * verborgen; alles andere geht weiter mit Passwort und Code.
  */
@@ -9,39 +9,22 @@
     if (!window.PublicKeyCredential || !navigator.credentials) {
         return;
     }
-    var csrfFeld = document.querySelector("input[name=csrf]");
-    if (!csrfFeld) {
+    if (!ws.csrf()) {
         return;
     }
-
-    function b64u(buf) {
-        var b = new Uint8Array(buf), s = "";
-        for (var i = 0; i < b.length; i++) { s += String.fromCharCode(b[i]); }
-        return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
-    function bytes(text) {
-        var s = atob(text.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text.length + 3) % 4));
-        var b = new Uint8Array(s.length);
-        for (var i = 0; i < s.length; i++) { b[i] = s.charCodeAt(i); }
-        return b.buffer;
-    }
+    var b64u = ws.b64u, bytes = ws.bytes;
     function senden(felder) {
-        var fd = new FormData();
-        fd.append("csrf", csrfFeld.value);
-        Object.keys(felder).forEach(function (k) { fd.append(k, felder[k]); });
-        return fetch("/passkey", { method: "POST", body: fd, credentials: "same-origin", headers: { "Accept": "application/json" } })
-            .then(function (r) { return r.json().catch(function () { return { ok: false, fehler: "Unerwartete Antwort. Bitte die Seite neu laden." }; }); });
+        return ws.post("/passkey", felder);
     }
     function melden(bereich, text) {
-        var m = bereich.querySelector("[data-passkey-meldung]");
-        if (m) { m.textContent = text || ""; m.hidden = !text; }
+        ws.melden(bereich.querySelector("[data-passkey-meldung]"), text);
     }
     function abgebrochen(e) {
         return e && (e.name === "NotAllowedError" || e.name === "AbortError");
     }
 
     // ---- Einloggen ----
-    Array.prototype.forEach.call(document.querySelectorAll("[data-passkey-login]"), function (bereich) {
+    document.querySelectorAll("[data-passkey-login]").forEach(function (bereich) {
         bereich.hidden = false;
         var knopf = bereich.querySelector("[data-passkey-los]");
         knopf.addEventListener("click", function () {
@@ -67,7 +50,7 @@
     });
 
     // ---- Anlegen ----
-    Array.prototype.forEach.call(document.querySelectorAll("[data-passkey-anlage]"), function (bereich) {
+    document.querySelectorAll("[data-passkey-anlage]").forEach(function (bereich) {
         bereich.hidden = false;
         var form = bereich.querySelector("[data-passkey-anlegen]");
         form.addEventListener("submit", function (ev) {

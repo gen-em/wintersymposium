@@ -377,7 +377,7 @@ function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung)
  */
 function betrieb_cron_anleitung(bool $mitToken = false): array
 {
-    $host = host_haupt() ?? (string)($GLOBALS['ws_host'] ?? 'localhost');
+    $host = host_haupt() ?? (string)(ctx('host') ?? 'localhost');
     return [
         'zeitplan' => '*/5 * * * *',
         'kommando' => 'php ' . dirname(__DIR__) . '/cli/jobs.php',
