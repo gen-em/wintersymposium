@@ -617,7 +617,9 @@ dialog.dlg::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); 
 /* Titel der Startseite (E-70 (4), AP-18): Größe vor Trennung. Der Server ordnet den Titel nach dem längsten
    unteilbaren Teil einer Stufe zu (START_TITEL_STUFEN in inhalt_lib); getrennt wird nur an Trennstellen.
    Mindestgröße 2rem; passt ein Teil auch so nicht (titel-notfall), darf der Browser trennen. */
-.held .titel, .held .titel.titel-xl { font-size: clamp(2.7rem, 12vw, 8.6rem); hyphens: manual; -webkit-hyphens: manual; }
+/* overflow-wrap: anywhere statt break-word: zählt auch für die Mindestbreite (sonst sprengt ein langes Wort in
+   WebKit, das unter Linux kein Deutsch trennt, Flex- und Grid-Container); getrennt wird damit nur, wenn nichts anderes passt */
+.held .titel, .held .titel.titel-xl { font-size: clamp(2.7rem, 12vw, 8.6rem); hyphens: manual; -webkit-hyphens: manual; overflow-wrap: anywhere; }
 .held .titel.titel-l { font-size: clamp(2.2rem, 10vw, 7rem); }
 .held .titel.titel-m { font-size: clamp(2rem, 7.6vw, 5.4rem); }
 .held .titel.titel-s { font-size: clamp(2rem, 6vw, 4.2rem); }
@@ -930,7 +932,7 @@ summary.einst-kopf::-webkit-details-marker { display: none; }
 .einst-knoepfe { justify-content: flex-end; }
 .einst-mini { margin: 14px 0 10px; padding: 14px; background: var(--bg); border: 1px solid var(--linie); }
 .einst-mini p { margin: 0; }
-.einst-mini .titel { font-size: 1.5rem; hyphens: manual; -webkit-hyphens: manual; }
+.einst-mini .titel { font-size: 1.5rem; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: anywhere; }
 .einst-mini .kicker { font-size: .66rem; }
 .einst-mini .meta { margin-top: 6px; }
 

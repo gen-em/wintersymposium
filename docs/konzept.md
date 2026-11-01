@@ -660,6 +660,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {problem: "Messung der Trennung im iframe: Chromium meldet den Trennstrich am ersten Zeichen nach der Trennstelle, die Vorschau warnte fälschlich", loesung: "beim Umbruch zwei Zeichen davor mit auf eine Trennstelle prüfen; in drei Engines mit Trennstelle, ohne und mit überlangem Wort nachgemessen"}
     - {problem: "Stufe S liegt auf dem Handy immer über der Mindestgröße (390 px fassen bei 2rem rund 21 Zeichen)", loesung: "S verkleinert nur Tablet und Desktop; auf dem Handy trennt dann der Browser (titel-notfall), die Vorschau warnt"}
     - {problem: "Test-Plan T-314: „als Teilnehmende 403“", loesung: "wie alle Team-Seiten leitet team_tor Teilnehmende zum Einloggen um (303); geprüft wird, dass keine Vorschau entsteht"}
+    - {problem: "WebKit (Linux) trennt kein Deutsch; im Komponentenblatt (Flex-Container) sprengte ein überlanges Wort trotz overflow-wrap: break-word die Seitenbreite (Stufe 3, alle Breiten)", loesung: "Titel mit overflow-wrap: anywhere – zählt auch für die Mindestbreite; getrennt wird weiter zuerst an Trennstellen (in drei Engines nachgemessen)"}
     - {problem: "Bedienungsprüfung im Browser-Durchlauf zählte schon offene Aufklapper als Fehler (Vorschau auf dem Handy, Kachel nach einem Fehler)", loesung: "Prüfskript schließt offene details zuerst und öffnet sie danach wieder"}
 
 - id: AP-19
