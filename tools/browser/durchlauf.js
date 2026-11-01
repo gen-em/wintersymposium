@@ -323,7 +323,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.selectOption('#berufsgruppe', 'Pflege/MFA');
         const iKlin = await iw();
         await p.selectOption('#berufsgruppe', 'ÄrztIn');
-        notiere(engine, breite, 'anmelden', 'Zwei Newsletter-Häkchen, Interessen nach Berufsgruppe vorausgewählt', await p.isVisible('#newsletter') && await p.isVisible('#nl_dachmarke') && iPrae === 'praeklinik' && iKlin === 'klinik' && await iw() === 'klinik,praeklinik', iPrae + '/' + iKlin);
+        notiere(engine, breite, 'anmelden', 'Zwei Newsletter-Häkchen, Interessen nach Berufsgruppe vorausgewählt', await p.isVisible('input[name=newsletter]') && await p.isVisible('input[name=nl_dachmarke]') && iPrae === 'praeklinik' && iKlin === 'klinik' && await iw() === 'klinik,praeklinik', iPrae + '/' + iKlin);
         await p.selectOption('#berufsgruppe', 'Sonstige');
         await p.locator('.ws-gruppe', { hasText: 'Atemweg' }).locator('label', { hasText: '19:30–20:15' }).click();
         const gesperrt = await p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label', { hasText: '19:30–20:00' }).locator('input').isDisabled();
@@ -846,6 +846,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const geladen = p.waitForEvent('requestfinished', r => r.url().endsWith('/team/startseite/vorschau'));
         await tun();
         await geladen;
+        // Die Antwort ist da; warten, bis das iframe sie anzeigt (Firefox lädt unter Last spürbar später)
+        await p.waitForFunction(() => { const f = document.querySelector('iframe.vorschau-frame'); return f && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.querySelector('.held .titel'); }, null, { timeout: 15000 }).catch(() => {});
         await p.waitForTimeout(250);
       };
       await vorschauNeu(() => p.goto(basis + '/team/startseite'));

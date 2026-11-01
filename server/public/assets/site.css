@@ -257,7 +257,7 @@ fieldset.feld > legend { font-weight: 700; font-size: .95rem; padding: 0; margin
 .wahl { display: grid; gap: 8px; }
 .wahl-reihe { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 /* Interessen beim Newsletter der Dachmarke (AP-19): unter dem Häkchen eingerückt */
-.nl-interessen { margin: 0 0 4px 30px; }
+fieldset.feld.nl-interessen { margin: 0 0 4px 30px; }
 .wahl label { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--linie); background: var(--flaeche); font-weight: 400; min-height: var(--h-knopf); cursor: pointer; }
 .wahl label:has(input:checked) { border-color: var(--akz); box-shadow: inset 4px 0 0 var(--akz); }
 .wahl label:has(input:focus-visible) { outline: 2px solid var(--akz); outline-offset: 2px; }

@@ -143,9 +143,10 @@ echo seiten_kopfzeile('Anmelden', $kicker, 'Dauert zwei Minuten. Danach bekommst
                 'label_html' => 'Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.']) ?><?php endif; ?>
             <?php // Zwei Häkchen (E-71 (6)): Newsletter der Reihe, Allgäu Akut mit Interessen; eine gemeinsame Bestätigungsmail (O-54)
             $nl = nl_angebot_anmeldung();
-            $nlHinweis = ' Freiwillig, Abmeldung jederzeit. Nach der Bestätigung deiner Anmeldung schicken wir dir eine Mail, mit der du den Newsletter bestätigst.'; ?>
+            $nlHinweis = ' Freiwillig, Abmeldung jederzeit.';
+            $nlMail = ' Nach der Bestätigung deiner Anmeldung schicken wir dir eine Mail, mit der du deine Newsletter bestätigst (eine für beide).'; ?>
             <?php if ($nl['reihe'] !== null): ?><?= feld('newsletter', '', ['typ' => 'haken', 'wert' => !empty($eingabe['newsletter']),
-                'label_html' => 'Newsletter „' . e($nl['reihe']['name']) . '“: Infos zum nächsten ' . e($nl['reihe_kurz']) . '.' . $nlHinweis]) ?><?php endif; ?>
+                'label_html' => 'Newsletter „' . e($nl['reihe']['name']) . '“: Infos zum nächsten ' . e($nl['reihe_kurz']) . '.' . $nlHinweis . ($nl['dachmarke'] === null ? $nlMail : '')]) ?><?php endif; ?>
             <?php if ($nl['dachmarke'] !== null):
                 $bgWahl = [];
                 foreach (va_liste('berufsgruppen') as $bg) {
@@ -153,7 +154,7 @@ echo seiten_kopfzeile('Anmelden', $kicker, 'Dauert zwei Minuten. Danach bekommst
                 }
                 $iWahl = isset($eingabe['nl_interesse']) ? array_map('strval', (array)$eingabe['nl_interesse']) : explode(',', nl_interessen_fuer((string)($eingabe['berufsgruppe'] ?? ''))); ?>
             <?= feld('nl_dachmarke', '', ['typ' => 'haken', 'wert' => !empty($eingabe['nl_dachmarke']),
-                'label_html' => 'Newsletter „' . e($nl['dachmarke']['name']) . '“' . ($nl['dachmarke']['beschreibung'] !== '' ? ': ' . editor_html($nl['dachmarke']['beschreibung'], 'inline') : '') . $nlHinweis]) ?>
+                'label_html' => 'Newsletter „' . e($nl['dachmarke']['name']) . '“' . ($nl['dachmarke']['beschreibung'] !== '' ? ': ' . editor_html($nl['dachmarke']['beschreibung'], 'inline') : '') . $nlHinweis . $nlMail]) ?>
             <fieldset class="feld nl-interessen" data-vorauswahl="<?= e(json_encode($bgWahl, JSON_UNESCAPED_UNICODE)) ?>"><legend>Interessiert an <span class="meta">(vorausgewählt nach Berufsgruppe)</span></legend>
                 <div class="wahl wahl-reihe"><?php foreach (NL_INTERESSEN as $ik => $it): ?><label><input type="checkbox" name="nl_interesse[]" value="<?= e($ik) ?>"<?= in_array($ik, $iWahl, true) ? ' checked' : '' ?>><span><?= e($it) ?></span></label><?php endforeach; ?></div>
             </fieldset>

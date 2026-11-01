@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 const NL_BESTAETIGEN_S = 7 * 86400;
 const NL_VERWALTEN_S = 400 * 86400;
-const NL_EINWILLIGUNG = 'Ich möchte die ausgewählten Newsletter per E-Mail erhalten. Die Einwilligung kann ich jederzeit über den Link in jeder Mail widerrufen. Gespeichert werden meine Adresse, mein Vorname (falls angegeben), die gewählten Listen, beim Newsletter der Dachmarke meine Interessen (Klinik, Präklinik) sowie Zeitpunkt und Fassung dieser Einwilligung.';
+const NL_EINWILLIGUNG = 'Ich möchte die ausgewählten Newsletter per E-Mail erhalten. Die Einwilligung kann ich jederzeit über den Link in jeder Mail widerrufen. Gespeichert werden meine Adresse, mein Vorname (falls angegeben), die gewählten Listen, beim Newsletter von Allgäu Akut meine Interessen (Klinik, Präklinik) sowie Zeitpunkt und Fassung dieser Einwilligung.';
 
 /** Listenarten (E-71). */
 const NL_ARTEN = ['reihe' => 'Reihe', 'dachmarke' => 'Dachmarke', 'weitere' => 'weitere'];
