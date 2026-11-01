@@ -38,7 +38,7 @@ function beispieldaten_laden(): array
  */
 function beispieldaten_einstellungen(): void
 {
-    $w = va_pruefen([
+    $eingabe = [
         'veranstaltung_datum' => gmdate('Y-m-d', time() + 60 * 86400),
         'veranstaltung_beginn' => '18:00', 'veranstaltung_ende' => '22:00', 'veranstaltung_ort' => 'Hörsaal Testklinik',
         'veranstaltung_name' => 'Allgäuer Winter-Notfallsymposium', 'veranstaltung_auflage' => '3. Auflage',
@@ -49,11 +49,13 @@ function beispieldaten_einstellungen(): void
         'anmeldung_bestaetigung_h' => '48', 'workshop_limit' => '0', 'workshop_pflicht' => 'freiwillig',
         'nachrueck_frist_h' => '48', 'nachrueck_grenze_tage' => '14',
         'berufsgruppen' => VA_KATALOG['berufsgruppen']['start'],
-    ]);
+    ];
+    $w = va_pruefen($eingabe);
     if ($w['fehler'] !== []) {
         throw new RuntimeException('Beispieldaten Einstellungen: ' . json_encode($w['fehler'], JSON_UNESCAPED_UNICODE));
     }
-    va_speichern($w['werte'], null);
+    // Nur die gesetzten Werte; die übrigen bleiben beim Startwert (sonst stünden sie leer in der Datenbank)
+    va_speichern(array_intersect_key($w['werte'], $eingabe), null);
 }
 
 /**

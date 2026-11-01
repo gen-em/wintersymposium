@@ -137,6 +137,7 @@ function test_reihen(): void
     $tt = konto_per_email('tt@example.org');
     pruefe($tk['konten'] === 3 && count($tk['fehler']) === 1 && $tb['rolle'] === 'betreiber' && password_verify('test-betreiber-pw', $tb['passwort_hash']) && totp_an((int)$tb['id'])
         && totp_code_passt((string)totp_geheimnis((int)$tb['id']), totp_code(totp_base32_dekodieren($geheim), time()), time(), null) !== null && $tt['rolle'] === 'teilnehmend' && $tt['email_bestaetigt_am'] !== null, 'Testkonten angelegt: Passwort, zweiter Faktor mit dem Geheimnis aus der Config, Teilnehmerin bestätigt; unbekannte Rolle abgelehnt');
+    pruefe(totp_zustand((int)$tb['id'])['codes_offen'] > 0 && db_zahl('SELECT COUNT(*) FROM konto_code WHERE konto_id = ?', [(int)$tt['id']]) === 0, 'Team-Testkonten haben Wiederherstellungscodes (kein roter Hinweis), Teilnehmende nicht');
     konto_passwort_setzen((int)$tb['id'], 'anderes-passwort-1');
     testdaten_konten(null);
     pruefe(password_verify('test-betreiber-pw', konto_per_email('tb@example.org')['passwort_hash']) && va_erlaubte_ids(konto_per_email('ta@example.org')) === null, 'erneut: Passwort zurückgesetzt, Admin für alle Veranstaltungen');
