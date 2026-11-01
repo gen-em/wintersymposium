@@ -87,6 +87,7 @@ function va_kurz(): string
  * jeweils bearbeitete. va_id() liefert sie; va_kontext() setzt sie.
  */
 const VA_STATUS = ['entwurf' => 'Entwurf', 'aktuell' => 'aktuell', 'abgeschlossen' => 'abgeschlossen'];
+const VA_KEINE = 0;
 /** Adressen, die kein Kürzel sein dürfen (erste Stelle eines Pfads der Anwendung). */
 const VA_KUERZEL_VERBOTEN = ['team', 'konto', 'anmelden', 'link', 'deine-anmeldung', 'newsletter', 'impressum', 'datenschutz', 'einloggen', 'ausloggen',
     'einrichten', 'notzugang', 'install', 'jobs', 'health', 'passkey', 'bild', 'assets', 'favicon', 'apple-touch-icon', 'robots', 'well-known', 'veranstaltung'];
@@ -111,13 +112,24 @@ function va_kontext(int $id): void
     $GLOBALS['ws_va_id'] = $id;
 }
 
-/** Veranstaltung des Kontexts (ohne gesetzten Kontext: die aktuelle). */
+/**
+ * Veranstaltung des Kontexts (ohne gesetzten Kontext: die aktuelle). Gibt es
+ * keine aktuelle, ist es 0 (VA_KEINE): kein Rückfall auf Veranstaltung 1,
+ * die öffentlichen Seiten zeigen „Derzeit keine Veranstaltung“ (Review B-10).
+ * Vor Migration 15 (ohne Tabelle veranstaltung) bleibt es 1.
+ */
 function va_id(): int
 {
     if (isset($GLOBALS['ws_va_id'])) {
         return (int)$GLOBALS['ws_va_id'];
     }
-    return va_aktuell_id() ?? 1;
+    return va_aktuell_id() ?? (va_tabellen_da() ? VA_KEINE : 1);
+}
+
+/** Gibt es im Kontext keine Veranstaltung (keine aktuelle, Review B-10)? */
+function va_keine(): bool
+{
+    return va_tabellen_da() && va_zeile() === null;
 }
 
 /** Die aktuelle Veranstaltung (Startseite, Anmeldung) oder null. */
@@ -252,7 +264,7 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
             programm_kopieren($vorlage, $id);
         } else {
             // Startwerte der Texte von der aktuellen Veranstaltung, damit die Startseite nicht leer ist
-            db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? 1]);
+            db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? (int)db_wert('SELECT MIN(id) FROM veranstaltung WHERE id <> ?', [$id])]);
         }
         db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_name', ?, ?)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
@@ -304,6 +316,9 @@ function va_loeschen(int $id, ?int $kontoId, string $bestaetigung = ''): ?string
     }
     if ($v['status'] === 'aktuell') {
         return 'Die aktuelle Veranstaltung lässt sich nicht löschen. Mach zuerst eine andere zur aktuellen oder schließ sie ab.';
+    }
+    if ((int)db_wert('SELECT COUNT(*) FROM veranstaltung') <= 1) {
+        return 'Die letzte Veranstaltung lässt sich nicht löschen. Leg zuerst eine neue an.'; // Review B-10
     }
     if (trim($bestaetigung) !== $v['kuerzel']) {
         return 'Zur Bestätigung bitte das Kürzel genau eintippen: ' . $v['kuerzel'];

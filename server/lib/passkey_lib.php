@@ -530,17 +530,47 @@ function pk_anlegen(int $kontoId, array $antwort, string $bezeichnung): int
     return $id;
 }
 
+/** Optionen für navigator.credentials.get() zum Bestätigen: nur Passkeys dieses Kontos (Review B-7). */
+function pk_bestaetigen_optionen(array $konto): array
+{
+    $u = pk_ursprung();
+    if ($u === null) {
+        throw new PkFehler('Passkeys gehen unter dieser Adresse nicht');
+    }
+    return [
+        'challenge' => pk_herausforderung('bestaetigen', (int)$konto['id']), 'rpId' => $u['rp_id'], 'timeout' => PK_GUELTIG_S * 1000, 'userVerification' => 'required',
+        'allowCredentials' => array_map(fn($k) => ['type' => 'public-key', 'id' => $k], pk_kennungen((int)$konto['id'], $u['rp_id'])),
+    ];
+}
+
 /**
  * Anmeldung mit Passkey prüfen. Gibt die Konto-ID zurück; wirft PkFehler.
  * $antwort: rawId, clientDataJSON, authenticatorData, signature (Base64url).
  */
 function pk_anmelden(array $antwort): int
 {
+    return pk_signatur_pruefen('login', $antwort);
+}
+
+/** Bestätigen mit einem Passkey des eingeloggten Kontos; wirft PkFehler. */
+function pk_bestaetigen(int $kontoId, array $antwort): void
+{
+    if (pk_signatur_pruefen('bestaetigen', $antwort, $kontoId) !== $kontoId) {
+        throw new PkFehler('Passkey gehört zu einem anderen Konto');
+    }
+}
+
+/** Antwort auf navigator.credentials.get() prüfen (Herausforderung je Zweck, bei $kontoId an das Konto gebunden). */
+function pk_signatur_pruefen(string $zweck, array $antwort, ?int $kontoId = null): int
+{
     $u = pk_ursprung();
     if ($u === null) {
         throw new PkFehler('Passkeys gehen unter dieser Adresse nicht');
     }
-    $abl = pk_herausforderung_nehmen('login');
+    $abl = pk_herausforderung_nehmen($zweck);
+    if ($kontoId !== null && (int)($abl['konto'] ?? 0) !== $kontoId) {
+        throw new PkFehler('Herausforderung gehört zu einem anderen Konto');
+    }
     $rawId = pk_feld($antwort, 'rawId');
     $client = pk_feld($antwort, 'clientDataJSON');
     $auth = pk_feld($antwort, 'authenticatorData');

@@ -588,7 +588,8 @@ function r30_http_tests(string $basis, string $h, string $tmp, string $b): void
     pruefe($code !== '' && str_contains($r['text'], 'Code aus der Mail'), 'Code kommt per Mail');
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'mail_einrichten', 'totp' => $code], $k);
     pruefe($r['status'] === 200 && substr_count($r['text'], '<li class="mono">') === TOTP_CODES && http_anfrage($basis, 'GET', '/team', $h, [], null, $k)['status'] === 200, 'Mit dem Code eingerichtet, Wiederherstellungscodes, eingeloggt');
-    // Nächstes Einloggen: Code kommt automatisch
+    // Nächstes Einloggen (später: Grenze 1 Code je Minute, Review S-9): Code kommt automatisch
+    db_ausfuehren('DELETE FROM rate_limit');
     $k2 = "$tmp/kekse-mia2.txt";
     $vorher = http_mail_anzahl($tmp, 'mia@example.org');
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k2);
@@ -895,14 +896,14 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe($r['status'] === 303 && count($dateien) === 1, 'Sicherung angelegt (gzip im Laufzeitordner)');
     $name = basename($dateien[0] ?? 'x');
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => $name, 'totp' => '000000'], $b);
-    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code aus deiner App stimmt nicht'), 'Herunterladen ohne gültigen Code abgelehnt');
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code stimmt nicht oder ist abgelaufen'), 'Herunterladen ohne gültigen Code abgelehnt');
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => $name, 'totp' => strtolower($codes[0])], $b);
     $erste = strtok((string)@gzdecode($r['text']), "\n");
     pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/gzip' && str_contains((string)$erste, '"art":"kopf"'), 'Herunterladen mit Code: gzip mit Kopfzeile');
     pruefe(http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'herunterladen', 'name' => '../config.php', 'totp' => '1'], $b)['status'] === 200 && sicherung_pfad('../config.php') === null, 'nur gültige Sicherungsnamen');
     $vorher = ['punkte' => (int)db_wert('SELECT COUNT(*) FROM programmpunkt'), 'anm' => (int)db_wert('SELECT COUNT(*) FROM anmeldung'), 'konten' => (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'")];
     $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $csrf, 'aktion' => 'testdaten'], $b);
-    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE veranstaltung_id = 1') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = 1') == 3 && db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'") == 2 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") >= $vorher['konten'] && db_wert("SELECT COUNT(*) FROM konto WHERE email = 'ada.abend@example.org' AND rolle = 'admin'") == 1, 'Testdaten geladen, Team-Konten bleiben, Ada (Admin) dazu');
+    pruefe($r['status'] === 303 && db_wert('SELECT COUNT(*) FROM programmpunkt WHERE veranstaltung_id = 1') == 9 && db_wert('SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = 1') == 4 /* 3 + Adas untergeschobene (AP-16) */ && db_wert("SELECT COUNT(*) FROM veranstaltung WHERE status = 'abgeschlossen'") == 2 && (int)db_wert("SELECT COUNT(*) FROM konto WHERE rolle <> 'teilnehmend'") >= $vorher['konten'] && db_wert("SELECT COUNT(*) FROM konto WHERE email = 'ada.abend@example.org' AND rolle = 'admin'") == 1, 'Testdaten geladen, Team-Konten bleiben, Ada (Admin) dazu');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Atemweg. Plan B.'), 'Startseite zeigt das Beispielprogramm');
     $vorTest = '';
     foreach (sicherung_liste() as $s) {
@@ -1023,7 +1024,12 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     $r = http_anfrage($basis, 'GET', '/team', $h, [], null, $a);
     pruefe($r['status'] === 303, 'Rollenwechsel beendet die Sitzung des Kontos');
     $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'sperren', 'id' => $annaId], $b);
-    pruefe(db_wert('SELECT aktiv FROM konto WHERE id = ?', [$annaId]) == 0, 'Konto gesperrt');
+    pruefe(db_wert('SELECT aktiv FROM konto WHERE id = ?', [$annaId]) == 1 && str_contains($r['text'], 'Nichts geändert'), 'Sperren ohne eigenen zweiten Faktor abgelehnt (Review B-7)');
+    // Mail-Code gilt zum Bestätigen auch ohne eingeschalteten Code per E-Mail (T-290)
+    $bId = (int)db_wert("SELECT id FROM konto WHERE email = 'betrieb@example.org'");
+    db_ausfuehren('UPDATE konto SET mailcode_hash = ?, mailcode_bis = ? WHERE id = ?', [password_hash('482913', PASSWORD_DEFAULT), gmdate('Y-m-d H:i:s', time() + 600), $bId]);
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $csrf, 'aktion' => 'sperren', 'id' => $annaId, 'totp' => '482913'], $b);
+    pruefe(db_wert('SELECT aktiv FROM konto WHERE id = ?', [$annaId]) == 0, 'Konto gesperrt (bestätigt mit Code aus der Mail)');
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $a);
     $r = http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'anna@example.org', 'passwort' => 'anna-ihr-passwort'], $a);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'stimmt nicht'), 'gesperrtes Konto kommt nicht rein');
@@ -1092,6 +1098,7 @@ function team_login_tests(string $basis, string $h, string $tmp, string $wurzel)
     veranstaltung_http_tests($basis, $h, $tmp, $b);
     rechte_http_tests($basis, $h, $tmp, $b);
     ap14_http_tests($basis, $h, $tmp);
+    ap16_http_tests($basis, $h, $tmp, $b);
 
     abschnitt('HTTP: Notzugang mit Installationsschlüssel (O-34)');
     $n = "$tmp/kekse-not.txt";
@@ -1424,4 +1431,121 @@ function http_tests(string $wurzel, string $tmp): void
         proc_terminate($proc);
         proc_close($proc);
     }
+}
+
+/** Review-Behebung 2 (AP-16, T-288 bis T-295): Prüfungen über HTTP. */
+function ap16_http_tests(string $basis, string $h, string $tmp, string $b): void
+{
+    abschnitt('HTTP: Review-Behebung 2 (AP-16)');
+    $json = fn(array $r) => json_decode($r['text'], true) ?? [];
+    $vAkt = (int)va_aktuell_id();
+    $rd = ['nachname' => 'Sechzehn', 'berufsgruppe' => 'Pflege/MFA', 'institution' => 'Station 16', 'efn' => '', 'essen' => 'egal'];
+
+    // Unterpunkt 4 (S-3, T-291): unbestätigte Anmeldung mit der Team-Adresse ist nicht „Meine Anmeldung“
+    konto_anlegen('Sina Sechzehn', 'sina.team@example.org', 'admin', 'sinas-passwort-16', null);
+    $sAnm = anm_anlegen(anm_daten_pruefen(['vorname' => 'Fremdsina', 'email' => 'sina.team@example.org'] + $rd)['werte'], ['fest' => [], 'warte' => []], false);
+    $s = http_admin_einloggen($basis, $h, $tmp, 'sina.team@example.org', 'sinas-passwort-16');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $s);
+    pruefe(($sAnm['art'] ?? '') === 'neu' && anm_laden($sAnm['id'])['status'] === 'unbestaetigt' && !str_contains($r['text'], 'Hallo Fremdsina') && str_contains($r['text'], 'Eingeloggt als Sina Sechzehn'), 'S-3: unbestätigte Anmeldung mit Team-Adresse nicht als eigene gezeigt');
+    db_ausfuehren("UPDATE anmeldung SET status = 'bestaetigt' WHERE id = ?", [$sAnm['id']]);
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $s)['text'], 'Hallo Fremdsina'), 'S-3: bestätigt mit gleicher Adresse: übernommen');
+
+    // Unterpunkt 1 (B-4, T-288): Team-Seite einer alten Veranstaltung legt deren Anmeldung nicht in die Sitzung
+    $vAlt = (int)va_anlegen('alt-2025', 'Alt 2025', $vAkt, null)['id'];
+    konto_anlegen('Bodo Sechzehn', 'bodo.team@example.org', 'admin', 'bodos-passwort-16', null);
+    va_mit($vAlt, fn() => team_anlegen(['vorname' => 'Altbodo', 'email' => 'bodo.team@example.org'] + $rd, true, false));
+    team_anlegen(['vorname' => 'Neubodo', 'email' => 'bodo.team@example.org'] + $rd, true, false);
+    db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen', abgeschlossen_am = ? WHERE id = ?", [db_jetzt(), $vAlt]);
+    $k = http_admin_einloggen($basis, $h, $tmp, 'bodo.team@example.org', 'bodos-passwort-16');
+    $r = http_anfrage($basis, 'GET', '/team/personen?va=' . $vAlt, $h, [], null, $k);
+    $r2 = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k);
+    pruefe($r['status'] === 200 && str_contains($r2['text'], 'Hallo Neubodo') && !str_contains($r2['text'], 'Hallo Altbodo') && !str_contains($r2['text'], 'Diese Veranstaltung ist vorbei'), 'B-4: nach der alten Veranstaltung im Team-Bereich zeigt „Meine Anmeldung“ die aktuelle');
+    pruefe(!str_contains(http_anfrage($basis, 'GET', '/alt-2025', $h, [], null, $k)['text'], 'Hallo Altbodo') && str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $k)['text'], 'Hallo Neubodo'), 'B-4: Archivseite ändert die Anmeldung der Sitzung nicht');
+
+    // Unterpunkt 7 (S-5, T-294): Mailing-Bilder nur für Berechtigte
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    $bId = (int)db_wert("SELECT id FROM konto WHERE email = 'betrieb@example.org'");
+    $bild = function (string $datei) use ($png, $bId): int {
+        file_put_contents(foto_ordner() . '/' . $datei, $png);
+        db_ausfuehren("INSERT INTO rundmail_bild (datei, typ, breite, hoehe, erstellt_von, erstellt_am) VALUES (?, 'png', 1, 1, ?, ?)", [$datei, $bId, db_jetzt()]);
+        return (int)db()->lastInsertId();
+    };
+    $nlBild = $bild('mailing-ap16-nl.png');
+    $vaBild = $bild('mailing-ap16-va.png');
+    $nlRm = rm_speichern(null, rm_pruefen(['art' => 'newsletter', 'listen' => [1], 'betreff' => 'NL', 'html' => '<p>x</p>', 'postfach' => 'newsletter'])['werte'], $bId);
+    db_ausfuehren('UPDATE rundmail SET veranstaltung_id = NULL, html = ? WHERE id = ?', ['<p><img src="/team/mailings/bild?id=' . $nlBild . '" alt=""></p>', $nlRm]);
+    $vaRm = rm_speichern(null, rm_pruefen(['betreff' => 'VA', 'html' => '<p>x</p>', 'auswahl' => 'angemeldet', 'berufsgruppe' => '', 'postfach' => 'system'])['werte'], $bId);
+    db_ausfuehren('UPDATE rundmail SET html = ? WHERE id = ?', ['<p><img src="/team/mailings/bild?id=' . $vaBild . '" alt=""></p>', $vaRm]);
+    http_anfrage($basis, 'GET', '/team?va=' . $vAkt, $h, [], null, $k); // Bodo stand noch auf der alten Veranstaltung
+    pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nlBild, $h, [], null, $k)['status'] === 404, 'S-5: Admin ruft Bild eines Newsletter-Mailings → 404');
+    pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $vaBild, $h, [], null, $k)['status'] === 200, 'S-5: Bild im Mailing der eigenen Veranstaltung sichtbar');
+    pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nlBild, $h, [], null, $b)['status'] === 200, 'S-5: BetreiberIn sieht das Newsletter-Bild');
+    http_anfrage($basis, 'GET', '/team?va=' . $vAlt, $h, [], null, $k);
+    pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $vaBild, $h, [], null, $k)['status'] === 404, 'S-5: Bild aus dem Mailing einer anderen Veranstaltung → 404');
+    db_ausfuehren('DELETE FROM rundmail WHERE id IN (?, ?)', [$nlRm, $vaRm]);
+
+    // Unterpunkt 3 (B-7, T-290): Sicherung herunterladen mit Code aus der Mail (Knopf „Code per E-Mail schicken“)
+    db_ausfuehren('DELETE FROM rate_limit');
+    $name = sicherung_anlegen('AP-16', $bId);
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'data-zf-mailcode') && str_contains($r['text'], 'Code aus der App, aus der Mail oder ein Wiederherstellungscode') && str_contains($r['text'], '/assets/zweitfaktor.js'), 'B-7: Bestätigung mit Knopf „Code per E-Mail schicken“');
+    $vorher = http_mail_anzahl($tmp, 'betrieb@example.org');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, ['Accept: application/json'], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name, 'zf_mailcode' => '1'], $b);
+    $mail = '';
+    for ($i = 0; $i < 30 && http_mail_anzahl($tmp, 'betrieb@example.org') <= $vorher; $i++) {
+        usleep(150_000);
+    }
+    $mail = http_mail_an($tmp, 'betrieb@example.org', 5, 'Er gilt 10 Minuten');
+    $code = preg_match('/^\s+(\d{6})\s*$/m', $mail, $m) === 1 ? $m[1] : '';
+    pruefe(($json($r)['ok'] ?? false) === true && $code !== '', 'B-7: Code per E-Mail angefordert (JSON), Mail mit Code');
+    $r2 = http_anfrage($basis, 'POST', '/team/daten', $h, ['Accept: application/json'], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name, 'zf_mailcode' => '1'], $b);
+    pruefe(($json($r2)['ok'] ?? true) === false && str_contains((string)($json($r2)['text'] ?? ''), 'gerade erst unterwegs'), 'S-9: zweiter Code in derselben Minute nicht verschickt');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name, 'totp' => $code], $b);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/gzip', 'B-7: Herunterladen mit dem Code aus der Mail');
+
+    // Unterpunkt 3 (B-7, T-290): BetreiberIn nur mit Passkey bestätigt über /passkey (Aktion bestaetigen)
+    require_once __DIR__ . '/passkey_hilfe.php';
+    $lh = 'localhost';
+    $ursprung = 'http://localhost:' . parse_url($basis, PHP_URL_PORT);
+    konto_anlegen('Paula Passkey', 'paula.pk@example.org', 'betreiber', 'paulas-passwort-16', null);
+    $p = "$tmp/kekse-paula.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $lh, [], null, $p);
+    http_anfrage($basis, 'POST', '/einloggen', $lh, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'paula.pk@example.org', 'passwort' => 'paulas-passwort-16'], $p);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $lh, [], null, $p);
+    $c = http_csrf($r['text']);
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'anlage_optionen'], $p))['optionen'] ?? [];
+    $g = test_pk_geraet();
+    http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'anlegen', 'antwort' => json_encode(test_pk_anlage($g, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $p);
+    $r = http_anfrage($basis, 'GET', '/team/daten', $lh, [], null, $p);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'data-zf-passkey'), 'B-7: mit Passkey: Knopf „Mit Passkey bestätigen“');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $lh, [], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name], $p);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Der Code stimmt nicht'), 'B-7: ohne Bestätigung abgelehnt');
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'bestaetigen_optionen'], $p))['optionen'] ?? [];
+    $r = http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'bestaetigen', 'antwort' => json_encode(test_pk_login($g, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $p);
+    pruefe(($json($r)['ok'] ?? false) === true && count($o['allowCredentials'] ?? []) === 1, 'B-7: Passkey-Bestätigung angenommen (nur Passkeys des Kontos angeboten)');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $lh, [], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name], $p);
+    pruefe($r['status'] === 200 && ($r['kopf']['content-type'] ?? '') === 'application/gzip', 'B-7: danach Herunterladen ohne Code');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $lh, [], ['csrf' => $c, 'aktion' => 'herunterladen', 'name' => $name], $p);
+    pruefe(($r['kopf']['content-type'] ?? '') !== 'application/gzip', 'B-7: Bestätigung gilt nur einmal');
+    $o = $json(http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'bestaetigen_optionen'], $p))['optionen'] ?? [];
+    $fremd = test_pk_geraet();
+    $r = http_anfrage($basis, 'POST', '/passkey', $lh, [], ['csrf' => $c, 'aktion' => 'bestaetigen', 'antwort' => json_encode(test_pk_login($fremd, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $p);
+    pruefe($r['status'] === 400, 'B-7: fremder Passkey abgelehnt');
+
+    // Unterpunkt 6 (B-10, T-293): keine aktuelle Veranstaltung
+    db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen' WHERE id = ?", [$vAkt]);
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    $r2 = http_anfrage($basis, 'GET', '/anmelden', $h);
+    $r3 = http_anfrage($basis, 'GET', '/deine-anmeldung', $h);
+    db_ausfuehren("UPDATE veranstaltung SET status = 'aktuell' WHERE id = ?", [$vAkt]);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Derzeit keine Veranstaltung') && !str_contains($r['text'], 'Jetzt anmelden') && !str_contains($r['text'], '<dl class="eckdaten">'), 'B-10: Startseite ohne aktuelle Veranstaltung: Hinweis, keine Eckdaten, keine Anmeldung');
+    pruefe($r2['status'] === 200 && str_contains($r2['text'], 'Derzeit gibt es keine Veranstaltung') && !str_contains($r2['text'], 'name="vorname"') && str_contains($r3['text'], 'Derzeit keine Veranstaltung'), 'B-10: /anmelden und /deine-anmeldung mit Hinweis');
+
+    // Unterpunkt 8 (S-12, T-295): erfundene Sitzungs-ID im Keks wird nicht übernommen
+    $erfunden = str_repeat('Ab1-', 12);
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, ['Cookie: ws_sitzung=' . $erfunden]);
+    $neu = preg_match('/ws_sitzung=([^;]+)/', (string)($r['kopf']['set-cookie'] ?? ''), $m) === 1 ? $m[1] : '';
+    pruefe($r['status'] === 200 && $neu !== '' && $neu !== $erfunden && !is_file(sitzung_ablage_pfad() . '/sess_' . $erfunden), 'S-12: erfundene Sitzungs-ID im Keks → neue ID (use_strict_mode wirkt)');
 }

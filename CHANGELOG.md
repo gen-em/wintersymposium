@@ -2,6 +2,33 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.25.0] – 2026-11-01
+
+### Behoben (AP-16, Review-Behebung 2)
+
+- **B-4:** „Meine Anmeldung“ zeigt immer die aktuelle Veranstaltung. Vorher legte eine Team-Seite oder Archivseite einer alten Veranstaltung deren Anmeldung in die Sitzung. Der Sitzungseintrag kennt jetzt seine Veranstaltung; abgeleitet wird nur auf öffentlichen Seiten der aktuellen. Ein Einmal-Link (z. B. aus der Zertifikat-Mail) öffnet weiter die Anmeldung einer vergangenen Veranstaltung (E-58).
+- **B-6:** Newsletter speichern („Mein Konto“, Verwalten-Link) meldet nicht mehr still von ausgeblendeten Listen ab; nichts angekreuzt in „Mein Konto“ meldet nur von den sichtbaren ab.
+- **B-7 / S-4 / V-4:** Heikle Aktionen (Rolle ändern, zweiten Faktor zurücksetzen, Sperren, Sicherung herunterladen und wiederherstellen) gehen mit jedem zweiten Faktor: Code aus der App, Code aus der Mail („Code per E-Mail schicken“ direkt im Dialog) oder Wiederherstellungscode, mit Passkey über „Mit Passkey bestätigen“. Ein Helfer (`zweitfaktor_bestaetigen`, `zweitfaktor_bestaetigt`) statt Eigencode auf vier Seiten. Passwort ändern, Konto löschen, zweiten Faktor ändern und Passkey anlegen prüfen das Passwort mit Ratenschutz (`passwort_bestaetigen`, 5 Versuche je 15 Minuten).
+- **S-3:** Team-Konten übernehmen nur die verknüpfte oder eine bestätigte Anmeldung mit ihrer Adresse; eine fremde, unbestätigte gilt nicht als eigene.
+- **B-8:** Der Aufräum-Job löscht keine Fotos mehr, die vergangene Veranstaltungen (Archivseiten) oder Workshop-Termine noch zeigen.
+- **B-12:** Nach „Restlichen Versand abbrechen“ stehen in der Empfängerliste nur noch die, die das Mailing bekommen haben.
+- **B-14:** Fehler ohne Feldbezug in „Mein Konto → Profil“ erscheinen als Meldung; Speichern eines gelöschten Mailings ohne PHP-Warnung.
+- **S-11:** Protokolltext zur Anwesenheit ohne Namen.
+- **B-10:** Ohne aktuelle Veranstaltung kein Rückfall auf Veranstaltung 1: Startseite „Derzeit keine Veranstaltung“, keine Anmeldung möglich. Die letzte verbliebene Veranstaltung lässt sich nicht löschen.
+- **S-5:** Mailing-Bilder sieht im Team-Bereich nur, wer sie hochgeladen hat oder das Mailing sehen darf.
+- **S-9:** Codes per E-Mail höchstens einer je Minute und 10 je Stunde je Konto (statt je Sitzung).
+- **S-6:** Status → Umgebung warnt, wenn Anfragen über einen Proxy kommen und `https_ueber_proxy` aus ist.
+- **S-12:** geprüft, kein Fehler: eine erfundene Sitzungs-ID im Keks wird nicht übernommen (`use_strict_mode` wirkt); dazu ein Test.
+
+### Geändert
+
+- Neues Skript `assets/zweitfaktor.js` (Knöpfe im Bestätigungsdialog), neue Aktion `bestaetigen` in `/passkey`; Ratenschutz-Töpfe `mailcode` und `mailcode_minute`.
+- Test-Beispieldatensatz: `beispieldaten_review2()` (unbestätigte Anmeldung mit Adas Adresse, Lea auf der ausgeblendeten Liste „Referierende (intern)“); Browser-Durchlauf prüft Bestätigung mit Mail-Code und Passkey, Adas „Meine Anmeldung“ und Startseite ohne Veranstaltung.
+
+### Doku
+
+- Konzept: AP-16 umgesetzt (status, ergebnis, probleme); betrieb.md (zweiter Faktor beim Bestätigen, Mail-Code-Grenze, keine aktuelle Veranstaltung, Proxy-Warnung, Newsletter, Fotos); Prüfprotokoll T-288 bis T-296; Review-Dokument Abschnitt 5.
+
 ## [0.24.0] – 2026-10-31
 
 ### Behoben (AP-14, Review-Behebung 1)

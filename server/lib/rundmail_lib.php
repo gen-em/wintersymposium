@@ -514,7 +514,8 @@ function rm_speichern(?int $id, array $w, ?int $kontoId): ?int
         "UPDATE rundmail SET veranstaltung_id = ?, betreff = ?, html = ?, auswahl = ?, berufsgruppe = ?, postfach = ?, geaendert_am = ? WHERE id = ? AND status = 'entwurf'",
         [rm_nl_listen($w['auswahl']) !== null ? null : va_id(), $w['betreff'], $w['html'], $w['auswahl'], $w['berufsgruppe'], $w['postfach'], $jetzt, $id]
     )->rowCount();
-    return $n === 1 || rm_laden($id)['status'] === 'entwurf' ? $id : null;
+    // Mailing inzwischen gelöscht: kein Entwurf mehr (Review B-14)
+    return $n === 1 || (rm_laden($id)['status'] ?? '') === 'entwurf' ? $id : null;
 }
 
 /** Fehler, die das Senden verhindern (leer = sendbar). */
@@ -609,9 +610,17 @@ function rm_abbrechen(int $id, int $kontoId): ?string
         return 'Planung aufgehoben – das Mailing ist wieder ein Entwurf.';
     }
     if ($rm['status'] === 'versand') {
-        $weg = db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id = ? AND status = 'offen'", [$id])->rowCount();
-        $raus = (int)$rm['empfaenger_zahl'] - $weg;
-        db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
+        // Wer die Mail nicht mehr bekommt, steht auch nicht in der Empfängerliste (Nachweis, Review B-12)
+        [$weg, $raus] = db_transaktion(function () use ($id): array {
+            $offen = array_column(db_zeilen("SELECT an FROM mail_ausgang WHERE rundmail_id = ? AND status = 'offen' FOR UPDATE", [$id]), 'an');
+            $weg = db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id = ? AND status = 'offen'", [$id])->rowCount();
+            foreach ($offen as $an) {
+                db_ausfuehren('DELETE FROM rundmail_empfaenger WHERE rundmail_id = ? AND email = ?', [$id, $an]);
+            }
+            $raus = (int)db_wert('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$id]);
+            db_ausfuehren("UPDATE rundmail SET status = 'abgebrochen', empfaenger_zahl = ? WHERE id = ?", [$raus, $id]);
+            return [$weg, $raus];
+        });
         audit_schreiben('mailing', 'Versand von Mailing ' . $id . ' abgebrochen: ' . $raus . ' gesendet, ' . $weg . ' nicht', $kontoId, rm_va((int)$id));
         return 'Versand abgebrochen: ' . $weg . ' Mails gehen nicht mehr raus.';
     }
@@ -689,7 +698,26 @@ function rm_job(int $jetzt): array
 
 function rm_bild(int $id): ?array
 {
-    return db_zeile('SELECT id, datei, typ, breite, hoehe FROM rundmail_bild WHERE id = ?', [$id]);
+    return db_zeile('SELECT id, datei, typ, breite, hoehe, erstellt_von FROM rundmail_bild WHERE id = ?', [$id]);
+}
+
+/**
+ * Darf dieses Team-Konto das Bild sehen (Review S-5)? Selbst hochgeladen oder
+ * in einem Mailing, das es sehen darf (rm_sichtbar: eigene Veranstaltung,
+ * Newsletter nur BetreiberInnen).
+ */
+function rm_bild_sichtbar(array $b, int $kontoId): bool
+{
+    if ((int)($b['erstellt_von'] ?? 0) === $kontoId) {
+        return true;
+    }
+    $id = (int)$b['id'];
+    foreach (db_zeilen('SELECT * FROM rundmail WHERE html LIKE ?', ['%/team/mailings/bild?id=' . $id . '%']) as $rm) {
+        if (preg_match('#/team/mailings/bild\?id=' . $id . '(?!\d)#', (string)$rm['html']) === 1 && rm_sichtbar($rm)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

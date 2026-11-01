@@ -31,7 +31,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $ids = array_map('intval', (array)($_POST['listen'] ?? []));
             $np = nl_person_per_email((string)$k['email']);
             if ($ids === [] && $np !== null) {
-                nl_abmelden((int)$np['id']);
+                nl_listen_setzen((int)$np['id'], [], 'konto'); // nur sichtbare Listen (Review B-6)
             } elseif ($ids !== []) {
                 nl_listen_setzen(nl_person_anlegen((string)$k['email'], tk_namen($k)['vorname']), $ids, 'konto');
             }
@@ -52,8 +52,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $fehler['passwort'] = $f;
             break;
         case 'passwort_aendern':
-            if (!anmeldung_passwort_ok($k, (string)($_POST['alt'] ?? ''))) {
-                $fehler['alt'] = 'Das bisherige Passwort stimmt nicht.';
+            if (($f = passwort_bestaetigen($k, (string)($_POST['alt'] ?? ''), 'Das bisherige Passwort stimmt nicht.')) !== null) {
+                $fehler['alt'] = $f; // mit Ratenschutz (Review S-4)
             } elseif (($f = passwort_regel_fehler((string)($_POST['neu'] ?? ''), (string)($_POST['neu2'] ?? ''), $pwMin)) !== null) {
                 $fehler['neu'] = $f;
             } else {
@@ -100,8 +100,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if ($team) {
                 umleiten('/konto'); // Team-Konten löscht ein Betreiber
             }
-            if (!anmeldung_passwort_ok($k, (string)($_POST['passwort'] ?? ''))) {
-                $fehler['loeschen'] = 'Das Passwort stimmt nicht. Das Konto wurde nicht gelöscht.';
+            if (($f = passwort_bestaetigen($k, (string)($_POST['passwort'] ?? ''), 'Das Passwort stimmt nicht. Das Konto wurde nicht gelöscht.')) !== null) {
+                $fehler['loeschen'] = $f; // mit Ratenschutz (Review S-4)
             } elseif (($f = tk_loeschen($id, ($_POST['anmeldung'] ?? '') === 'stornieren')) !== null) {
                 $fehler['loeschen'] = $f;
             } else {
@@ -150,7 +150,7 @@ seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js', 'pas
 <?php if (($_GET['aendern'] ?? '') === 'profil'):
     $w = fn(string $f) => e($eingabe !== [] ? (string)($eingabe[$f] ?? '') : (string)($f === 'vorname' || $f === 'nachname' ? $namen[$f] : ($profil[$f] ?? ''))); ?>
 <div class="innen abschnitt">
-    <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert">Nicht gespeichert. Bitte prüf die markierten Angaben.</div><?php endif; ?>
+    <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert">Nicht gespeichert. <?= isset($fehler['_']) ? e($fehler['_']) : 'Bitte prüf die markierten Angaben.' ?></div><?php endif; ?>
     <form class="form" method="post" action="/konto" novalidate>
         <?= csrf_feld() ?><input type="hidden" name="aktion" value="profil">
         <h2 class="zwischen">Dein Profil</h2>

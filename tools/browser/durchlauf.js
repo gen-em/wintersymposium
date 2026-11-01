@@ -916,6 +916,54 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.waitForLoadState('load');
       notiere(engine, 'desktop-breit', 'code-login', 'Login mit Wiederherstellungscode', new URL(p.url()).pathname === '/team');
 
+      // ---- AP-16 (Review B-7): Herunterladen bestätigen mit Code aus der Mail, in Chromium auch mit Passkey ----
+      const mailAnBea = () => (fs.existsSync(vor.mails) ? fs.readdirSync(vor.mails) : []).sort().reverse()
+        .map(f => fs.readFileSync(path.join(vor.mails, f), 'utf8').replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/g, (_, x) => String.fromCharCode(parseInt(x, 16))))
+        .filter(t => t.includes(`To: <${vor.betreiber}>`) && t.includes('Er gilt 10 Minuten'));
+      await pruefeSeite(p, fehler, engine, 'desktop-breit', 'zf-bestaetigen', basis + '/team/daten');
+      await p.locator('button[aria-haspopup="dialog"]', { hasText: 'Herunterladen' }).first().click();
+      await p.waitForSelector('dialog[open]');
+      notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'Dialog: Code-Feld und „Code per E-Mail schicken“', await p.isVisible('dialog[open] input[name=totp]') && await p.isVisible('dialog[open] [data-zf-mailcode]') && !await p.isVisible('dialog[open] [data-zf-passkey]'));
+      const mailsVorher = mailAnBea().length;
+      await p.click('dialog[open] [data-zf-mailcode]');
+      await p.waitForSelector('dialog[open] [data-zf-meldung]:not([hidden])', { timeout: 5000 }).catch(() => {});
+      notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'Code angefordert, Meldung im Dialog', ((await p.textContent('dialog[open] [data-zf-meldung]')) || '').includes('unterwegs'), (await p.textContent('dialog[open] [data-zf-meldung]').catch(() => '')) || '');
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-zf-mailcode.png`) });
+      let zfCode = '';
+      for (let i = 0; i < 40 && !zfCode; i++) {
+        const m = mailAnBea();
+        if (m.length > mailsVorher) zfCode = (m[0].match(/^\s+(\d{6})\s*$/m) || ['', ''])[1];
+        if (!zfCode) await p.waitForTimeout(150);
+      }
+      await p.fill('dialog[open] input[name=totp]', zfCode);
+      const [zfDl] = await Promise.all([p.waitForEvent('download', { timeout: 10000 }).catch(() => null), p.click('dialog[open] .dlg-ja')]);
+      notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'Herunterladen mit dem Code aus der Mail', zfCode !== '' && zfDl !== null && zfDl.suggestedFilename().endsWith('.gz'), zfCode);
+      if (engine === 'chromium') {
+        const cdpZ = await ctx.newCDPSession(p);
+        await cdpZ.send('WebAuthn.enable');
+        const { authenticatorId: zfGeraet } = await cdpZ.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+        await p.goto(lokal + '/einloggen');
+        await p.fill('#email', vor.betreiber); await p.fill('#passwort', vor.passwort);
+        await p.click('form:has(input[value=passwort]) button');
+        await p.waitForLoadState('load');
+        await p.fill('#totp', codes[1]);
+        await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=code]) button')]);
+        await p.goto(lokal + '/konto');
+        await p.click('[data-passkey-anlage] > summary');
+        await p.fill('#pk-bez', 'Bea Browser'); await p.fill('#pk-pw', vor.passwort);
+        await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-anlegen] button[type=submit]')]);
+        await p.waitForLoadState('load');
+        await p.goto(lokal + '/team/daten');
+        await p.locator('button[aria-haspopup="dialog"]', { hasText: 'Herunterladen' }).first().click();
+        await p.waitForSelector('dialog[open]');
+        notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'mit Passkey: Knopf „Mit Passkey bestätigen“', await p.isVisible('dialog[open] [data-zf-passkey]'));
+        await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-zf-passkey.png`) });
+        const [pkDl] = await Promise.all([p.waitForEvent('download', { timeout: 10000 }).catch(() => null), p.click('dialog[open] [data-zf-passkey]')]);
+        notiere(engine, 'desktop-breit', 'zf-bestaetigen', 'Herunterladen mit Passkey bestätigt', pkDl !== null && pkDl.suggestedFilename().endsWith('.gz'), (await p.textContent('dialog[open] [data-zf-meldung]').catch(() => '')) || '');
+        await cdpZ.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId: zfGeraet });
+        await p.goto(basis + '/team');
+      }
+
       // AP-12: Ada ist Admin nur für den Fortbildungsabend
       await ausloggen(p);
       for (const [breite, w, h] of [['handy', 390, 844], ['desktop-breit', 1440, 900]]) {
@@ -940,6 +988,24 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.click('.va-wechsler > summary');
         await pruefeSeite(p, fehler, engine, breite, 'admin-konto', basis + '/konto');
         notiere(engine, breite, 'admin-konto', 'Mein Konto: „Admin für“ den Abend', (await p.textContent('.rechte-liste')).includes('Fortbildungsabend'));
+        // AP-16 (Review S-3): unbestätigte Anmeldung mit Adas Adresse (Beispieldaten) ist nicht „Meine Anmeldung“
+        await pruefeSeite(p, fehler, engine, breite, 'admin-anmeldung', basis + '/deine-anmeldung');
+        notiere(engine, breite, 'admin-anmeldung', 'Fremde unbestätigte Anmeldung mit Team-Adresse nicht als eigene', (await p.textContent('body')).includes('Eingeloggt als Ada') && !(await p.textContent('body')).includes('Hallo Ada.'));
+      }
+
+      // AP-16 (Review B-10): ohne aktuelle Veranstaltung kein Rückfall auf Veranstaltung 1
+      const vaStatus = st => php(['-r', `require '${path.join(WURZEL, 'server/bootstrap.php')}'; db_ausfuehren("UPDATE veranstaltung SET status = '${st}' WHERE id = ?", [${vor.aktuell_id}]);`], vor.config);
+      vaStatus('abgeschlossen');
+      try {
+        for (const [breite, w, h] of BREITEN) {
+          await p.setViewportSize({ width: w, height: h });
+          await pruefeSeite(p, fehler, engine, breite, 'start-ohne-va', basis + '/');
+          notiere(engine, breite, 'start-ohne-va', 'Startseite: „Derzeit keine Veranstaltung“, keine Anmeldung, keine Eckdaten', (await p.textContent('body')).includes('Derzeit keine Veranstaltung') && !await p.isVisible('.held-knoepfe') && !await p.isVisible('dl.eckdaten'));
+          await pruefeSeite(p, fehler, engine, breite, 'anmelden-ohne-va', basis + '/anmelden');
+          notiere(engine, breite, 'anmelden-ohne-va', '/anmelden mit Hinweis, ohne Formular', (await p.textContent('body')).includes('Derzeit gibt es keine Veranstaltung') && !await p.isVisible('input[name=vorname]'));
+        }
+      } finally {
+        vaStatus('aktuell');
       }
 
       notiere(engine, '-', '-', 'Engine ' + version, true);

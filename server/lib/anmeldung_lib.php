@@ -211,6 +211,24 @@ function team_schreibschutz(string $ziel): void
     }
 }
 
+/**
+ * Passwort im eingeloggten Zustand bestätigen (Passwort ändern, Konto löschen,
+ * zweiten Faktor ändern, Passkey anlegen), mit Ratenschutz Topf login je Konto
+ * wie beim Einloggen (Review S-4, V-4). Gibt null oder den Fehlertext zurück.
+ */
+function passwort_bestaetigen(array $k, string $pw, string $falsch = 'Das Passwort stimmt nicht.'): ?string
+{
+    $kennung = rate_merkmal('konto:' . (int)$k['id']);
+    if (!rate_erlaubt('login', $kennung)) {
+        return 'Zu viele Versuche. Bitte warte 15 Minuten.';
+    }
+    if (!anmeldung_passwort_ok($k, $pw)) {
+        rate_misserfolg('login', $kennung);
+        return $falsch;
+    }
+    return null;
+}
+
 /** Passwort prüfen, mit gleicher Laufzeit für unbekannte Adressen. */
 function anmeldung_passwort_ok(?array $k, string $passwort): bool
 {

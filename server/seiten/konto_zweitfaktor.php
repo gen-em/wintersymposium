@@ -18,15 +18,11 @@ $appEinrichtung = null;
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $aktion = (string)($_POST['aktion'] ?? '');
-    $kennung = rate_merkmal('konto:' . $id);
     if (in_array($aktion, ['codes', 'mail_an', 'mail_aus', 'app_start'], true)) {
-        // Änderungen am zweiten Faktor: mit dem Passwort bestätigen
+        // Änderungen am zweiten Faktor: mit dem Passwort bestätigen (Ratenschutz im Helfer, V-4)
         $zs = totp_zustand($id);
-        if (!rate_erlaubt('login', $kennung)) {
-            $fehler[] = 'Zu viele Versuche. Bitte warte 15 Minuten.';
-        } elseif (!anmeldung_passwort_ok($konto, (string)($_POST['pw'] ?? ''))) {
-            rate_misserfolg('login', $kennung);
-            $fehler[] = 'Das Passwort stimmt nicht. Nichts geändert.';
+        if (($f = passwort_bestaetigen($konto, (string)($_POST['pw'] ?? ''), 'Das Passwort stimmt nicht. Nichts geändert.')) !== null) {
+            $fehler[] = $f;
         } elseif ($aktion === 'codes') {
             $neueCodes = totp_codes_erneuern($id);
         } elseif ($aktion === 'mail_an') {

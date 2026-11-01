@@ -100,7 +100,7 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
 <?php if ($zeitraum !== 'offen'): ?>
     <p class="text"><?= $zeitraum === 'vorher'
         ? 'Die Anmeldung öffnet am ' . e(datum_zeit_text(va('anmeldung_start'))) . ' Uhr.'
-        : 'Die Anmeldung ist geschlossen.' ?></p>
+        : ($zeitraum === 'geschlossen' ? 'Derzeit gibt es keine Veranstaltung, zu der du dich anmelden kannst.' : 'Die Anmeldung ist geschlossen.') ?></p>
     <p><a href="/deine-anmeldung">Schon angemeldet? Zu deiner Anmeldung</a></p>
 </div>
 <?php seite_fuss(); return; endif; ?>

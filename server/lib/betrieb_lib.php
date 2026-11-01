@@ -339,7 +339,41 @@ function betrieb_zeile_umgebung(int $jetzt): array
     if ($nicht !== []) {
         return ['ampel' => 'fehler', 'text' => 'Nicht beschreibbar: ' . implode(', ', $nicht) . '. Rechte des Laufzeitordners beim Hoster prüfen.', 'details' => $details];
     }
+    if (betrieb_proxy_verdacht($_SERVER, (bool)konfig('https_ueber_proxy', false), umgebung())) {
+        return ['ampel' => 'warnung', 'text' => BETRIEB_PROXY_TEXT, 'details' => $details];
+    }
     return ['ampel' => 'ok', 'text' => 'Version ' . app_version() . ' (' . umgebung() . '), PHP ' . PHP_VERSION . ', Laufzeitordner beschreibbar.', 'details' => $details];
+}
+
+const BETRIEB_PROXY_TEXT = 'Anfragen kommen über einen Proxy; der Ratenschutz zählt dann alle Besucher zusammen. Beim Hoster klären.';
+
+/**
+ * Kommen Anfragen über einen Proxy, ohne dass https_ueber_proxy gesetzt ist
+ * (Review S-6)? Merkmale: REMOTE_ADDR in einem privaten Bereich (10/8,
+ * 172.16/12, 192.168/16, 127/8, ::1) oder eine Kopfzeile X-Forwarded-For.
+ * In der Entwicklung (lokaler Server, Tests) zählt 127/8 nicht.
+ */
+function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung): bool
+{
+    if ($proxyEin) {
+        return false;
+    }
+    if (trim((string)($server['HTTP_X_FORWARDED_FOR'] ?? '')) !== '') {
+        return true;
+    }
+    $ip = (string)($server['REMOTE_ADDR'] ?? '');
+    if ($ip === '::1') {
+        return $umgebung !== 'entwicklung';
+    }
+    $n = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? ip2long($ip) : false;
+    if ($n === false) {
+        return false;
+    }
+    $in = fn(string $netz, int $bits) => ($n >> (32 - $bits)) === (ip2long($netz) >> (32 - $bits));
+    if ($in('127.0.0.0', 8)) {
+        return $umgebung !== 'entwicklung';
+    }
+    return $in('10.0.0.0', 8) || $in('172.16.0.0', 12) || $in('192.168.0.0', 16);
 }
 
 /* ---- Cron-Anleitung (E-64 (2), E-65 (2)) ---------------------------------- */

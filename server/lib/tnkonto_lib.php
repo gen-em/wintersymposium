@@ -62,7 +62,7 @@ function tk_einloggen(array $k): void
     db_ausfuehren('UPDATE konto SET letzte_anmeldung = ?, loesch_erinnert_am = NULL WHERE id = ?', [db_jetzt(), (int)$k['id']]);
     $a = tk_anmeldung((int)$k['id']);
     if ($a !== null) {
-        $_SESSION['anm'] = ['id' => (int)$a['id'], 'version' => (int)$a['sitzung_version']];
+        anm_merken($a, false);
     }
 }
 
@@ -295,6 +295,20 @@ function tk_login_pruefen(string $email, string $passwort): array
 }
 
 /** Profil ohne verknüpfte Anmeldung (Name, Berufsgruppe, Institution, EFN). Fehlerliste. */
+/**
+ * Fehler ohne Feldbezug (Zahlen-Schlüssel, z. B. „Die Anmeldung gibt es nicht
+ * mehr.“) unter '_'; „Mein Konto“ zeigt sie als Meldung (Review B-14).
+ */
+function tk_profil_fehler(array $fehler): array
+{
+    $f = [];
+    foreach ($fehler as $feld => $text) {
+        $f[is_int($feld) ? '_' : $feld] = $text;
+    }
+    return $f;
+}
+
+/** Profil speichern. Gibt Fehler je Feld zurück; Fehler ohne Feldbezug unter '_'. */
 function tk_profil_setzen(int $kontoId, array $e): array
 {
     $k = konto_laden($kontoId);
@@ -307,7 +321,7 @@ function tk_profil_setzen(int $kontoId, array $e): array
             db_ausfuehren('UPDATE konto SET name = ?, berufsgruppe = ?, beruf_sonstige = ?, institution = ?, efn = ?, geaendert_am = ? WHERE id = ?',
                 [trim($a['vorname'] . ' ' . $a['nachname']), $a['berufsgruppe'], $a['beruf_sonstige'], $a['institution'], $a['efn'], db_jetzt(), $kontoId]);
         }
-        return $r['fehler'];
+        return tk_profil_fehler($r['fehler']);
     }
     $r = anm_daten_pruefen(['email' => $k['email'], 'essen' => 'egal'] + $e);
     $f = array_intersect_key($r['fehler'], array_flip(['vorname', 'nachname', 'berufsgruppe', 'beruf_sonstige', 'institution', 'efn']));

@@ -27,6 +27,7 @@ function beispieldaten_laden(): array
     $r['vorjahr'] = beispieldaten_vorjahr($r['anmeldungen']);
     $r['abend'] = beispieldaten_abend($r['anmeldungen']);
     $r['admin'] = beispieldaten_admin((int)$r['abend']['id']);
+    $r['review2'] = beispieldaten_review2();
     return $r;
 }
 
@@ -393,4 +394,32 @@ function beispieldaten_warteliste(): array
     anm_platz_anlegen($e['id'], $termin, 'warte', time() - 3 * 86400);
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['wanda' => $e['id'], 'termin' => $termin];
+}
+
+/**
+ * Review-Behebung 2 (AP-16): (1) eine unbestätigte Anmeldung mit der Adresse
+ * von Ada (Team-Konto) in der aktuellen Veranstaltung – jemand Fremdes hat sie
+ * angelegt; „Meine Anmeldung“ darf sie Ada nicht als eigene zeigen (Review
+ * S-3). (2) Lea (mit Konto) hat ein Abo auf der ausgeblendeten Liste
+ * „Referierende (intern)“; Speichern unter „Mein Konto“ lässt es stehen
+ * (Review B-6). Es geht keine Mail raus.
+ * Gibt ['fremd_ada' => Anmeldung, 'liste_intern' => Liste] zurück.
+ */
+function beispieldaten_review2(): array
+{
+    $r = anm_daten_pruefen(['vorname' => 'Ada', 'nachname' => 'Untergeschoben', 'email' => 'ada.abend@example.org', 'berufsgruppe' => 'StudentIn', 'institution' => 'Unbekannt', 'beruf_sonstige' => '', 'efn' => '', 'essen' => 'egal']);
+    $e = anm_anlegen($r['werte'], ['fest' => [], 'warte' => []], false);
+    if (!in_array($e['art'], ['neu', 'vorhanden'], true)) {
+        throw new RuntimeException('Beispieldaten Review 2: ' . json_encode($e, JSON_UNESCAPED_UNICODE));
+    }
+    $liste = array_column(nl_listen(), 'id', 'name')['Referierende (intern)'] ?? null;
+    $liste ??= nl_liste_speichern(null, nl_liste_pruefen(['name' => 'Referierende (intern)', 'beschreibung' => 'Einladungen für Referierende – nur über das Team.', 'sichtbar' => ''])['werte'], null);
+    $lea = nl_person_anlegen('lea@example.org', 'Lea');
+    db_ausfuehren(
+        "INSERT INTO newsletter_abo (person_id, liste_id, status, quelle, angefragt_am, bestaetigt_am, fassung) VALUES (?, ?, 'bestaetigt', 'team', ?, ?, ?)
+         ON DUPLICATE KEY UPDATE status = 'bestaetigt'",
+        [$lea, (int)$liste, db_jetzt(), db_jetzt(), nl_fassung()]
+    );
+    db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'ada.abend@example.org'");
+    return ['fremd_ada' => (int)$e['id'], 'liste_intern' => (int)$liste];
 }
