@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.26.2] – 2026-11-01
+
+### Doku
+
+- **AP-17 Vereinheitlichung geplant** (E-69): die Review-Pakete AP-R3 bis AP-R9 als ein Paket mit zwölf Unterpunkten (Konventionen, Helfer, formular_lib, Seiten umstellen, CSS-Grundreinigung, Komponentenblatt, JS-Basis, Link-Lib, Protokoll mit Objektbezug, Lib-Aufteilung, Tests auf Beispieldaten, Abschluss); kommt vor dem Umbau von Einstellungen, Startseite und Newsletter; Prüfprotokoll reserviert T-297 bis T-308.
+
 ## [0.26.1] – 2026-11-01
 
 ### Doku
