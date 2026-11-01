@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
-## [0.25.0] – 2026-11-01
+## [0.26.0] – 2026-11-01
 
 ### Behoben (AP-16, Review-Behebung 2)
 
@@ -28,6 +28,13 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 ### Doku
 
 - Konzept: AP-16 umgesetzt (status, ergebnis, probleme); betrieb.md (zweiter Faktor beim Bestätigen, Mail-Code-Grenze, keine aktuelle Veranstaltung, Proxy-Warnung, Newsletter, Fotos); Prüfprotokoll T-288 bis T-296; Review-Dokument Abschnitt 5.
+## [0.25.0] – 2026-10-31
+
+### Geändert
+
+- **Startseite aus der Veranstaltung** (E-68): Die Zeile über dem Titel ist „Name der Reihe · Kurzname“, der Titel der Name der Veranstaltung – ein Wort ganz lila, sonst das erste Wort weiß und der Rest lila. Die Textfelder „Zeile über dem Titel“ und „Titel“ entfallen.
+- **Alles einer Veranstaltung auf einer Seite:** Untertitel, Sticker, Überschrift der Kacheln, **drei Kacheln** mit je Titel und Text und der Hinweis Fortbildungspunkte stehen bei Verwaltung → Einstellungen (Abschnitt „Startseite“, mit derselben Sperre). Die Seite „Startseite“ und ihr Reiter entfallen; alte Links führen zu den Einstellungen. Das frühere Feld „Infokästen“ wird beim ersten Speichern in die drei Kacheln übernommen.
+- Lange Wörter im Titel der Startseite werden mit Trennstrich umbrochen (vorher lief „Fortbildungsabend“ auf breiten Bildschirmen über den Rand).
 
 ## [0.24.0] – 2026-10-31
 

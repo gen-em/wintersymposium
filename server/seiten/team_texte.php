@@ -2,12 +2,11 @@
 declare(strict_types=1);
 
 /*
- * Texte (AP-5, E-49; pflegbare Texte aus AP-2), seit AP-12 (E-60) zwei Seiten:
- * /team/startseite – Texte der Startseite je Veranstaltung (Verwaltung, Admin
- * und Betreiber); /team/texte – Impressum und Datenschutz, gemeinsam für alle
- * Veranstaltungen (Betrieb, nur Betreiber). Derselbe Editor wie bei den
- * Mailings (E-54), gespeichert als bereinigtes HTML (inhalt_lib.php);
- * Änderungen gelten sofort und stehen im Protokoll.
+ * Texte (AP-5, E-49; pflegbare Texte aus AP-2): /team/texte – Impressum und
+ * Datenschutz, gemeinsam für alle Veranstaltungen (Betrieb, nur Betreiber).
+ * Die Texte der Startseite stehen seit 2026-10-31 bei den Einstellungen der
+ * Veranstaltung (team_einstellungen.php, START_TEXTE). Derselbe Editor wie bei
+ * den Mailings (E-54), gespeichert als bereinigtes HTML (inhalt_lib.php).
  */
 
 $textSeite = ($TEXTE_SEITE ?? '') === '/team/startseite' ? '/team/startseite' : '/team/texte';
@@ -19,13 +18,6 @@ if ($startseite) {
 $betreiber = $konto['rolle'] === 'betreiber';
 // Schlüssel => [Titel, Art (inline: eine Zeile mit fett/kursiv/Link; block: ganzer Text; text: ohne Auszeichnung), nur Betreiber]
 const TEXTE_KATALOG = [
-    'start_kicker' => ['Zeile über dem Titel', 'inline', false],
-    'start_titel' => ['Titel (kursiv = lila)', 'inline', false],
-    'start_unter' => ['Untertitel', 'inline', false],
-    'start_sticker' => ['Sticker (z. B. „Kostenlos“)', 'text', false],
-    'start_infos_titel' => ['Überschrift der Infokästen', 'inline', false],
-    'start_infos' => ['Infokästen (je Kasten eine Zwischenüberschrift „H“, darunter der Text)', 'block', false],
-    'start_cme' => ['Hinweis Fortbildungspunkte („Merke“)', 'block', false],
     'impressum' => ['Impressum', 'block', true],
     'datenschutz' => ['Datenschutzerklärung', 'block', true],
 ];

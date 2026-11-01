@@ -221,3 +221,79 @@ function editor_abschnitte(string $s): array
     }
     return $erg;
 }
+
+/* ---- Startseite einer Veranstaltung (Admin 2026-10-31) ------------------- */
+
+/**
+ * Texte der Startseite, bearbeitet unter Verwaltung → Einstellungen (eine
+ * Seite für alles einer Veranstaltung). Zeile und Titel oben entstehen aus
+ * den Einstellungen (Reihe · Kurzname, Name). Immer genau drei Kacheln.
+ * Schlüssel => [Titel, Art: inline | block | text, Hilfe].
+ */
+const START_TEXTE = [
+    'start_unter' => ['Untertitel', 'inline', 'Ein, zwei Sätze unter dem Titel.'],
+    'start_sticker' => ['Sticker', 'text', 'Schräger Aufkleber oben rechts, z. B. „Kostenlos“. Leer: kein Sticker.'],
+    'start_infos_titel' => ['Überschrift der Kacheln', 'inline', ''],
+    'start_kachel_1_titel' => ['Kachel 1 – Titel', 'text', ''],
+    'start_kachel_1_text' => ['Kachel 1 – Text', 'block', ''],
+    'start_kachel_2_titel' => ['Kachel 2 – Titel', 'text', ''],
+    'start_kachel_2_text' => ['Kachel 2 – Text', 'block', ''],
+    'start_kachel_3_titel' => ['Kachel 3 – Titel', 'text', ''],
+    'start_kachel_3_text' => ['Kachel 3 – Text', 'block', ''],
+    'start_cme' => ['Hinweis Fortbildungspunkte („Merke“)', 'block', 'Nur sichtbar, wenn ausgefüllt.'],
+];
+
+/**
+ * Die drei Kacheln der Startseite: [['titel' => Text, 'text' => HTML], …].
+ * Bis zum ersten Speichern kommen sie aus dem früheren Feld „Infokästen“
+ * (Zwischenüberschrift je Kasten).
+ */
+function start_kacheln(): array
+{
+    $k = [];
+    for ($i = 1; $i <= 3; $i++) {
+        $k[] = ['titel' => inhalt("start_kachel_{$i}_titel"), 'text' => inhalt("start_kachel_{$i}_text")];
+    }
+    if (implode('', array_merge(...array_map('array_values', $k))) === '' && inhalt('start_infos') !== '') {
+        foreach (array_slice(editor_abschnitte(inhalt('start_infos')), 0, 3) as $i => $a) {
+            $k[$i] = ['titel' => html_entity_decode(strip_tags($a['titel']), ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'text' => $a['text']];
+        }
+    }
+    return $k;
+}
+
+/** Formularwert eines Startseiten-Texts (Kacheln mit Übernahme aus „Infokästen“). */
+function start_text_wert(string $schluessel): string
+{
+    if (preg_match('/^start_kachel_([123])_(titel|text)$/', $schluessel, $m) === 1) {
+        return start_kacheln()[(int)$m[1] - 1][$m[2]];
+    }
+    return inhalt($schluessel);
+}
+
+/** Startseiten-Texte aus dem Formular speichern. Gibt [geänderte Schlüssel, Fehler je Schlüssel] zurück. */
+function start_texte_speichern(array $eingabe, int $kontoId): array
+{
+    $geaendert = [];
+    $fehler = [];
+    foreach (START_TEXTE as $k => [$titel, $art]) {
+        if (!isset($eingabe[$k])) {
+            continue;
+        }
+        $roh = (string)$eingabe[$k];
+        if (mb_strlen($roh) > EDITOR_MAX || ($art === 'text' && mb_strlen($roh) > 120)) {
+            $fehler[$k] = 'Zu lang.';
+            continue;
+        }
+        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : editor_bereinigen($roh, $art, $art === 'block');
+        if ($neu !== inhalt($k)) {
+            inhalt_setzen($k, $neu, $kontoId);
+            $geaendert[] = $k;
+        }
+    }
+    // Die Kacheln sind jetzt gespeichert: das frühere Feld „Infokästen“ wird nicht mehr gebraucht
+    if ($fehler === [] && isset($eingabe['start_kachel_1_titel']) && inhalt('start_infos') !== '') {
+        inhalt_setzen('start_infos', '', $kontoId);
+    }
+    return [$geaendert, $fehler];
+}

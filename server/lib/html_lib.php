@@ -152,7 +152,7 @@ const TEAM_BEREICHE = [
     'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
     'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
-    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/startseite', 'Startseite'], ['/team/protokoll', 'Protokoll']],
+    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/protokoll', 'Protokoll']],
     'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true]],
 ];
 

@@ -74,6 +74,17 @@ function va_an(string $schluessel): bool
 }
 
 /** Kurzname der Veranstaltung für Mails und Kopfzeilen. */
+/**
+ * Titel der Startseite aus dem Namen der Veranstaltung (Admin 2026-10-31):
+ * ein Wort ganz lila, sonst das erste Wort weiß und der Rest lila.
+ */
+function va_titel_html(): string
+{
+    $name = trim(preg_replace('/\s+/u', ' ', va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz()) ?? '');
+    $teile = explode(' ', $name, 2);
+    return count($teile) === 1 ? '<em>' . e($name) . '</em>' : e($teile[0]) . ' <em>' . e($teile[1]) . '</em>';
+}
+
 function va_kurz(): string
 {
     return va('veranstaltung_kurz') !== '' ? va('veranstaltung_kurz') : 'Wintersymposium';
