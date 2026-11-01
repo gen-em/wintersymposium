@@ -124,7 +124,7 @@ function konv_klassen_im_code(string $wurzel): array
     $k = [];
     foreach ($dateien as $p) {
         $q = (string)file_get_contents($p);
-        preg_match_all('/class(?:Name)?\s*=\s*\\?"([^"]*)\\?"|class=\'([^\']*)\'|classList\.(?:add|remove|toggle)\(([^)]*)\)|\'(?:knopf|klasse|knopfklasse|form_klasse|ja_klasse)\'\s*=>\s*\'([^\']*)\'/', $q, $m, PREG_SET_ORDER);
+        preg_match_all('/class(?:Name)?\s*=\s*\\\\?"([^"]*)\\\\?"|class=\'([^\']*)\'|classList\.(?:add|remove|toggle)\(([^)]*)\)|\'(?:knopf|klasse|knopfklasse|form_klasse|ja_klasse)\'\s*=>\s*\'([^\']*)\'/', $q, $m, PREG_SET_ORDER);
         foreach ($m as $x) {
             if (($x[3] ?? '') !== '') {
                 // classList.add/remove/toggle: nur die Zeichenketten, keine Ausdrücke
@@ -265,6 +265,13 @@ function konventionen_pruefen(string $wurzel): void
     konv_melden($ohne, 'V-29: jede Klasse in site.css wird in PHP/JS verwendet (' . count($cssKlassen) . ' Klassen)');
     $fehlt = array_values(array_filter(konv_klassen_im_code($wurzel), fn($k) => !in_array($k, $cssKlassen, true) && !isset(KONV_KLASSE_OHNE_CSS[$k])));
     konv_melden($fehlt, 'V-29: jede Klasse im Markup hat eine Regel in site.css');
+    // Ausnahmelisten ohne veraltete Einträge
+    $imCode = konv_klassen_im_code($wurzel);
+    $alt = array_merge(
+        array_keys(array_filter(KONV_CSS_OHNE_VORKOMMEN, fn($_, $k) => !in_array($k, $cssKlassen, true) || preg_match('/(?<![\w-])' . preg_quote($k, '/') . '(?![\w-])/', $code) === 1, ARRAY_FILTER_USE_BOTH)),
+        array_keys(array_filter(KONV_KLASSE_OHNE_CSS, fn($_, $k) => in_array($k, $cssKlassen, true) || !in_array($k, $imCode, true), ARRAY_FILTER_USE_BOTH))
+    );
+    konv_melden($alt, 'V-29: Ausnahmelisten der Klassen ohne veraltete Einträge');
 
     // K-h Präfixe: jede Funktion liegt in der Lib ihres Präfixes
     $falsch = [];

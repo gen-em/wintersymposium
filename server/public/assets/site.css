@@ -454,7 +454,7 @@ body.akzent-rot .kopf .logo-lila { display: none; }
 .nav-liste a { color: var(--fg); text-decoration: none; }
 .nav-liste a[aria-current="page"] { color: var(--akz); }
 .nav-liste a.knopf { color: var(--auf-akz); }
-/* Stehende Kopfleiste (AP-12, E-60): immer sichtbar; Handy blendet sie beim Scrollen nach unten aus (kopf.js) */
+/* Stehende Kopfleiste (AP-12, E-60): immer sichtbar; Handy blendet sie beim Scrollen nach unten aus (basis.js) */
 .kopf { border-bottom: 1px solid var(--linie); position: sticky; top: 0; z-index: 30; background: var(--bg); transition: transform .2s ease, box-shadow .2s ease; }
 .kopf.gescrollt { box-shadow: 0 6px 18px color-mix(in srgb, var(--schwarz) 35%, transparent); }
 @media (max-width: 759px) {
