@@ -2000,6 +2000,7 @@ va_zwischenspeicher_leeren();
     db()->exec('SET FOREIGN_KEY_CHECKS = 1');
 va_zwischenspeicher_leeren();
 
+    require_once __DIR__ . '/seiten.php';
     require __DIR__ . '/http_tests.php';
     http_tests($wurzel, $tmp);
 }

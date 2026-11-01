@@ -87,6 +87,23 @@ function totp_base32(string $roh): string
     return $aus;
 }
 
+/** Base32 (RFC 4648, ohne Auffüllung) zurück in Bytes; fremde Zeichen werden übersprungen. */
+function totp_base32_dekodieren(string $b32): string
+{
+    $abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $bits = '';
+    foreach (str_split(strtoupper(preg_replace('/[^A-Za-z2-7]/', '', $b32) ?? '')) as $z) {
+        $bits .= str_pad(decbin((int)strpos($abc, $z)), 5, '0', STR_PAD_LEFT);
+    }
+    $roh = '';
+    foreach (str_split($bits, 8) as $b) {
+        if (strlen($b) === 8) {
+            $roh .= chr((int)bindec($b));
+        }
+    }
+    return $roh;
+}
+
 function totp_base32_gruppen(string $roh): string
 {
     return trim(chunk_split(totp_base32($roh), 4, ' '));

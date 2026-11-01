@@ -48,26 +48,10 @@ function http_csrf(string $html): string
     return preg_match('/name="csrf" value="([0-9a-f]{64})"/', $html, $m) === 1 ? $m[1] : '';
 }
 
-function base32_dekodieren(string $b32): string
-{
-    $abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    $bits = '';
-    foreach (str_split(strtoupper($b32)) as $z) {
-        $bits .= str_pad(decbin(strpos($abc, $z)), 5, '0', STR_PAD_LEFT);
-    }
-    $roh = '';
-    foreach (str_split($bits, 8) as $b) {
-        if (strlen($b) === 8) {
-            $roh .= chr(bindec($b));
-        }
-    }
-    return $roh;
-}
-
 /** Geheimnis aus der Einrichtungsseite (otpauth-Adresse im QR-Code). */
 function http_totp_geheimnis(string $html): ?string
 {
-    return preg_match('/secret=([A-Z2-7]+)/', $html, $m) === 1 ? base32_dekodieren($m[1]) : null;
+    return preg_match('/secret=([A-Z2-7]+)/', $html, $m) === 1 ? totp_base32_dekodieren($m[1]) : null;
 }
 
 /** Programm pflegen, veröffentlichen, anzeigen (AP-3 Schritt 3); $b = Kekse einer eingeloggten Betreiberin. */
@@ -923,6 +907,25 @@ function daten_http_tests(string $basis, string $h, string $tmp, string $b, arra
     pruefe(count(sicherung_liste()) === count($alt) + 3 && http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b)['status'] === 200, 'davor automatisch gesichert, Team bleibt eingeloggt');
     status_http_tests($basis, $h, $b);
     komponenten_http_tests($basis, $h, $b);
+    seiten_http_tests($basis, $h, $b);
+}
+
+/** Jede HTML-Seite aus der Seitenliste (tools/tests/seiten.php, V-52) antwortet: Team-Seiten der BetreiberIn, öffentliche allen. */
+function seiten_http_tests(string $basis, string $h, string $b): void
+{
+    abschnitt('HTTP: alle Seiten aus ROUTEN (AP-17 Unterpunkt 11)');
+    $s = test_seiten();
+    $team = [];
+    foreach (array_merge($s['team'], $s['betreiber']) as $pfad) {
+        $team[$pfad] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $b)['status'];
+    }
+    pruefe(count($team) >= 15 && array_unique(array_values($team)) === [200], 'BetreiberIn: alle ' . count($team) . ' Team-Seiten 200' . (array_unique(array_values($team)) === [200] ? '' : ': ' . json_encode($team)));
+    $offen = [];
+    foreach ($s['oeffentlich'] as $pfad) {
+        $offen[$pfad] = http_anfrage($basis, 'GET', $pfad, $h)['status'];
+    }
+    $schlecht = array_filter($offen, fn($st) => $st >= 400);
+    pruefe(count($offen) >= 8 && $schlecht === [], 'Gäste: alle ' . count($offen) . ' öffentlichen Seiten ohne Fehler (/konto leitet zum Einloggen)' . ($schlecht === [] ? '' : ': ' . json_encode($schlecht)));
 }
 
 /** Betrieb → Komponenten (AP-17 Unterpunkt 6, E-64 (1)): alle Abschnitte, Beispiele ändern nichts. */
@@ -1195,10 +1198,10 @@ function rechte_http_tests(string $basis, string $h, string $tmp, string $b): vo
     pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $aktuell, $h, [], null, $k)['status'] === 403, 'fremde Veranstaltung per ?va= abgewiesen (403)');
     pruefe(http_anfrage($basis, 'GET', '/team/personen?a=' . $fremdAnm, $h, [], null, $k)['status'] === 404, 'Anmeldung einer fremden Veranstaltung: 404');
     $nur = [];
-    foreach (['/team/newsletter', '/team/konten', '/team/veranstaltungen', '/team/texte', '/team/daten', '/team/status', '/team/komponenten'] as $pfad) {
-        $nur[] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
+    foreach (test_seiten()['betreiber'] as $pfad) {
+        $nur[$pfad] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
     }
-    pruefe($nur === [403, 403, 403, 403, 403, 403, 403], 'Betrieb-Seiten (auch Status, AP-15, und Komponenten, AP-17) nur für BetreiberInnen');
+    pruefe(count($nur) >= 7 && array_unique(array_values($nur)) === [403], 'Betrieb-Seiten aus der Seitenliste (' . count($nur) . ') nur für BetreiberInnen: ' . json_encode($nur));
     pruefe(str_contains(http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $k)['text'], 'name="start_kachel_1_titel"') && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja (bei den Einstellungen), Newsletter-Export nein');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
