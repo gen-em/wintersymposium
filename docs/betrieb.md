@@ -49,20 +49,13 @@ tools/browser/          → Browser-Durchlauf (R-12)
 
 **Gestaltung:** `assets/site.css` ist die einzige Quelle (E-64), nach Komponenten gegliedert (Inhaltsverzeichnis am Dateianfang), Farben und Maße als Tokens in `:root`, Umbruchpunkte 760 px und 1000 px. Das Komponentenblatt unter Betrieb → Komponenten (`/team/komponenten`, nur BetreiberInnen) zeigt jede Komponente mit Varianten und Aufruf; der Browser-Durchlauf fotografiert es in allen Engines und Breiten. `docs/mockups/` ist Archiv.
 
-Zielordner auf dem Webspace (E-32):
-
-| Umgebung | Ordner im Webspace | Pfad vom FTP-Login aus | Domain zeigt auf |
-|---|---|---|---|
-| Staging | `/wintersymposium/staging` | `/staging` | `/wintersymposium/staging/public` (`test.winter-notfallsymposium.de`) |
-| Produktion | `/wintersymposium/produktiv` | `/produktiv` | `/wintersymposium/produktiv/public` (`winter-notfallsymposium.de`) |
-
-Der FTP-Zugang der Auslieferung landet direkt im Ordner `wintersymposium` und sieht dort `staging` und `produktiv`; der Workflow verwendet deshalb `/staging/` und `/produktiv/`.
+Zielordner auf dem Webspace (E-32): je Umgebung ein eigener Ordner (`<Zielordner Staging>`, `<Zielordner Produktion>`); die Domain zeigt jeweils auf dessen Unterordner `public/` (E-34) – Staging `test.winter-notfallsymposium.de`, Produktion `winter-notfallsymposium.de`. Die echten Ordnernamen stehen nur in der Verwaltung des Hosters und im Auslieferungs-Workflow, nicht in der Doku (R-10).
 
 ## 2. Ersteinrichtung je Umgebung
 
 Erst Staging einrichten und prüfen, dann Produktion genauso.
 
-1. **Domain-Zuordnung:** in der Verwaltung des Hosters die Subdomain `test.winter-notfallsymposium.de` auf den Ordner `/wintersymposium/staging/public` legen (Produktion: Hauptdomain auf `/wintersymposium/produktiv/public`). HTTPS-Zertifikat für die Domain aktivieren.
+1. **Domain-Zuordnung:** in der Verwaltung des Hosters die Subdomain `test.winter-notfallsymposium.de` auf `<Zielordner Staging>/public` legen (Produktion: Hauptdomain auf `<Zielordner Produktion>/public`). HTTPS-Zertifikat für die Domain aktivieren.
 2. **Datenbank:** eine MySQL-Datenbank mit eigenem Benutzer anlegen (je Umgebung eine eigene).
 3. **Erste Auslieferung:** Sobald der PR in `main` gemergt ist, überträgt GitHub Actions den Code automatisch nach Staging (Abschnitt 3). Für Produktion: Tag setzen (Abschnitt 3).
 4. **config.php anlegen:** `config.example.php` lokal kopieren, als `config.php` ausfüllen und per FTP in den Zielordner legen (neben `config.example.php`, **nicht** in `public/`):
@@ -77,8 +70,8 @@ Erst Staging einrichten und prüfen, dann Produktion genauso.
 
 ## 3. Auslieferung (GitHub Actions)
 
-- **Staging:** jeder Push auf `main` (also jeder gemergte PR) → Prüfung → Abgleich nach `/wintersymposium/staging` (FTP-Pfad `/staging/`).
-- **Produktion:** ein Tag `vX.Y.Z` → Prüfung → Abgleich nach `/wintersymposium/produktiv` (FTP-Pfad `/produktiv/`). Der Tag muss genau der Datei `VERSION` entsprechen (`v` + Inhalt) und auf einem Commit von `main` liegen, sonst bricht der Lauf ab, bevor etwas übertragen wird.
+- **Staging:** jeder Push auf `main` (also jeder gemergte PR) → Prüfung → Abgleich nach `<Zielordner Staging>`.
+- **Produktion:** ein Tag `vX.Y.Z` → Prüfung → Abgleich nach `<Zielordner Produktion>`. Der Tag muss genau der Datei `VERSION` entsprechen (`v` + Inhalt) und auf einem Commit von `main` liegen, sonst bricht der Lauf ab, bevor etwas übertragen wird.
   - Mit GitHub Desktop: Branch `main` auswählen und aktualisieren („Fetch/Pull origin“) → Reiter *History* → Rechtsklick auf den obersten Commit → *Create Tag…* → Name `v` + Version (z. B. `v0.1.0`) → *Push origin* (überträgt den Tag).
   - Optional: In GitHub unter *Settings → Environments → produktiv* einen Pflicht-Prüfer eintragen; dann wartet der Lauf vor dem Abgleich auf die Freigabe. Das Environment legt GitHub beim ersten Tag-Lauf selbst an.
 - **Nie übertragen und nie gelöscht:** `config.php`, `var/` (Sitzungen, Sperrdateien, Logs).
