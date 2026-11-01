@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.1] – 2026-11-01
+
+### Doku
+
+- Konzept E-71 (12), (13) und Prüfprotokoll AP-19: zwei Punkte aus der Umsetzung vom Admin bestätigt (Reihe ändern nur BetreiberInnen; ohne gewähltes Interesse gilt die Vorauswahl der Berufsgruppe). Keine Code-Änderung.
+
 ## [0.30.0] – 2026-11-01
 
 AP-19 Veranstaltungsreihen und Newsletter (E-71, O-50 bis O-54).
