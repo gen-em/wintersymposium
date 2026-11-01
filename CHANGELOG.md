@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.6] – 2026-11-01
+
+### Behoben
+
+- **Status → Umgebung: Fehlalarm „Anfragen kommen über einen Proxy“.** Auf Staging setzt der Hoster die Adresse der Besuchenden schon als Absenderadresse ein und schickt zusätzlich X-Forwarded-For mit (Merkmale aus 0.30.5: intern nein, letzter Eintrag ja). Die Prüfung warnt jetzt nur, wenn die Absenderadresse intern ist oder nicht dem letzten Eintrag in X-Forwarded-For entspricht; der Ratenschutz zählt dort jede Person einzeln.
+
+### Doku
+
+- Konzept E-74 (3) d geklärt, Prüfprotokoll T-341 (Browser-Prüfung der Status-Seite aus 0.30.5 nachgetragen) und T-342, betrieb.md (Status-Tabelle).
+
 ## [0.30.5] – 2026-11-01
 
 Befunde aus dem Durchklicken von Staging (E-74 (3)).

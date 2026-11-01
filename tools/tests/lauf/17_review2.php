@@ -194,6 +194,8 @@ function test_review2(): void
     pruefe($pv(['REMOTE_ADDR' => '10.1.2.3']) && $pv(['REMOTE_ADDR' => '172.20.0.1']) && $pv(['REMOTE_ADDR' => '192.168.1.1']) && $pv(['REMOTE_ADDR' => '127.0.0.1']), 'S-6: private Adressen 10/8, 172.16/12, 192.168/16, 127/8 → Warnung');
     pruefe(!$pv(['REMOTE_ADDR' => '172.32.0.1']) && !$pv(['REMOTE_ADDR' => '203.0.113.5']) && !$pv(['REMOTE_ADDR' => '127.0.0.1'], false, 'entwicklung'), 'S-6: öffentliche Adresse und 127/8 in der Entwicklung → keine Warnung');
     pruefe($pv(['REMOTE_ADDR' => '203.0.113.5', 'HTTP_X_FORWARDED_FOR' => '198.51.100.7']) && !$pv(['REMOTE_ADDR' => '10.1.2.3', 'HTTP_X_FORWARDED_FOR' => '1.2.3.4'], true), 'S-6: X-Forwarded-For → Warnung; mit https_ueber_proxy keine');
+    pruefe(!$pv(['REMOTE_ADDR' => '198.51.100.7', 'HTTP_X_FORWARDED_FOR' => '198.51.100.7']) && !$pv(['REMOTE_ADDR' => '198.51.100.7', 'HTTP_X_FORWARDED_FOR' => '203.0.113.9, 198.51.100.7'])
+        && $pv(['REMOTE_ADDR' => '10.0.0.7', 'HTTP_X_FORWARDED_FOR' => '10.0.0.7']), 'E-74 (3) d: Absender = letzter Eintrag in X-Forwarded-For → keine Warnung (Hoster hat die echte Adresse eingesetzt); interne Absenderadresse warnt weiter');
     $pm = fn(array $s) => array_column(betrieb_proxy_merkmale($s, 'produktion'), 1);
     pruefe($pm(['REMOTE_ADDR' => '10.0.0.7', 'HTTP_X_FORWARDED_FOR' => '198.51.100.7']) === ['ja', 'vorhanden (1 Eintrag)', 'nein']
         && $pm(['REMOTE_ADDR' => '198.51.100.7', 'HTTP_X_FORWARDED_FOR' => '203.0.113.9, 198.51.100.7']) === ['nein', 'vorhanden (2 Einträge)', 'ja']

@@ -343,7 +343,9 @@ const BETRIEB_PROXY_TEXT = 'Anfragen kommen über einen Proxy; der Ratenschutz z
 /**
  * Kommen Anfragen über einen Proxy, ohne dass https_ueber_proxy gesetzt ist
  * (Review S-6)? Merkmale: REMOTE_ADDR in einem privaten Bereich (10/8,
- * 172.16/12, 192.168/16, 127/8, ::1) oder eine Kopfzeile X-Forwarded-For.
+ * 172.16/12, 192.168/16, 127/8, ::1) oder eine Kopfzeile X-Forwarded-For,
+ * deren letzter Eintrag nicht REMOTE_ADDR ist. Ist er es, hat der Hoster die
+ * echte Adresse schon eingesetzt (Staging, E-74 (3) d) – kein Verdacht.
  * In der Entwicklung (lokaler Server, Tests) zählt 127/8 nicht.
  */
 function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung): bool
@@ -351,10 +353,12 @@ function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung)
     if ($proxyEin) {
         return false;
     }
-    if (trim((string)($server['HTTP_X_FORWARDED_FOR'] ?? '')) !== '') {
+    $ip = (string)($server['REMOTE_ADDR'] ?? '');
+    if (betrieb_ip_intern($ip, $umgebung)) {
         return true;
     }
-    return betrieb_ip_intern((string)($server['REMOTE_ADDR'] ?? ''), $umgebung);
+    $xff = array_values(array_filter(array_map('trim', explode(',', (string)($server['HTTP_X_FORWARDED_FOR'] ?? ''))), fn($x) => $x !== ''));
+    return $xff !== [] && $xff[count($xff) - 1] !== $ip;
 }
 
 /** Absenderadresse in einem privaten Bereich (10/8, 172.16/12, 192.168/16, 127/8, ::1); in der Entwicklung zählt die lokale nicht. */
