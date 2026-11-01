@@ -634,6 +634,7 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
  *   ['art' => 'vorhanden', 'id' => …]   (Adresse schon angemeldet, E-46)
  *   ['art' => 'fehler', 'fehler' => [...]] (Wahl nicht mehr möglich, z. B. Termin voll)
  */
+/* $newsletter: Häkchen „Newsletter der Reihe“; $w['nl_interessen']: Allgäu Akut mit Interessen ('' = nein, AP-19). */
 function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null, bool $kontoWunsch = false, ?array $konto = null): array
 {
     $jetzt ??= time();
@@ -661,10 +662,10 @@ function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null
         $jetztDb = db_zeit($jetzt);
         $bis = $jetzt + va_zahl('anmeldung_bestaetigung_h') * 3600;
         db_ausfuehren(
-            "INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, konto_wunsch, status, bestaetigen_bis, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO anmeldung (veranstaltung_id, konto_id, vorname, nachname, email, berufsgruppe, beruf_sonstige, institution, efn, essen, newsletter, nl_interessen, konto_wunsch, status, bestaetigen_bis, einwilligung_am, erstellt_am, bestaetigt_am, geaendert_am)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [va_id(), $vomKonto ? (int)$konto['id'] : null, $w['vorname'], $w['nachname'], $w['email'], $w['berufsgruppe'], $w['beruf_sonstige'], $w['institution'], $w['efn'] !== '' ? $w['efn'] : null,
-                $w['essen'], $newsletter ? 1 : 0, $kontoWunsch && !$vomKonto ? 1 : 0, $vomKonto ? 'bestaetigt' : 'unbestaetigt', $vomKonto ? null : db_zeit($bis), $jetztDb, $jetztDb, $vomKonto ? $jetztDb : null, $jetztDb]
+                $w['essen'], $newsletter ? 1 : 0, nl_interessen(explode(',', (string)($w['nl_interessen'] ?? ''))), $kontoWunsch && !$vomKonto ? 1 : 0, $vomKonto ? 'bestaetigt' : 'unbestaetigt', $vomKonto ? null : db_zeit($bis), $jetztDb, $jetztDb, $vomKonto ? $jetztDb : null, $jetztDb]
         );
         $id = (int)db()->lastInsertId();
         anm_platz_anlegen($id, 0, $warteliste ? 'warte' : 'fest', $jetzt);

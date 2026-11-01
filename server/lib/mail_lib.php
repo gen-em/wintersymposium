@@ -105,7 +105,7 @@ function mail_absender(array $c): string
 function mail_absender_name(array $c): string
 {
     $nl = ($c['postfach'] ?? 'system') === 'newsletter';
-    // System-Postfach: Name der Reihe (E-67); Newsletter: eigene Einstellung, sonst die Reihe
+    // System-Postfach: Dachmarke (E-67, E-71); Newsletter: eigene Einstellung, sonst die Dachmarke
     $n = $nl ? trim((string)(einstellung('mail_absender_name_newsletter') ?? '')) : '';
     return $n !== '' ? $n : reihe_name();
 }
@@ -540,7 +540,7 @@ function mail_gruss(bool $allgemein = false): string
 }
 
 /**
- * Name der Reihe (E-67): steht in Mails, die für alle Veranstaltungen gelten
+ * Dachmarke (E-67; Begriff E-71, Einstellung reihe_name): steht in Mails, die für alle Veranstaltungen gelten
  * (Team, Konto, Newsletter), als Absender, im Betreff und im Gruß. Einstellung
  * unter Betrieb → Absender.
  */
@@ -689,7 +689,7 @@ function mail_vorlage_roh(string $name, array $d): array
 
 /**
  * Absender je Postfach speichern (Betrieb, E-27, E-50, E-67): System
- * (anmeldung@, mit Name der Reihe) oder Newsletter (newsletter@, mit eigenem
+ * (anmeldung@, mit der Dachmarke) oder Newsletter (newsletter@, mit eigenem
  * Namen). Gibt null oder eine Fehlermeldung zurück; protokolliert.
  */
 function mail_absender_setzen(string $postfach, string $adresse, string $name, string $reihe, ?int $durch): ?string
@@ -704,7 +704,7 @@ function mail_absender_setzen(string $postfach, string $adresse, string $name, s
     if ($nl !== '') {
         einstellung_setzen('mail_absender_name' . $nl, $nam === '' ? null : mb_substr($nam, 0, 80));
     } else {
-        // System-Postfach: Name der Reihe (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
+        // System-Postfach: Dachmarke (E-67); der Absender der Mails zu einer Anmeldung ist die Veranstaltung
         $reihe = trim(preg_replace('/\s+/u', ' ', $reihe) ?? '');
         einstellung_setzen('reihe_name', $reihe === '' ? null : mb_substr($reihe, 0, 60));
         einstellung_setzen('mail_absender_name', null);

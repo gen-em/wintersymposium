@@ -16,6 +16,13 @@ declare(strict_types=1);
  */
 
 /** Arten von Veranstaltungen (E-58): beeinflussen nur Texte, das Grundmuster ist für alle gleich. */
+/** Vorauswahl bei „Allgäu Akut“ je Berufsgruppe (O-50), gespeichert als JSON {Berufsgruppe: klinik|praeklinik|beides}. */
+const VA_BG_INTERESSE = 'berufsgruppen_interesse';
+const VA_INTERESSEN = ['klinik' => 'Klinik', 'praeklinik' => 'Präklinik', 'beides' => 'beides'];
+
+/** Zielgruppe je Veranstaltung (E-71 (5)). */
+const VA_ZIELGRUPPEN = ['beide' => 'Klinik und Präklinik', 'klinik' => 'Klinik', 'praeklinik' => 'Präklinik'];
+
 const VA_ARTEN = ['symposium' => 'Symposium', 'vortrag' => 'Vortragsabend', 'journalclub' => 'Journal Club', 'workshop' => 'Workshop-Abend', 'fall' => 'Fallbesprechung', 'sonstige' => 'Sonstige'];
 
 /**
@@ -25,12 +32,13 @@ const VA_ARTEN = ['symposium' => 'Symposium', 'vortrag' => 'Vortragsabend', 'jou
 const VA_GRUPPEN = [
     'veranstaltung' => ['Grunddaten', 'Erscheint in den Eckdaten auf der Startseite.'],
     'bausteine' => ['Bausteine', 'Was diese Veranstaltung braucht. Workshops gibt es, sobald das Programm welche enthält (E-58).'],
+    'reihe' => ['Reihe & Zielgruppe', 'Die Reihe bestimmt den Newsletter, den die Anmeldung anbietet (E-71); ändern können sie BetreiberInnen. Die Zielgruppe bestimmt, wer ein Mailing an „Allgäu Akut“ zu dieser Veranstaltung bekommt.'],
     'anmeldung' => ['Anmeldung', 'Zeitraum und Regeln des Anmeldeformulars.'],
     'nachruecken' => ['Warteliste', 'Ein frei gewordener Platz wird der ersten Person der Warteliste angeboten (E-19).'],
     'stichtage' => ['Stichtage', 'Bis einschließlich dieses Tages können Teilnehmende selbst ändern; danach nur noch das Team (E-31). Leer: bis zur Veranstaltung.'],
     'cme' => ['Fortbildungspunkte', 'Die Anzeige erscheint auf der Startseite; Punkte, Kategorie, Kammer und Nummer stehen auf der Teilnahmebescheinigung (AP-10).'],
     'zertifikat' => ['Bescheinigung', 'Steht auf der Teilnahmebescheinigung (AP-10, E-57). Die Unterschrift als Bild lädst du unter „Teilnahme“ hoch.'],
-    'listen' => ['Berufsgruppen', 'Je Zeile ein Eintrag; die Reihenfolge gilt im Formular.'],
+    'listen' => ['Berufsgruppen', 'Je Zeile ein Eintrag; die Reihenfolge gilt im Formular. Darunter je Berufsgruppe die Vorauswahl bei „Allgäu Akut“ in der Anmeldung (O-50).'],
 ];
 
 /**
@@ -67,7 +75,9 @@ const VA_KATALOG = [
     'stichtag_workshop' => ['gruppe' => 'stichtage', 'typ' => 'datum', 'titel' => 'Workshops ändern bis', 'start' => ''],
     'stichtag_essen' => ['gruppe' => 'stichtage', 'typ' => 'datum', 'titel' => 'Essen ändern bis', 'start' => ''],
     'stichtag_storno' => ['gruppe' => 'stichtage', 'typ' => 'datum', 'titel' => 'Selbst stornieren bis', 'start' => ''],
+    'zielgruppe' => ['gruppe' => 'reihe', 'typ' => 'auswahl', 'titel' => 'Zielgruppe', 'start' => 'beide', 'optionen' => VA_ZIELGRUPPEN, 'hilfe' => 'Ein Mailing an „Allgäu Akut“ mit Bezug auf diese Veranstaltung geht nur an Abonnierende mit passendem Interesse; „Klinik und Präklinik“ = an alle.'],
     'berufsgruppen' => ['gruppe' => 'listen', 'typ' => 'liste', 'titel' => 'Berufsgruppen', 'start' => "ÄrztIn\nNotfallsanitäterIn\nRettungssanitäterIn\nPflege/MFA\nStudentIn\nSonstige", 'max_zeilen' => 30, 'hilfe' => 'Die erste Zeile fragt die EFN ab (ÄrztInnen, E-22); „Sonstige“ erlaubt einen Freitext (E-21).'],
+    VA_BG_INTERESSE => ['gruppe' => 'listen', 'typ' => 'zuordnung', 'titel' => 'Vorauswahl „Allgäu Akut“ je Berufsgruppe', 'start' => ''],
 ];
 
 /** Ein Baustein (mit_essen, mit_cme, mit_zertifikat) ist eingeschaltet; leer gilt der Startwert. */
@@ -108,7 +118,7 @@ function va_tabellen_da(): bool
 /** Nach Migrationen oder geleerter Datenbank neu nachsehen. */
 function va_zwischenspeicher_leeren(): void
 {
-    ctx_weg('va_tab', 'va_aktuell', 'inhalt_cache', 'va_rechte');
+    ctx_weg('va_tab', 'va_aktuell', 'inhalt_cache', 'va_rechte', 'va_reihen_da');
 }
 
 function va_kontext(int $id): void
@@ -253,13 +263,17 @@ function va_kuerzel_setzen(int $id, string $kuerzel, ?int $kontoId): ?string
  * Neue Veranstaltung (Entwurf). $vorlage: Einstellungen und Programm einer
  * bestehenden kopieren (Programm als Arbeitsstand, noch nicht veröffentlicht).
  */
-function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId): array
+/**
+ * $reihe (E-71 (2)): null = wie die Vorlage (ohne Vorlage einzeln), 0 = einzeln,
+ * sonst die Reihe; eine gewählte Reihe belegt den Kurznamen mit ihrem vor.
+ */
+function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId, ?int $reihe = null): array
 {
     $kuerzel = mb_strtolower(trim($kuerzel));
     if (($f = va_kuerzel_fehler($kuerzel)) !== null) {
         return ['fehler' => $f];
     }
-    $id = db_transaktion(function () use ($kuerzel, $name, $vorlage): int {
+    $id = db_transaktion(function () use ($kuerzel, $name, $vorlage, $reihe): int {
         db_ausfuehren("INSERT INTO veranstaltung (kuerzel, status, erstellt_am) VALUES (?, 'entwurf', ?)", [$kuerzel, db_jetzt()]);
         $id = (int)db()->lastInsertId();
         if ($vorlage !== null) {
@@ -280,6 +294,15 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
         }
         db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_name', ?, ?)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
+        if (va_reihen_da()) {
+            $rid = $reihe === null ? ($vorlage !== null ? db_wert('SELECT reihe_id FROM veranstaltung WHERE id = ?', [$vorlage]) : null) : ($reihe > 0 ? $reihe : null);
+            $r = $rid === null ? null : va_reihe((int)$rid);
+            db_ausfuehren('UPDATE veranstaltung SET reihe_id = ? WHERE id = ?', [$r['id'] ?? null, $id]);
+            if ($r !== null && $reihe !== null && $reihe > 0) {
+                db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_kurz', ?, ?)
+                    ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $r['kurz'], db_jetzt()]);
+            }
+        }
         return $id;
     });
     audit_schreiben('einstellungen', audit_text('veranstaltung', $id, 'angelegt: ' . $kuerzel . ($vorlage !== null ? ' (Kopie von ' . $vorlage . ')' : '')), $kontoId, ['veranstaltung' => $id]);
@@ -449,6 +472,17 @@ function va_pruefen(array $eingabe): array
                     $fehler[$k] = "„{$titel}“: bitte eine der Möglichkeiten wählen.";
                 }
                 break;
+            case 'zuordnung':
+                // {Berufsgruppe: klinik|praeklinik|beides}; die Seite schickt ein Feld je Berufsgruppe
+                $map = json_decode($roh, true);
+                if (!is_array($map) || array_filter($map, fn($v, $k) => !is_string($k) || !isset(VA_INTERESSEN[$v]), ARRAY_FILTER_USE_BOTH) !== []) {
+                    $fehler[$k] = "„{$titel}“: bitte je Berufsgruppe Klinik, Präklinik oder beides wählen.";
+                    $roh = '';
+                } else {
+                    ksort($map);
+                    $roh = json_encode($map, JSON_UNESCAPED_UNICODE);
+                }
+                break;
             case 'liste':
                 $zeilen = array_values(array_filter(array_map(fn($z) => trim(preg_replace('/\s+/u', ' ', $z) ?? ''), explode("\n", $roh)), fn($z) => $z !== ''));
                 if (count($zeilen) > $d['max_zeilen'] || array_filter($zeilen, fn($z) => mb_strlen($z) > 60) !== []) {
@@ -498,7 +532,10 @@ function va_gruppe_pruefen(array $eingabe, ?string $gruppe): array
     $teil = [];
     foreach (VA_KATALOG as $k => $d) {
         $mit = $gruppe === null ? array_key_exists($k, $eingabe) : $d['gruppe'] === $gruppe;
-        $alle[$k] = $mit ? (string)($eingabe[$k] ?? '') : va_formularwert($k);
+        // Zuordnung kommt als Feld je Eintrag (name[Berufsgruppe]) und wird als JSON geprüft
+        $wert = $eingabe[$k] ?? '';
+        $wert = is_array($wert) ? json_encode(array_map('strval', $wert), JSON_UNESCAPED_UNICODE) : (string)$wert;
+        $alle[$k] = $mit ? $wert : va_formularwert($k);
         if ($mit) {
             $teil[$k] = true;
         }
@@ -565,7 +602,9 @@ function va_zusammenfassung(string $gruppe): array
             ['VNR', $w('cme_veranstaltungsnummer')],
         ],
         'zertifikat' => [['Unterschrift', implode(', ', array_filter([va('zertifikat_leitung'), va('zertifikat_leitung_rolle')], fn($x) => $x !== '')) ?: '–']],
-        'listen' => [['Berufsgruppen', implode(' · ', va_liste('berufsgruppen'))]],
+        'reihe' => [['Reihe', ($r = va_reihe_von(va_id())) !== null ? $r['name'] : 'einzeln'], ['Zielgruppe', VA_ZIELGRUPPEN[va('zielgruppe')] ?? VA_ZIELGRUPPEN['beide']]],
+        'listen' => [['Berufsgruppen', implode(' · ', va_liste('berufsgruppen'))],
+            ['Allgäu Akut', implode(' · ', array_map(fn($bg) => $bg . ': ' . VA_INTERESSEN[va_interesse($bg)], va_liste('berufsgruppen')))]],
         default => [],
     };
 }
@@ -596,6 +635,172 @@ function va_eckdaten(): array
     return $eck;
 }
 
+/* ---- Veranstaltungsreihen (AP-19, E-71) ---------------------------------- */
+
+/*
+ * Dachmarke (Allgäu Akut, Einstellung reihe_name) → Reihe (z. B. Wintersymposium
+ * über alle Jahre) → Veranstaltung (eine Ausgabe). Jede Reihe hat ihre
+ * Newsletter-Liste (art 'reihe'), angelegt und benannt mit der Reihe; eine
+ * Veranstaltung gehört zu einer Reihe oder ist einzeln.
+ */
+
+function va_reihen_da(): bool
+{
+    if (!ctx_da('va_reihen_da')) {
+        ctx_setzen('va_reihen_da', db_tabelle_da('reihe'));
+    }
+    return (bool)ctx('va_reihen_da');
+}
+
+/** Alle Reihen (nach Name) mit Zahl der Veranstaltungen und bestätigten Abonnierenden. */
+function va_reihen(): array
+{
+    if (!va_reihen_da()) {
+        return [];
+    }
+    $z = db_zeilen("SELECT r.*, (SELECT COUNT(*) FROM veranstaltung v WHERE v.reihe_id = r.id) AS veranstaltungen,
+        (SELECT COUNT(*) FROM newsletter_abo a WHERE a.liste_id = r.liste_id AND a.status = 'bestaetigt') AS abonnierende
+        FROM reihe r ORDER BY r.name, r.id");
+    foreach ($z as &$r) {
+        $r['id'] = (int)$r['id'];
+        $r['liste_id'] = $r['liste_id'] === null ? null : (int)$r['liste_id'];
+        $r['veranstaltungen'] = (int)$r['veranstaltungen'];
+        $r['abonnierende'] = (int)$r['abonnierende'];
+    }
+    return $z;
+}
+
+function va_reihe(int $id): ?array
+{
+    foreach (va_reihen() as $r) {
+        if ($r['id'] === $id) {
+            return $r;
+        }
+    }
+    return null;
+}
+
+/** Reihe einer Veranstaltung oder null (einzeln). */
+function va_reihe_von(int $vaId): ?array
+{
+    if (!va_reihen_da()) {
+        return null;
+    }
+    $id = db_wert('SELECT reihe_id FROM veranstaltung WHERE id = ?', [$vaId]);
+    return $id === null ? null : va_reihe((int)$id);
+}
+
+/** Reihe zu einer Newsletter-Liste oder null. */
+function va_reihe_zur_liste(int $listeId): ?array
+{
+    foreach (va_reihen() as $r) {
+        if ($r['liste_id'] === $listeId) {
+            return $r;
+        }
+    }
+    return null;
+}
+
+/** Eingaben einer Reihe prüfen: ['werte' => …, 'fehler' => […]]. */
+function va_reihe_pruefen(array $e, ?int $id = null): array
+{
+    $t = fn(string $k, int $max) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string)($e[$k] ?? '')) ?? ''), 0, $max);
+    $w = ['name' => $t('name', 80), 'kurz' => $t('kurz', 40), 'beschreibung' => html_bereinigen(mb_substr((string)($e['beschreibung'] ?? ''), 0, 900), 'inline')];
+    $f = [];
+    if ($w['name'] === '') {
+        $f['name'] = 'Bitte einen Namen angeben.';
+    } elseif (array_filter(va_reihen(), fn($r) => $r['id'] !== $id && mb_strtolower($r['name']) === mb_strtolower($w['name'])) !== []) {
+        $f['name'] = 'Eine Reihe mit diesem Namen gibt es schon.';
+    }
+    if ($w['kurz'] === '') {
+        $f['kurz'] = 'Bitte einen Kurznamen angeben.';
+    }
+    if (mb_strlen(editor_text($w['beschreibung'])) > 300) {
+        $f['beschreibung'] = 'Höchstens 300 Zeichen.';
+    }
+    return ['werte' => $w, 'fehler' => $f];
+}
+
+/**
+ * Reihe anlegen oder ändern. Neu: mit eigener Newsletter-Liste (öffentlich
+ * wählbar, Name der Reihe). Umbenennen zieht Name und Beschreibung der Liste mit.
+ */
+function va_reihe_speichern(?int $id, array $w, ?int $kontoId): int
+{
+    db_transaktion(function () use (&$id, $w, $kontoId): void {
+        if ($id === null) {
+            $liste = nl_liste_speichern(null, ['name' => $w['name'], 'art' => 'reihe', 'beschreibung' => $w['beschreibung'], 'absender_name' => '', 'sichtbar' => 1], $kontoId);
+            db_ausfuehren('INSERT INTO reihe (name, kurz, beschreibung, liste_id, erstellt_am) VALUES (?, ?, ?, ?, ?)', [$w['name'], $w['kurz'], $w['beschreibung'], $liste, db_jetzt()]);
+            $id = (int)db()->lastInsertId();
+            return;
+        }
+        db_ausfuehren('UPDATE reihe SET name = ?, kurz = ?, beschreibung = ? WHERE id = ?', [$w['name'], $w['kurz'], $w['beschreibung'], $id]);
+        $lid = db_wert('SELECT liste_id FROM reihe WHERE id = ?', [$id]);
+        if ($lid !== null) {
+            db_ausfuehren('UPDATE newsletter_liste SET name = ?, beschreibung = ? WHERE id = ?', [$w['name'], $w['beschreibung'], (int)$lid]);
+        }
+    });
+    audit_schreiben('einstellungen', audit_text('reihe', (int)$id, 'gespeichert (' . $w['name'] . ')'), $kontoId, ['reihe' => (int)$id], 0);
+    return (int)$id;
+}
+
+/**
+ * Reihe löschen (O-51): nur ohne Veranstaltungen; ihre Liste samt
+ * Abonnierenden geht mit, vorher eine Sicherung. Gibt null oder den Fehler zurück.
+ */
+function va_reihe_loeschen(int $id, ?int $kontoId): ?string
+{
+    $r = va_reihe($id);
+    if ($r === null) {
+        return 'Diese Reihe gibt es nicht.';
+    }
+    if ($r['veranstaltungen'] > 0) {
+        return 'Zur Reihe „' . $r['name'] . '“ gehören noch ' . $r['veranstaltungen'] . ' Veranstaltung(en). Erst zuordnen oder löschen.';
+    }
+    sicherung_anlegen('vor dem Löschen der Reihe ' . $r['name'], $kontoId);
+    db_transaktion(function () use ($r): void {
+        db_ausfuehren('DELETE FROM reihe WHERE id = ?', [$r['id']]); // Rechte per Fremdschlüssel
+        if ($r['liste_id'] !== null) {
+            db_ausfuehren('DELETE FROM newsletter_liste WHERE id = ?', [$r['liste_id']]); // Abos per Fremdschlüssel
+            db_ausfuehren('DELETE p FROM newsletter_person p LEFT JOIN newsletter_abo a ON a.person_id = p.id WHERE a.person_id IS NULL');
+        }
+    });
+    audit_schreiben('einstellungen', audit_text('reihe', $r['id'], 'gelöscht (' . $r['name'] . ', ' . $r['abonnierende'] . ' Abonnierende)'), $kontoId, ['reihe' => $r['id']], 0);
+    return null;
+}
+
+/** Reihe einer Veranstaltung setzen (null = einzeln). */
+function va_reihe_setzen(int $vaId, ?int $reiheId, ?int $kontoId): void
+{
+    if ($reiheId !== null && va_reihe($reiheId) === null) {
+        throw new InvalidArgumentException('Unbekannte Reihe: ' . $reiheId);
+    }
+    $alt = db_wert('SELECT reihe_id FROM veranstaltung WHERE id = ?', [$vaId]);
+    if (($alt === null ? null : (int)$alt) === $reiheId) {
+        return;
+    }
+    db_ausfuehren('UPDATE veranstaltung SET reihe_id = ? WHERE id = ?', [$reiheId, $vaId]);
+    audit_schreiben('einstellungen', audit_text('veranstaltung', $vaId, 'Reihe: ' . ($reiheId === null ? 'einzeln' : va_reihe($reiheId)['name'])), $kontoId, ['veranstaltung' => $vaId]);
+}
+
+/**
+ * Vorauswahl bei „Allgäu Akut“ für eine Berufsgruppe (O-50): eingestellt je
+ * Veranstaltung, sonst Regel – NotSan, RettSan → Präklinik; Pflege/MFA → Klinik;
+ * alle anderen → beides.
+ */
+function va_interesse(string $berufsgruppe): string
+{
+    $map = json_decode(va(VA_BG_INTERESSE), true);
+    if (is_array($map) && isset($map[$berufsgruppe], VA_INTERESSEN[$map[$berufsgruppe]])) {
+        return $map[$berufsgruppe];
+    }
+    $b = mb_strtolower($berufsgruppe);
+    if (str_contains($b, 'notfallsan') || str_contains($b, 'rettungssan')) {
+        return 'praeklinik';
+    }
+    return str_contains($b, 'pflege') || str_contains($b, 'mfa') ? 'klinik' : 'beides';
+}
+
 /* ---- Rechte je Veranstaltung (AP-12, E-60) -------------------------------- */
 
 /*
@@ -624,7 +829,31 @@ function va_erlaubte_ids(array $konto): ?array
     if ($k === null || (int)$k['alle_veranstaltungen'] === 1) {
         return null;
     }
-    return array_map('intval', array_column(db_zeilen('SELECT veranstaltung_id FROM konto_veranstaltung WHERE konto_id = ?', [(int)$konto['id']]), 'veranstaltung_id'));
+    $ids = array_map('intval', array_column(db_zeilen('SELECT veranstaltung_id FROM konto_veranstaltung WHERE konto_id = ?', [(int)$konto['id']]), 'veranstaltung_id'));
+    if (va_reihen_da()) {
+        // Eine freigeschaltete Reihe umfasst alle ihre Veranstaltungen, auch künftige (E-71 (3))
+        $ids = array_merge($ids, array_map('intval', array_column(db_zeilen('SELECT v.id FROM veranstaltung v JOIN konto_reihe kr ON kr.reihe_id = v.reihe_id WHERE kr.konto_id = ?', [(int)$konto['id']]), 'id')));
+    }
+    return array_values(array_unique($ids));
+}
+
+/** Einzeln freigeschaltete Veranstaltungen (ohne die über Reihen) für das Formular unter Team-Konten. */
+function va_rechte_direkt(int $kontoId): array
+{
+    return va_rechte_da() ? array_map('intval', array_column(db_zeilen('SELECT veranstaltung_id FROM konto_veranstaltung WHERE konto_id = ?', [$kontoId]), 'veranstaltung_id')) : [];
+}
+
+/** Reihen, für die ein Team-Konto freigeschaltet ist; null = alle (BetreiberIn oder „alle Veranstaltungen“). */
+function va_erlaubte_reihen(array $konto): ?array
+{
+    if (($konto['rolle'] ?? '') === 'betreiber' || !va_rechte_da() || !va_reihen_da()) {
+        return null;
+    }
+    $k = db_zeile('SELECT alle_veranstaltungen FROM konto WHERE id = ?', [(int)$konto['id']]);
+    if ($k === null || (int)$k['alle_veranstaltungen'] === 1) {
+        return null;
+    }
+    return array_map('intval', array_column(db_zeilen('SELECT reihe_id FROM konto_reihe WHERE konto_id = ?', [(int)$konto['id']]), 'reihe_id'));
 }
 
 /** Darf dieses Team-Konto die Veranstaltung sehen und bearbeiten? */
@@ -654,19 +883,27 @@ function va_sql_erlaubt(array $konto, string $spalte): array
     return [$spalte . ' IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids];
 }
 
-/** Rechte eines Admins setzen: alle (auch künftige) oder die Auswahl. */
-function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch): void
+/** Rechte eines Admins setzen: alle (auch künftige) oder die Auswahl aus Reihen und Veranstaltungen (kombinierbar, E-71 (3)). */
+function va_rechte_setzen(int $kontoId, bool $alle, array $ids, ?int $durch, array $reihen = []): void
 {
     $gueltig = array_column(va_alle(), 'id');
     $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => in_array($i, $gueltig, true))));
-    db_transaktion(function () use ($kontoId, $alle, $ids): void {
+    $rGueltig = array_column(va_reihen(), 'id');
+    $reihen = array_values(array_unique(array_filter(array_map('intval', $reihen), fn($i) => in_array($i, $rGueltig, true))));
+    db_transaktion(function () use ($kontoId, $alle, $ids, $reihen): void {
         db_ausfuehren('UPDATE konto SET alle_veranstaltungen = ? WHERE id = ?', [$alle ? 1 : 0, $kontoId]);
         db_ausfuehren('DELETE FROM konto_veranstaltung WHERE konto_id = ?', [$kontoId]);
         foreach ($alle ? [] : $ids as $id) {
             db_ausfuehren('INSERT INTO konto_veranstaltung (konto_id, veranstaltung_id) VALUES (?, ?)', [$kontoId, $id]);
         }
+        if (va_reihen_da()) {
+            db_ausfuehren('DELETE FROM konto_reihe WHERE konto_id = ?', [$kontoId]);
+            foreach ($alle ? [] : $reihen as $rid) {
+                db_ausfuehren('INSERT INTO konto_reihe (konto_id, reihe_id) VALUES (?, ?)', [$kontoId, $rid]);
+            }
+        }
     });
-    $namen = $alle ? 'alle, auch künftige' : (implode(', ', array_map(fn($i) => va_zeile($i)['kuerzel'] ?? (string)$i, $ids)) ?: 'keine');
+    $namen = $alle ? 'alle, auch künftige' : (implode(', ', array_merge(array_map(fn($i) => 'Reihe ' . (va_reihe($i)['name'] ?? $i), $reihen), array_map(fn($i) => va_zeile($i)['kuerzel'] ?? (string)$i, $ids))) ?: 'keine');
     audit_schreiben('konto', audit_text('konto', $kontoId, 'Veranstaltungen: ' . $namen), $durch, ['konto' => $kontoId]);
 }
 
@@ -680,9 +917,10 @@ function va_rechte_text(array $konto): string
     if ($ids === null) {
         return 'alle, auch künftige';
     }
-    $namen = [];
+    $reihen = va_erlaubte_reihen($konto) ?? [];
+    $namen = array_map(fn($r) => 'Reihe ' . $r['name'], array_filter(va_reihen(), fn($r) => in_array($r['id'], $reihen, true)));
     foreach (va_alle() as $v) {
-        if (in_array($v['id'], $ids, true)) {
+        if (in_array($v['id'], $ids, true) && !in_array((int)($v['reihe_id'] ?? 0), $reihen, true)) {
             $namen[] = $v['kurz'] . ' (' . $v['kuerzel'] . ')';
         }
     }
@@ -699,9 +937,10 @@ function va_rechte_liste(array $konto): array
     if ($ids === null) {
         return ['alle Veranstaltungen, auch künftige'];
     }
-    $namen = [];
+    $reihen = va_erlaubte_reihen($konto) ?? [];
+    $namen = array_values(array_map(fn($r) => 'Reihe ' . $r['name'] . ' (alle Veranstaltungen, auch künftige; ihr Newsletter)', array_filter(va_reihen(), fn($r) => in_array($r['id'], $reihen, true))));
     foreach (va_alle() as $v) {
-        if (in_array($v['id'], $ids, true)) {
+        if (in_array($v['id'], $ids, true) && !in_array((int)($v['reihe_id'] ?? 0), $reihen, true)) {
             $namen[] = $v['name'] . ($v['datum'] !== '' ? ' (' . tag_text($v['datum']) . ')' : '');
         }
     }

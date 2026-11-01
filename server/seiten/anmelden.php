@@ -46,6 +46,8 @@ if ($zeitraum === 'offen' && ist_post()) {
         $mensch = spam_ok($_POST) && rate_erlaubt('anmelden', $ip) && !spam_wegwerf($r['werte']['email']);
         rate_misserfolg('anmelden', $ip);
         if ($mensch) {
+            // Häkchen 2 (E-71 (6)): Allgäu Akut mit Interessen; ohne gewähltes Interesse die Vorauswahl der Berufsgruppe (O-50)
+            $r['werte']['nl_interessen'] = post_haken('nl_dachmarke') ? (nl_interessen((array)($_POST['nl_interesse'] ?? [])) ?: nl_interessen_fuer($r['werte']['berufsgruppe'])) : '';
             $erg = anm_anlegen($r['werte'], $wahl, post_haken('newsletter'), null, post_haken('konto'), $tk);
             if ($erg['art'] !== 'fehler') {
                 unset($_SESSION[SITZUNG_SCHLUESSEL_ANM_VORLAGE]); // Vorlage „Daten übernehmen“ ist verbraucht (Review B-13)
@@ -139,8 +141,24 @@ echo seiten_kopfzeile('Anmelden', $kicker, 'Dauert zwei Minuten. Danach bekommst
         <div class="feld haken-liste">
             <?php if ($tk === null): ?><?= feld('konto', '', ['typ' => 'haken', 'wert' => !empty($eingabe['konto']),
                 'label_html' => 'Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.']) ?><?php endif; ?>
-            <?php if (($nlListe = nl_liste_anmeldung()) !== null): ?><?= feld('newsletter', '', ['typ' => 'haken', 'wert' => !empty($eingabe['newsletter']),
-                'label_html' => 'Newsletter „' . e($nlListe['name']) . '“' . ($nlListe['beschreibung'] !== '' ? ': ' . editor_html($nlListe['beschreibung'], 'inline') : '') . ' Freiwillig, Abmeldung jederzeit. Nach der Bestätigung deiner Anmeldung schicken wir dir eine eigene Mail, mit der du den Newsletter bestätigst.']) ?><?php endif; ?>
+            <?php // Zwei Häkchen (E-71 (6)): Newsletter der Reihe, Allgäu Akut mit Interessen; eine gemeinsame Bestätigungsmail (O-54)
+            $nl = nl_angebot_anmeldung();
+            $nlHinweis = ' Freiwillig, Abmeldung jederzeit.';
+            $nlMail = ' Nach der Bestätigung deiner Anmeldung schicken wir dir eine Mail, mit der du deine Newsletter bestätigst (eine für beide).'; ?>
+            <?php if ($nl['reihe'] !== null): ?><?= feld('newsletter', '', ['typ' => 'haken', 'wert' => !empty($eingabe['newsletter']),
+                'label_html' => 'Newsletter „' . e($nl['reihe']['name']) . '“: Infos zum nächsten ' . e($nl['reihe_kurz']) . '.' . $nlHinweis . ($nl['dachmarke'] === null ? $nlMail : '')]) ?><?php endif; ?>
+            <?php if ($nl['dachmarke'] !== null):
+                $bgWahl = [];
+                foreach (va_liste('berufsgruppen') as $bg) {
+                    $bgWahl[$bg] = va_interesse($bg);
+                }
+                $iWahl = isset($eingabe['nl_interesse']) ? array_map('strval', (array)$eingabe['nl_interesse']) : explode(',', nl_interessen_fuer((string)($eingabe['berufsgruppe'] ?? ''))); ?>
+            <?= feld('nl_dachmarke', '', ['typ' => 'haken', 'wert' => !empty($eingabe['nl_dachmarke']),
+                'label_html' => 'Newsletter „' . e($nl['dachmarke']['name']) . '“' . ($nl['dachmarke']['beschreibung'] !== '' ? ': ' . editor_html($nl['dachmarke']['beschreibung'], 'inline') : '') . $nlHinweis . $nlMail]) ?>
+            <fieldset class="feld nl-interessen" data-vorauswahl="<?= e(json_encode($bgWahl, JSON_UNESCAPED_UNICODE)) ?>"><legend>Interessiert an <span class="meta">(vorausgewählt nach Berufsgruppe)</span></legend>
+                <div class="wahl wahl-reihe"><?php foreach (NL_INTERESSEN as $ik => $it): ?><label><input type="checkbox" name="nl_interesse[]" value="<?= e($ik) ?>"<?= in_array($ik, $iWahl, true) ? ' checked' : '' ?>><span><?= e($it) ?></span></label><?php endforeach; ?></div>
+            </fieldset>
+            <?php endif; ?>
             <?= feld('einwilligung', '', ['typ' => 'haken', 'wert' => !empty($eingabe['einwilligung']), 'fehler' => $fehler['einwilligung'] ?? null,
                 'label_html' => 'Ich habe die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen und bin einverstanden, dass meine Angaben für die Organisation des Symposiums verarbeitet werden.']) ?>
         </div>

@@ -6,6 +6,9 @@ declare(strict_types=1);
  * Abonnierende suchen und löschen, jemanden einladen (Bestätigungsmail –
  * direkt als bestätigt eintragen geht nicht, Double-Opt-In). Versendet wird
  * über „Mailings“ mit der Empfängerart „Newsletter-Listen“.
+ * Listen der Reihen (AP-19, E-71) entstehen mit der Reihe unter Betrieb →
+ * Veranstaltungen; Name und Beschreibung kommen von dort. „Allgäu Akut“
+ * (Dachmarke) fragt Interessen Klinik/Präklinik ab.
  */
 
 $konto = team_tor(['betreiber']); // Newsletter gilt für alle Veranstaltungen: nur Betreiber (AP-12, E-60)
@@ -42,14 +45,16 @@ $q = trim((string)($_GET['q'] ?? ''));
 $filterListe = (int)($_GET['liste'] ?? 0);
 $personen = nl_personen($q, $filterListe);
 $bearbeiten = isset($_GET['bearbeiten']) ? nl_liste((int)$_GET['bearbeiten']) : null;
-$lf = $listeForm ?? ($bearbeiten ?? ['name' => '', 'beschreibung' => '', 'absender_name' => '', 'sichtbar' => 1, 'bei_anmeldung' => 0]);
+$lf = $listeForm ?? ($bearbeiten ?? ['name' => '', 'beschreibung' => '', 'absender_name' => '', 'sichtbar' => 1]);
+$reiheVon = fn(array $l): ?array => $l['art'] === 'reihe' ? va_reihe_zur_liste((int)$l['id']) : null;
+$bReihe = $bearbeiten !== null ? $reiheVon($bearbeiten) : null;
 team_seite_kopf($konto, 'Newsletter', '/team/newsletter');
 ?>
 <p class="meta klein">Versand über <a href="/team/mailings?neu=1">Mailings</a> mit der Empfängerart „Newsletter-Listen“. Eingetragen ist nur, wer den Link in der Bestätigungsmail angeklickt hat (Double-Opt-In); unbestätigte Anfragen verschwinden nach <?= intdiv(NL_BESTAETIGEN_S, 86400) ?> Tagen, Abgemeldete werden gelöscht.</p>
 <div class="kacheln">
     <?php foreach ($zahlen as $lid => $z): ?>
     <div class="kachel"><div class="lbl"><?= e($z['liste']['name']) ?><?= (int)$z['liste']['sichtbar'] === 0 ? ' · ausgeblendet' : '' ?></div><div class="zahl"><?= $z['bestaetigt'] ?></div>
-        <p class="meta klein"><?= $z['offen'] ?> warten auf Bestätigung · <?= $z['abgemeldet'] ?> abgemeldet<?= (int)$z['liste']['bei_anmeldung'] === 1 ? '<br>bei der Symposium-Anmeldung angeboten' : '' ?></p>
+        <p class="meta klein"><?= $z['offen'] ?> warten auf Bestätigung · <?= $z['abgemeldet'] ?> abgemeldet<br><?= ($r = $reiheVon($z['liste'])) !== null ? 'gehört zur Reihe „' . e($r['name']) . '“' : ($z['liste']['art'] === 'dachmarke' ? 'Dachmarke · mit Interessen Klinik/Präklinik' : 'weitere Liste') ?></p>
         <p class="aktionen"><a class="knopf zweit klein" href="/team/newsletter?bearbeiten=<?= $lid ?>#liste">Bearbeiten</a> <?= export_knoepfe(['art' => 'newsletter', 't' => $lid]) ?></p></div>
     <?php endforeach; ?>
 </div>
@@ -65,7 +70,7 @@ team_seite_kopf($konto, 'Newsletter', '/team/newsletter');
         <ul class="schlicht nl-personen">
             <?php foreach ($personen as $p): ?>
             <li><strong><?= e($p['email']) ?></strong><?= $p['vorname'] !== '' ? ' <span class="meta">' . e($p['vorname']) . '</span>' : '' ?><br>
-                <span class="klein"><?php foreach ($p['abos'] as $a): ?><?= chip($a['status'] === 'bestaetigt' ? 'ok' : 'offen', $a['name'] . ($a['status'] === 'offen' ? ' · wartet' : '')) ?> <?php endforeach; ?></span>
+                <span class="klein"><?php foreach ($p['abos'] as $a): $ai = nl_interessen(array_keys(array_filter(['klinik' => (int)$a['klinik'], 'praeklinik' => (int)$a['praeklinik']]))); ?><?= chip($a['status'] === 'bestaetigt' ? 'ok' : 'offen', $a['name'] . ($ai !== '' ? ' (' . nl_interessen_text($ai) . ')' : '') . ($a['status'] === 'offen' ? ' · wartet' : '')) ?> <?php endforeach; ?></span>
                 <?= bestaetigung_html('Löschen', $p['email'] . ' wird aus allen Listen gelöscht.', 'Ja, löschen', ['aktion' => 'loeschen', 'person' => (int)$p['id'], 'q' => $q, 'liste' => $filterListe ?: ''],
                     ['ziel' => '/team/newsletter', 'klasse' => 'inline-details', 'titel' => 'Aus allen Listen löschen?']) ?></li>
             <?php endforeach; ?>
@@ -86,13 +91,18 @@ team_seite_kopf($konto, 'Newsletter', '/team/newsletter');
         </div>
         <div class="kasten" id="liste">
             <h2 class="zwischen"><?= $bearbeiten !== null ? 'Liste bearbeiten' : 'Neue Liste' ?></h2>
+            <?php if ($bearbeiten === null): ?><p class="meta klein">Für eine weitere Liste (z. B. intern). Die Listen der Reihen entstehen mit der Reihe unter <a href="/team/veranstaltungen#reihen">Betrieb → Veranstaltungen</a>.</p><?php endif; ?>
             <form class="form" method="post" action="/team/newsletter"><?= csrf_feld() ?><input type="hidden" name="aktion" value="liste"><?php if ($bearbeiten !== null): ?><input type="hidden" name="id" value="<?= (int)$bearbeiten['id'] ?>"><?php endif; ?>
+                <?php if ($bReihe !== null): // Name und Beschreibung kommen von der Reihe ?>
+                <p class="meta klein">Liste der Reihe „<?= e($bReihe['name']) ?>“: Name und Beschreibung änderst du bei der Reihe unter <a href="/team/veranstaltungen#reihen">Betrieb → Veranstaltungen</a>.</p>
+                <?= versteckt_html(['name' => (string)$lf['name']]) ?>
+                <?php else: ?>
                 <?= feld('name', 'Name', ['id' => 'l-name', 'wert' => (string)$lf['name'], 'fehler' => $fehler['name'] ?? null, 'attr' => ['maxlength' => 80]]) ?>
                 <div class="feld"><label for="l-beschreibung">Beschreibung (öffentlich)</label><textarea id="l-beschreibung" name="beschreibung" rows="2"<?= editor_attribute('inline') ?>><?= e((string)$lf['beschreibung']) ?></textarea></div>
+                <?php endif; ?>
                 <?= feld('absender_name', 'Absendername', ['id' => 'l-absender', 'wert' => (string)$lf['absender_name'], 'attr' => ['maxlength' => 80, 'placeholder' => 'z. B. Allgäu Akut'],
                     'hilfe' => 'Adresse bleibt newsletter@ (bzw. anmeldung@, solange newsletter@ fehlt).']) ?>
                 <?= feld('sichtbar', 'Öffentlich wählbar (Seite „Newsletter“)', ['typ' => 'haken', 'wert' => !empty($lf['sichtbar'])]) ?>
-                <?= feld('bei_anmeldung', 'Bei der Symposium-Anmeldung anbieten (nur eine Liste)', ['typ' => 'haken', 'wert' => !empty($lf['bei_anmeldung'])]) ?>
                 <div class="aktionen"><button class="knopf" type="submit">Speichern</button><?php if ($bearbeiten !== null): ?><a class="knopf zweit" href="/team/newsletter">Abbrechen</a><?php endif; ?></div>
             </form>
         </div>

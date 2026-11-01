@@ -218,17 +218,18 @@ function beispieldaten_mailings(): array
 }
 
 /**
- * Newsletter (AP-7): drei erfundene Abonnierende – Nina auf beiden Listen,
- * Otto auf „Allgäu Akut“ (beide bestätigt), Pia wartet noch auf die Bestätigung.
+ * Newsletter (AP-7, AP-19): drei erfundene Abonnierende – Nina auf
+ * Wintersymposium und „Allgäu Akut“ mit Interesse Klinik, Otto auf „Allgäu
+ * Akut“ mit Präklinik (beide bestätigt), Pia wartet noch auf die Bestätigung.
  * Es geht keine Mail raus.
  */
 function beispieldaten_newsletter(): array
 {
     $listen = array_column(nl_listen(), 'id', 'name');
     $nina = nl_person_anlegen('nina@example.org', 'Nina');
-    nl_listen_setzen($nina, [$listen['Wintersymposium'] ?? 0, $listen['Allgäu Akut'] ?? 0], 'formular');
+    nl_listen_setzen($nina, [$listen['Wintersymposium'] ?? 0, $listen['Allgäu Akut'] ?? 0], 'formular', 'klinik');
     $otto = nl_person_anlegen('otto@example.org', '');
-    nl_listen_setzen($otto, [$listen['Allgäu Akut'] ?? 0], 'formular');
+    nl_listen_setzen($otto, [$listen['Allgäu Akut'] ?? 0], 'formular', 'praeklinik');
     nl_anfragen('pia@example.org', 'Pia', [$listen['Wintersymposium'] ?? 0], 'formular');
     db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'pia@example.org'");
     return ['nina' => $nina, 'otto' => $otto];
@@ -279,7 +280,8 @@ function beispieldaten_teilnahme(array $anm): array
  */
 function beispieldaten_vorjahr(array $anm): array
 {
-    $r = va_anlegen('wintersymposium2026', 'Allgäuer Winter-Notfallsymposium', null, null);
+    // Reihe Wintersymposium (AP-19): die Migration legt sie für die erste Veranstaltung an
+    $r = va_anlegen('wintersymposium2026', 'Allgäuer Winter-Notfallsymposium', null, null, va_reihe_von((int)va_aktuell_id())['id'] ?? 0);
     if (!isset($r['id'])) {
         throw new RuntimeException('Beispieldaten Vorjahr: ' . ($r['fehler'] ?? ''));
     }
@@ -322,7 +324,8 @@ function beispieldaten_vorjahr(array $anm): array
  */
 function beispieldaten_abend(array $anm): array
 {
-    $r = va_anlegen('fortbildungsabend-notfallmedizin', 'Fortbildungsabend klinische Notfallmedizin', null, null);
+    // Eigene Reihe „Fortbildungsabend“ mit ihrem Newsletter (AP-19)
+    $r = va_anlegen('fortbildungsabend-notfallmedizin', 'Fortbildungsabend klinische Notfallmedizin', null, null, beispieldaten_reihe_abend());
     if (!isset($r['id'])) {
         throw new RuntimeException('Beispieldaten Abend: ' . ($r['fehler'] ?? ''));
     }
@@ -370,6 +373,30 @@ function beispieldaten_abend(array $anm): array
     va_abschliessen($vid, null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     return ['id' => $vid] + $ids;
+}
+
+/** Reihe „Fortbildungsabend“ (AP-19): vorhanden oder neu, mit eigener Newsletter-Liste. Gibt die ID zurück. */
+function beispieldaten_reihe_abend(): int
+{
+    foreach (va_reihen() as $r) {
+        if ($r['name'] === 'Fortbildungsabend') {
+            return $r['id'];
+        }
+    }
+    return va_reihe_speichern(null, va_reihe_pruefen(['name' => 'Fortbildungsabend', 'kurz' => 'Fortbildungsabend', 'beschreibung' => 'Vortragsabende zur klinischen Notfallmedizin: Termine und Themen.'])['werte'], null);
+}
+
+/**
+ * Rita Reihe (AP-19, E-71 (3)): Admin für die Reihe „Fortbildungsabend“ – sieht
+ * deren Veranstaltungen, auch neue, und verschickt ihren Newsletter, aber nicht
+ * „Allgäu Akut“. Nicht Teil von beispieldaten_laden(). Gibt die Konto-ID zurück.
+ */
+function beispieldaten_admin_reihe(): int
+{
+    $k = konto_per_email('rita.reihe@example.org');
+    $id = $k !== null ? (int)$k['id'] : konto_anlegen('Rita Reihe', 'rita.reihe@example.org', 'admin', BEISPIEL_PASSWORT_ADMIN, null);
+    va_rechte_setzen($id, false, [], null, [beispieldaten_reihe_abend()]);
+    return $id;
 }
 
 /**

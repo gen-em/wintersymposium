@@ -553,10 +553,12 @@ function export_erzeugen(string $art, string $bg = '', int $terminId = -1): ?arr
                 $nur = ' AND a.liste_id = ?';
                 $par[] = $terminId;
             }
-            $zeilen = array_map(fn($r) => [$r['liste'], $r['email'], $r['vorname'], datum_zeit_text($r['bestaetigt_am']), $r['fassung'], $r['quelle']], db_zeilen(
-                "SELECT l.name AS liste, p.email, p.vorname, a.bestaetigt_am, a.fassung, a.quelle FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id JOIN newsletter_liste l ON l.id = a.liste_id
+            // Interessen nur beim Newsletter der Dachmarke (AP-19)
+            $zeilen = array_map(fn($r) => [$r['liste'], $r['email'], $r['vorname'], $r['art'] === 'dachmarke' ? nl_interessen_text(nl_interessen(array_keys(array_filter(['klinik' => (int)$r['klinik'], 'praeklinik' => (int)$r['praeklinik']])))) : '',
+                datum_zeit_text($r['bestaetigt_am']), $r['fassung'], $r['quelle']], db_zeilen(
+                "SELECT l.name AS liste, l.art, p.email, p.vorname, a.klinik, a.praeklinik, a.bestaetigt_am, a.fassung, a.quelle FROM newsletter_abo a JOIN newsletter_person p ON p.id = a.person_id JOIN newsletter_liste l ON l.id = a.liste_id
                  WHERE a.status = 'bestaetigt'" . $nur . ' ORDER BY l.pos, p.email', $par));
-            return $paket('wintersymposium-newsletter-' . $heute . '.csv', 'Newsletter-Listen', ['Liste', 'E-Mail', 'Vorname', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen, null);
+            return $paket('wintersymposium-newsletter-' . $heute . '.csv', 'Newsletter-Listen', ['Liste', 'E-Mail', 'Vorname', 'Interessen', 'Bestätigt am', 'Fassung der Einwilligung', 'Quelle'], $zeilen, null);
         case 'statistik':
             $d = stat_daten($bg);
             $z = [['Angemeldet', $d['angemeldet']], ['Kapazität', $d['kapazitaet'] ?? 'unbegrenzt'], ['Mail nicht bestätigt', $d['unbestaetigt']], ['Warteliste Symposium', $d['warteliste']],

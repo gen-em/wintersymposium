@@ -26,8 +26,17 @@ if (ist_post()) {
     if ($mitKuerzel && ($kf = va_kuerzel_fehler($kuerzel, va_id())) !== null) {
         $r['fehler']['kuerzel'] = $kf;
     }
+    // Reihe der Veranstaltung (AP-19): Kachel „Reihe & Zielgruppe“, nur BetreiberInnen
+    $reihe = $gruppe === 'reihe' && $konto['rolle'] === 'betreiber' && isset($_POST['reihe_id']) ? (post_zahl('reihe_id') ?: null) : false;
+    if ($reihe !== false && $reihe !== null && va_reihe($reihe) === null) {
+        $r['fehler']['reihe_id'] = 'Unbekannte Reihe.';
+    }
     if ($r['fehler'] === []) {
         $geaendert = va_speichern($r['werte'], (int)$konto['id']);
+        if ($reihe !== false && (va_reihe_von(va_id())['id'] ?? null) !== $reihe) {
+            va_reihe_setzen(va_id(), $reihe, (int)$konto['id']);
+            $geaendert[] = 'reihe';
+        }
         if ($kuerzel !== va_zeile()['kuerzel']) {
             va_kuerzel_setzen(va_id(), $kuerzel, (int)$konto['id']);
             $geaendert[] = 'kuerzel';
@@ -41,11 +50,11 @@ if (ist_post()) {
 
 $nurLesen = va_abgeschlossen();
 // Offen: die bearbeitete Kachel und jede mit Fehler (Fehler über Gruppen hinweg, z. B. Stichtag nach dem Datum)
-$mitFehler = array_unique(array_map(fn($k) => $k === 'kuerzel' ? 'veranstaltung' : VA_KATALOG[$k]['gruppe'], array_keys($fehler)));
+$mitFehler = array_unique(array_map(fn($k) => ['kuerzel' => 'veranstaltung', 'reihe_id' => 'reihe'][$k] ?? VA_KATALOG[$k]['gruppe'], array_keys($fehler)));
 $istOffen = fn(string $g): bool => $g === $offen || in_array($g, $mitFehler, true);
 
 /** Formular einer Gruppe: Felder aus dem Katalog, Abbrechen und Speichern. */
-$formular = function (string $g, string $hilfe) use ($eingabe, $fehler): string {
+$formular = function (string $g, string $hilfe) use ($eingabe, $fehler, $konto): string {
     $h = '<form method="post" action="/team/einstellungen#' . e($g) . '" class="einst-form stapel" novalidate>' . csrf_feld() . versteckt_html(['gruppe' => $g])
         . '<p class="meta klein">' . e($hilfe) . '</p><div class="felder">';
     if ($g === 'veranstaltung') {
@@ -53,8 +62,25 @@ $formular = function (string $g, string $hilfe) use ($eingabe, $fehler): string 
         $h .= feld('kuerzel', 'Kürzel (Adresse)', ['wert' => $eingabe !== null ? (string)$eingabe['kuerzel'] : va_zeile()['kuerzel'], 'fehler' => $kf, 'pflicht' => true, 'attr' => ['maxlength' => 40],
             'hilfe_html' => $kf !== null ? null : 'Die Veranstaltung ist unter <span class="mono">' . e(parse_url(url('/'), PHP_URL_HOST)) . '/' . e(va_zeile()['kuerzel']) . '</span> erreichbar. Kleinbuchstaben ohne Umlaute, Ziffern, Bindestrich.']);
     }
+    if ($g === 'reihe') {
+        $aktuell = va_reihe_von(va_id());
+        $h .= feld('reihe_id', 'Reihe', ['typ' => 'auswahl', 'wert' => (string)($aktuell['id'] ?? 0), 'fehler' => $fehler['reihe_id'] ?? null,
+            'optionen' => ['0' => 'einzeln (keine Reihe)'] + array_column(va_reihen(), 'name', 'id'),
+            'attr' => ['disabled' => $konto['rolle'] !== 'betreiber'],
+            'hilfe' => $konto['rolle'] === 'betreiber' ? 'Reihen verwaltest du unter Betrieb → Veranstaltungen.' : 'Die Reihe ändern BetreiberInnen.']);
+    }
     foreach (VA_KATALOG as $k => $d) {
         if ($d['gruppe'] !== $g) {
+            continue;
+        }
+        if ($d['typ'] === 'zuordnung') {
+            // Vorauswahl bei Allgäu Akut je Berufsgruppe (O-50): ein Auswahlfeld je Berufsgruppe
+            $map = json_decode($eingabe !== null ? (string)$eingabe[$k] : va_formularwert($k), true);
+            $h .= '<fieldset class="feld breit"><legend>' . e($d['titel']) . '</legend><div class="felder">';
+            foreach (va_liste('berufsgruppen') as $i => $bg) {
+                $h .= feld($k . '[' . $bg . ']', $bg, ['typ' => 'auswahl', 'id' => 'bgi-' . $i, 'optionen' => VA_INTERESSEN, 'wert' => is_array($map) && isset($map[$bg]) ? (string)$map[$bg] : va_interesse($bg)]);
+            }
+            $h .= '</div>' . (isset($fehler[$k]) ? '<p class="feldfehler">' . e($fehler[$k]) . '</p>' : '<p class="hilfe">Nach dem Speichern neuer Berufsgruppen erscheinen sie hier; bis dahin gilt die Regel (NotSan, RettSan → Präklinik; Pflege/MFA → Klinik; sonst beides).</p>') . '</fieldset>';
             continue;
         }
         // Mit Fehler steht der Fehler an der Stelle des Hilfetexts

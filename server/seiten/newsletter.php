@@ -19,8 +19,11 @@ if (ist_post()) {
     if ($email === null) {
         $fehler['email'] = 'Diese E-Mail-Adresse sieht nicht wie eine Adresse aus.';
     }
+    $interessen = nl_interessen((array)($_POST['nl_interesse'] ?? []));
     if ($gewaehlt === []) {
         $fehler['listen'] = 'Bitte mindestens einen Newsletter wählen.';
+    } elseif (($f = nl_wahl_fehler($gewaehlt, $interessen)) !== null) {
+        $fehler['listen'] = $f;
     }
     if (!post_haken('einwilligung')) {
         $fehler['einwilligung'] = 'Ohne deine Einwilligung können wir dir keinen Newsletter schicken.';
@@ -32,14 +35,14 @@ if (ist_post()) {
         rate_misserfolg('link_ip', $ip);
         rate_misserfolg('link_ziel', $ziel);
         if ($ok) {
-            nl_anfragen($email, post_text('vorname'), $gewaehlt, 'formular');
+            nl_anfragen($email, post_text('vorname'), $gewaehlt, 'formular', null, $interessen);
         }
         rate_gleiche_dauer($beginn, 0.6);
         fertig('ok', 'Fast geschafft: Schau in dein Postfach und bestätige den Newsletter über den Link in der Mail. Ohne Bestätigung tragen wir dich nicht ein.', '/newsletter');
     }
 }
 seite_kopf('Newsletter', ['aktiv' => '/newsletter', 'skripte' => ['pow.js']]);
-echo seiten_kopfzeile('Newsletter', 'Allgäu Akut · Wintersymposium', 'Termine und Neuigkeiten per Mail. Kostenlos, jederzeit abbestellbar über den Link in jeder Mail.');
+echo seiten_kopfzeile('Newsletter', reihe_name(), 'Termine und Neuigkeiten per Mail. Kostenlos, jederzeit abbestellbar über den Link in jeder Mail.');
 ?>
 <div class="innen">
     <?= meldung_html(flash_holen()) ?>
@@ -47,10 +50,8 @@ echo seiten_kopfzeile('Newsletter', 'Allgäu Akut · Wintersymposium', 'Termine 
     <form class="form zg-form" method="post" action="/newsletter" novalidate>
         <?= csrf_feld() ?>
         <fieldset class="feld nl-listen"><legend>Welche Newsletter?</legend>
-            <?php foreach ($listen as $l): ?>
-            <?= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => (int)$l['id'], 'wert' => in_array((string)$l['id'], (array)($eingabe['listen'] ?? []), true),
-                'label_html' => '<strong>' . e($l['name']) . '</strong>' . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]) ?>
-            <?php endforeach; ?>
+            <?php // Alle Reihen-Newsletter und Allgäu Akut mit Interessen (E-71 (7)) ?>
+            <?= nl_listen_html((array)($eingabe['listen'] ?? []), $eingabe === [] ? 'klinik,praeklinik' : nl_interessen((array)($eingabe['nl_interesse'] ?? []))) ?>
             <?php if (isset($fehler['listen'])): // Fehler zur ganzen Gruppe, ohne eigenes Feld ?><p class="feldfehler" id="f-listen"><?= e($fehler['listen']) ?></p><?php endif; ?>
         </fieldset>
         <div class="paar">

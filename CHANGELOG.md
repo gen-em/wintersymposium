@@ -2,6 +2,48 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.0] – 2026-11-01
+
+AP-19 Veranstaltungsreihen und Newsletter (E-71, O-50 bis O-54).
+
+### Neu
+
+- **Reihen:** Dachmarke (Allgäu Akut) → Reihe (z. B. Wintersymposium über alle Jahre) → Veranstaltung.
+  - Unter Betrieb → Veranstaltungen anlegen, bearbeiten und löschen. Löschen geht nur ohne Veranstaltungen; die Liste samt Abonnierenden geht mit, vorher eine Sicherung (O-51).
+  - Eine neue Veranstaltung wählt ihre Reihe („wie die Vorlage“, „einzeln“, Reihe). Eine Kopie behält die Reihe; eine gewählte Reihe belegt den Kurznamen vor.
+  - Einstellungen: Kachel „Reihe & Zielgruppe“.
+- **Newsletter je Reihe:** Die Liste entsteht mit der Reihe und heißt wie sie. Team → Newsletter vermerkt „gehört zur Reihe …“.
+- **Allgäu Akut mit Interessen** Klinik, Präklinik oder beides (mindestens eins) auf „Newsletter bestellen“, „Verwalten“ und „Mein Konto“; Export mit Interessen; Einwilligungstext ergänzt (neue Fassung).
+- **Zielgruppe je Veranstaltung** (Klinik, Präklinik, beide). Ein Mailing an Allgäu Akut geht an alle, nur Klinik, nur Präklinik oder „wie die Zielgruppe einer Veranstaltung“; die Empfängerzahl zeigt der Editor.
+- **Admin-Rechte je Reihe:** kombinierbar mit einzelnen Veranstaltungen; gilt auch für künftige Veranstaltungen der Reihe. Admins verschicken den Newsletter ihrer Reihen (O-52).
+- **Anmeldung mit zwei Häkchen:**
+  - Newsletter der Reihe („Infos zum nächsten …“).
+  - Allgäu Akut mit Interessen, vorausgewählt nach Berufsgruppe (O-50, je Berufsgruppe einstellbar in der Kachel Berufsgruppen).
+  - Eine Bestätigungsmail für beide (O-54).
+- **Migration 23:**
+  - Je Kurzname eine Reihe (O-53); die Liste „Wintersymposium“ gehört der Reihe Wintersymposium.
+  - Die Liste „Allgäu Akut“ wird Dachmarke; bestehende Abos gelten für beides.
+  - Tabellen `reihe` und `konto_reihe`; Spalten `veranstaltung.reihe_id`, `newsletter_liste.art`, `newsletter_abo.klinik`/`praeklinik`, `anmeldung.nl_interessen`; `rundmail.auswahl` auf 120 Zeichen.
+- **Beispieldaten:** Reihen Wintersymposium (2026, 2027) und Fortbildungsabend; Nina (Klinik) und Otto (Präklinik) bei Allgäu Akut; `beispieldaten_admin_reihe()` (Rita, Admin für die Reihe Fortbildungsabend).
+- **Tests:** T-317 bis T-325 (`tools/tests/lauf/20_reihen.php`, HTTP-Bereich `ap19`, Browser: Vorauswahl der Interessen, Zielgruppe im Mailing-Editor).
+
+### Geändert
+
+- „Name der Reihe“ heißt **Dachmarke** (Betrieb → Absender); Wert und Wirkung bleiben (E-67).
+- Seite „Newsletter“: Kopfzeile mit der Dachmarke.
+- Statistik „Newsletter-Wunsch“ zählt beide Häkchen.
+- S-5-Prüfung angepasst: Ein Admin für alle Veranstaltungen sieht seit O-52 auch Bilder der Reihen-Newsletter.
+
+### Entfernt
+
+- Listen-Option „Bei der Symposium-Anmeldung anbieten“ (Spalte `newsletter_liste.bei_anmeldung`, `nl_liste_anmeldung()`), ersetzt durch die zwei Häkchen.
+
+### Doku
+
+- betrieb.md: Reihen (Abschnitt 9), Einstellungen (10), Rechte je Reihe (14), Newsletter (15).
+- Datenschutz-Vorschlag: Interessen und Newsletter der Reihen.
+- Konzept: AP-19 mit status, fortschritt, ergebnis, probleme; E-71 ergänzt. Prüfprotokoll: T-317 bis T-325.
+
 ## [0.29.0] – 2026-11-01
 
 AP-18 Startseite mit Vorschau, Einstellungen als Übersicht (E-70, Mockup Variante B).

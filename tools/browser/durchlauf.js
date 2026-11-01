@@ -316,6 +316,15 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const efnAus = !await p.isVisible('#efn') && !await p.isVisible('#beruf_sonstige');
         await p.selectOption('#berufsgruppe', 'Sonstige');
         notiere(engine, breite, 'anmelden', 'EFN nur bei ÄrztIn, Freitext nur bei Sonstige', efnAn && efnAus && await p.isVisible('#beruf_sonstige'));
+        // AP-19 (O-50): Interessen bei „Allgäu Akut“ folgen der Berufsgruppe
+        const iw = async () => (await p.locator('.nl-interessen input:checked').evaluateAll(xs => xs.map(x => x.value))).join(',');
+        await p.selectOption('#berufsgruppe', 'NotfallsanitäterIn');
+        const iPrae = await iw();
+        await p.selectOption('#berufsgruppe', 'Pflege/MFA');
+        const iKlin = await iw();
+        await p.selectOption('#berufsgruppe', 'ÄrztIn');
+        notiere(engine, breite, 'anmelden', 'Zwei Newsletter-Häkchen, Interessen nach Berufsgruppe vorausgewählt', await p.isVisible('input[name=newsletter]') && await p.isVisible('input[name=nl_dachmarke]') && iPrae === 'praeklinik' && iKlin === 'klinik' && await iw() === 'klinik,praeklinik', iPrae + '/' + iKlin);
+        await p.selectOption('#berufsgruppe', 'Sonstige');
         await p.locator('.ws-gruppe', { hasText: 'Atemweg' }).locator('label', { hasText: '19:30–20:15' }).click();
         const gesperrt = await p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label', { hasText: '19:30–20:00' }).locator('input').isDisabled();
         const grund = await p.locator('.ws-gruppe', { hasText: 'Kleine' }).locator('label', { hasText: '19:30–20:00' }).textContent();
@@ -657,6 +666,13 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.check('.rm-listen input[name="listen[]"] >> nth=0');
       await p.waitForTimeout(500);
       notiere(engine, 'desktop-breit', 'team-mailing-neu', 'Newsletter: Listen sichtbar, Zahl der Abonnierenden', await p.isVisible('.rm-listen') && !await p.isVisible('#auswahl') && Number(await p.textContent('#rm-zahl')) >= 1, await p.textContent('#rm-zahl'));
+      // AP-19: Zielgruppe nur mit „Allgäu Akut“; Klinik zählt nur Nina
+      await p.uncheck('.rm-listen input[name="listen[]"] >> nth=0');
+      const zielVorher = await p.isVisible('#nl_ziel');
+      await p.check('.rm-listen input[data-dachmarke]');
+      await p.selectOption('#nl_ziel', 'klinik');
+      await p.waitForTimeout(500);
+      notiere(engine, 'desktop-breit', 'team-mailing-neu', 'Zielgruppe erst mit „Allgäu Akut“, Zahl je Zielgruppe', !zielVorher && await p.isVisible('#nl_ziel') && await p.textContent('#rm-zahl') === '1', await p.textContent('#rm-zahl'));
       // Mailings: Editor bedienen (Desktop)
       await p.setViewportSize({ width: 1440, height: 900 });
       await p.goto(basis + '/team/mailings?id=' + vor.mailing_entwurf);
@@ -830,6 +846,8 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         const geladen = p.waitForEvent('requestfinished', r => r.url().endsWith('/team/startseite/vorschau'));
         await tun();
         await geladen;
+        // Die Antwort ist da; warten, bis das iframe sie anzeigt (Firefox lädt unter Last spürbar später)
+        await p.waitForFunction(() => { const f = document.querySelector('iframe.vorschau-frame'); return f && f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.querySelector('.held .titel'); }, null, { timeout: 15000 }).catch(() => {});
         await p.waitForTimeout(250);
       };
       await vorschauNeu(() => p.goto(basis + '/team/startseite'));

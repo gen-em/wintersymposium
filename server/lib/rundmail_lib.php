@@ -64,27 +64,68 @@ function rm_auswahl_gruppen(): array
     return array_filter($g);
 }
 
+/** Muster einer Newsletter-Auswahl: „nl:1,2“, optional mit Zielgruppe für Allgäu Akut „;ziel:klinik“ bzw. „;ziel:va:5“ (AP-19). */
+const RM_NL_MUSTER = '/^nl:(\d+(?:,\d+)*)(?:;ziel:(beide|klinik|praeklinik|va:\d+))?$/';
+
 /** Newsletter-Listen einer Auswahl „nl:1,2“ oder null (AP-7). */
 function rm_nl_listen(string $auswahl): ?array
 {
-    return preg_match('/^nl:(\d+(?:,\d+)*)$/', $auswahl, $m) === 1 ? array_map('intval', explode(',', $m[1])) : null;
+    return preg_match(RM_NL_MUSTER, $auswahl, $m) === 1 ? array_map('intval', explode(',', $m[1])) : null;
 }
 
-/** Ist die Auswahl gültig (Teilnehmende oder vorhandene Newsletter-Listen)? */
-/** Mailings an Newsletter-Listen: nur Betreiber (AP-12, E-60); außerhalb des Team-Bereichs (Jobs) erlaubt. */
+/** Zielgruppe einer Newsletter-Auswahl wie gewählt: beide, klinik, praeklinik oder va:<id> (Bezug auf eine Veranstaltung). */
+function rm_nl_ziel(string $auswahl): string
+{
+    return preg_match(RM_NL_MUSTER, $auswahl, $m) === 1 && ($m[2] ?? '') !== '' ? $m[2] : 'beide';
+}
+
+/** Wirksame Zielgruppe (E-71 (5)): mit Bezug auf eine Veranstaltung deren Einstellung „Zielgruppe“. */
+function rm_nl_ziel_wirksam(string $auswahl): string
+{
+    $z = rm_nl_ziel($auswahl);
+    if (str_starts_with($z, 'va:')) {
+        $id = (int)substr($z, 3);
+        return va_zeile($id) !== null ? va_von($id, 'zielgruppe') : 'beide';
+    }
+    return $z;
+}
+
+/**
+ * Newsletter-Listen, an die das angemeldete Team-Konto Mailings schicken darf:
+ * null = alle (BetreiberIn; außerhalb des Team-Bereichs, z. B. Jobs). Admins
+ * dürfen die Listen der Reihen, für die sie freigeschaltet sind (O-52); die
+ * Dachmarke und weitere Listen bleiben bei den BetreiberInnen (AP-12, E-60).
+ */
+function rm_nl_erlaubt_ids(): ?array
+{
+    if (!ctx_da('team_rolle') || ctx('team_rolle') === 'betreiber') {
+        return null;
+    }
+    $konto = ctx('team_konto_zeile');
+    $reihen = is_array($konto) ? va_erlaubte_reihen($konto) : [];
+    return array_values(array_filter(array_map(fn($r) => $r['liste_id'], array_filter(va_reihen(), fn($r) => $reihen === null || in_array($r['id'], $reihen, true)))));
+}
+
+/** Darf das Team-Konto überhaupt Newsletter-Mailings schicken? */
 function rm_newsletter_erlaubt(): bool
 {
-    return !ctx_da('team_rolle') || ctx('team_rolle') === 'betreiber';
+    $ids = rm_nl_erlaubt_ids();
+    return $ids === null || $ids !== [];
 }
 
+/** Liegen alle Listen einer Auswahl im erlaubten Bereich? */
+function rm_nl_darf(array $listeIds): bool
+{
+    $ids = rm_nl_erlaubt_ids();
+    return $ids === null || array_diff($listeIds, $ids) === [];
+}
+
+/** Ist die Auswahl gültig (Teilnehmende oder vorhandene, erlaubte Newsletter-Listen)? */
 function rm_auswahl_gueltig(string $auswahl): bool
 {
     $nl = rm_nl_listen($auswahl);
     if ($nl !== null) {
-        if (!rm_newsletter_erlaubt()) {
-            return false;
-        }
-        return array_diff($nl, array_map('intval', array_column(nl_listen(), 'id'))) === [];
+        return rm_nl_darf($nl) && array_diff($nl, array_map('intval', array_column(nl_listen(), 'id'))) === [];
     }
     return array_key_exists($auswahl, rm_auswahl_optionen());
 }
@@ -95,7 +136,10 @@ function rm_auswahl_text(string $auswahl, string $bg): string
     $nl = rm_nl_listen($auswahl);
     if ($nl !== null) {
         $namen = array_column(array_filter(nl_listen(), fn($l) => in_array((int)$l['id'], $nl, true)), 'name');
-        return 'Newsletter: ' . implode(', ', $namen);
+        $ziel = rm_nl_ziel_wirksam($auswahl);
+        $d = nl_liste_dachmarke();
+        $zusatz = $d !== null && in_array((int)$d['id'], $nl, true) && $ziel !== 'beide' ? ' · ' . $d['name'] . ' nur ' . VA_ZIELGRUPPEN[$ziel] : '';
+        return 'Newsletter: ' . implode(', ', $namen) . $zusatz;
     }
     $o = rm_auswahl_optionen();
     $t = $o[$auswahl] ?? $auswahl;
@@ -107,7 +151,7 @@ function rm_empfaenger(string $auswahl, string $bg = ''): array
 {
     $nl = rm_nl_listen($auswahl);
     if ($nl !== null) {
-        return nl_empfaenger($nl);
+        return nl_empfaenger($nl, rm_nl_ziel_wirksam($auswahl));
     }
     // Empfänger aus der Veranstaltung des Kontexts (E-58)
     $wo = ["a.status = 'bestaetigt'", 'a.veranstaltung_id = ' . va_id()];
@@ -463,7 +507,7 @@ function rm_laden(int $id): ?array
  */
 function rm_sichtbar(array $rm): bool
 {
-    return $rm['veranstaltung_id'] === null ? rm_newsletter_erlaubt() : (int)$rm['veranstaltung_id'] === va_id();
+    return $rm['veranstaltung_id'] === null ? rm_nl_darf(rm_nl_listen((string)$rm['auswahl']) ?? []) && rm_newsletter_erlaubt() : (int)$rm['veranstaltung_id'] === va_id();
 }
 
 /** Eingaben prüfen. Gibt ['werte' => …, 'fehler' => [feld => text]] zurück. */
@@ -474,6 +518,13 @@ function rm_pruefen(array $e): array
         $ids = array_values(array_unique(array_filter(array_map('intval', (array)($e['listen'] ?? [])))));
         sort($ids);
         $e['auswahl'] = $ids === [] ? 'nl:' : 'nl:' . implode(',', $ids);
+        // Zielgruppe nur, wenn Allgäu Akut dabei ist (E-71 (5))
+        $ziel = (string)($e['nl_ziel'] ?? 'beide');
+        $d = nl_liste_dachmarke();
+        if ($ids !== [] && $d !== null && in_array((int)$d['id'], $ids, true) && $ziel !== 'beide' && preg_match('/^(klinik|praeklinik|va:\d+)$/', $ziel) === 1
+            && (!str_starts_with($ziel, 'va:') || va_zeile((int)substr($ziel, 3)) !== null)) {
+            $e['auswahl'] .= ';ziel:' . $ziel;
+        }
         $e['berufsgruppe'] = '';
     }
     $w = [
@@ -662,12 +713,14 @@ function rm_loeschen(int $id, int $kontoId): bool
 /** Liste für die Übersicht: Entwürfe und geplante zuerst, dann gesendete. */
 function rm_liste(): array
 {
-    return db_zeilen(
-        "SELECT r.id, r.betreff, r.status, r.geplant_fuer, r.gesendet_am, r.empfaenger_zahl, r.auswahl, r.berufsgruppe, r.auswahl_text, r.geaendert_am, k.name AS von
+    $z = db_zeilen(
+        "SELECT r.id, r.veranstaltung_id, r.betreff, r.status, r.geplant_fuer, r.gesendet_am, r.empfaenger_zahl, r.auswahl, r.berufsgruppe, r.auswahl_text, r.geaendert_am, k.name AS von
          FROM rundmail r LEFT JOIN konto k ON k.id = COALESCE(r.gesendet_von, r.erstellt_von)
          WHERE " . (rm_newsletter_erlaubt() ? 'r.veranstaltung_id IS NULL OR ' : '') . "r.veranstaltung_id = " . va_id() . "
          ORDER BY FIELD(r.status, 'versand', 'geplant', 'entwurf', 'gesendet', 'abgebrochen'), COALESCE(r.gesendet_am, r.geaendert_am) DESC, r.id DESC"
     );
+    // Newsletter-Mailings nur an erlaubte Listen (Admins: ihre Reihen, O-52)
+    return array_values(array_filter($z, fn($r) => $r['veranstaltung_id'] !== null || rm_nl_darf(rm_nl_listen((string)$r['auswahl']) ?? [])));
 }
 
 /* ---- Job ----------------------------------------------------------------- */

@@ -152,7 +152,8 @@ function team_tor(array $rollen = TEAM_ROLLEN): array
         seite_meldung(403, 'Kein Zugriff', 'Diese Seite ist für deine Rolle nicht freigegeben.');
     }
     ctx_setzen('team_konto', (int)$k['id']); // für das Audit-Protokoll bei Team-Änderungen
-    ctx_setzen('team_rolle', $k['rolle']); // Newsletter-Mailings nur für Betreiber (AP-12)
+    ctx_setzen('team_rolle', $k['rolle']); // Newsletter-Mailings: BetreiberInnen alle Listen, Admins die ihrer Reihen (AP-12, AP-19)
+    ctx_setzen('team_konto_zeile', $k); // Rechte je Reihe beim Newsletter-Versand (AP-19, O-52)
     team_veranstaltung_waehlen($k);
     team_ids_pruefen($k);
     return $k;

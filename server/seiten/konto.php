@@ -29,11 +29,15 @@ if (ist_post()) {
         case 'newsletter':
             // AP-7: Adresse ist durch das bestätigte Konto bewiesen – Listen gelten gleich
             $ids = array_map('intval', (array)($_POST['listen'] ?? []));
+            $interessen = nl_interessen((array)($_POST['nl_interesse'] ?? []));
+            if (($wf = nl_wahl_fehler($ids, $interessen)) !== null) {
+                fertig('fehler', $wf . ' Nichts geändert.', '/konto');
+            }
             $np = nl_person_per_email((string)$k['email']);
             if ($ids === [] && $np !== null) {
                 nl_listen_setzen((int)$np['id'], [], 'konto'); // nur sichtbare Listen (Review B-6)
             } elseif ($ids !== []) {
-                nl_listen_setzen(nl_person_anlegen((string)$k['email'], tk_namen($k)['vorname']), $ids, 'konto');
+                nl_listen_setzen(nl_person_anlegen((string)$k['email'], tk_namen($k)['vorname']), $ids, 'konto', $interessen);
             }
             fertig('ok', 'Newsletter gespeichert.', '/konto');
         case 'passwort_setzen':
@@ -224,8 +228,7 @@ $emailOffen = isset($fehler['email']);
             <h3 class="zwischen klein-zwischen" id="h-nl">Newsletter</h3>
             <form class="form" method="post" action="/konto"><?= csrf_feld() ?><input type="hidden" name="aktion" value="newsletter">
                 <fieldset class="feld nl-listen"><legend class="sr">Newsletter</legend>
-                <?php foreach (nl_listen(true) as $l): ?><?= feld('listen[]', $l['name'], ['typ' => 'haken', 'wert_haken' => (int)$l['id'], 'wert' => ($abos[(int)$l['id']] ?? '') === 'bestaetigt',
-                    'label_html' => '<strong>' . e($l['name']) . '</strong>' . ($l['beschreibung'] !== '' ? '<br><span class="meta klein">' . editor_html($l['beschreibung'], 'inline') . '</span>' : '')]) ?><?php endforeach; ?>
+                <?= nl_listen_html(array_keys(array_filter($abos, fn($st) => $st === 'bestaetigt')), ($np !== null ? nl_interessen_von((int)$np['id']) : '') ?: 'klinik,praeklinik') ?>
                 </fieldset>
                 <p class="meta klein"><?= e(NL_EINWILLIGUNG) ?></p>
                 <div><button class="knopf zweit" type="submit">Newsletter speichern</button></div>

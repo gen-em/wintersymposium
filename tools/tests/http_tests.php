@@ -171,7 +171,7 @@ function test_va_form(string $csrf): array
 
 /** HTTP-Bereiche in der Reihenfolge des Laufs (Funktion http_bereich_<name>). */
 const HTTP_BEREICHE = ['login', 'einstellungen', 'programm', 'anmeldung', 'konto', 'daten', 'betrieb', 'team', 'mailings',
-    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18'];
+    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18', 'ap19'];
 
 function http_tests(string $wurzel, string $tmp): void
 {
@@ -1605,7 +1605,9 @@ function http_bereich_ap16(array $u): void
     } else {
         $vaBild = (int)$f['bd']['mailings']['bild']; // im Entwurf „WS 01 Atemweg: Raumänderung“ der aktuellen Veranstaltung
         $k = http_team_einloggen($u, TEST_ADMIN, TEST_PASSWORT)['keks'];
-        pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nl['bild'], $h, [], null, $k)['status'] === 404, 'S-5: Admin ruft Bild eines Newsletter-Mailings → 404');
+        // Seit AP-19 (O-52) verschicken Admins die Newsletter ihrer Reihen; Anna (alle Veranstaltungen) sieht den der Reihe Wintersymposium.
+        // Ohne Recht auf die Reihe bleibt es 404 (geprüft im Bereich ap19).
+        pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nl['bild'], $h, [], null, $k)['status'] === 200, 'S-5/O-52: Admin für alle Veranstaltungen sieht das Bild des Reihen-Newsletters');
         pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $vaBild, $h, [], null, $k)['status'] === 200, 'S-5: Bild im Mailing der eigenen Veranstaltung sichtbar');
         pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nl['bild'], $h, [], null, $b)['status'] === 200, 'S-5: BetreiberIn sieht das Newsletter-Bild');
         http_anfrage($basis, 'GET', '/team?va=' . $vAbend, $h, [], null, $k);
@@ -1753,4 +1755,87 @@ function http_bereich_ap18(array $u): void
     db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen' WHERE id = ?", [$aktuell]);
     $r = http_anfrage($basis, 'GET', '/', $h);
     pruefe(str_contains($r['text'], '<h1 class="titel titel-xl">Allgäu <em>Akut</em></h1>') && !str_contains($r['text'], 'href="/#programm"') && !str_contains($r['text'], 'id="programm"'), 'keine aktuelle: Titel = Dachmarke, kein „Programm“ in der Navigation');
+}
+
+/** Veranstaltungsreihen und Newsletter (AP-19, E-71): T-317, T-320, T-321, T-323 über HTTP. */
+function http_bereich_ap19(array $u): void
+{
+    ['basis' => $basis, 'h' => $h, 'tmp' => $tmp] = $u;
+    $f = http_frisch($u);
+    $vAbend = (int)$f['bd']['abend']['id'];
+    $vAkt = (int)va_aktuell_id();
+    $b = http_team_einloggen($u, TEST_BETREIBER, TEST_PASSWORT)['keks'];
+
+    abschnitt('HTTP: Dachmarke, Reihen, Einstellungen (AP-19, T-317, T-318)');
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], '>Dachmarke<') && !str_contains($r['text'], 'Name der Reihe'), 'Betrieb: Einstellung heißt „Dachmarke“');
+    $r = http_anfrage($basis, 'GET', '/team/veranstaltungen', $h, [], null, $b);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'id="reihen"') && str_contains($r['text'], '<strong>Fortbildungsabend</strong>') && str_contains($r['text'], 'name="reihe"'), 'Veranstaltungen: Reihen und Auswahl der Reihe beim Anlegen');
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'reihe', 'name' => 'Journal Club', 'kurz' => 'Journal Club', 'beschreibung' => 'Ein Paper, ein Abend.'], $b);
+    $jc = array_column(va_reihen(), null, 'name')['Journal Club'] ?? null;
+    pruefe($r['status'] === 303 && $jc !== null && nl_liste((int)$jc['liste_id'])['name'] === 'Journal Club', 'Reihe angelegt, mit Liste');
+    $r = http_anfrage($basis, 'POST', '/team/veranstaltungen', $h, [], ['csrf' => $c, 'aktion' => 'anlegen', 'name' => 'Journal Club März', 'kuerzel' => 'jc-maerz', 'vorlage' => '', 'reihe' => (string)$jc['id']], $b);
+    $vJc = (int)(va_per_kuerzel('jc-maerz')['id'] ?? 0);
+    pruefe($r['status'] === 303 && va_reihe_von($vJc)['id'] === $jc['id'] && va_von($vJc, 'veranstaltung_kurz') === 'Journal Club', 'neue Veranstaltung mit Reihe, Kurzname vorbelegt');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen?va=' . $vAkt, $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'id="reihe"') && str_contains($r['text'], '<dt>Reihe</dt><dd>Wintersymposium</dd>') && str_contains($r['text'], 'name="zielgruppe"') && str_contains($r['text'], 'name="berufsgruppen_interesse[NotfallsanitäterIn]"'), 'Einstellungen: Kachel „Reihe & Zielgruppe“, Vorauswahl je Berufsgruppe');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => '0', 'zielgruppe' => 'klinik'], $b);
+    pruefe($r['status'] === 303 && va_reihe_von($vAkt) === null && va('zielgruppe') === 'klinik', 'BetreiberIn ändert Reihe und Zielgruppe');
+    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => (string)array_column(va_reihen(), 'id', 'name')['Wintersymposium'], 'zielgruppe' => 'beide'], $b);
+
+    abschnitt('HTTP: Admin-Rechte je Reihe (AP-19 Unterpunkt 4, T-320)');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'name="reihe[]"') && str_contains($r['text'], 'Reihe <strong>Fortbildungsabend</strong>'), 'Team-Konten: Reihen wählbar');
+    $rita = beispieldaten_admin_reihe();
+    $k = http_team_einloggen($u, 'rita.reihe@example.org', BEISPIEL_PASSWORT_ADMIN)['keks'];
+    pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $vAbend, $h, [], null, $k)['status'] === 200 && http_anfrage($basis, 'GET', '/team/personen?va=' . $vAkt, $h, [], null, $k)['status'] === 403, 'Admin mit Reihe: eigene Veranstaltung ja, fremde 403');
+    $neu = va_anlegen('fortbildungsabend-2', 'Fortbildungsabend Februar', $vAbend, null);
+    pruefe(http_anfrage($basis, 'GET', '/team/personen?va=' . $neu['id'], $h, [], null, $k)['status'] === 200, 'neue Veranstaltung der Reihe ohne neue Freigabe');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen?va=' . $neu['id'], $h, [], null, $k);
+    pruefe(preg_match('#<select id="reihe_id" name="reihe_id"[^>]* disabled#', $r['text']) === 1, 'Admin: Reihe nur lesen');
+    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => http_csrf($r['text']), 'gruppe' => 'reihe', 'reihe_id' => '0', 'zielgruppe' => 'klinik'], $k);
+    pruefe(va_reihe_von($neu['id']) !== null && va_von($neu['id'], 'zielgruppe') === 'klinik', 'Admin ändert die Zielgruppe, die Reihe nicht');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
+    $abendListe = (int)va_reihe(beispieldaten_reihe_abend())['liste_id'];
+    $dm = (int)nl_liste_dachmarke()['id'];
+    pruefe(str_contains($r['text'], 'name="listen[]" value="' . $abendListe . '"') && !str_contains($r['text'], 'name="listen[]" value="' . $dm . '"') && !str_contains($r['text'], 'name="nl_ziel"'), 'Mailings: Admin wählt nur den Newsletter ihrer Reihe (O-52)');
+    $r = http_anfrage($basis, 'POST', '/team/mailings', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'speichern', 'art' => 'newsletter', 'listen' => [$dm], 'betreff' => 'Darf nicht', 'html' => '<p>x</p>', 'postfach' => 'newsletter'], $k);
+    pruefe(db_wert("SELECT COUNT(*) FROM rundmail WHERE betreff = 'Darf nicht'") == 0, 'Allgäu Akut für Admins abgewiesen');
+    $nlm = beispieldaten_newsletter_mailing();
+    if ($nlm !== null) {
+        pruefe(http_anfrage($basis, 'GET', '/team/mailings/bild?id=' . $nlm['bild'], $h, [], null, $k)['status'] === 404, 'S-5: Bild des Newsletters einer fremden Reihe → 404');
+    }
+
+    abschnitt('HTTP: Newsletter bestellen mit Interessen (AP-19 Unterpunkt 5, T-321)');
+    $g = "$tmp/kekse-ap19-gast.txt";
+    $r = http_anfrage($basis, 'GET', '/newsletter', $h, [], null, $g);
+    pruefe(str_contains($r['text'], '<strong>Wintersymposium</strong>') && str_contains($r['text'], '<strong>Fortbildungsabend</strong>') && str_contains($r['text'], '<strong>Journal Club</strong>') && str_contains($r['text'], 'name="nl_interesse[]" value="praeklinik"'), 'Formular zeigt alle Reihen-Newsletter und Allgäu Akut mit Interessen');
+    preg_match('/name="pow_aufgabe" value="([0-9a-f]{64})"/', $r['text'], $m);
+    $spam = ['zeit' => spam_stempel(time() - 10), 'pow_aufgabe' => $m[1] ?? '', 'pow_loesung' => http_pow($m[1] ?? ''), 'website' => '', 'einwilligung' => '1'];
+    $r = http_anfrage($basis, 'POST', '/newsletter', $h, [], ['csrf' => http_csrf($r['text']), 'email' => 'ina@example.org', 'listen' => [$dm]] + $spam, $g);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Klinik, Präklinik oder beides') && nl_person_per_email('ina@example.org') === null, 'Allgäu Akut ohne Interesse: Fehler, nichts angefragt');
+
+    abschnitt('HTTP: Anmeldung mit zwei Häkchen (AP-19 Unterpunkt 7, T-323)');
+    $a = "$tmp/kekse-ap19-anm.txt";
+    $r = http_anfrage($basis, 'GET', '/anmelden', $h, [], null, $a);
+    pruefe(str_contains($r['text'], 'Newsletter „Wintersymposium“: Infos zum nächsten Wintersymposium.') && str_contains($r['text'], 'name="nl_dachmarke"') && str_contains($r['text'], 'data-vorauswahl=') && !str_contains($r['text'], 'bei_anmeldung'), 'Formular: Häkchen Reihe und Allgäu Akut mit Vorauswahl');
+    $r = http_anmelden($basis, $h, $a, ['vorname' => 'Nils', 'nachname' => 'Notsan', 'email' => 'nils@example.org', 'berufsgruppe' => 'NotfallsanitäterIn', 'beruf_sonstige' => '', 'institution' => 'Rettungswache', 'efn' => '', 'essen' => 'egal',
+        'newsletter' => '1', 'nl_dachmarke' => '1']);
+    $an = db_zeile("SELECT * FROM anmeldung WHERE email = 'nils@example.org'");
+    pruefe($an !== null && (int)$an['newsletter'] === 1 && $an['nl_interessen'] === 'praeklinik', 'ohne gewähltes Interesse: Vorauswahl der Berufsgruppe (Präklinik, O-50)');
+    $mail = http_mail_an($tmp, 'nils@example.org');
+    preg_match('~(/link\?t=[A-Za-z0-9_-]{43})~', $mail, $lm);
+    $r = http_anfrage($basis, 'GET', $lm[1] ?? '/link?t=x', $h, [], null, $a);
+    http_anfrage($basis, 'POST', '/link', $h, [], ['csrf' => http_csrf($r['text']), 't' => substr($lm[1] ?? '/link?t=x', 8)], $a);
+    $nm = http_mail_an($tmp, 'nils@example.org', 20, '/newsletter/bestaetigen');
+    $np = nl_person_per_email('nils@example.org');
+    $abos = $np !== null ? nl_abos((int)$np['id']) : [];
+    pruefe($nm !== '' && str_contains($nm, 'Wintersymposium, Allgäu Akut (Präklinik)') && count($abos) === 2 && array_unique(array_values($abos)) === ['offen'], 'nach der Bestätigung: eine Mail für beide Listen (O-54)');
+    preg_match('~/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})~', $nm, $bm);
+    $r = http_anfrage($basis, 'GET', '/newsletter/bestaetigen?t=' . ($bm[1] ?? ''), $h, [], null, $a);
+    http_anfrage($basis, 'POST', '/newsletter/bestaetigen', $h, [], ['csrf' => http_csrf($r['text']), 't' => $bm[1] ?? ''], $a);
+    pruefe(nl_abos((int)$np['id']) === array_fill_keys(array_keys($abos), 'bestaetigt') && nl_interessen_von((int)$np['id']) === 'praeklinik', 'bestätigt: beide Abos, Interesse Präklinik');
+    $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $a);
+    pruefe(str_contains($r['text'], 'Newsletter der Reihe, Allgäu Akut (Präklinik)'), 'Meine Anmeldung zeigt den Newsletter-Wunsch');
 }

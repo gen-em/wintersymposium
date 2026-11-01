@@ -4,6 +4,8 @@
  * - Workshop-Wahl: Termine, die sich mit einem gewählten festen Termin eines
  *   anderen Workshops überschneiden, werden gesperrt, mit Grund (E-20)
  * - Wartelisten-Schalter zeigt „✓ Auf der Warteliste“ / „+ Warteliste“
+ * - Newsletter „Allgäu Akut“ (AP-19, O-50): Interessen Klinik/Präklinik nach
+ *   der Berufsgruppe vorausgewählt, bis man sie selbst ändert
  * Der Server prüft alles noch einmal; ohne Skript bleiben alle Felder sichtbar.
  */
 (function () {
@@ -17,6 +19,22 @@
         if (sonst) { sonst.hidden = beruf.value.toLowerCase() !== "sonstige"; }
     }
     if (beruf) { beruf.addEventListener("change", berufZeigen); berufZeigen(); }
+
+    var interessen = document.querySelector(".nl-interessen[data-vorauswahl]");
+    var selbstGewaehlt = false;
+    function vorauswahl() {
+        if (!interessen || !beruf || selbstGewaehlt) { return; }
+        var wahl = {};
+        try { wahl = JSON.parse(interessen.getAttribute("data-vorauswahl")) || {}; } catch (e) { wahl = {}; }
+        var w = wahl[beruf.value] || "beides";
+        interessen.querySelectorAll("input[type=checkbox]").forEach(function (c) {
+            c.checked = w === "beides" || c.value === w;
+        });
+    }
+    if (interessen) {
+        interessen.addEventListener("change", function () { selbstGewaehlt = true; });
+        if (beruf) { beruf.addEventListener("change", vorauswahl); }
+    }
 
     var radios = Array.prototype.slice.call(document.querySelectorAll("input[type=radio][name^=\"ws[\"][data-von]"));
     function sperren() {

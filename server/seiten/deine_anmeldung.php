@@ -366,7 +366,9 @@ echo seiten_kopfzeile('Hallo ' . $a['vorname'] . '.', 'Deine Anmeldung · ' . va
                 <div><dt>Berufsgruppe</dt><dd><?= e($a['berufsgruppe'] . ($a['beruf_sonstige'] !== '' ? ' (' . $a['beruf_sonstige'] . ')' : '')) ?></dd></div>
                 <div><dt>Institution</dt><dd><?= e($a['institution']) ?></dd></div>
                 <?php if ($a['berufsgruppe'] === (va_liste('berufsgruppen')[0] ?? '') && va_an('mit_cme')): ?><div><dt>EFN</dt><dd class="mono"><?= $a['efn'] !== null ? e(efn_text($a['efn'])) : '<span class="meta">– nicht angegeben</span>' ?></dd></div><?php endif; ?>
-                <div><dt>Newsletter</dt><dd><?= (int)$a['newsletter'] === 1 ? 'gewünscht (Bestätigung folgt, sobald er startet)' : 'nein' ?></dd></div>
+                <?php // Newsletter-Wunsch (AP-19): Reihe und Allgäu Akut mit Interessen
+                $nlWunsch = array_filter([(int)$a['newsletter'] === 1 ? 'Newsletter der Reihe' : '', (string)$a['nl_interessen'] !== '' ? 'Allgäu Akut (' . nl_interessen_text((string)$a['nl_interessen']) . ')' : '']); ?>
+                <div><dt>Newsletter</dt><dd><?= $nlWunsch === [] ? 'nein' : e(implode(', ', $nlWunsch)) . ' <span class="meta">– bestätigst du per Mail</span>' ?></dd></div>
             </dl>
             <div class="aktionen abstand"><div class="aktion-frist"><a class="knopf zweit" href="<?= $a['konto_id'] !== null && tk_aktuell() !== null ? '/konto?aendern=profil' : '/deine-anmeldung?aendern=daten' ?>">Daten bearbeiten</a><span class="frist">jederzeit · neue E-Mail erst nach Bestätigung</span></div></div>
         </div>

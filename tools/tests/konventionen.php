@@ -136,6 +136,9 @@ const KONV_TEST_ANLEGEN_ERLAUBT = [
     'lauf/15_status.php' => ['INSERT job' => 'Fehlerzustände der Ampeln', 'INSERT mail_ausgang' => 'Fehlerzustände der Ampeln', 'INSERT schema_migration' => 'Stand nach der Prüfung wiederherstellen'],
     'lauf/16_review1.php' => ['INSERT mail_ausgang' => 'Mail ohne Mailing', 'rm_speichern' => 'Versand und Sichtbarkeit von Mailings'],
     'lauf/17_review2.php' => ['anm_anlegen' => 'anm_anlegen ohne aktuelle Veranstaltung', 'team_anlegen' => 'Anmeldung mitten im Ablauf', 'rm_speichern' => 'Abbruch eines laufenden Versands'],
+    'http_tests.php' => ['va_anlegen' => 'neue Veranstaltung einer freigeschalteten Reihe ohne neue Freigabe (AP-19, T-320)'],
+    'lauf/20_reihen.php' => ['va_anlegen' => 'Reihe beim Anlegen und Kopieren, neue Veranstaltung einer Reihe (AP-19)', 'nl_person_anlegen' => 'Abonnierende einer Reihe, die mit ihr gelöscht werden (O-51)',
+        'nl_liste_speichern' => 'Name einer Reihen-Liste bleibt bei der Reihe (AP-19)'],
     'lauf/18_vereinheitlichung.php' => ['INSERT anmeldung_link' => 'Altdaten für Migration 20', 'INSERT konto_link' => 'Altdaten für Migration 20', 'INSERT newsletter_link' => 'Altdaten für Migration 20', 'INSERT audit' => 'Altdaten für Migration 21'],
 ];
 

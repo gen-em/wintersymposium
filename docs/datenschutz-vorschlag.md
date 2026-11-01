@@ -1,6 +1,6 @@
 # Datenschutzerklärung – Textvorschlag (AP-9, E-59)
 
-> **Kein Rechtsrat.** Vorschlag aus der Umsetzung, abgestimmt auf das, was die Anwendung tatsächlich speichert und wie lange (Stand Version 0.19.0). Bitte vom Verantwortlichen prüfen – ggf. mit einer Datenschutzberaterin oder einem Datenschutzberater – und Platzhalter in eckigen Klammern füllen. Danach im Team-Bereich unter **Kommunikation → Texte → Datenschutz** einfügen (der Editor übernimmt Überschriften und Listen).
+> **Kein Rechtsrat.** Vorschlag aus der Umsetzung, abgestimmt auf das, was die Anwendung tatsächlich speichert und wie lange (Stand Version 0.19.0, Newsletter ergänzt mit AP-19). Bitte vom Verantwortlichen prüfen – ggf. mit einer Datenschutzberaterin oder einem Datenschutzberater – und Platzhalter in eckigen Klammern füllen. Danach im Team-Bereich unter **Kommunikation → Texte → Datenschutz** einfügen (der Editor übernimmt Überschriften und Listen).
 
 ---
 
@@ -40,7 +40,8 @@ Bei Fragen zum Datenschutz erreichst du uns unter [Adresse, z. B. admin@winter-n
 
 ### Newsletter (freiwillig)
 
-- **Daten:** E-Mail-Adresse, Vorname (freiwillig), gewählte Listen, Zeitpunkt und Wortlaut deiner Einwilligung.
+- **Daten:** E-Mail-Adresse, Vorname (freiwillig), gewählte Listen (der Newsletter von Allgäu Akut und die Newsletter einzelner Veranstaltungsreihen), beim Newsletter von Allgäu Akut deine Interessen (Klinik, Präklinik) – danach richten wir aus, welche Termine wir dir schicken –, Zeitpunkt und Wortlaut deiner Einwilligung.
+- **Bei der Anmeldung:** Kreuzt du dort einen Newsletter an, schlagen wir die Interessen nach deiner Berufsgruppe vor; eingetragen bist du erst, wenn du den Link in der Bestätigungsmail anklickst.
 - **Grundlage:** deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), bestätigt über einen Link (Double-Opt-In). Unbestätigte Eintragungen löschen wir nach 7 Tagen.
 - **Abmelden:** jederzeit über den Link in jeder Mail oder unter „Mein Konto“; die Adresse wird dann sofort gelöscht.
 

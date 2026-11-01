@@ -23,17 +23,24 @@
     function artZeigen() {
         form.querySelectorAll("[data-empfaenger]").forEach(function (el) { el.hidden = el.getAttribute("data-empfaenger") !== art(); });
     }
+    // Zielgruppe nur, wenn der Newsletter der Dachmarke gewählt ist (AP-19)
+    var ziel = form.querySelector("[data-nur-dachmarke]");
+    function dachmarkeGewaehlt() { return form.querySelector("input[name='listen[]'][data-dachmarke]:checked") !== null; }
     function auswahlWert() {
         if (art() !== "newsletter") { return form.auswahl.value; }
-        var ids = Array.from(form.querySelectorAll("input[name='listen[]']:checked"), function (c) { return c.value; });
-        return "nl:" + ids.join(",");
+        var ids = Array.from(form.querySelectorAll("input[name='listen[]']:checked"), function (c) { return Number(c.value); });
+        ids.sort(function (a, b) { return a - b; });
+        var z = ziel && dachmarkeGewaehlt() ? form.nl_ziel.value : "beide";
+        return "nl:" + ids.join(",") + (ids.length && z !== "beide" ? ";ziel:" + z : "");
     }
-    form.querySelectorAll("input[name=art], input[name='listen[]']").forEach(function (el) {
-        el.addEventListener("change", function () { artZeigen(); zaehlen(); });
+    function zielZeigen() { if (ziel) { ziel.hidden = !dachmarkeGewaehlt(); } }
+    form.querySelectorAll("input[name=art], input[name='listen[]'], select[name=nl_ziel]").forEach(function (el) {
+        el.addEventListener("change", function () { artZeigen(); zielZeigen(); zaehlen(); });
     });
     artZeigen();
+    zielZeigen();
     function zaehlen() {
-        if (auswahlWert() === "nl:") { zahl.textContent = "0"; zahl2.textContent = "0"; senden.textContent = "An 0 senden"; return; }
+        if (/^nl:(;|$)/.test(auswahlWert())) { zahl.textContent = "0"; zahl2.textContent = "0"; senden.textContent = "An 0 senden"; return; }
         var q = "auswahl=" + encodeURIComponent(auswahlWert()) + "&bg=" + encodeURIComponent(art() === "newsletter" ? "" : form.berufsgruppe.value);
         ws.get("/team/mailings/empfaenger?" + q)
             .then(function (d) {

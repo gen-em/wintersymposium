@@ -49,12 +49,14 @@ team_seite_kopf($konto, 'Komponenten', '/team/komponenten');
     . feld('kb_datum', 'Datum und Zeit', ['typ' => 'datetime-local', 'wert' => '2027-01-30T19:30']) . '</div>'
     . feld('kb_lang', 'Textfeld lang', ['typ' => 'textarea', 'wert' => 'Mehrere Zeilen …'])
     . feld('kb_wahl', 'Auswahl als Reihe', ['typ' => 'radio-reihe', 'optionen' => ['ja' => 'Ja', 'nein' => 'Nein', 'egal' => 'Egal'], 'wert' => 'ja'])
-    . '<div class="feld haken-liste">' . feld('kb_haken', 'Haken mit Text', ['typ' => 'haken', 'wert' => true]) . '</div>'
+    . '<div class="feld haken-liste">' . feld('kb_haken', 'Haken mit Text', ['typ' => 'haken', 'wert' => true])
+    . '<fieldset class="feld nl-interessen"><legend>Interessiert an <span class="meta">(eingerückt unter einem Haken, AP-19)</span></legend><div class="wahl wahl-reihe"><label><input type="checkbox" checked><span>Klinik</span></label><label><input type="checkbox"><span>Präklinik</span></label></div></fieldset></div>'
     . '<div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="' . e($ziel) . '">Abbrechen</a></div></form>',
     "feld('name', 'Label', ['wert' => …, 'hilfe' => …, 'fehler' => …, 'pflicht' => true, 'zusatz' => '(freiwillig)', 'attr' => […]])\n"
     . "feld(…, ['typ' => 'auswahl', 'optionen' => […], 'leer' => 'Bitte wählen'])   // auch textarea, haken, radio, radio-reihe, zahl, passwort, email, date …\n"
     . "wert(\$eingabe, \$datensatz, 'name')   // Eingabe nach Fehler, sonst gespeicherter Wert\n"
-    . "profil_felder_html(\$werte, \$fehler, ['email' => 'frei|fest|ohne', 'pflicht' => …, 'cme' => …, 'hinweise' => …])") ?>
+    . "profil_felder_html(\$werte, \$fehler, ['email' => 'frei|fest|ohne', 'pflicht' => …, 'cme' => …, 'hinweise' => …])\n"
+    . "nl_listen_html(\$gewaehlt, \$interessen, \$abos)   // Newsletter-Listen mit Interessen bei der Dachmarke: <fieldset class=\"feld nl-interessen\">") ?>
 
 <?= $abschnitt('kaesten', 'Kästen') ?>
 <?= $muster('<div class="team-raster"><div class="kasten"><h3 class="zwischen klein-titel">Kasten</h3><p>Standardfläche für Inhalte.</p></div>'

@@ -39,7 +39,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-16 | Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (E-63) | umgesetzt, Staging offen | lokal T-288 bis T-296 | Staging (siehe unten); T-296 Proxy-Prüfung durch den Admin |
 | AP-17 | Vereinheitlichung (E-69) | umgesetzt (Teil 1 in 0.27.0, Teil 2 in 0.28.0), Staging offen | lokal T-297 bis T-308 | Staging Teil 1 und Teil 2 (siehe unten) |
 | AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | umgesetzt, Staging offen | lokal T-309 bis T-316 | Staging (siehe unten) |
-| AP-19 | Veranstaltungsreihen und Newsletter (E-71) | geplant | – | T-317 bis T-325 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
+| AP-19 | Veranstaltungsreihen und Newsletter (E-71) | umgesetzt, Staging offen | lokal T-317 bis T-325 | Staging (siehe unten) |
 
 ## Wie geprüft wird
 
@@ -856,8 +856,38 @@ Nach dem Merge auf Staging. Ziel: Startseite und Einstellungen sehen aus wie im 
 3. **Seite „Startseite“:** Verwaltung → Startseite. Im Titel ein Wort markieren → „Lila“; in ein langes Wort klicken → „Trennstelle“. Erwartet: Die Vorschau rechts zeigt es nach kurzer Zeit; „Handy“ wählen → schmale Ansicht mit Trennung an deiner Stelle und dem Hinweis „gewollt“. Dann „Verwerfen“ (oder speichern, wenn es dir gefällt).
 4. **Am Handy:** dieselbe Seite. Erwartet: Vorschau unter dem Formular, „Handy“ vorausgewählt, aufklappbar.
 5. **Einstellungen:** Verwaltung → Einstellungen. Erwartet: Kacheln mit dem Stand; „Bearbeiten“ öffnet eine Kachel, Speichern ändert nur sie. Kachel „Startseite“ führt zur neuen Seite.
-6. **Ohne aktuelle Veranstaltung** (nur wenn es passt, z. B. auf Staging mit einer Test-Veranstaltung): Erwartet: Titel „Allgäu Akut“ ohne Zeile darüber, kein „Programm“ oben. **Bitte bestätigen**, dass die Zeile über dem Titel dann fehlen soll (E-70 (7) sagt „Zeile und Titel aus der Dachmarke“; beides gleich wäre doppelt).
+6. **Ohne aktuelle Veranstaltung** (nur wenn es passt, z. B. auf Staging mit einer Test-Veranstaltung): Erwartet: Titel „Allgäu Akut“ ohne Zeile darüber, kein „Programm“ oben. Dass die Zeile über dem Titel dann fehlt, hat der Admin am 2026-11-01 bestätigt.
 
 ## AP-19 Veranstaltungsreihen und Newsletter (E-71)
 
-Geplant; T-317 bis T-325 (ein Test je Unterpunkt) werden bei der Umsetzung angelegt.
+### Geplante Prüfungen
+
+```yaml
+- {id: T-317, ap: AP-19, was: "Unterpunkt 1: Begriff Dachmarke", wie: "lauf.php (20_reihen): reihe_name() und Mail-Kicker unverändert; http_tests (ap19): Betrieb zeigt „Dachmarke“, nicht „Name der Reihe“", status: "lokal bestanden"}
+- {id: T-318, ap: AP-19, was: "Unterpunkt 2: Reihe als eigenes Objekt", wie: "lauf.php: Beispieldaten-Reihen; Migration 23 nachgestellt (zwei Wintersymposien und ein Abend je Kurzname); Kopie behält die Reihe, „einzeln“ ohne; neue Veranstaltung einer Reihe mit deren Kurznamen; Name Pflicht und eindeutig; Löschen mit Veranstaltungen abgelehnt, ohne: Liste und Abonnierende mit, Sicherung (O-51); Reihe setzen, Zusammenfassung. http_tests: Reihe über Betrieb → Veranstaltungen anlegen, Veranstaltung mit Reihe anlegen, Kachel „Reihe & Zielgruppe“ (BetreiberIn ändert Reihe und Zielgruppe)", status: "lokal bestanden"}
+- {id: T-319, ap: AP-19, was: "Unterpunkt 3: Newsletter je Reihe", wie: "lauf.php: Liste „Wintersymposium“ gehört der Reihe; neue Reihe → neue öffentliche Liste; Umbenennen zieht Name und Beschreibung mit; Name einer Reihen-Liste bleibt bei der Reihe; genau eine Dachmarke", status: "lokal bestanden"}
+- {id: T-320, ap: AP-19, was: "Unterpunkt 4: Admin-Rechte je Reihe", wie: "lauf.php: Admin mit Reihe sieht deren Veranstaltungen, auch neue, fremde nicht; kombinierbar mit Veranstaltungen; nur Listen der eigenen Reihen (O-52). http_tests: Team-Konten mit Reihen; Rita: eigene 200, fremde 403, neue der Reihe 200; Reihe nur lesen, Zielgruppe änderbar; Mailing-Editor nur mit ihrer Liste, Allgäu Akut abgewiesen; Bild eines fremden Reihen-Newsletters 404", status: "lokal bestanden"}
+- {id: T-321, ap: AP-19, was: "Unterpunkt 5: Allgäu Akut mit Interessen", wie: "lauf.php: ohne Interesse abgelehnt; Speicherform; Interessen ändern; Export mit Spalte Interessen; Einwilligungstext und Fassung. http_tests: /newsletter zeigt alle Reihen-Newsletter und die Interessen, Allgäu Akut ohne Interesse → Fehler, nichts angefragt", status: "lokal bestanden"}
+- {id: T-322, ap: AP-19, was: "Unterpunkt 6: Zielgruppe und Versand", wie: "lauf.php: Empfänger Klinik/Präklinik/alle, „beides“ bekommt Klinik, andere Listen unabhängig; Bezug auf eine Veranstaltung nimmt deren Zielgruppe (Text im Mailing); ohne Allgäu Akut keine Zielgruppe; Vorauswahl je Berufsgruppe (Regel und Einstellung, ungültige abgelehnt). Browser: Zielgruppe erscheint erst mit Allgäu Akut, Zahl je Zielgruppe", status: "lokal bestanden"}
+- {id: T-323, ap: AP-19, was: "Unterpunkt 7: Anmeldung mit zwei Häkchen", wie: "lauf.php (10_newsletter): nach der Bestätigung eine Mail für Reihe und Allgäu Akut mit Interesse. http_tests: Formular mit beiden Häkchen und Vorauswahl; Anmeldung NotSan ohne gewähltes Interesse → Präklinik; nach Bestätigung eine Mail für beide; Bestätigen → beide Abos, Interesse Präklinik; Meine Anmeldung zeigt den Wunsch. Browser: Interessen folgen der Berufsgruppe (4 Breiten, 3 Engines)", status: "lokal bestanden"}
+- {id: T-324, ap: AP-19, was: "Unterpunkt 8: Beispieldaten und Browser", wie: "lauf.php: Rita Reihe (Admin für die Reihe Fortbildungsabend); Browser-Durchlauf mit neuen Prüfungen und allen Seiten (Veranstaltungen mit Reihen, Team-Konten, Newsletter, Einstellungen)", status: "lokal bestanden"}
+- {id: T-325, ap: AP-19, was: "Unterpunkt 9: Abschluss", wie: "lauf.php ohne Fehler; Browser-Durchlauf Stufe 3; Fotos angesehen", status: "lokal bestanden"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-317 bis T-325 | 2026-11-01 | claude-dev | lokal bestanden | 0.30.0 AP-19: `lauf.php` 1152 ok, 0 Fehler in 3:05 min (vorher 1095; neu: Bereich `reihen` mit T-317 bis T-322, T-324 und HTTP-Bereich `ap19`); Browser-Durchlauf Stufe 3 (Ende des AP; gemeinsame Teile: Anmeldung, Formulare, CSS): 9341 ok, 0 Fehler in Chromium, Firefox und WebKit × 4 Breiten (vorher 9110), 15 min; nach einer Textänderung an der Anmeldung Stufe 2 (`WS_SEITEN=anmelden`) 249 ok, 0 Fehler; Fotos von Anmeldung, Newsletter, Veranstaltungen mit Reihen, Einstellungen und Team-Konten angesehen | In der Umsetzung gefunden und behoben: Reihe fehlte in der Transaktion von va_anlegen (HTTP-Test über das Fehlerprotokoll), Spalte rundmail.auswahl zu kurz; S-5-Erwartung an O-52 angepasst; im ersten Stufe-3-Lauf brach Firefox einmal in der Startseiten-Vorschau ab (Zeitproblem, allein 3091 ok) – die Prüfung wartet jetzt, bis das iframe den Titel zeigt; Interessen waren nicht eingerückt (CSS-Spezifität) und der Einwilligungstext nannte intern „Dachmarke“ – beides behoben (Konzept AP-19 probleme) |
+
+### Noch zu prüfen
+
+Nach dem Merge auf Staging. Ziel: Reihen und Newsletter so, wie in E-71 beschrieben; Bestehendes läuft weiter.
+
+1. **Migration 23:** Betrieb → Status. Erwartet: Datenbank „Schema = Soll“, alles grün.
+2. **Zuordnung prüfen (O-53):** Betrieb → Veranstaltungen. Erwartet: Spalte „Reihe“ bei jeder Veranstaltung, unten der Abschnitt „Reihen“ (je Kurzname eine). Falsch zugeordnet? In den Einstellungen der Veranstaltung, Kachel „Reihe & Zielgruppe“, umstellen; Name und Kurzname einer Reihe unter „Bearbeiten“ anpassen.
+3. **Newsletter:** Team → Newsletter. Erwartet: „Wintersymposium“ mit „gehört zur Reihe Wintersymposium“, „Allgäu Akut“ als Dachmarke. Die öffentliche Seite „Newsletter“ zeigt alle Reihen und bei Allgäu Akut „Klinik / Präklinik“.
+4. **Anmeldung:** /anmelden öffnen (ohne abzusenden). Erwartet: zwei Häkchen; bei Berufsgruppe NotfallsanitäterIn ist „Präklinik“ vorausgewählt, bei Pflege/MFA „Klinik“, sonst beides.
+5. **Rechte je Reihe:** Team-Konten → bei einem Admin „Veranstaltungen …“. Erwartet: Reihen und Veranstaltungen zum Ankreuzen.
+6. **Mailing an Allgäu Akut:** Mailings → Neu → Newsletter-Listen → Allgäu Akut. Erwartet: Feld „Zielgruppe“, Empfängerzahl ändert sich mit der Auswahl (nicht senden).
+7. **Bitte bestätigen:** Die Reihe einer Veranstaltung ändern nur BetreiberInnen; Admins sehen sie und ändern die Zielgruppe. Und: Wer bei der Anmeldung „Allgäu Akut“ ankreuzt, aber kein Interesse wählt, bekommt die Vorauswahl seiner Berufsgruppe statt einer Fehlermeldung.

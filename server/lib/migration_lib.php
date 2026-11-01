@@ -643,6 +643,58 @@ function migration_katalog(): array
                     ON DUPLICATE KEY UPDATE text = IF(text = '', VALUES(text), text)",
             ],
         ],
+        23 => [
+            'beschreibung' => 'Veranstaltungsreihen und Newsletter (AP-19, E-71): Reihen mit eigener Liste, Allgäu Akut mit Interessen Klinik/Präklinik, Admin-Rechte je Reihe, zwei Newsletter-Häkchen bei der Anmeldung',
+            'sql' => [
+                "CREATE TABLE reihe (
+                    id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    name         VARCHAR(80)   NOT NULL,
+                    kurz         VARCHAR(40)   NOT NULL,
+                    beschreibung VARCHAR(1000) NOT NULL DEFAULT '',
+                    liste_id     INT UNSIGNED  NULL,
+                    erstellt_am  DATETIME      NOT NULL,
+                    UNIQUE KEY uq_reihe_liste (liste_id),
+                    CONSTRAINT fk_reihe_liste FOREIGN KEY (liste_id) REFERENCES newsletter_liste (id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                "ALTER TABLE veranstaltung ADD COLUMN reihe_id INT UNSIGNED NULL, ADD CONSTRAINT fk_veranstaltung_reihe FOREIGN KEY (reihe_id) REFERENCES reihe (id)",
+                // Je Kurzname eine Reihe (O-53); ohne gespeicherten Kurznamen gilt der Startwert „Wintersymposium“
+                "INSERT INTO reihe (name, kurz, erstellt_am)
+                    SELECT k, k, UTC_TIMESTAMP() FROM (SELECT DISTINCT COALESCE(NULLIF(e.wert, ''), 'Wintersymposium') AS k FROM veranstaltung v
+                    LEFT JOIN va_einstellung e ON e.veranstaltung_id = v.id AND e.schluessel = 'veranstaltung_kurz') x ORDER BY k",
+                "UPDATE veranstaltung v SET reihe_id = (SELECT r.id FROM reihe r WHERE r.kurz = COALESCE((SELECT NULLIF(e.wert, '') FROM va_einstellung e WHERE e.veranstaltung_id = v.id AND e.schluessel = 'veranstaltung_kurz'), 'Wintersymposium'))",
+                // Listen: reihe (gehört zu einer Reihe), dachmarke (Allgäu Akut mit Interessen), weitere
+                "ALTER TABLE newsletter_liste ADD COLUMN art ENUM('reihe','dachmarke','weitere') NOT NULL DEFAULT 'weitere' AFTER name",
+                "UPDATE newsletter_liste SET art = 'dachmarke' WHERE id = (SELECT id FROM (SELECT id FROM newsletter_liste ORDER BY name = 'Allgäu Akut' DESC, bei_anmeldung DESC, id LIMIT 1) x)
+                    AND (name = 'Allgäu Akut' OR bei_anmeldung = 1)",
+                "INSERT INTO newsletter_liste (name, art, beschreibung, absender_name, sichtbar, pos, erstellt_am)
+                    SELECT 'Allgäu Akut', 'dachmarke', 'Termine der nächsten Fortbildungen von Allgäu Akut.', 'Allgäu Akut', 1, 0, UTC_TIMESTAMP() FROM DUAL
+                    WHERE NOT EXISTS (SELECT 1 FROM newsletter_liste WHERE art = 'dachmarke')",
+                // Bestehende Liste mit dem Namen einer Reihe gehört ihr (Liste „Wintersymposium“); sonst eine neue
+                "UPDATE reihe r JOIN newsletter_liste l ON l.name = r.name AND l.art = 'weitere' SET r.liste_id = l.id, r.beschreibung = l.beschreibung, l.art = 'reihe'",
+                "INSERT INTO newsletter_liste (name, art, beschreibung, absender_name, sichtbar, pos, erstellt_am)
+                    SELECT r.name, 'reihe', '', '', 1, 100 + r.id, UTC_TIMESTAMP() FROM reihe r WHERE r.liste_id IS NULL",
+                "UPDATE reihe r JOIN newsletter_liste l ON l.name = r.name AND l.art = 'reihe' SET r.liste_id = l.id WHERE r.liste_id IS NULL",
+                "ALTER TABLE newsletter_liste DROP COLUMN bei_anmeldung",
+                // Interessen bei Allgäu Akut; bestehende Abos gelten für beides
+                "ALTER TABLE newsletter_abo ADD COLUMN klinik TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN praeklinik TINYINT(1) NOT NULL DEFAULT 0",
+                "UPDATE newsletter_abo a JOIN newsletter_liste l ON l.id = a.liste_id SET a.klinik = 1, a.praeklinik = 1 WHERE l.art = 'dachmarke'",
+                // Admin-Rechte je Reihe (gilt auch für künftige Veranstaltungen der Reihe)
+                "CREATE TABLE konto_reihe (
+                    konto_id INT UNSIGNED NOT NULL,
+                    reihe_id INT UNSIGNED NOT NULL,
+                    PRIMARY KEY (konto_id, reihe_id),
+                    KEY ix_konto_reihe_reihe (reihe_id),
+                    CONSTRAINT fk_konto_reihe_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE,
+                    CONSTRAINT fk_konto_reihe_reihe FOREIGN KEY (reihe_id) REFERENCES reihe (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+                // Anmeldung: Häkchen 1 (newsletter) = Newsletter der Reihe, Häkchen 2 = Allgäu Akut mit Interessen.
+                // Bisher bot das eine Häkchen Allgäu Akut an: offene Wünsche dorthin, mit beiden Interessen.
+                "ALTER TABLE anmeldung ADD COLUMN nl_interessen VARCHAR(20) NOT NULL DEFAULT '' AFTER newsletter",
+                "UPDATE anmeldung SET nl_interessen = 'klinik,praeklinik', newsletter = 0 WHERE newsletter = 1",
+                // Newsletter-Auswahl mit Zielgruppe („nl:1,2;ziel:va:5“)
+                "ALTER TABLE rundmail MODIFY auswahl VARCHAR(120) NOT NULL DEFAULT 'angemeldet'",
+            ],
+        ],
     ];
 }
 
