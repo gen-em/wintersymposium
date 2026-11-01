@@ -7,14 +7,13 @@ declare(strict_types=1);
  * setzt die Positionen) und als Liste auf dem Handy; Popups (<dialog>) für
  * Vorträge, Fallbesprechungen, Workshops und Stationen.
  *
- * Erwartet $programm_punkte (veröffentlichter Stand oder, in der Vorschau,
- * der Arbeitsstand).
+ * Vorlage von programm_html() (V-27): sieht nur deren Parameter $punkte
+ * (veröffentlichter Stand oder, in der Vorschau, der Arbeitsstand).
  */
 
-$punkte = $programm_punkte ?? [];
 $gliederung = programm_gliederung($punkte);
 $anmeldungAb = va('anmeldung_start');
-$anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmelden kannst du dich ab ' . datum_text($anmeldungAb) . '.' : '';
+$anmeldungHinweis = va_anmeldung_vor_start() ? 'Anmelden kannst du dich ab ' . datum_text($anmeldungAb) . '.' : '';
 
 $dauer = fn(string $von, string $bis) => minuten($bis) - minuten($von);
 $frei = fn(array $t) => max(0, $t['plaetze'] - termin_belegt((int)$t['id']));

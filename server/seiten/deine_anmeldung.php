@@ -275,19 +275,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
 </div>
 
 <?php if ($modus === 'workshops' && $sym === 'fest' && anm_frist_offen('stichtag_workshop')):
-    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : ['fest' => [], 'warte' => []];
-    if ($eingabe === []) {
-        foreach ($plaetze as $p) {
-            if ((int)$p['termin_id'] === 0) {
-                continue;
-            }
-            if ($p['status'] === 'fest') {
-                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
-            } elseif ($p['status'] === 'warte') {
-                $wahl['warte'][] = (int)$p['termin_id'];
-            }
-        }
-    }
+    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : anm_wahl_aus_plaetzen($plaetze);
     $bisher = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] !== 0)); ?>
 <div class="innen abschnitt">
     <form class="form" method="post" action="/deine-anmeldung" novalidate>
@@ -295,7 +283,7 @@ seite_kopf('Meine Anmeldung', ['aktiv' => '/deine-anmeldung', 'teilnehmer' => $a
         <fieldset class="feld" id="workshops"><legend>Workshops ändern</legend>
             <p class="hilfe">Gibst du einen festen Platz ab, geht er sofort an die Warteliste. Je Workshop ein fester Termin; Wartelisten für volle Termine.</p>
             <?php if ($fehler !== []): ?><div class="meldung fehler" role="alert"><ul><?php foreach ($fehler as $f): ?><li><?= e($f) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
-            <?php require __DIR__ . '/teil_workshopwahl.php'; ?>
+            <?= anm_workshopwahl_html($wahl, $bisher) ?>
         </fieldset>
         <div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="/deine-anmeldung">Abbrechen</a></div>
     </form>

@@ -1584,20 +1584,9 @@ va_zwischenspeicher_leeren();
     db_ausfuehren('DELETE FROM newsletter_liste WHERE id = ?', [$nlListe]);
 
     // Unterpunkt 3 (B-2, B-3, T-277): Warte-Einträge überleben „Speichern“
-    $formWahl = function (int $anmId, bool $team) use ($wurzel): array {
-        $wahl = ['fest' => [], 'warte' => []];
+    $formWahl = function (int $anmId, bool $team): array {
         $bisher = array_values(array_filter(anm_plaetze($anmId), fn($p) => (int)$p['termin_id'] !== 0));
-        foreach ($bisher as $p) {
-            if ($p['status'] === 'fest') {
-                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
-            } elseif ($p['status'] === 'warte') {
-                $wahl['warte'][] = (int)$p['termin_id'];
-            }
-        }
-        $teamModus = $team;
-        ob_start();
-        require $wurzel . '/server/seiten/teil_workshopwahl.php';
-        $html = (string)ob_get_clean();
+        $html = anm_workshopwahl_html(anm_wahl_aus_plaetzen($bisher), $bisher, $team);
         // was der Browser sendet: angekreuzte Felder
         $post = ['ws' => [], 'wl' => []];
         preg_match_all('/<input[^>]*name="(ws\[(\d+)\]|wl\[\])" value="(\d*)"[^>]* checked/', $html, $mm, PREG_SET_ORDER);

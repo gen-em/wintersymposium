@@ -30,6 +30,25 @@ const PROGRAMM_MAX_PLAETZE = 500;
 
 /* ---- Lesen --------------------------------------------------------------- */
 
+/** Ob es die Dozentin bzw. den Dozenten gibt. */
+function dozent_da(int $id): bool
+{
+    return db_gibt_es('SELECT COUNT(*) FROM dozent WHERE id = ?', [$id]);
+}
+
+/** Programmpunkt eines Workshop-Termins (0 = gibt es nicht). */
+function programm_punkt_von_termin(int $terminId): int
+{
+    return db_zahl('SELECT punkt_id FROM workshop_termin WHERE id = ?', [$terminId]);
+}
+
+/** Typ eines Programmpunkts oder null. */
+function programm_typ(int $punktId): ?string
+{
+    $t = db_wert('SELECT typ FROM programmpunkt WHERE id = ?', [$punktId]);
+    return $t === null ? null : (string)$t;
+}
+
 /** Arbeitsstand: Liste der Punkte mit Terminen und Dozierenden (Speicherform für Vergleich und Kopie). */
 function programm_arbeitsstand(): array
 {
@@ -850,4 +869,12 @@ function foto_aufraeumen(): int
         }
     }
     return $n;
+}
+
+/** Programm-Anzeige als HTML (V-27; Vorlage seiten/teil_programm.php). */
+function programm_html(array $punkte): string
+{
+    ob_start();
+    require dirname(__DIR__) . '/seiten/teil_programm.php';
+    return (string)ob_get_clean();
 }

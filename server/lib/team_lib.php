@@ -422,3 +422,19 @@ function csv_text(array $kopf, array $zeilen): string
     }
     return $out;
 }
+
+/** Bestätigte Anmeldungen der Veranstaltung seit einem Zeitpunkt (Übersicht „seit gestern“). */
+function team_bestaetigt_seit(int $ts): int
+{
+    return db_zahl("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND bestaetigt_am >= ?", [va_id(), db_zeit($ts)]);
+}
+
+/** Essenswünsche der bestätigten Anmeldungen: [essen => anzahl]. */
+function team_essen_zahlen(): array
+{
+    $essen = [];
+    foreach (db_zeilen("SELECT essen, COUNT(*) AS n FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' GROUP BY essen", [va_id()]) as $z) {
+        $essen[$z['essen']] = (int)$z['n'];
+    }
+    return $essen;
+}

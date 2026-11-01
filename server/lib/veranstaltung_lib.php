@@ -644,3 +644,20 @@ function va_rechte_liste(array $konto): array
     }
     return $namen === [] ? ['noch keine – eine BetreiberIn schaltet dich frei'] : $namen;
 }
+
+/** Bestätigte Anmeldungen je Veranstaltung in einer Abfrage: [id => anzahl] (Review V-14, statt einer Abfrage je Zeile). */
+function va_bestaetigte_zahlen(): array
+{
+    $n = [];
+    foreach (db_zeilen("SELECT veranstaltung_id, COUNT(*) AS n FROM anmeldung WHERE status = 'bestaetigt' GROUP BY veranstaltung_id") as $z) {
+        $n[(int)$z['veranstaltung_id']] = (int)$z['n'];
+    }
+    return $n;
+}
+
+/** Ob die Anmeldung einen Starttermin hat, der noch in der Zukunft liegt. */
+function va_anmeldung_vor_start(?int $jetzt = null): bool
+{
+    $ab = va('anmeldung_start');
+    return $ab !== '' && db_ts($ab) > ($jetzt ?? time());
+}

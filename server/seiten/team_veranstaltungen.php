@@ -62,7 +62,7 @@ team_seite_kopf($konto, 'Veranstaltungen', '/team/veranstaltungen');
 <div class="tabelle-wrap"><table class="t karten">
     <thead><tr><th>Veranstaltung</th><th>Datum</th><th>Status</th><th>Anmeldungen</th><th>Aktionen</th></tr></thead>
     <tbody>
-    <?php foreach ($alle as $v): $n = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt'", [$v['id']]); ?>
+    <?php $zahlen = va_bestaetigte_zahlen(); foreach ($alle as $v): $n = $zahlen[(int)$v['id']] ?? 0; ?>
         <tr<?= $v['id'] === va_id() ? ' class="gewaehlt"' : '' ?>>
             <td data-label="Veranstaltung"><strong><?= e($v['name']) ?></strong><br><a class="mono klein" href="/<?= e($v['kuerzel']) ?>"<?= $v['status'] === 'entwurf' ? '' : '' ?>>/<?= e($v['kuerzel']) ?></a></td>
             <td data-label="Datum" class="mono"><?= $v['datum'] !== '' ? e(tag_text($v['datum'])) : '–' ?></td>

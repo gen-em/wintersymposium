@@ -16,7 +16,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     csrf_pruefen();
     $aktion = (string)($_POST['aktion'] ?? '');
     $id = (int)($_POST['id'] ?? 0) ?: null;
-    if ($id !== null && db_wert('SELECT COUNT(*) FROM dozent WHERE id = ?', [$id]) != 1) {
+    if ($id !== null && !dozent_da($id)) {
         seite_meldung(404, 'Nicht gefunden', 'Diese Person gibt es nicht mehr.');
     }
     if ($aktion === 'speichern') {

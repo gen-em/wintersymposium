@@ -135,3 +135,15 @@ function hm_aus_minuten(int $min): string
     $min = max(0, min(23 * 60 + 59, $min));
     return sprintf('%02d:%02d', intdiv($min, 60), $min % 60);
 }
+
+/** „Stand“-Zeit für Seiten: jetzt in Ortszeit, „01.11.2026, 14:05“. */
+function jetzt_text(): string
+{
+    return datum_zeit_text(db_jetzt());
+}
+
+/** Jetzt als ISO-8601 in UTC („2026-11-01T13:05:00Z“). */
+function jetzt_iso(): string
+{
+    return (string)iso_utc(db_jetzt());
+}

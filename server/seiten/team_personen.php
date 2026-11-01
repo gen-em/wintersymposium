@@ -270,21 +270,11 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <div class="feld" id="efn-feld"><label for="efn">EFN</label><input id="efn" name="efn" type="text" inputmode="numeric" maxlength="20" value="<?= $w('efn') ?>"<?= $ungueltig('efn') ?>><?= $fehlerFeld('efn') ?></div>
                 <fieldset class="feld"><legend>Essen</legend><div class="wahl wahl-reihe"><?php $es = $eingabe !== [] ? (string)($eingabe['essen'] ?? '') : $a['essen']; foreach (ANM_ESSEN as $ek => $et): ?><label><input type="radio" name="essen" value="<?= e($ek) ?>"<?= $es === $ek ? ' checked' : '' ?>><span><?= e($et) ?></span></label><?php endforeach; ?></div></fieldset>
                 <?php if ($sym === 'fest' && anm_workshops() !== []):
-                    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : ['fest' => [], 'warte' => []];
-                    if ($eingabe === []) {
-                        foreach ($plaetze as $p) {
-                            if ((int)$p['termin_id'] !== 0 && $p['status'] === 'fest') {
-                                $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
-                            } elseif ((int)$p['termin_id'] !== 0 && $p['status'] === 'warte') {
-                                $wahl['warte'][] = (int)$p['termin_id'];
-                            }
-                        }
-                    }
-                    $bisher = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] !== 0));
-                    $teamModus = true; ?>
+                    $wahl = $eingabe !== [] ? anm_wahl_lesen($eingabe) : anm_wahl_aus_plaetzen($plaetze);
+                    $bisher = array_values(array_filter($plaetze, fn($p) => (int)$p['termin_id'] !== 0)); ?>
                 <fieldset class="feld" id="workshops"><legend>Workshops</legend>
                     <input type="hidden" name="ws_gesendet" value="1">
-                    <?php require __DIR__ . '/teil_workshopwahl.php'; ?>
+                    <?= anm_workshopwahl_html($wahl, $bisher, true) ?>
                     <label class="haken"><input type="checkbox" name="ueberbuchen" value="1"><span>Überbuchen bestätigen (volle Termine trotzdem vergeben)</span></label>
                 </fieldset>
                 <?php endif; ?>
@@ -352,7 +342,7 @@ team_seite_kopf($konto, 'Personen', '/team/personen', ['skripte' => ['anmelden.j
                 <?php endif; ?>
                 </div>
             </div>
-            <?php $letzte = $a !== null ? db_zeile("SELECT a.zeit, a.text, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id WHERE a.text LIKE ? OR a.text LIKE ? ORDER BY a.id DESC LIMIT 1", ['Anmeldung ' . $a['id'] . ' %', '%Anmeldung ' . $a['id']]) : null;
+            <?php $letzte = $a !== null ? audit_letzte_anmeldung((int)$a['id']) : null;
             if ($letzte !== null): ?>
             <p class="meta klein">Letzte Änderung <?= e(datum_zeit_text($letzte['zeit'])) ?> durch <?= e($letzte['name'] ?? 'die Person selbst oder das System') ?> (<?= e($letzte['text']) ?>) · <a href="/team/protokoll?q=<?= e(rawurlencode('Anmeldung ' . $a['id'])) ?>">Protokoll ansehen</a></p>
             <?php endif; ?>

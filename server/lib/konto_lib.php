@@ -200,3 +200,9 @@ function konto_profil_setzen(int $id, array $w, ?string $email = null): void
     db_ausfuehren('UPDATE konto SET ' . implode(', ', array_map(fn($k) => "$k = ?", array_keys($spalten))) . ', geaendert_am = ? WHERE id = ?',
         [...array_values($spalten), db_jetzt(), $id]);
 }
+
+/** Ob es schon ein Konto gibt (Installer: dann ist die App installiert). */
+function konto_irgendeins_da(): bool
+{
+    return db_gibt_es('SELECT COUNT(*) FROM konto');
+}

@@ -847,3 +847,15 @@ function rm_va(int $id): int
 {
     return (int)(db_wert('SELECT veranstaltung_id FROM rundmail WHERE id = ?', [$id]) ?? 0);
 }
+
+/** Hochgeladenes Bild ans Ende des Mailing-Textes setzen (volle Breite). */
+function rm_bild_anhaengen(int $rmId, int $bildId): void
+{
+    db_ausfuehren('UPDATE rundmail SET html = CONCAT(html, ?) WHERE id = ?', ['<p><img src="/team/mailings/bild?id=' . $bildId . '" alt="" data-breite="100"></p>', $rmId]);
+}
+
+/** Empfängerliste eines verschickten Mailings aus dem Archiv: [['name', 'email'], …]. */
+function rm_empfaenger_archiv(int $rmId): array
+{
+    return db_zeilen('SELECT name, email FROM rundmail_empfaenger WHERE rundmail_id = ? ORDER BY name', [$rmId]);
+}

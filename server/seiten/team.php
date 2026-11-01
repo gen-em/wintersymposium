@@ -11,14 +11,11 @@ declare(strict_types=1);
 $konto = team_tor();
 $zf = totp_zustand((int)$konto['id']);
 $z = anm_zahlen();
-$seitGestern = (int)db_wert("SELECT COUNT(*) FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' AND bestaetigt_am >= ?", [va_id(), gmdate('Y-m-d H:i:s', time() - 86400)]);
+$seitGestern = team_bestaetigt_seit(time() - 86400);
 $termine = team_termine();
 $wl = array_filter($termine, fn($t) => $t['id'] !== 0 && $t['warte'] > 0);
 $ms = mail_stand();
-$essen = [];
-foreach (db_zeilen("SELECT essen, COUNT(*) AS n FROM anmeldung WHERE veranstaltung_id = ? AND status = 'bestaetigt' GROUP BY essen", [va_id()]) as $r) {
-    $essen[$r['essen']] = (int)$r['n'];
-}
+$essen = team_essen_zahlen();
 $aufgaben = team_aufgaben();
 
 team_seite_kopf($konto, 'Übersicht', '/team');
@@ -27,7 +24,7 @@ if ($zf['codes_offen'] <= 2) {
         . 'Erzeuge unter <a href="/konto/zweitfaktor">Mein Konto › Zwei-Faktor</a> neue.</div>';
 }
 ?>
-<p>Hallo <?= e($konto['name']) ?>. <span class="meta klein mono">Stand <?= e(datum_zeit_text(db_jetzt())) ?> · Version <?= e(app_version()) ?> · <?= e(ucfirst(umgebung())) ?></span></p>
+<p>Hallo <?= e($konto['name']) ?>. <span class="meta klein mono">Stand <?= e(jetzt_text()) ?> · Version <?= e(app_version()) ?> · <?= e(ucfirst(umgebung())) ?></span></p>
 <div class="kacheln">
     <div class="kachel"><div class="lbl">Anmeldungen</div><div class="zahl"><?= $z['symposium_belegt'] ?><?= $z['kapazitaet'] !== null ? ' / ' . $z['kapazitaet'] : '' ?></div><p class="meta klein"><?= $z['bestaetigt'] ?> bestätigt · +<?= $seitGestern ?> seit gestern · <?= $z['unbestaetigt'] ?> noch nicht bestätigt</p><p><a href="/team/personen">Personen</a></p></div>
     <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl"><?= array_sum(array_column($termine, 'warte')) ?></div><p class="meta klein"><?= $z['symposium_warte'] ?> fürs Symposium · über <?= count($wl) ?> Termine</p></div>

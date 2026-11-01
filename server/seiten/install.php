@@ -28,8 +28,8 @@ if ($maengel !== []) {
 migration_anwenden();
 
 // Schon installiert, nur die Sperrdatei fehlt: Sperre wiederherstellen.
-if ((int)db_wert('SELECT COUNT(*) FROM konto') > 0) {
-    @file_put_contents(install_sperrdatei(), gmdate('c') . " wiederhergestellt\n");
+if (konto_irgendeins_da()) {
+    install_sperre_wiederherstellen();
     audit_schreiben('installation', 'install.lock fehlte und wurde neu angelegt');
     seite_meldung(200, 'Bereits installiert', 'Die Installation ist schon erfolgt. Die Sperre des Installers wurde wiederhergestellt.');
 }

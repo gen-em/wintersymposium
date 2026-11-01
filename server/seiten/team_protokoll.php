@@ -27,31 +27,7 @@ $vf = in_array($_GET['v'] ?? '', $betreiber ? ['alle', 'ohne'] : ['alle'], true)
 $q = trim((string)($_GET['q'] ?? ''));
 $seite = max(1, (int)($_GET['s'] ?? 1));
 $proSeite = 50;
-[$sicht, $sichtPar] = audit_sichtbar($konto);
-$wo = [$sicht];
-$par = $sichtPar;
-if (va_rechte_da() && $vf === '') {
-    $wo[] = 'a.veranstaltung_id = ?';
-    $par[] = va_id();
-} elseif (va_rechte_da() && $vf === 'ohne') {
-    $wo[] = 'a.veranstaltung_id IS NULL';
-}
-if ($q !== '') {
-    $wo[] = 'a.text LIKE ?';
-    $par[] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $q) . '%';
-}
-// Zahlen je Art für die Filter (mit Suche, ohne Art-Filter)
-$zahlen = [];
-foreach (db_zeilen('SELECT a.art, COUNT(*) AS n FROM audit a WHERE ' . implode(' AND ', $wo) . ' GROUP BY a.art', $par) as $z) {
-    $zahlen[$z['art']] = (int)$z['n'];
-}
-if ($art !== '') {
-    $wo[] = 'a.art = ?';
-    $par[] = $art;
-}
-$sqlWo = ' WHERE ' . implode(' AND ', $wo);
-$gesamt = (int)db_wert('SELECT COUNT(*) FROM audit a' . $sqlWo, $par);
-$zeilen = db_zeilen('SELECT a.*, k.name FROM audit a LEFT JOIN konto k ON k.id = a.konto_id' . $sqlWo . ' ORDER BY a.id DESC LIMIT ' . $proSeite . ' OFFSET ' . (($seite - 1) * $proSeite), $par);
+['zahlen' => $zahlen, 'gesamt' => $gesamt, 'zeilen' => $zeilen] = audit_suchen($konto, $vf, $q, $art, $seite, $proSeite);
 $link = fn(array $neu) => '/team/protokoll?' . http_build_query(array_filter(array_merge(['art' => $art ?: null, 'q' => $q ?: null, 'v' => $vf ?: null], $neu)));
 $vaNamen = array_column(va_alle(), 'kuerzel', 'id');
 $titel = fn(string $a) => AUDIT_ARTEN[$a] ?? $a;

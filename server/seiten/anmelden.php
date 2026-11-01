@@ -143,7 +143,7 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
         <fieldset class="feld" id="workshops"><legend>Workshops <span class="meta"><?= $pflicht ? '(mindestens einer)' : '(freiwillig)' ?></span></legend>
             <p class="hilfe">Jeder Workshop hat eigene Termine und Längen. Je Workshop ein fester Termin; Termine, die sich mit deiner Wahl überschneiden, sind gesperrt. Volle Termine kannst du zusätzlich auf die Warteliste setzen.<?= $limit > 0 ? " Höchstens $limit " . ($limit === 1 ? 'Workshop' : 'Workshops') . ' (feste Plätze und Wartelisten zusammen).' : '' ?></p>
             <?php if ($wsFehler !== []): ?><div class="meldung fehler" role="alert"><ul><?php foreach ($wsFehler as $f): ?><li><?= e($f) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
-            <?php $bisher = []; require __DIR__ . '/teil_workshopwahl.php'; ?>
+            <?= anm_workshopwahl_html($wahl, []) ?>
         </fieldset>
         <?php endif; ?>
 

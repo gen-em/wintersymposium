@@ -88,10 +88,10 @@ $zeile = function (array $z) use ($chip, $zusatz, $mitToken, $logZeilen): string
 
 team_seite_kopf($konto, 'Status', '/team/status', ['skripte' => ['status.js']]);
 ?>
-<p class="aktionen"><span class="meta klein mono">Stand <?= e(datum_zeit_text(db_jetzt())) ?></span> <a class="knopf zweit klein-knopf" href="/team/status">Jetzt prüfen</a></p>
+<p class="aktionen"><span class="meta klein mono">Stand <?= e(jetzt_text()) ?></span> <a class="knopf zweit klein-knopf" href="/team/status">Jetzt prüfen</a></p>
 
 <?php if ($offen === []): ?>
-<div class="meldung ok" role="status">Alles in Ordnung, Stand <?= e(datum_zeit_text(db_jetzt())) ?>.</div>
+<div class="meldung ok" role="status">Alles in Ordnung, Stand <?= e(jetzt_text()) ?>.</div>
 <?php else: ?>
 <div class="kasten">
     <h2 class="zwischen"><?= count($offen) ?> <?= count($offen) === 1 ? 'Punkt braucht' : 'Punkte brauchen' ?> Aufmerksamkeit</h2>

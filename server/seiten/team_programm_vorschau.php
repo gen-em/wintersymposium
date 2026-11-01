@@ -15,7 +15,7 @@ seite_kopf('Vorschau Programm', ['konto' => $konto, 'aktiv' => '/team', 'skripte
 <section class="abschnitt" id="programm" aria-labelledby="programm-titel"><div class="innen">
     <p class="kicker">Programm</p>
     <h2 class="zwischen" id="programm-titel">Der Abend im Überblick</h2>
-    <?php $programm_punkte = programm_arbeitsstand(); require __DIR__ . '/teil_programm.php'; ?>
+    <?= programm_html(programm_arbeitsstand()) ?>
 </div></section>
 <?php
 seite_fuss();

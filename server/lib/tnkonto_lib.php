@@ -415,3 +415,9 @@ function tk_loeschfrist(int $jetzt): array
     }
     return ['erinnert' => $erinnert, 'geloescht' => $geloescht];
 }
+
+/** Anmeldung eines Kontos in irgendeiner Veranstaltung (Zertifikat aus „Mein Konto“, E-58) oder null. */
+function tk_eigene_anmeldung(int $kontoId, int $anmId): ?array
+{
+    return db_zeile('SELECT * FROM anmeldung WHERE id = ? AND konto_id = ?', [$anmId, $kontoId]);
+}

@@ -47,6 +47,40 @@ function anm_profil_setzen(int $id, array $w, ?string $email = null, bool $sitzu
         [...array_values($spalten), $sitzungNeu ? 1 : 0, db_jetzt(), $id]);
 }
 
+/** Anmeldung eines Platzes (0 = gibt es nicht). */
+function anm_id_von_platz(int $platzId): int
+{
+    return db_zahl('SELECT anmeldung_id FROM platz WHERE id = ?', [$platzId]);
+}
+
+/** Wahl aus den eigenen Plätzen vorbelegen (Workshops ändern): ['fest' => [wid => tid], 'warte' => [tid]]. */
+function anm_wahl_aus_plaetzen(array $plaetze): array
+{
+    $wahl = ['fest' => [], 'warte' => []];
+    foreach ($plaetze as $p) {
+        if ((int)$p['termin_id'] === 0) {
+            continue;
+        }
+        if ($p['status'] === 'fest') {
+            $wahl['fest'][(int)$p['workshop_id']] = (int)$p['termin_id'];
+        } elseif ($p['status'] === 'warte') {
+            $wahl['warte'][] = (int)$p['termin_id'];
+        }
+    }
+    return $wahl;
+}
+
+/**
+ * Workshop-Wahl als HTML (V-27; Vorlage seiten/teil_workshopwahl.php):
+ * $wahl vorbelegt, $bisher eigene Plätze ohne Termin 0, $team = Team-Bereich.
+ */
+function anm_workshopwahl_html(array $wahl, array $bisher, bool $team = false): string
+{
+    ob_start();
+    require dirname(__DIR__) . '/seiten/teil_workshopwahl.php';
+    return (string)ob_get_clean();
+}
+
 /** Einmal-Links gelten 48 Stunden und einmal (Admin 2026-10-29). */
 const ANM_LINK_GUELTIG_H = 48;
 /** Hinweis, wenn die Adresse eines Team-Kontos über eine Anmeldung geändert werden soll (E-63 (2)). */

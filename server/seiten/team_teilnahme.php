@@ -22,7 +22,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     switch ((string)($_POST['aktion'] ?? '')) {
         case 'erschienen':
             $platz = (int)($_POST['platz'] ?? 0);
-            $anker = '#a' . (int)db_wert('SELECT anmeldung_id FROM platz WHERE id = ?', [$platz]);
+            $anker = '#a' . anm_id_von_platz($platz);
             if (!tn_setzen($platz, ($_POST['wert'] ?? '') === '1', $kid)) {
                 flash_setzen('fehler', 'Diesen Platz gibt es nicht mehr.');
             }

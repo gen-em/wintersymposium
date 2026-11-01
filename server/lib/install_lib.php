@@ -98,3 +98,9 @@ function install_ausfuehren_gesperrt(string $hauptHost, array $e): void
         throw new RuntimeException('install.lock konnte nicht geschrieben werden (Schreibrechte im Laufzeitordner prüfen).');
     }
 }
+
+/** Sperrdatei neu anlegen, wenn die App schon installiert ist und sie fehlt. */
+function install_sperre_wiederherstellen(): void
+{
+    @file_put_contents(install_sperrdatei(), gmdate('c') . " wiederhergestellt\n");
+}

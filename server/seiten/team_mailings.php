@@ -53,7 +53,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             case 'bild':
                 try {
                     $b = rm_bild_speichern($_FILES['bild'] ?? [], $ich);
-                    db_ausfuehren('UPDATE rundmail SET html = CONCAT(html, ?) WHERE id = ?', ['<p><img src="/team/mailings/bild?id=' . $b['id'] . '" alt="" data-breite="100"></p>', $id]);
+                    rm_bild_anhaengen($id, (int)$b['id']);
                     flash_setzen('ok', 'Bild eingefügt (am Ende der Mail).');
                 } catch (RuntimeException $ex) {
                     flash_setzen('fehler', $ex->getMessage());
@@ -155,7 +155,7 @@ endif;
 /* ---- Gesendet, geplant, abgebrochen: Archiv ---- */
 if ($rm !== null && $rm['status'] !== 'entwurf'):
     $fs = rm_fortschritt($id);
-    $empf = db_zeilen('SELECT name, email FROM rundmail_empfaenger WHERE rundmail_id = ? ORDER BY name', [$id]); ?>
+    $empf = rm_empfaenger_archiv($id); ?>
 <p><a href="/team/mailings">← Alle Mailings</a></p>
 <div class="ml-raster">
     <div class="kasten detail">

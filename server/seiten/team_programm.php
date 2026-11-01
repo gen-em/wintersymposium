@@ -43,10 +43,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             umleiten('/team/programm');
         case 'verschieben':
             $art = (string)($_POST['art'] ?? '') === 'termin' ? 'termin' : 'punkt';
-            $pid = $art === 'termin' ? (int)db_wert('SELECT punkt_id FROM workshop_termin WHERE id = ?', [(int)($_POST['id'] ?? 0)]) : (int)($_POST['id'] ?? 0);
+            $pid = $art === 'termin' ? programm_punkt_von_termin((int)($_POST['id'] ?? 0)) : (int)($_POST['id'] ?? 0);
             // In einen Block gezogen bzw. aus ihm heraus (Rückmeldung 2026-10-30): zuerst zuordnen,
             // damit ein Punkt im Block die Hauptspur nicht nach hinten schiebt
-            if (($_POST['block'] ?? '') !== '' && in_array(db_wert('SELECT typ FROM programmpunkt WHERE id = ?', [$pid]), PROGRAMM_IM_BLOCK, true)) {
+            if (($_POST['block'] ?? '') !== '' && in_array(programm_typ($pid), PROGRAMM_IM_BLOCK, true)) {
                 programm_zuordnen($pid, (int)$_POST['block'] ?: null, $ich);
             }
             $neu = programm_verschieben($art, (int)($_POST['id'] ?? 0), (string)($_POST['beginn'] ?? ''), $ich, !empty($_POST['nachruecken']));

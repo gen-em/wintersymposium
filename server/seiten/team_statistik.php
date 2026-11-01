@@ -24,7 +24,7 @@ team_seite_kopf($konto, 'Statistik', '/team/statistik');
     <button class="knopf zweit klein-knopf" type="submit">Filtern</button>
     <a class="klein-link" href="#export">Zum Export</a>
 </form>
-<p class="meta klein">Stand <?= e(datum_zeit_text(db_jetzt())) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
+<p class="meta klein">Stand <?= e(jetzt_text()) ?><?= $bg !== '' ? ' · nur ' . e($bg) : '' ?> · gezählt werden bestätigte Anmeldungen.</p>
 
 <div class="kacheln">
     <div class="kachel"><div class="lbl">Angemeldet</div><div class="zahl"><?= $d['angemeldet'] ?><?= $d['kapazitaet'] !== null && $bg === '' ? ' / ' . $d['kapazitaet'] : '' ?></div><p class="meta klein"><?= $d['kapazitaet'] !== null && $bg === '' ? stat_prozent($d['angemeldet'], $d['kapazitaet']) . ' der Kapazität · ' : '' ?>+ <?= $d['unbestaetigt'] ?> Mail nicht bestätigt</p></div>
