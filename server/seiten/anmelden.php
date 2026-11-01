@@ -28,15 +28,13 @@ if ($tk !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 $wahl = ['fest' => [], 'warte' => []];
 $danke = false;
 $voll = anm_frei(0) <= 0;
-$gruppen = va_liste('berufsgruppen');
 
-if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if ($zeitraum === 'offen' && ist_post()) {
     $eingabe = $_POST;
     $r = anm_daten_pruefen($tk !== null ? ['email' => $tk['email']] + $_POST : $_POST);
     $fehler = $r['fehler'];
     $wahl = anm_wahl_lesen($_POST);
-    if (empty($_POST['einwilligung'])) {
+    if (!post_haken('einwilligung')) {
         $fehler['einwilligung'] = 'Ohne dein Einverständnis zur Verarbeitung können wir dich nicht anmelden.';
     }
     if (!$voll) {
@@ -48,7 +46,7 @@ if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $mensch = spam_ok($_POST) && rate_erlaubt('anmelden', $ip) && !spam_wegwerf($r['werte']['email']);
         rate_misserfolg('anmelden', $ip);
         if ($mensch) {
-            $erg = anm_anlegen($r['werte'], $wahl, !empty($_POST['newsletter']), null, !empty($_POST['konto']), $tk);
+            $erg = anm_anlegen($r['werte'], $wahl, post_haken('newsletter'), null, post_haken('konto'), $tk);
             if ($erg['art'] !== 'fehler') {
                 unset($_SESSION['anm_vorlage']); // Vorlage „Daten übernehmen“ ist verbraucht (Review B-13)
             }
@@ -56,8 +54,7 @@ if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $wsFehler = $erg['fehler'];
             } elseif ($erg['art'] === 'neu' && !empty($erg['bestaetigt'])) {
                 anm_einloggen($erg['id']);
-                flash_setzen('ok', 'Du bist angemeldet. Die Übersicht kommt auch per Mail.');
-                umleiten('/deine-anmeldung');
+                fertig('ok', 'Du bist angemeldet. Die Übersicht kommt auch per Mail.', '/deine-anmeldung');
             } else {
                 if ($erg['art'] === 'vorhanden') {
                     // Gleiche Grenze je Adresse wie bei „Link per Mail“ (keine Mailflut an Fremde)
@@ -78,17 +75,20 @@ if ($zeitraum === 'offen' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-$v = fn(string $k) => e(is_string($eingabe[$k] ?? null) ? $eingabe[$k] : '');
-$fehlerFeld = fn(string $k) => isset($fehler[$k]) ? '<p class="feldfehler" id="f-' . $k . '">' . e($fehler[$k]) . '</p>' : '';
-$ungueltig = fn(string $k) => isset($fehler[$k]) ? ' aria-invalid="true" aria-describedby="f-' . $k . '"' : '';
-$tagKurz = fn(string $tag) => tag_text($tag);
+// Profilfelder; mit Konto ist die Adresse fest (die des Kontos)
+$profilHtml = function (array $eingabe, array $fehler, ?array $tk): string {
+    $opt = ['pflicht' => true, 'cme' => va_an('mit_cme')];
+    if ($tk === null) {
+        return profil_felder_html($eingabe, $fehler, $opt + ['email_hilfe' => 'An diese Adresse schicken wir die Bestätigung und deine Links zum Ändern.']);
+    }
+    return profil_felder_html(['email' => $tk['email']] + $eingabe, $fehler, $opt + ['email' => 'fest',
+        'email_hilfe' => 'Die Adresse deines Kontos. Du bist eingeloggt, deshalb ist keine Bestätigung per Mail nötig.']);
+};
 
 seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'pow.js']]);
-?>
-<div class="innen form-kopf">
-    <p class="kicker"><?= e(va_kurz()) ?> · <?= e(tag_text(va('veranstaltung_datum'))) ?></p>
-    <h1 class="titel">Anmelden</h1>
-<?php if ($danke): ?>
+$kicker = va_kurz() . ' · ' . tag_text(va('veranstaltung_datum'));
+if ($danke) {
+    echo seiten_kopfzeile('Anmelden', $kicker, '', true); ?>
     <div class="kasten danke" role="status">
         <p class="kicker">Fast geschafft</p>
         <h2 class="zwischen">Schau in dein Postfach.</h2>
@@ -96,70 +96,53 @@ seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'po
         <p class="meta">Keine Mail da? Schau auch im Spam-Ordner. Hast du dich mit dieser Adresse schon einmal angemeldet, bekommst du stattdessen einen Link zu deiner bestehenden Anmeldung.</p>
     </div>
 </div>
-<?php seite_fuss(); return; endif; ?>
-<?php if ($zeitraum !== 'offen'): ?>
-    <p class="text"><?= $zeitraum === 'vorher'
-        ? 'Die Anmeldung öffnet am ' . e(datum_zeit_text(va('anmeldung_start'))) . ' Uhr.'
-        : ($zeitraum === 'geschlossen' ? 'Derzeit gibt es keine Veranstaltung, zu der du dich anmelden kannst.' : 'Die Anmeldung ist geschlossen.') ?></p>
-    <p><a href="/deine-anmeldung">Schon angemeldet? Zu deiner Anmeldung</a></p>
-</div>
-<?php seite_fuss(); return; endif; ?>
-    <p class="text">Dauert zwei Minuten. Danach bekommst du eine Mail mit einem Bestätigungslink – erst damit gilt deine Anmeldung.</p>
+<?php
+    seite_ende();
+}
+if ($zeitraum !== 'offen') {
+    echo seiten_kopfzeile('Anmelden', $kicker, $zeitraum === 'vorher'
+        ? 'Die Anmeldung öffnet am ' . datum_zeit_text(va('anmeldung_start')) . ' Uhr.'
+        : ($zeitraum === 'geschlossen' ? 'Derzeit gibt es keine Veranstaltung, zu der du dich anmelden kannst.' : 'Die Anmeldung ist geschlossen.'), true)
+        . '<p><a href="/deine-anmeldung">Schon angemeldet? Zu deiner Anmeldung</a></p></div>';
+    seite_ende();
+}
+echo seiten_kopfzeile('Anmelden', $kicker, 'Dauert zwei Minuten. Danach bekommst du eine Mail mit einem Bestätigungslink – erst damit gilt deine Anmeldung.', true);
+?>
     <div class="stichtage">
         <span>Anmeldeschluss <?= e(datum_text(anm_schluss_utc())) ?></span>
-        <span>Workshops ändern bis <?= e($tagKurz(anm_stichtag('stichtag_workshop'))) ?></span>
-        <?php if (va_an('mit_essen')): ?><span>Essen ändern bis <?= e($tagKurz(anm_stichtag('stichtag_essen'))) ?></span><?php endif; ?>
-        <span>Absagen bis <?= e($tagKurz(anm_stichtag('stichtag_storno'))) ?></span>
+        <span>Workshops ändern bis <?= e(tag_text(anm_stichtag('stichtag_workshop'))) ?></span>
+        <?php if (va_an('mit_essen')): ?><span>Essen ändern bis <?= e(tag_text(anm_stichtag('stichtag_essen'))) ?></span><?php endif; ?>
+        <span>Absagen bis <?= e(tag_text(anm_stichtag('stichtag_storno'))) ?></span>
     </div>
 </div>
 <div class="innen">
-    <?php if ($tn !== null): ?><div class="meldung hinweis">Du bist schon angemeldet. <a href="/deine-anmeldung">Zu deiner Anmeldung</a></div><?php endif; ?>
+    <?= $tn !== null ? meldung_html('Du bist schon angemeldet.', 'hinweis', ['text_html' => 'Du bist schon angemeldet. <a href="/deine-anmeldung">Zu deiner Anmeldung</a>']) : '' ?>
     <?php if ($voll): ?><div class="merke warteliste-hinweis"><p class="kicker">Gerade voll</p><p>Alle Plätze sind vergeben. Melde dich trotzdem an: Du kommst auf die Warteliste, und wird ein Platz frei, bieten wir ihn dir per Mail an. Workshops wählst du, sobald du einen Platz hast.</p></div><?php endif; ?>
-    <?php if ($fehler !== [] || $wsFehler !== []): ?><div class="meldung fehler" role="alert">Noch nicht angemeldet. Bitte prüf die markierten Angaben<?= $wsFehler !== [] ? ' und deine Workshop-Wahl' : '' ?>.</div><?php endif; ?>
+    <?= $fehler !== [] || $wsFehler !== [] ? meldung_html('Noch nicht angemeldet. Bitte prüf die markierten Angaben' . ($wsFehler !== [] ? ' und deine Workshop-Wahl' : '') . '.', 'fehler') : '' ?>
     <form class="form" method="post" action="/anmelden" novalidate data-pow data-pow-bits="<?= SPAM_POW_BITS ?>" data-pow-worker="/assets/pow-worker.js">
         <?= csrf_feld() ?>
-        <div class="paar">
-            <div class="feld"><label for="vorname">Vorname</label><input id="vorname" name="vorname" type="text" autocomplete="given-name" maxlength="80" required value="<?= $v('vorname') ?>"<?= $ungueltig('vorname') ?>><?= $fehlerFeld('vorname') ?></div>
-            <div class="feld"><label for="nachname">Nachname</label><input id="nachname" name="nachname" type="text" autocomplete="family-name" maxlength="80" required value="<?= $v('nachname') ?>"<?= $ungueltig('nachname') ?>><?= $fehlerFeld('nachname') ?></div>
-        </div>
-        <?php if ($tk !== null): ?>
-        <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" value="<?= e($tk['email']) ?>" readonly><p class="hilfe">Die Adresse deines Kontos. Du bist eingeloggt, deshalb ist keine Bestätigung per Mail nötig.</p></div>
-        <?php else: ?>
-        <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="email" maxlength="190" required value="<?= $v('email') ?>"<?= $ungueltig('email') ?>><p class="hilfe">An diese Adresse schicken wir die Bestätigung und deine Links zum Ändern.</p><?= $fehlerFeld('email') ?></div>
-        <?php endif; ?>
-        <div class="paar">
-            <div class="feld"><label for="berufsgruppe">Berufsgruppe</label>
-                <select id="berufsgruppe" name="berufsgruppe" required data-efn-gruppe="<?= e($gruppen[0] ?? '') ?>"<?= $ungueltig('berufsgruppe') ?>>
-                    <option value="">Bitte wählen</option>
-                    <?php foreach ($gruppen as $g): ?><option value="<?= e($g) ?>"<?= ($eingabe['berufsgruppe'] ?? '') === $g ? ' selected' : '' ?>><?= e($g) ?></option><?php endforeach; ?>
-                </select><?= $fehlerFeld('berufsgruppe') ?></div>
-            <div class="feld"><label for="institution">Klinik / Institution</label><input id="institution" name="institution" type="text" autocomplete="organization" maxlength="160" required value="<?= $v('institution') ?>"<?= $ungueltig('institution') ?>><?= $fehlerFeld('institution') ?></div>
-        </div>
-        <div class="feld" id="sonst-feld"><label for="beruf_sonstige">Sonstige – welche? <span class="meta">(freiwillig)</span></label><input id="beruf_sonstige" name="beruf_sonstige" type="text" maxlength="80" value="<?= $v('beruf_sonstige') ?>"<?= $ungueltig('beruf_sonstige') ?>><?= $fehlerFeld('beruf_sonstige') ?></div>
-        <?php if (va_an('mit_cme')): ?><div class="feld" id="efn-feld"><label for="efn">EFN <span class="meta">(nur für <?= e($gruppen[0] ?? 'ÄrztInnen') ?>, freiwillig, für die Fortbildungspunkte)</span></label><input id="efn" name="efn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" value="<?= $v('efn') ?>"<?= $ungueltig('efn') ?>><p class="hilfe">Die einheitliche Fortbildungsnummer (15 Ziffern) steht auf deinem Fortbildungsausweis. Kannst du auch später nachtragen.</p><?= $fehlerFeld('efn') ?></div><?php endif; ?>
+        <?= $profilHtml($eingabe, $fehler, $tk) ?>
 
         <?php if (!$voll && anm_workshops() !== []):
             $limit = va_zahl('workshop_limit'); $pflicht = va('workshop_pflicht') === 'pflicht'; ?>
         <fieldset class="feld" id="workshops"><legend>Workshops <span class="meta"><?= $pflicht ? '(mindestens einer)' : '(freiwillig)' ?></span></legend>
             <p class="hilfe">Jeder Workshop hat eigene Termine und Längen. Je Workshop ein fester Termin; Termine, die sich mit deiner Wahl überschneiden, sind gesperrt. Volle Termine kannst du zusätzlich auf die Warteliste setzen.<?= $limit > 0 ? " Höchstens $limit " . ($limit === 1 ? 'Workshop' : 'Workshops') . ' (feste Plätze und Wartelisten zusammen).' : '' ?></p>
-            <?php if ($wsFehler !== []): ?><div class="meldung fehler" role="alert"><ul><?php foreach ($wsFehler as $f): ?><li><?= e($f) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
+            <?= $wsFehler !== [] ? fehler_html($wsFehler) : '' ?>
             <?= anm_workshopwahl_html($wahl, []) ?>
         </fieldset>
         <?php endif; ?>
 
         <?php if (va_an('mit_essen')): ?>
-        <fieldset class="feld"><legend>Essen</legend>
-            <div class="wahl wahl-reihe">
-                <?php foreach (ANM_ESSEN as $k => $t): ?><label><input type="radio" name="essen" value="<?= e($k) ?>"<?= ($eingabe['essen'] ?? '') === $k ? ' checked' : '' ?>><span><?= e($t) ?></span></label><?php endforeach; ?>
-            </div><?= $fehlerFeld('essen') ?>
-        </fieldset>
+        <?= feld('essen', 'Essen', ['typ' => 'radio-reihe', 'optionen' => ANM_ESSEN, 'wert' => wert($eingabe, [], 'essen'), 'fehler' => $fehler['essen'] ?? null]) ?>
         <?php endif; ?>
 
         <div class="feld haken-liste">
-            <?php if ($tk === null): ?><label class="haken"><input type="checkbox" name="konto" value="1"<?= !empty($eingabe['konto']) ? ' checked' : '' ?>><span>Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.</span></label><?php endif; ?>
-            <?php if (($nlListe = nl_liste_anmeldung()) !== null): ?><label class="haken"><input type="checkbox" name="newsletter" value="1"<?= !empty($eingabe['newsletter']) ? ' checked' : '' ?>><span>Newsletter „<?= e($nlListe['name']) ?>“<?= $nlListe['beschreibung'] !== '' ? ': ' . editor_html($nlListe['beschreibung'], 'inline') : '' ?> Freiwillig, Abmeldung jederzeit. Nach der Bestätigung deiner Anmeldung schicken wir dir eine eigene Mail, mit der du den Newsletter bestätigst.</span></label><?php endif; ?>
-            <label class="haken"><input type="checkbox" name="einwilligung" value="1"<?= !empty($eingabe['einwilligung']) ? ' checked' : '' ?><?= $ungueltig('einwilligung') ?>><span>Ich habe die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen und bin einverstanden, dass meine Angaben für die Organisation des Symposiums verarbeitet werden.</span></label>
-            <?= $fehlerFeld('einwilligung') ?>
+            <?php if ($tk === null): ?><?= feld('konto', '', ['typ' => 'haken', 'wert' => !empty($eingabe['konto']),
+                'label_html' => 'Konto anlegen – dann siehst und änderst du deine Anmeldung jederzeit mit Passwort, ohne Link per Mail. Das Passwort legst du nach der Bestätigung fest. Geht auch später.']) ?><?php endif; ?>
+            <?php if (($nlListe = nl_liste_anmeldung()) !== null): ?><?= feld('newsletter', '', ['typ' => 'haken', 'wert' => !empty($eingabe['newsletter']),
+                'label_html' => 'Newsletter „' . e($nlListe['name']) . '“' . ($nlListe['beschreibung'] !== '' ? ': ' . editor_html($nlListe['beschreibung'], 'inline') : '') . ' Freiwillig, Abmeldung jederzeit. Nach der Bestätigung deiner Anmeldung schicken wir dir eine eigene Mail, mit der du den Newsletter bestätigst.']) ?><?php endif; ?>
+            <?= feld('einwilligung', '', ['typ' => 'haken', 'wert' => !empty($eingabe['einwilligung']), 'fehler' => $fehler['einwilligung'] ?? null,
+                'label_html' => 'Ich habe die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen und bin einverstanden, dass meine Angaben für die Organisation des Symposiums verarbeitet werden.']) ?>
         </div>
         <?= spam_felder() ?>
         <div class="absenden"><button class="knopf gruen" type="submit" data-pow-knopf>Anmelden</button>

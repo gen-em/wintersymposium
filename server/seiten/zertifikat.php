@@ -19,12 +19,10 @@ if (rtrim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PAT
     $a = anm_aktuell();
 }
 if ($a === null) {
-    flash_setzen('fehler', 'Bitte öffne zuerst deine Anmeldung – über den Link aus der Mail oder mit deinem Konto.');
-    umleiten('/deine-anmeldung');
+    fertig('fehler', 'Bitte öffne zuerst deine Anmeldung – über den Link aus der Mail oder mit deinem Konto.', '/deine-anmeldung');
 }
 if (!zertifikat_verfuegbar($a)) {
-    flash_setzen('fehler', 'Deine Teilnahmebescheinigung ist noch nicht freigeschaltet.');
-    umleiten('/deine-anmeldung');
+    fertig('fehler', 'Deine Teilnahmebescheinigung ist noch nicht freigeschaltet.', '/deine-anmeldung');
 }
 va_kontext((int)$a['veranstaltung_id']);
 $inhalt = zertifikat_pdf_fuer($a);

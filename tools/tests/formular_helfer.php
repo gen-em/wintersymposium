@@ -20,7 +20,7 @@ function pruefe(bool $bedingung, string $was): void
 
 $_SESSION = ['csrf' => str_repeat('c', 64)];
 $h = feld('vorname', 'Vor<name>', ['wert' => 'A"b<c', 'fehler' => 'Fehlt <noch>', 'hilfe' => 'So & so', 'pflicht' => true, 'attr' => ['maxlength' => 80, 'autocomplete' => 'given-name']]);
-pruefe($h === '<div class="feld"><label for="vorname">Vor&lt;name&gt;</label><input id="vorname" name="vorname" type="text" maxlength="80" autocomplete="given-name" required value="A&quot;b&lt;c" aria-invalid="true" aria-describedby="h-vorname f-vorname"><p class="hilfe" id="h-vorname">So &amp; so</p><p class="feldfehler" id="f-vorname">Fehlt &lt;noch&gt;</p></div>', 'feld: Markup, Escaping, aria-describedby auf Hilfe und Fehler, required');
+pruefe($h === '<div class="feld"><label for="vorname">Vor&lt;name&gt;</label><input id="vorname" name="vorname" type="text" value="A&quot;b&lt;c" maxlength="80" autocomplete="given-name" required aria-invalid="true" aria-describedby="h-vorname f-vorname"><p class="hilfe" id="h-vorname">So &amp; so</p><p class="feldfehler" id="f-vorname">Fehlt &lt;noch&gt;</p></div>', 'feld: Markup, Escaping, aria-describedby auf Hilfe und Fehler, required');
 pruefe(!str_contains(feld('x', 'X', ['wert' => '1']), 'aria-'), 'feld ohne Hilfe und Fehler: keine aria-Attribute');
 pruefe(str_contains(feld('x', 'X', ['hilfe' => 'H']), 'aria-describedby="h-x"') && !str_contains(feld('x', 'X', ['hilfe' => 'H']), 'aria-invalid'), 'feld mit Hilfe: describedby ohne invalid');
 $h = feld('bg', 'Gruppe', ['typ' => 'auswahl', 'optionen' => ['ÄrztIn', 'Pflege "A"'], 'leer' => 'Bitte wählen', 'wert' => 'Pflege "A"']);

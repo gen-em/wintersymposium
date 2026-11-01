@@ -50,7 +50,8 @@ function attr_html(array $attr): string
  *   pflicht  true = required
  *   attr     weitere Attribute des Eingabeelements (maxlength, autocomplete, readonly, data-* …)
  *   id       id des Eingabeelements (Standard: name)
- *   klasse   weitere Klassen am Rahmen; rahmen_id: id am Rahmen (z. B. sonst-feld)
+ *   klasse   weitere Klassen am Rahmen; rahmen_id: id am Rahmen (z. B. sonst-feld);
+ *            rahmen_attr: weitere Attribute am Rahmen (z. B. data-fuer)
  *   sr       true = Label nur für Screenreader (Filterzeilen)
  *   optionen bei auswahl/radio: [wert => text] oder Liste (wert = text)
  *   leer     bei auswahl: Text einer leeren ersten Option, z. B. „Bitte wählen“
@@ -76,7 +77,7 @@ function feld(string $name, string $label, array $opt = []): string
             return $innen;
         }
         $klasse = trim('feld ' . ($opt['klasse'] ?? ''));
-        return '<' . $tag . ' class="' . e($klasse) . '"' . (isset($opt['rahmen_id']) ? ' id="' . e($opt['rahmen_id']) . '"' : '') . '>' . $innen . '</' . $tag . '>';
+        return '<' . $tag . ' class="' . e($klasse) . '"' . (isset($opt['rahmen_id']) ? ' id="' . e($opt['rahmen_id']) . '"' : '') . attr_html((array)($opt['rahmen_attr'] ?? [])) . '>' . $innen . '</' . $tag . '>';
     };
     $optionen = (array)($opt['optionen'] ?? []);
     if ($optionen !== [] && array_is_list($optionen)) {
@@ -114,8 +115,9 @@ function feld(string $name, string $label, array $opt = []): string
     } else {
         $type = ['zahl' => 'number', 'passwort' => 'password'][$typ] ?? $typ;
         $wert = $opt['wert'] ?? null;
-        $element = '<input' . attr_html($basis + ['type' => $type] + $attr + ['required' => $pflicht]
-            + ($type === 'password' || $wert === null ? [] : ['value' => (string)$wert]) + $aria) . '>';
+        // value vor den übrigen Attributen (… value="x" readonly), wie im bisherigen Markup
+        $element = '<input' . attr_html($basis + ['type' => $type] + ($type === 'password' || $wert === null ? [] : ['value' => (string)$wert])
+            + $attr + ['required' => $pflicht] + $aria) . '>';
     }
     return $rahmen($label . $element . $unten);
 }
