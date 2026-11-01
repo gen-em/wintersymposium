@@ -2,6 +2,16 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.28.1] – 2026-11-01
+
+### Behoben
+
+- **Auslieferung nach 0.28.0 brach vor dem Abgleich ab:** Der neue Schritt im Prüf-Workflow installierte `poppler-utils` ohne aktuellen Paketindex, der Runner bekam 404 auf einen älteren Paketstand. Jetzt läuft vorher `apt-get update`. Übertragen wurde nichts; Staging blieb auf 0.27.0.
+
+### Doku
+
+- Prüfprotokoll und Konzept (AP-17, Probleme) zur abgebrochenen Auslieferung.
+
 ## [0.28.0] – 2026-11-01
 
 AP-17 Vereinheitlichung, zweiter Teil und Abschluss (Unterpunkte 7 bis 12, E-69): reiner Umbau; Seiten und Abläufe bleiben gleich. Sichtbar anders sind nur die Protokolltexte (einheitliches Muster).

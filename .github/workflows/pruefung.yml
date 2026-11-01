@@ -36,7 +36,12 @@ jobs:
           php -m | grep -E -i '^(pdo_mysql|mbstring|curl|openssl|sodium|gd|zip)$'
 
       - name: pdftotext für die PDF-Prüfungen
-        run: sudo apt-get install -y --no-install-recommends poppler-utils
+        # Erst den Paketindex holen: der des Runner-Images ist oft veraltet
+        # (404 auf ältere Paketstände, Auslieferung nach 0.28.0).
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          pdftotext -v
 
       - name: Syntax aller PHP-Dateien
         run: |
