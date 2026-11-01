@@ -117,6 +117,43 @@ const KONV_KLASSE_OHNE_CSS = [
     'vor' => 'Vergleichswert in programm-team.js (wo === \'vor\'), keine Klasse',
 ];
 
+/* ---- Tests legen nur an, wo das Anlegen geprüft wird (V-50) ---------------
+ * Alles andere kommt aus server/testdaten/beispieldaten.php. Je Datei die
+ * erlaubten Aufrufe mit Grund; ein Eintrag ohne Fundstelle gilt als veraltet. */
+const KONV_TEST_ANLEGEN_MUSTER = '/\b(anm_anlegen|konto_anlegen|team_anlegen|tk_registrieren|tk_anlegen_aus_anmeldung|va_anlegen|nl_person_anlegen|nl_liste_speichern|rm_speichern|programm_punkt_speichern|dozent_speichern)\(|INSERT INTO ([a-z_]+)/';
+const KONV_TEST_ANLEGEN_ERLAUBT = [
+    'lauf/00_migration.php' => ['INSERT einstellung' => 'alter Stand vor AP-3', 'INSERT schema_migration' => 'alter Stand vor AP-3', 'INSERT team_konto' => 'alter Stand vor AP-3'],
+    'lauf/02_konten.php' => ['konto_anlegen' => 'Normierung der Adresse beim Anlegen'],
+    'lauf/03_veranstaltung.php' => ['va_anlegen' => 'Kopieren, Entwurf, Löschen neuer Veranstaltungen', 'anm_anlegen' => 'eine Anmeldung je Veranstaltung und Adresse'],
+    'lauf/05_beispieldaten.php' => ['programm_punkt_speichern' => 'Einfügen mit Nachrücken im Beispielprogramm'],
+    'lauf/06_anmeldung.php' => ['anm_anlegen' => 'Regeln von anm_anlegen, Paralleltest T-137'],
+    'lauf/07_tn_konten.php' => ['anm_anlegen' => 'Anmelden mit Konto und mit Häkchen „Konto anlegen“', 'tk_registrieren' => 'Registrieren, Team-Adresse, Verknüpfung (E-48)'],
+    'lauf/08_team.php' => ['team_anlegen' => 'Anlegen durch das Team (bestätigt, doppelt, Warteliste, Überbuchen)'],
+    'lauf/09_mailings.php' => ['rm_speichern' => 'Mailings sind Gegenstand', 'programm_punkt_speichern' => 'Block-Zuordnung der Empfänger', 'dozent_speichern' => 'Block-Zuordnung der Empfänger', 'INSERT mail_ausgang' => 'schon gesendete Mails des Tages (Tageslimit)'],
+    'lauf/10_newsletter.php' => ['anm_anlegen' => 'Newsletter-Häkchen beim Anmelden', 'rm_speichern' => 'Newsletter-Mailing'],
+    'lauf/13_fristen.php' => ['INSERT audit' => 'zurückdatierte Einträge für die Protokoll-Frist'],
+    'lauf/14_gesamtablauf.php' => ['va_anlegen' => 'Gesamtablauf T-202', 'programm_punkt_speichern' => 'Gesamtablauf T-202', 'anm_anlegen' => 'Gesamtablauf T-202', 'rm_speichern' => 'Gesamtablauf T-202'],
+    'lauf/15_status.php' => ['INSERT job' => 'Fehlerzustände der Ampeln', 'INSERT mail_ausgang' => 'Fehlerzustände der Ampeln', 'INSERT schema_migration' => 'Stand nach der Prüfung wiederherstellen'],
+    'lauf/16_review1.php' => ['INSERT mail_ausgang' => 'Mail ohne Mailing', 'rm_speichern' => 'Versand und Sichtbarkeit von Mailings'],
+    'lauf/17_review2.php' => ['anm_anlegen' => 'anm_anlegen ohne aktuelle Veranstaltung', 'team_anlegen' => 'Anmeldung mitten im Ablauf', 'rm_speichern' => 'Abbruch eines laufenden Versands'],
+    'lauf/18_vereinheitlichung.php' => ['INSERT anmeldung_link' => 'Altdaten für Migration 20', 'INSERT konto_link' => 'Altdaten für Migration 20', 'INSERT newsletter_link' => 'Altdaten für Migration 20', 'INSERT audit' => 'Altdaten für Migration 21'],
+];
+
+/** Aufrufe, die in Tests Daten anlegen, als ['datei' => ['aufruf' => Anzahl]]. */
+function konv_test_anlegen(string $wurzel): array
+{
+    $r = [];
+    foreach (array_merge(glob("$wurzel/tools/tests/lauf/*.php") ?: [], ["$wurzel/tools/tests/http_tests.php"]) as $p) {
+        preg_match_all(KONV_TEST_ANLEGEN_MUSTER, (string)@file_get_contents($p), $m, PREG_SET_ORDER);
+        foreach ($m as $x) {
+            $a = ($x[2] ?? '') !== '' ? 'INSERT ' . $x[2] : $x[1];
+            $d = substr($p, strlen("$wurzel/tools/tests/"));
+            $r[$d][$a] = ($r[$d][$a] ?? 0) + 1;
+        }
+    }
+    return $r;
+}
+
 /** Klassen aus class="…"-Angaben in PHP und JS (nur feste Teile, dynamische Stücke entfallen). */
 function konv_klassen_im_code(string $wurzel): array
 {
@@ -272,6 +309,27 @@ function konventionen_pruefen(string $wurzel): void
         array_keys(array_filter(KONV_KLASSE_OHNE_CSS, fn($_, $k) => in_array($k, $cssKlassen, true) || !in_array($k, $imCode, true), ARRAY_FILTER_USE_BOTH))
     );
     konv_melden($alt, 'V-29: Ausnahmelisten der Klassen ohne veraltete Einträge');
+
+    // V-50: Tests legen nur an, wo das Anlegen geprüft wird
+    $funde = [];
+    $gefunden = konv_test_anlegen($wurzel);
+    foreach ($gefunden as $d => $aufrufe) {
+        foreach ($aufrufe as $a => $n) {
+            if (!isset(KONV_TEST_ANLEGEN_ERLAUBT[$d][$a])) {
+                $funde[] = "$d: $a ({$n}×)";
+            }
+        }
+    }
+    konv_melden($funde, 'V-50: Tests nehmen den Beispieldatensatz, eigenes Anlegen nur mit Grund');
+    $alt = [];
+    foreach (KONV_TEST_ANLEGEN_ERLAUBT as $d => $aufrufe) {
+        foreach (array_keys($aufrufe) as $a) {
+            if (!isset($gefunden[$d][$a])) {
+                $alt[] = "$d: $a";
+            }
+        }
+    }
+    konv_melden($alt, 'V-50: Ausnahmeliste fürs Anlegen ohne veraltete Einträge');
 
     // K-h Präfixe: jede Funktion liegt in der Lib ihres Präfixes
     $falsch = [];

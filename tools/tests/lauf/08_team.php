@@ -87,29 +87,21 @@ function test_team(): void
     pruefe(preg_match('/<sheet name="([^"]*)"/', $mappe, $bn) === 1 && str_starts_with($bn[1], 'Liste') && str_contains($bn[1], 'x') && strpbrk($bn[1], ':[]*?/\\') === false, 'xlsx: Blattname ohne verbotene Zeichen');
     $zip->close();
     @unlink($xlTmp);
-    $pdfText = function (array $d) : string {
-        $f = tempnam(sys_get_temp_dir(), 'wsp');
-        file_put_contents($f, $d['inhalt']);
-        $t = (string)shell_exec('pdftotext -layout ' . escapeshellarg($f) . ' - 2>/dev/null');
-        @unlink($f);
-        return $t;
-    };
+    $pdfText = fn(array $d): string => test_pdf_text($d['inhalt']);
     $ex = export_erzeugen('teilnehmende');
     $pd = export_datei($ex, 'pdf');
     pruefe($pd !== null && str_starts_with($pd['inhalt'], '%PDF-') && $pd['datei'] === preg_replace('/\.csv$/', '.pdf', $ex['datei']), 'PDF Teilnehmende: Datei');
-    if (trim((string)shell_exec('command -v pdftotext')) !== '') {
-        $pt = $pdfText($pd);
-        pruefe(str_contains($pt, 'Theo') && str_contains($pt, 'Seite 1 von') && str_contains($pt, 'TEILNEHMENDE') && !str_contains($pt, '@example.org'), 'PDF Teilnehmende: Namen, Seitenzahl, ohne E-Mail');
-        $exT = export_erzeugen('termine');
-        $ptT = $pdfText(export_datei($exT, 'pdf'));
-        $seiten = substr_count($ptT, "\f");
-        pruefe($seiten >= count(array_unique(array_column($exT['zeilen'], 0))) && str_contains($ptT, 'Plätzen belegt') && !str_contains($ptT, '@example.org'), 'PDF je Termin: eine Seite je Termin, Belegung, ohne E-Mail');
-        $leer = export_datei(['datei' => 'l.csv', 'basis' => 'l', 'titel' => 'Leer', 'kopf' => ['A'], 'zeilen' => [], 'text' => '', 'bg' => '', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
-        pruefe(str_contains($pdfText($leer), 'Niemand eingetragen'), 'PDF ohne Zeilen: Hinweis statt leerer Tabelle');
-        $lang = export_datei(['datei' => 'g.csv', 'basis' => 'g', 'titel' => 'Lang', 'kopf' => ['Name', 'Text'], 'zeilen' => array_fill(0, 120, ['Zora Zett', str_repeat('Workshop Atemweg ', 6)]), 'text' => '', 'bg' => 'ÄrztIn', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
-        $ptL = $pdfText($lang);
-        pruefe(substr_count($ptL, 'Zora Zett') === 120 && substr_count($ptL, "\f") >= 3 && str_contains($ptL, 'Berufsgruppe: ÄrztIn'), 'PDF: lange Liste über mehrere Seiten, nichts verloren');
-    }
+    $pt = $pdfText($pd);
+    pruefe(str_contains($pt, 'Theo') && str_contains($pt, 'Seite 1 von') && str_contains($pt, 'TEILNEHMENDE') && !str_contains($pt, '@example.org'), 'PDF Teilnehmende: Namen, Seitenzahl, ohne E-Mail');
+    $exT = export_erzeugen('termine');
+    $ptT = $pdfText(export_datei($exT, 'pdf'));
+    $seiten = substr_count($ptT, "\f");
+    pruefe($seiten >= count(array_unique(array_column($exT['zeilen'], 0))) && str_contains($ptT, 'Plätzen belegt') && !str_contains($ptT, '@example.org'), 'PDF je Termin: eine Seite je Termin, Belegung, ohne E-Mail');
+    $leer = export_datei(['datei' => 'l.csv', 'basis' => 'l', 'titel' => 'Leer', 'kopf' => ['A'], 'zeilen' => [], 'text' => '', 'bg' => '', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
+    pruefe(str_contains($pdfText($leer), 'Niemand eingetragen'), 'PDF ohne Zeilen: Hinweis statt leerer Tabelle');
+    $lang = export_datei(['datei' => 'g.csv', 'basis' => 'g', 'titel' => 'Lang', 'kopf' => ['Name', 'Text'], 'zeilen' => array_fill(0, 120, ['Zora Zett', str_repeat('Workshop Atemweg ', 6)]), 'text' => '', 'bg' => 'ÄrztIn', 'pdf' => ['gruppe' => null, 'ohne' => [], 'quer' => false, 'info' => []]], 'pdf');
+    $ptL = $pdfText($lang);
+    pruefe(substr_count($ptL, 'Zora Zett') === 120 && substr_count($ptL, "\f") >= 3 && str_contains($ptL, 'Berufsgruppe: ÄrztIn'), 'PDF: lange Liste über mehrere Seiten, nichts verloren');
     pruefe(export_datei(export_erzeugen('newsletter'), 'pdf') === null && export_datei($ex, 'doc') === null, 'Newsletter ohne PDF, unbekanntes Format nichts');
     pruefe(str_contains(export_knoepfe(['art' => 'cme']), 'format=pdf') && str_contains(export_knoepfe(['art' => 'cme']), 'format=xlsx') && !str_contains(export_knoepfe(['art' => 'newsletter']), 'format=pdf'), 'Knöpfe CSV, Excel, PDF (Newsletter ohne PDF)');
     // bestätigt: Lea, Paula, Wilma, Theo, Uwe, Vroni (Warteliste); StudentIn davon Theo, Uwe, Vroni

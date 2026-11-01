@@ -35,6 +35,9 @@ jobs:
           php -v
           php -m | grep -E -i '^(pdo_mysql|mbstring|curl|openssl|sodium|gd|zip)$'
 
+      - name: pdftotext für die PDF-Prüfungen
+        run: sudo apt-get install -y --no-install-recommends poppler-utils
+
       - name: Syntax aller PHP-Dateien
         run: |
           fehler=0

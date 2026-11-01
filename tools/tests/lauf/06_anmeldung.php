@@ -47,9 +47,7 @@ function test_anmeldung(): void
     $mails0 = (int)db_wert('SELECT COUNT(*) FROM mail_ausgang');
     $kim = $neu('Kim', 'kim@example.org');
     pruefe($kim['art'] === 'neu' && anm_laden($kim['id'])['status'] === 'unbestaetigt' && anm_symposium_status($kim['id']) === 'fest', 'neue Anmeldung unbestätigt, Platz reserviert');
-    $m = test_mail_an('kim@example.org');
-    preg_match('~/link\?t=([A-Za-z0-9_-]{43})~', (string)($m['text'] ?? ''), $mm);
-    $tok = $mm[1] ?? '';
+    $tok = test_link_aus_mail('kim@example.org');
     pruefe((int)db_wert('SELECT COUNT(*) FROM mail_ausgang') === $mails0 + 1 && $tok !== '', 'Bestätigungsmail mit Link in der Warteschlange');
     pruefe(db_wert('SELECT COUNT(*) FROM link WHERE token_hash = ?', [hash('sha256', $tok)]) == 1, 'Link nur als Hash gespeichert');
     pruefe(anm_link_einloesen($tok) !== null && anm_laden($kim['id'])['status'] === 'bestaetigt', 'Link bestätigt die Anmeldung');

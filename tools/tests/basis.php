@@ -103,6 +103,37 @@ function test_mail_an(string $an): ?array
     return db_zeile('SELECT * FROM mail_ausgang WHERE an = ? ORDER BY id DESC LIMIT 1', [$an]);
 }
 
+/**
+ * Text eines PDF (pdftotext -layout, Seiten durch \f getrennt). Fehlt
+ * pdftotext, schlägt eine Prüfung fehl, statt die PDF-Prüfungen still
+ * auszulassen (Paket poppler-utils; im Prüf-Workflow installiert).
+ */
+function test_pdf_text(string $pdf): string
+{
+    static $da = null;
+    $da ??= trim((string)shell_exec('command -v pdftotext')) !== '';
+    if (!$da) {
+        pruefe(false, 'pdftotext vorhanden (für die PDF-Prüfungen, Paket poppler-utils)');
+        return '';
+    }
+    $f = tempnam(sys_get_temp_dir(), 'wsp');
+    file_put_contents($f, $pdf);
+    $t = (string)shell_exec('pdftotext -layout ' . escapeshellarg($f) . ' - 2>/dev/null');
+    @unlink($f);
+    return $t;
+}
+
+/**
+ * Token eines Links aus der letzten Mail an eine Adresse, z. B.
+ * test_link_aus_mail('lea@example.org') für /link?t=…, mit 'konto/link' für
+ * Konto-Links; '' wenn keiner drin ist.
+ */
+function test_link_aus_mail(string $an, string $pfad = 'link'): string
+{
+    $text = (string)(test_mail_an($an)['text'] ?? '');
+    return preg_match('~/' . preg_quote($pfad, '~') . '\?t=([A-Za-z0-9_-]{43,64})~', $text, $m) === 1 ? $m[1] : '';
+}
+
 /** Zeit messen und als Text zurückgeben (für die Laufzeit im Prüfprotokoll). */
 function test_dauer(float $seit): string
 {

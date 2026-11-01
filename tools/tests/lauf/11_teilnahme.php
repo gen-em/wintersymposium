@@ -59,29 +59,21 @@ function test_teilnahme(): void
     if ($ausgabe !== '') {
         file_put_contents($ausgabe . '/zertifikat.pdf', $z);
     }
-    if (trim((string)shell_exec('command -v pdftotext')) !== '') {
-        $txt = function (string $pdf): string {
-            $f = tempnam(sys_get_temp_dir(), 'wsz');
-            file_put_contents($f, $pdf);
-            $t = (string)shell_exec('pdftotext -layout ' . escapeshellarg($f) . ' - 2>/dev/null');
-            @unlink($f);
-            return $t;
-        };
-        $zt = $txt($z);
-        pruefe(str_contains($zt, 'LEA BEISPIEL') && str_contains($zt, 'NICHT NUR') && str_contains($zt, 'Atemweg. Plan B.') && str_contains($zt, 'Kleine PatientInnen') && str_contains($zt, 'Nr. ' . zertifikat_nr($lea)), 'Zertifikat: Name, Titel, Workshops, Nummer');
-        pruefe(str_contains($zt, '4 Punkte') && str_contains($zt, 'Kategorie A') && str_contains($zt, 'Beispiel-Landesärztekammer') && str_contains($zt, 'Dr. Erika Erfunden') && !str_contains($zt, 'ÄrztIn'), 'Zertifikat: Punkte, Kammer, Leitung, keine Berufsgruppe');
-        pruefe(str_contains($zt, 'ALLGÄUER') && str_contains($zt, '3. AUFLAGE'), 'Zertifikat: Name der Veranstaltung und Auflage aus den Einstellungen');
-        $u1 = unterschriftenliste_pdf(false, 'vorname');
-        $u2 = unterschriftenliste_pdf(true, 'nachname');
-        if ($ausgabe !== '') {
-            file_put_contents($ausgabe . '/unterschriften.pdf', $u1);
-            file_put_contents($ausgabe . '/unterschriften-aerzte.pdf', $u2);
-        }
-        $ut = $txt($u1);
-        pruefe(str_starts_with($u1, '%PDF-') && str_contains($ut, 'UNTERSCHRIFTENLISTE') && str_contains($ut, 'Beispiel') && str_contains($ut, 'Probe') && str_contains($ut, 'sortiert nach Vorname'), 'Unterschriftenliste: alle, sortiert');
-        $ut2 = $txt($u2);
-        pruefe(str_contains($ut2, 'EFN') && str_contains($ut2, 'Beispiel') && !str_contains($ut2, 'Probe'), 'Unterschriftenliste ÄrztInnen: mit EFN, ohne andere Berufsgruppen');
+    $txt = fn(string $pdf): string => test_pdf_text($pdf);
+    $zt = $txt($z);
+    pruefe(str_contains($zt, 'LEA BEISPIEL') && str_contains($zt, 'NICHT NUR') && str_contains($zt, 'Atemweg. Plan B.') && str_contains($zt, 'Kleine PatientInnen') && str_contains($zt, 'Nr. ' . zertifikat_nr($lea)), 'Zertifikat: Name, Titel, Workshops, Nummer');
+    pruefe(str_contains($zt, '4 Punkte') && str_contains($zt, 'Kategorie A') && str_contains($zt, 'Beispiel-Landesärztekammer') && str_contains($zt, 'Dr. Erika Erfunden') && !str_contains($zt, 'ÄrztIn'), 'Zertifikat: Punkte, Kammer, Leitung, keine Berufsgruppe');
+    pruefe(str_contains($zt, 'ALLGÄUER') && str_contains($zt, '3. AUFLAGE'), 'Zertifikat: Name der Veranstaltung und Auflage aus den Einstellungen');
+    $u1 = unterschriftenliste_pdf(false, 'vorname');
+    $u2 = unterschriftenliste_pdf(true, 'nachname');
+    if ($ausgabe !== '') {
+        file_put_contents($ausgabe . '/unterschriften.pdf', $u1);
+        file_put_contents($ausgabe . '/unterschriften-aerzte.pdf', $u2);
     }
+    $ut = $txt($u1);
+    pruefe(str_starts_with($u1, '%PDF-') && str_contains($ut, 'UNTERSCHRIFTENLISTE') && str_contains($ut, 'Beispiel') && str_contains($ut, 'Probe') && str_contains($ut, 'sortiert nach Vorname'), 'Unterschriftenliste: alle, sortiert');
+    $ut2 = $txt($u2);
+    pruefe(str_contains($ut2, 'EFN') && str_contains($ut2, 'Beispiel') && !str_contains($ut2, 'Probe'), 'Unterschriftenliste ÄrztInnen: mit EFN, ohne andere Berufsgruppen');
     // Unterschrift als Bild (die Beispieldaten bringen schon eine mit)
     unterschrift_entfernen(null);
     pruefe(!unterschrift_da(), 'Unterschrift entfernen');
