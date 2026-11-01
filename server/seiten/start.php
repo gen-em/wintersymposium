@@ -8,15 +8,20 @@ declare(strict_types=1);
  * Das Programm zeigt den veröffentlichten Stand (AP-3 Schritt 3, teil_programm.php).
  */
 
-$eck = va_eckdaten();
+// Keine aktuelle Veranstaltung (Review B-10): Hinweis statt Eckdaten, Anmeldung und Programm
+$keine = va_keine();
+$eck = $keine ? [] : va_eckdaten();
 $anmeldungAb = va('anmeldung_start');
-$anmeldungHinweis = ($anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
+$anmeldungHinweis = (!$keine && $anmeldungAb !== '' && strtotime($anmeldungAb . ' UTC') > time()) ? 'Anmeldung ab ' . datum_text($anmeldungAb) : '';
 
 seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
 $archiv = va_abgeschlossen();
 ?>
 <?php if ($archiv): $akt = va_aktuell_id(); ?>
 <div class="innen"><p class="va-archiv" role="status"><strong>Diese Veranstaltung ist vorbei.</strong> Die Seite bleibt als Rückblick stehen<?= $akt !== null ? ' – die aktuelle findest du auf der <a href="/">Startseite</a>' : '' ?>.</p></div>
+<?php endif; ?>
+<?php if ($keine): ?>
+<div class="innen"><p class="va-archiv" role="status"><strong>Derzeit keine Veranstaltung.</strong> Die nächste kündigen wir hier und im <a href="/newsletter">Newsletter</a> an.</p></div>
 <?php endif; ?>
 <div class="innen held">
     <div>
@@ -50,11 +55,13 @@ $archiv = va_abgeschlossen();
 </div></section>
 <?php endif; ?>
 
+<?php if (!$keine): ?>
 <section class="abschnitt" id="programm" aria-labelledby="programm-titel"><div class="innen">
     <p class="kicker">Programm</p>
     <h2 class="zwischen" id="programm-titel">Der Abend im Überblick</h2>
     <?php $programm_punkte = programm_veroeffentlicht()['punkte'] ?? []; require __DIR__ . '/teil_programm.php'; ?>
 </div></section>
+<?php endif; ?>
 
 <?php if (inhalt('start_cme') !== ''): ?>
 <section class="abschnitt"><div class="innen">

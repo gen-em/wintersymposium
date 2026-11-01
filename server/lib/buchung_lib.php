@@ -142,10 +142,14 @@ function anm_schluss_utc(): string
     return va('anmeldung_ende') !== '' ? va('anmeldung_ende') : anm_beginn_utc();
 }
 
-/** 'vorher', 'offen' oder 'vorbei'. */
+/** 'vorher', 'offen', 'vorbei' oder 'geschlossen' (keine Veranstaltung, Review B-10). */
 function anm_zeitraum(?int $jetzt = null): string
 {
     $jetzt ??= time();
+    // Keine Veranstaltung (Review B-10): geschlossen
+    if (va_keine()) {
+        return 'geschlossen';
+    }
     // Nur die aktuelle Veranstaltung nimmt Anmeldungen an (E-58)
     $status = va_zeile()['status'] ?? 'aktuell';
     if ($status !== 'aktuell') {
@@ -610,6 +614,9 @@ function anm_link_einloesen(string $token, ?int $jetzt = null): ?array
 function anm_anlegen(array $w, array $wahl, bool $newsletter, ?int $jetzt = null, bool $kontoWunsch = false, ?array $konto = null): array
 {
     $jetzt ??= time();
+    if (va_keine()) {
+        return ['art' => 'fehler', 'fehler' => ['_' => 'Derzeit gibt es keine Veranstaltung, zu der du dich anmelden kannst.']]; // Review B-10
+    }
     // Eingeloggt mit bestätigtem Konto und gleicher Adresse: keine zweite Bestätigung nötig (AP-4b)
     // Team-Konten gelten als bestätigt (Adresse über die Einladung bewiesen, ein Konto für alles, E-54)
     $vomKonto = $konto !== null && ($konto['email_bestaetigt_am'] !== null || konto_ist_team($konto)) && $konto['email'] === $w['email'];
@@ -1009,6 +1016,16 @@ function anm_sitzung(): void
     sitzung_starten('link');
 }
 
+/**
+ * Anmeldung in der Sitzung merken, mit ihrer Veranstaltung (Review B-4).
+ * $link: über einen Einmal-Link geöffnet (bewusst gewählt, bleibt auch in
+ * einer anderen Veranstaltung, E-58); sonst aus Konto oder Team-Adresse abgeleitet.
+ */
+function anm_merken(array $a, bool $link): void
+{
+    $_SESSION['anm'] = ['id' => (int)$a['id'], 'version' => (int)$a['sitzung_version'], 'va' => (int)$a['veranstaltung_id'], 'link' => $link];
+}
+
 /** Nach einem gültigen Link: diese Anmeldung in der Sitzung merken. */
 function anm_einloggen(int $anmId): void
 {
@@ -1017,19 +1034,54 @@ function anm_einloggen(int $anmId): void
         return;
     }
     sitzung_erneuern();
-    $_SESSION['anm'] = ['id' => $anmId, 'version' => (int)$a['sitzung_version']];
+    anm_merken($a, true);
+}
+
+/**
+ * Eigene Anmeldung eines Team-Kontos in der Veranstaltung des Kontexts: die
+ * verknüpfte oder eine bestätigte mit der Login-Adresse. Unbestätigte mit der
+ * Team-Adresse kann jede anlegen, sie gelten nicht als eigene (Review S-3).
+ */
+function anm_eigene_team(array $konto): ?array
+{
+    $a = tk_anmeldung((int)$konto['id']);
+    if ($a !== null) {
+        return $a;
+    }
+    $a = anm_per_email((string)$konto['email']);
+    return $a !== null && $a['status'] === 'bestaetigt' ? $a : null;
+}
+
+/**
+ * Die Anmeldung aus Konto oder Team-Login ableiten nur auf öffentlichen Seiten
+ * der aktuellen Veranstaltung: Team-Seiten und Archivseiten setzen einen
+ * Kontext und würden sonst eine Anmeldung einer anderen Veranstaltung in die
+ * Sitzung legen (Review B-4).
+ */
+function anm_ableiten_erlaubt(): bool
+{
+    return !isset($GLOBALS['ws_va_id']) && va_aktuell_id() !== null;
 }
 
 /** Die Anmeldung dieser Sitzung oder null (gelöscht oder Sitzung beendet). */
 function anm_aktuell(): ?array
 {
-    // Mit Konto eingeloggt: die verknüpfte Anmeldung (AP-4b)
-    if (!isset($_SESSION['anm']) && ($k = tk_aktuell()) !== null && ($va = tk_anmeldung((int)$k['id'])) !== null) {
-        $_SESSION['anm'] = ['id' => (int)$va['id'], 'version' => (int)$va['sitzung_version']];
+    // Abgeleitet in einer anderen Veranstaltung: verwerfen und neu ableiten (Review B-4).
+    // Einträge aus einem Einmal-Link bleiben (Zertifikat-Mail einer vergangenen Veranstaltung, E-58).
+    $s = $_SESSION['anm'] ?? null;
+    if (is_array($s) && isset($s['va']) && empty($s['link']) && (int)$s['va'] !== va_id()) {
+        unset($_SESSION['anm']);
     }
-    // Team-Mitglied mit eigener Anmeldung (verknüpft oder gleiche, durch den Login bestätigte Adresse)
-    if (!isset($_SESSION['anm']) && ($tk = team_gesehen()) !== null && ($va = tk_anmeldung((int)$tk['id']) ?? anm_per_email((string)$tk['email'])) !== null) {
-        $_SESSION['anm'] = ['id' => (int)$va['id'], 'version' => (int)$va['sitzung_version']];
+    if (!isset($_SESSION['anm']) && anm_ableiten_erlaubt()) {
+        // Mit Konto eingeloggt: die verknüpfte Anmeldung (AP-4b)
+        $a = ($k = tk_aktuell()) !== null ? tk_anmeldung((int)$k['id']) : null;
+        // Team-Mitglied mit eigener Anmeldung (verknüpft oder bestätigt mit gleicher Adresse, S-3)
+        if ($a === null && ($tk = team_gesehen()) !== null) {
+            $a = anm_eigene_team($tk);
+        }
+        if ($a !== null) {
+            anm_merken($a, false);
+        }
     }
     $s = $_SESSION['anm'] ?? null;
     if (!is_array($s) || !isset($s['id'], $s['version'])) {

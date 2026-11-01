@@ -108,8 +108,8 @@ function tn_setzen(int $platzId, bool $erschienen, ?int $kontoId): bool
         return true;
     }
     db_ausfuehren('UPDATE platz SET nicht_erschienen = ? WHERE id = ?', [$erschienen ? 0 : 1, $platzId]);
-    $a = anm_laden((int)$p['anmeldung_id']);
-    audit_schreiben('teilnahme', 'Anmeldung ' . $p['anmeldung_id'] . ' (' . ($a['vorname'] ?? '') . ' ' . ($a['nachname'] ?? '') . '): '
+    // Ohne Namen, wie die übrigen Einträge (R-02, Review S-11)
+    audit_schreiben('teilnahme', 'Anmeldung ' . $p['anmeldung_id'] . ': '
         . anm_termin_text((int)$p['termin_id']) . ' – ' . ($erschienen ? 'doch erschienen' : 'nicht erschienen'), $kontoId);
     return true;
 }

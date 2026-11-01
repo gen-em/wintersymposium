@@ -239,13 +239,15 @@ function nl_abmelden(int $personId, ?array $listeIds = null, ?int $kontoId = nul
  * Listen einer Person setzen (Seite „Verwalten“ über den Link aus der Mail,
  * „Mein Konto“): Die Adresse ist durch den Link bzw. das Konto bewiesen, neue
  * Listen gelten deshalb gleich als bestätigt (mit Fassung). Abgewählte
- * Listen werden abgemeldet.
+ * Listen werden abgemeldet. Beide Formulare zeigen nur sichtbare Listen:
+ * Abos ausgeblendeter Listen (z. B. per Team-Einladung, E-52) bleiben (Review B-6).
  */
 function nl_listen_setzen(int $personId, array $listeIds, string $quelle): void
 {
-    $ids = array_values(array_intersect(array_map('intval', $listeIds), array_map('intval', array_column(nl_listen(true), 'id'))));
+    $sichtbar = array_map('intval', array_column(nl_listen(true), 'id'));
+    $ids = array_values(array_intersect(array_map('intval', $listeIds), $sichtbar));
     $abos = nl_abos($personId);
-    $weg = array_values(array_diff(array_keys($abos), $ids));
+    $weg = array_values(array_diff(array_intersect(array_map('intval', array_keys($abos)), $sichtbar), $ids));
     $fassung = nl_fassung();
     foreach ($ids as $lid) {
         if (($abos[$lid] ?? '') !== 'bestaetigt') {

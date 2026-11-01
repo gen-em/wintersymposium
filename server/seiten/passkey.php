@@ -8,6 +8,10 @@ declare(strict_types=1);
  *   anlage_optionen / anlegen       – Passkey hinzufügen: eingeloggt (mit
  *                                     Passwort bestätigt) oder beim ersten
  *                                     Team-Login als zweiter Faktor
+ *   bestaetigen_optionen / bestaetigen – heikle Aktion im Team-Bereich
+ *                                     bestätigen (Review B-7): Passkey des
+ *                                     eingeloggten Kontos, gilt 5 Minuten
+ *                                     für eine Aktion (zweitfaktor_bestaetigt)
  * Antworten: {ok: true, …} oder {ok: false, fehler: "…"} mit Status 400.
  */
 
@@ -63,15 +67,8 @@ try {
             if ($z['konto'] === null) {
                 $nein('Bitte logge dich zuerst ein.');
             }
-            if (!$z['einrichtung']) {
-                $kennung = rate_merkmal('konto:' . $z['konto']['id']);
-                if (!rate_erlaubt('login', $kennung)) {
-                    $nein('Zu viele Versuche. Bitte warte 15 Minuten.');
-                }
-                if (!anmeldung_passwort_ok($z['konto'], (string)($_POST['pw'] ?? ''))) {
-                    rate_misserfolg('login', $kennung);
-                    $nein('Das Passwort stimmt nicht.');
-                }
+            if (!$z['einrichtung'] && ($f = passwort_bestaetigen($z['konto'], (string)($_POST['pw'] ?? ''))) !== null) {
+                $nein($f);
             }
             json_antwort(200, ['ok' => true, 'optionen' => pk_anlage_optionen($z['konto'])]);
         case 'anlegen':
@@ -95,6 +92,31 @@ try {
             }
             flash_setzen('ok', 'Passkey gespeichert. Ab jetzt kannst du dich damit ohne Passwort einloggen.');
             json_antwort(200, ['ok' => true, 'ziel' => '/konto?passkey=neu#passkeys']); // mit Abfrage: lädt neu, statt nur zum Anker zu springen
+        case 'bestaetigen_optionen':
+            // Heikle Aktion im Team-Bereich mit Passkey bestätigen (Review B-7)
+            $k = anmeldung_konto();
+            if ($k === null) {
+                $nein('Bitte logge dich zuerst ein.');
+            }
+            json_antwort(200, ['ok' => true, 'optionen' => pk_bestaetigen_optionen($k)]);
+        case 'bestaetigen':
+            $k = anmeldung_konto();
+            if ($k === null) {
+                $nein('Bitte logge dich zuerst ein.');
+            }
+            $kennung = rate_merkmal('konto:' . $k['id']);
+            if (!rate_erlaubt('zweitfaktor', $kennung)) {
+                $nein('Zu viele Versuche. Bitte warte 15 Minuten.');
+            }
+            try {
+                pk_bestaetigen((int)$k['id'], is_array($antwort) ? $antwort : []);
+            } catch (PkFehler $f) {
+                rate_misserfolg('zweitfaktor', $kennung);
+                $nein('Dieser Passkey wurde nicht angenommen. Nimm einen Passkey dieses Kontos oder gib einen Code ein.');
+            }
+            rate_erfolg('zweitfaktor', $kennung);
+            zweitfaktor_merken((int)$k['id']);
+            json_antwort(200, ['ok' => true]);
         default:
             $nein('Unbekannte Aktion.');
     }
