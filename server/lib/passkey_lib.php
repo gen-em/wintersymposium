@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 const PK_HOECHSTENS = 10;
 const PK_GUELTIG_S = 300;
+const PK_OFFEN_MAX = 3; // offene Herausforderungen je Zweck (E-75)
 const PK_BEZEICHNUNG_MAX = 40;
 const PK_ALGS = [-7 => 'ES256', -257 => 'RS256'];
 const PK_KENNUNG_MAX = 1023;
@@ -344,23 +345,44 @@ function pk_ursprung(): ?array
     return ['ursprung' => $schema . '://' . $host . $port, 'rp_id' => $host];
 }
 
-/** Herausforderung in der Sitzung ablegen (je Zweck eine, neue verdrängt alte). */
+/**
+ * Herausforderung in der Sitzung ablegen. Je Zweck bis zu PK_OFFEN_MAX
+ * zugleich (E-75): Adressfeld-Abfrage, Knopf und ein zweiter Tab machen sich
+ * so nicht gegenseitig ungültig; die älteste fällt heraus.
+ */
 function pk_herausforderung(string $zweck, ?int $kontoId = null): string
 {
     $h = pk_b64u(random_bytes(32));
-    $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] = ['h' => $h, 'bis' => time() + PK_GUELTIG_S, 'konto' => $kontoId];
+    $jetzt = time();
+    $offen = $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] ?? [];
+    $offen = array_values(array_filter(is_array($offen) ? $offen : [], fn($a) => is_array($a) && (int)($a['bis'] ?? 0) >= $jetzt));
+    $offen[] = ['h' => $h, 'bis' => $jetzt + PK_GUELTIG_S, 'konto' => $kontoId];
+    $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] = array_slice($offen, -PK_OFFEN_MAX);
     return $h;
 }
 
-/** Abgelegte Herausforderung holen und verbrauchen (gilt einmal). */
-function pk_herausforderung_nehmen(string $zweck): array
+/** Die vorgelegte Herausforderung (aus clientDataJSON) unter den offenen suchen und verbrauchen (gilt einmal). */
+function pk_herausforderung_nehmen(string $zweck, string $vorgelegt): array
 {
-    $a = $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] ?? null;
-    unset($_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck]);
-    if (!is_array($a) || !is_string($a['h'] ?? null) || (int)($a['bis'] ?? 0) < time()) {
-        throw new PkFehler('Herausforderung fehlt oder ist abgelaufen');
+    $offen = $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] ?? [];
+    foreach (is_array($offen) ? $offen : [] as $i => $a) {
+        if (is_array($a) && is_string($a['h'] ?? null) && $vorgelegt !== '' && hash_equals($a['h'], $vorgelegt)) {
+            unset($offen[$i]);
+            $_SESSION[SITZUNG_SCHLUESSEL_PK][$zweck] = array_values($offen);
+            if ((int)($a['bis'] ?? 0) < time()) {
+                throw new PkFehler('Herausforderung ist abgelaufen');
+            }
+            return $a;
+        }
     }
-    return $a;
+    throw new PkFehler('Herausforderung fehlt oder ist abgelaufen');
+}
+
+/** Herausforderung aus clientDataJSON lesen (geprüft wird sie danach in pk_client_pruefen). */
+function pk_client_herausforderung(string $json): string
+{
+    $c = json_decode($json, true);
+    return is_array($c) && is_string($c['challenge'] ?? null) ? $c['challenge'] : '';
 }
 
 function pk_authdata_lesen(string $a, bool $mitSchluessel): array
@@ -490,11 +512,11 @@ function pk_anlegen(int $kontoId, array $antwort, string $bezeichnung): int
     if ($u === null) {
         throw new PkFehler('Passkeys gehen unter dieser Adresse nicht');
     }
-    $abl = pk_herausforderung_nehmen('anlage');
+    $client = pk_feld($antwort, 'clientDataJSON');
+    $abl = pk_herausforderung_nehmen('anlage', pk_client_herausforderung($client));
     if ((int)($abl['konto'] ?? 0) !== $kontoId) {
         throw new PkFehler('Herausforderung gehört zu einem anderen Konto');
     }
-    $client = pk_feld($antwort, 'clientDataJSON');
     $att = pk_feld($antwort, 'attestationObject');
     $rawId = pk_feld($antwort, 'rawId');
     pk_client_pruefen($client, 'webauthn.create', $abl['h'], $u['ursprung']);
@@ -567,12 +589,12 @@ function pk_signatur_pruefen(string $zweck, array $antwort, ?int $kontoId = null
     if ($u === null) {
         throw new PkFehler('Passkeys gehen unter dieser Adresse nicht');
     }
-    $abl = pk_herausforderung_nehmen($zweck);
+    $client = pk_feld($antwort, 'clientDataJSON');
+    $abl = pk_herausforderung_nehmen($zweck, pk_client_herausforderung($client));
     if ($kontoId !== null && (int)($abl['konto'] ?? 0) !== $kontoId) {
         throw new PkFehler('Herausforderung gehört zu einem anderen Konto');
     }
     $rawId = pk_feld($antwort, 'rawId');
-    $client = pk_feld($antwort, 'clientDataJSON');
     $auth = pk_feld($antwort, 'authenticatorData');
     $sig = pk_feld($antwort, 'signature');
     pk_client_pruefen($client, 'webauthn.get', $abl['h'], $u['ursprung']);

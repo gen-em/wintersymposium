@@ -1352,6 +1352,7 @@ function http_bereich_passkey(array $u): void
     $k = "$tmp/kekse-pk.txt";
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $k);
     pruefe(str_contains($r['text'], 'data-passkey-login') && str_contains($r['text'], 'Mit Passkey einloggen') && str_contains($r['text'], '/assets/passkey.js'), 'Login-Seite: „Mit Passkey einloggen“');
+    pruefe(preg_match('/<input[^>]*id="email"[^>]*autocomplete="username webauthn"|<input[^>]*autocomplete="username webauthn"[^>]*id="email"/', $r['text']) === 1 && str_contains($r['text'], 'data-passkey-direkt'), 'E-75: Adressfeld bietet Passkeys an (autocomplete="username webauthn"), Knopf für den Direkt-Login');
     http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'lea@example.org', 'passwort' => BEISPIEL_PASSWORT], $k);
     $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
     $c = http_csrf($r['text']);
@@ -1374,9 +1375,22 @@ function http_bereich_passkey(array $u): void
     $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($g, (string)($o['challenge'] ?? ''), 'localhost', $ursprung))], $k);
     pruefe(($json($r)['ok'] ?? false) === true && ($json($r)['ziel'] ?? '') === '/deine-anmeldung', 'Einloggen mit Passkey ohne Passwort (Lea hat eine Anmeldung: weiter zu ihr)');
     pruefe(str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k)['text'], 'zuletzt benutzt'), 'Danach eingeloggt, Passkey als benutzt markiert');
+    // E-75: Zwei Abfragen kurz nacheinander (Adressfeld und Knopf) machen sich nicht ungültig
+    $c = http_csrf(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k)['text']);
+    $o1 = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $k))['optionen'] ?? [];
+    $o2 = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $k))['optionen'] ?? [];
+    $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($g, (string)($o1['challenge'] ?? ''), 'localhost', $ursprung))], $k);
+    pruefe(($json($r)['ok'] ?? false) === true && ($o1['challenge'] ?? '') !== ($o2['challenge'] ?? ''), 'E-75: erste von zwei Herausforderungen gilt noch');
     $o = $json(http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login_optionen'], $k))['optionen'] ?? [];
     $r = http_anfrage($basis, 'POST', '/passkey', $h, [], ['csrf' => $c, 'aktion' => 'login', 'antwort' => json_encode(test_pk_login($g, (string)($o['challenge'] ?? ''), 'localhost', 'https://boese.example'))], $k);
     pruefe($r['status'] === 400 && str_contains($r['text'], 'nicht angenommen'), 'Fremder Ursprung abgelehnt');
+    // E-75: letzten Passkey entfernen → „Mein Konto“ sagt dem Browser einmal, den Merker zu löschen
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(!str_contains($r['text'], 'data-passkey-merker-weg'), 'E-75: ohne Entfernen keine Markierung für den Merker');
+    http_anfrage($basis, 'POST', '/konto', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'pk_entfernen', 'pk' => (int)pk_liste($kp)[0]['id']], $k);
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $k);
+    pruefe(pk_zahl($kp) === 0 && str_contains($r['text'], 'data-passkey-merker-weg'), 'E-75: letzter Passkey entfernt → Markierung zum Löschen des Merkers');
+    pruefe(!str_contains(http_anfrage($basis, 'GET', '/konto', $h, [], null, $k)['text'], 'data-passkey-merker-weg'), 'E-75: Markierung nur einmal');
     // Team-Konto (Anna): beim ersten Login Passkey als zweiter Faktor, dann Wiederherstellungscodes
     $kt = "$tmp/kekse-pk-team.txt";
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $kt);

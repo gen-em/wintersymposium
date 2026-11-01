@@ -43,6 +43,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | E-72 | Rückmeldungen nach AP-18/AP-19 | umgesetzt, Staging offen | lokal T-326 bis T-330 | Staging (siehe unten) |
 | E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
 | E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen | umgesetzt, Staging offen | lokal T-332, T-333 | Staging: Reihe wechseln, Durchklicken (siehe unten) |
+| E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
 
 ## Wie geprüft wird
 
@@ -949,3 +950,34 @@ Nach dem Merge auf Staging (Claude, mit den Testkonten).
 1. **Reihe:** Einstellungen → Reihe & Zielgruppe → „Wintersymposium“ → Speichern. Erwartet: „Gespeichert (…). Reihe: Wintersymposium.“
 2. **Durchklicken (E-74 (3)):** alle Funktionen mit BetreiberIn, Admin und Teilnehmender; Bericht an den Admin.
 3. **Staging zurücksetzen:** danach Betrieb → Betrieb → „Staging zurücksetzen“ mit Code. Erwartet: Testkonten und Beispieldaten weg, Reihe Wintersymposium mit leerer Veranstaltung, eigene Konten des Admins bleiben.
+
+
+## Passkey direkt abfragen (E-75)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-334, ap: E-75, was: "Mehrere offene Herausforderungen je Sitzung", wie: "lauf.php (02_konten): zwei Herausforderungen kurz nacheinander gelten beide, jede nur einmal; höchstens 3 offen, die älteste fällt heraus, die neueste gilt; abgelaufene abgelehnt. http_tests (passkey): zwei login_optionen hintereinander, die erste gilt noch", status: "ok"}
+- {id: T-335, ap: E-75, was: "Adressfeld bietet Passkeys an", wie: "http_tests (passkey): #email trägt autocomplete=\"username webauthn\", Bereich mit data-passkey-direkt; Browser (Chromium, Firefox, WebKit): Attribut gesetzt, ohne Merker keine Abfrage von selbst, keine Konsolenfehler; Chromium: Passkey im Adressfeld (Conditional UI) loggt ein und setzt den Merker", status: "ok"}
+- {id: T-336, ap: E-75, was: "Merker und automatische Abfrage", wie: "Browser (Chromium mit simuliertem Gerät): Knopf bricht die Adressfeld-Abfrage ab und loggt ein, Merker gesetzt; Ausloggen lässt ihn stehen; mit Merker normale Abfrage von selbst, Login ohne Klick; danach ohne Merker nur die Adressfeld-Abfrage", status: "ok"}
+- {id: T-337, ap: E-75, was: "Abbrechen und Blockade durch den Browser", wie: "Browser (Chromium, Abfrage nachgestellt): Ablehnung sofort (wie Safari ohne Tipp) → Knopf hervorgehoben oben, Merker bleibt, Adressfeld-Abfrage läuft (Foto chromium-handy-passkey-oben.png); Ablehnung nach 1,5 s (Abbrechen) → Merker gelöscht", status: "ok"}
+- {id: T-338, ap: E-75, was: "Letzten Passkey entfernen löscht den Merker", wie: "http_tests (passkey): nach dem Entfernen des letzten Passkeys trägt „Mein Konto“ einmal data-passkey-merker-weg, sonst nicht; Browser (Chromium): Merker danach gelöscht", status: "ok"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-334 bis T-338 | 2026-11-01 | claude-dev | bestanden | ERGEBNIS_LAUF | Chromiums simuliertes Gerät beantwortet eine Adressfeld-Abfrage sofort; der Durchlauf hält sie deshalb offen und stellt Blockade und Abbruch nach (`ws-test-pk` in `durchlauf.js`). WebKit unter Linux hat auf localhost kein `navigator.credentials`; dort bleibt der Passkey-Bereich verborgen wie bisher. Firefox (headless) lässt eine normale Abfrage ohne Gerät offen, deshalb läuft die automatische Abfrage nur in Chromium. |
+
+### Noch zu prüfen
+
+Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gilt nur unter der Staging-Domain).
+
+1. **iPhone, Safari:** Passkey unter „Mein Konto“ anlegen, ausloggen, `/einloggen` öffnen. Erwartet: Entweder geht die Passkey-Abfrage von selbst auf, oder der Knopf „Mit Passkey einloggen“ steht hervorgehoben oben. Ins Feld „E-Mail-Adresse“ tippen: Über der Tastatur erscheint der Passkey zur Auswahl; ein Tipp plus Face ID loggt ein.
+2. **iPhone, Abbrechen:** Geht die Abfrage von selbst auf, „Abbrechen“ tippen, Seite neu laden. Erwartet: Es öffnet sich nichts mehr von selbst, der Knopf steht unten. Danach mit Passkey einloggen, ausloggen, neu laden: Abfrage bzw. Knopf oben wieder da.
+3. **LibreWolf (Desktop):** wie 1 und 2; Passkey aus dem Passwortmanager bzw. vom Handy (QR-Code). Erwartet: keine Fehlermeldung auf der Seite, Konsole ohne Fehler.
+4. **Android, Chrome:** wie 1; die Passkeys erscheinen in der Vorschlagsleiste des Adressfelds.
+5. **Letzten Passkey entfernen:** unter „Mein Konto“ → „Passkeys“ den einzigen Passkey entfernen, ausloggen, `/einloggen` öffnen. Erwartet: nichts öffnet sich von selbst.
+6. **Länger als 5 Minuten:** `/einloggen` offen lassen (über 5 Minuten), dann ins Adressfeld tippen und den Passkey wählen. Erwartet: Login klappt (die stille Abfrage holt vor Ablauf eine frische Herausforderung).
+

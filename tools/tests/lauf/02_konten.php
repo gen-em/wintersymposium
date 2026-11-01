@@ -112,6 +112,17 @@ function test_konten(): void
     pk_anlegen($kp, test_pk_anlage($gr, $o['challenge'], 'localhost', 'http://localhost'), 'Laptop');
     $o = pk_login_optionen();
     pruefe(pk_anmelden(test_pk_login($gr, $o['challenge'], 'localhost', 'http://localhost')) === $kp && pk_zahl($kp) === 2, 'RS256 (2048 Bit): anlegen und einloggen');
+    // E-75: mehrere offene Herausforderungen (Adressfeld, Knopf, zweiter Tab) machen sich nicht ungültig
+    $o1 = pk_login_optionen();
+    $o2 = pk_login_optionen();
+    pruefe(pk_anmelden(test_pk_login($g, $o1['challenge'], 'localhost', 'http://localhost')) === $kp && pk_anmelden(test_pk_login($gr, $o2['challenge'], 'localhost', 'http://localhost')) === $kp, 'E-75: zwei Herausforderungen kurz nacheinander gelten beide');
+    pruefe($pkFehlt(fn() => pk_anmelden(test_pk_login($g, $o1['challenge'], 'localhost', 'http://localhost'))), 'E-75: jede gilt weiter nur einmal');
+    $o = [pk_login_optionen(), pk_login_optionen(), pk_login_optionen(), pk_login_optionen()];
+    pruefe(count($_SESSION[SITZUNG_SCHLUESSEL_PK]['login']) === PK_OFFEN_MAX && $pkFehlt(fn() => pk_anmelden(test_pk_login($g, $o[0]['challenge'], 'localhost', 'http://localhost'))), 'E-75: höchstens ' . PK_OFFEN_MAX . ' offen, die älteste fällt heraus');
+    pruefe(pk_anmelden(test_pk_login($g, $o[3]['challenge'], 'localhost', 'http://localhost')) === $kp, 'E-75: die neueste gilt');
+    $o = pk_login_optionen();
+    $_SESSION[SITZUNG_SCHLUESSEL_PK]['login'][count($_SESSION[SITZUNG_SCHLUESSEL_PK]['login']) - 1]['bis'] = time() - 1;
+    pruefe($pkFehlt(fn() => pk_anmelden(test_pk_login($g, $o['challenge'], 'localhost', 'http://localhost'))), 'E-75: abgelaufene Herausforderung abgelehnt');
     // Team: Passkey als einziger zweiter Faktor
     pruefe(!zweitfaktor_da(konto_laden($kt)), 'Team ohne zweiten Faktor');
     $gt = test_pk_geraet();

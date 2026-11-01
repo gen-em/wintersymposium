@@ -542,12 +542,42 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Passkeys brauchen eine Domain: localhost statt 127.0.0.1
       const lokal = basis.replace('127.0.0.1', 'localhost');
       await p.setViewportSize({ width: 1440, height: 900 });
+      fehler.length = 0;
       await p.goto(lokal + '/einloggen');
+      await p.waitForTimeout(1000);
       notiere(engine, 'desktop-breit', 'passkey', 'Knopf „Mit Passkey einloggen“ sichtbar', await p.isVisible('[data-passkey-los]'));
+      notiere(engine, 'desktop-breit', 'passkey', 'E-75: Adressfeld mit autocomplete="username webauthn"', await p.getAttribute('#email', 'autocomplete') === 'username webauthn');
+      notiere(engine, 'desktop-breit', 'passkey', 'E-75: ohne Merker öffnet sich nichts von selbst, keine Konsolenfehler', new URL(p.url()).pathname === '/einloggen' && fehler.length === 0, fehler.join(' | '));
       if (engine === 'chromium') {
+        // E-75: Abfragen mitschreiben (sessionStorage, übersteht das Neuladen). Chromiums simuliertes Gerät beantwortet
+        // eine Abfrage im Adressfeld sofort; ein echter Browser wartet auf die Wahl. Deshalb steuert „ws-test-pk“:
+        //   still      Adressfeld-Abfrage bleibt offen (wie im echten Browser), normale Abfragen gehen ans Gerät
+        //   blockiert  normale Abfrage sofort abgelehnt (wie Safari ohne Tipp)
+        //   abbrechen  normale Abfrage nach 1,5 s abgelehnt (wie „Abbrechen“ im Dialog)
+        //   (leer)     alles geht ans Gerät
+        await ctx.addInitScript(() => {
+          if (!navigator.credentials || !navigator.credentials.get) return;
+          const echt = navigator.credentials.get.bind(navigator.credentials);
+          navigator.credentials.get = function (opt) {
+            const art = opt && opt.mediation === 'conditional' ? 'adressfeld' : 'normal';
+            const modus = sessionStorage.getItem('ws-test-pk') || '';
+            sessionStorage.setItem('ws-test-pk-aufrufe', (sessionStorage.getItem('ws-test-pk-aufrufe') || '') + art + ' ');
+            const nein = (n) => new DOMException('Test', n);
+            if (art === 'adressfeld' && modus) {
+              return new Promise((_, ab) => { if (opt.signal) opt.signal.addEventListener('abort', () => ab(nein('AbortError'))); });
+            }
+            if (art === 'normal' && modus === 'blockiert') return Promise.reject(nein('NotAllowedError'));
+            if (art === 'normal' && modus === 'abbrechen') return new Promise((_, ab) => setTimeout(() => ab(nein('NotAllowedError')), 1500));
+            return echt(opt);
+          };
+        });
+        const pkTest = async (modus) => p.evaluate((m) => { sessionStorage.setItem('ws-test-pk', m); sessionStorage.setItem('ws-test-pk-aufrufe', ''); }, modus);
+        const aufrufe = async () => p.evaluate(() => (sessionStorage.getItem('ws-test-pk-aufrufe') || '').trim());
+        const merker = async () => p.evaluate(() => localStorage.getItem('ws-passkey'));
         const cdp = await ctx.newCDPSession(p);
         await cdp.send('WebAuthn.enable');
         const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+        await pkTest('still');
         await p.fill('#email', vor.lea.email); await p.fill('#passwort', vor.lea.passwort);
         await Promise.all([p.waitForNavigation(), p.click('form:has(input[value=passwort]) button')]);
         await p.goto(lokal + '/konto');
@@ -558,11 +588,66 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         notiere(engine, 'desktop-breit', 'passkey', 'Passkey anlegen (simuliertes Gerät mit Fingerabdruck)', ((await p.textContent('#passkeys')) || '').includes('Browser-Test'), ((await p.textContent('[data-passkey-meldung]').catch(() => '')) || '') + ' ' + p.url());
         await p.locator('#passkeys').screenshot({ path: path.join(AUS, `${engine}-desktop-breit-passkeys.png`) });
         await ausloggen(p);
+        fehler.length = 0;
+        // Ohne Merker: nur die stille Abfrage im Adressfeld
         await p.goto(lokal + '/einloggen');
+        await pkTest('still');
+        await p.reload();
+        await p.waitForTimeout(1000);
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: ohne Merker nur die Abfrage im Adressfeld', new URL(p.url()).pathname === '/einloggen' && await aufrufe() === 'adressfeld' && await merker() === null, await aufrufe());
+        // Knopf: bricht die Abfrage im Adressfeld ab, normale Abfrage, Login setzt den Merker
         await Promise.all([p.waitForNavigation({ timeout: 10000 }).catch(() => {}), p.click('[data-passkey-los]')]);
         await p.waitForLoadState('load');
-        notiere(engine, 'desktop-breit', 'passkey', 'Einloggen mit Passkey ohne Passwort', new URL(p.url()).pathname === '/deine-anmeldung' && (await p.textContent('body')).includes('Hallo Lea.'), p.url());
+        notiere(engine, 'desktop-breit', 'passkey', 'Einloggen mit Passkey ohne Passwort (Knopf)', new URL(p.url()).pathname === '/deine-anmeldung' && (await p.textContent('body')).includes('Hallo Lea.'), p.url());
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: Knopf bricht die Abfrage im Adressfeld vorher ab', await aufrufe() === 'adressfeld normal', await aufrufe());
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: Passkey-Login setzt den Merker', await merker() === '1', String(await merker()));
         await ausloggen(p);
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: Ausloggen lässt den Merker stehen', await merker() === '1', String(await merker()));
+        // Mit Merker: normale Abfrage beim Öffnen, ohne Klick
+        await pkTest('still');
+        await p.goto(lokal + '/einloggen');
+        await p.waitForURL(u => new URL(u).pathname === '/deine-anmeldung', { timeout: 10000 }).catch(() => {});
+        await p.waitForLoadState('load');
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: mit Merker geht die Abfrage von selbst auf (normal) und loggt ein', new URL(p.url()).pathname === '/deine-anmeldung' && (await aufrufe()).startsWith('normal'), p.url() + ' ' + await aufrufe());
+        await ausloggen(p);
+        // Browser lehnt ohne Tipp ab (Safari): Knopf hervorgehoben oben, Merker bleibt, Adressfeld-Abfrage läuft
+        await p.setViewportSize({ width: 390, height: 844 });
+        await pkTest('blockiert');
+        await p.goto(lokal + '/einloggen');
+        await p.waitForTimeout(800);
+        const oben = await p.evaluate(() => {
+          const b = document.querySelector('[data-passkey-login]'), f = document.querySelector('form:has(input[value=passwort])');
+          return !!(b && f && (b.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING)) && !document.querySelector('[data-passkey-los]').classList.contains('zweit');
+        });
+        notiere(engine, 'handy', 'passkey', 'E-75: vom Browser abgelehnt → Knopf hervorgehoben oben', oben);
+        notiere(engine, 'handy', 'passkey', 'E-75: vom Browser abgelehnt → Merker bleibt, Adressfeld-Abfrage läuft', await merker() === '1' && await aufrufe() === 'normal adressfeld', await aufrufe());
+        await p.screenshot({ path: path.join(AUS, `${engine}-handy-passkey-oben.png`) });
+        await p.setViewportSize({ width: 1440, height: 900 });
+        // Abbrechen löscht den Merker
+        await pkTest('abbrechen');
+        await p.reload();
+        await p.waitForFunction(() => (sessionStorage.getItem('ws-test-pk-aufrufe') || '').includes('adressfeld'), null, { timeout: 5000 }).catch(() => {});
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: Abbrechen der automatischen Abfrage löscht den Merker', await merker() === null && await aufrufe() === 'normal adressfeld' && new URL(p.url()).pathname === '/einloggen', String(await merker()) + ' ' + await aufrufe());
+        await pkTest('still');
+        await p.reload();
+        await p.waitForTimeout(1000);
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: danach öffnet sich nichts von selbst', await aufrufe() === 'adressfeld' && new URL(p.url()).pathname === '/einloggen', await aufrufe());
+        // Adressfeld (Conditional UI): das simulierte Gerät wählt sofort den Passkey
+        await pkTest('');
+        await Promise.all([p.waitForURL(u => new URL(u).pathname === '/deine-anmeldung', { timeout: 10000 }).catch(() => {}), p.reload()]);
+        await p.waitForLoadState('load');
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: Passkey im Adressfeld loggt ein (Conditional UI), Merker gesetzt', new URL(p.url()).pathname === '/deine-anmeldung' && (await aufrufe()).startsWith('adressfeld') && await merker() === '1', p.url() + ' ' + await aufrufe());
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: keine Konsolenfehler', fehler.length === 0, fehler.join(' | '));
+        // Letzten Passkey entfernen löscht den Merker
+        await pkTest('still');
+        await p.goto(lokal + '/konto');
+        await p.locator('#passkeys button[aria-haspopup="dialog"]', { hasText: 'Entfernen' }).first().click();
+        await p.waitForSelector('dialog[open]');
+        await Promise.all([p.waitForNavigation(), p.click('dialog[open] .dlg-ja')]);
+        await p.waitForLoadState('load');
+        notiere(engine, 'desktop-breit', 'passkey', 'E-75: letzten Passkey entfernen löscht den Merker', ((await p.textContent('#passkeys')) || '').includes('Noch kein Passkey') && await merker() === null, String(await merker()));
+        await ausloggen(p);
+        await pkTest('');
         await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
       }
 

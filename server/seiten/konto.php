@@ -88,7 +88,11 @@ if (ist_post()) {
             break;
         case 'pk_entfernen':
             // Passkey entfernen (E-55); Team-Konten behalten immer einen zweiten Faktor
-            fertig_oder_fehler(pk_entfernen($id, post_zahl('pk')), 'Passkey entfernt.', '/konto#passkeys');
+            $f = pk_entfernen($id, post_zahl('pk'));
+            if ($f === null && pk_zahl($id) === 0) {
+                $_SESSION[SITZUNG_SCHLUESSEL_PK_MERKER_WEG] = true; // letzter Passkey weg: Merker auf diesem Gerät löschen (E-75)
+            }
+            fertig_oder_fehler($f, 'Passkey entfernt.', '/konto#passkeys');
         case 'pk_umbenennen':
             pk_umbenennen($id, post_zahl('pk'), post_text('bezeichnung'));
             fertig('ok', 'Passkey umbenannt.', '/konto#passkeys');
@@ -115,6 +119,8 @@ $meldung = flash_holen();
 $gruppen = va_liste('berufsgruppen');
 $namen = $a !== null ? ['vorname' => $a['vorname'], 'nachname' => $a['nachname']] : tk_namen($k);
 $profil = $a ?? $k;
+$pkMerkerWeg = !empty($_SESSION[SITZUNG_SCHLUESSEL_PK_MERKER_WEG]); // einmal nach dem Entfernen des letzten Passkeys (E-75)
+unset($_SESSION[SITZUNG_SCHLUESSEL_PK_MERKER_WEG]);
 $benutzer = '<input type="email" name="email" value="' . e($k['email']) . '" autocomplete="username" hidden>';
 
 seite_kopf('Mein Konto', ['aktiv' => '/konto', 'skripte' => ['anmelden.js', 'passkey.js']]);
@@ -271,7 +277,7 @@ $emailOffen = isset($fehler['email']);
             <?php endif; ?>
 
             <?php $pks = pk_liste($id); $pkHier = pk_ursprung(); ?>
-            <div class="sicherheit-teil" id="passkeys">
+            <div class="sicherheit-teil" id="passkeys"<?= $pkMerkerWeg ? ' data-passkey-merker-weg' : '' ?>>
                 <h3 class="zwischen klein-zwischen">Einloggen ohne Passwort</h3>
                 <p class="meta klein">Mit einem <strong>Passkey</strong> wird dein Handy oder Computer zum Schlüssel – entsperrt mit Fingerabdruck, Gesicht oder PIN.<?= $team ? ' Zählt auch als zweiter Schritt.' : ' Freiwillig.' ?></p>
                 <?php if ($pks === []): ?><?= leer_hinweis('Noch kein Passkey.') ?><?php else: ?>

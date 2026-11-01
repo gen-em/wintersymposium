@@ -2,6 +2,24 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.4] – 2026-11-01
+
+Passkey direkt abfragen (E-75).
+
+### Neu
+
+- **Passkey im Adressfeld:** Auf der Login-Seite bietet der Browser beim Tippen ins Feld „E-Mail-Adresse“ die Passkeys der Seite an (WebAuthn Conditional UI); ein Tipp plus Fingerabdruck, Gesicht oder PIN loggt ein. Für Team-Konten und Teilnehmende.
+- **Das Gerät merkt sich den Passkey:** Nach einem Login mit Passkey geht die Passkey-Abfrage beim nächsten Öffnen der Login-Seite von selbst auf. Gespeichert wird im Browser nur „zuletzt mit Passkey“, ohne Name oder Adresse. Lässt der Browser das ohne Tipp nicht zu (Safari), steht der Knopf „Mit Passkey einloggen“ hervorgehoben oben. Abbrechen löscht den Merker, ebenso das Entfernen des letzten eigenen Passkeys unter „Mein Konto“; Ausloggen nicht.
+
+### Geändert
+
+- Je Sitzung gelten bis zu 3 offene Passkey-Herausforderungen je Zweck (vorher eine): Adressfeld, Knopf und ein zweiter Tab machen sich nicht mehr gegenseitig ungültig.
+- Der Knopf „Mit Passkey einloggen“ bricht die Abfrage im Adressfeld vorher ab und holt eine frische Herausforderung.
+
+### Doku
+
+- betrieb.md (Passkeys), Konzept (E-75), Prüfprotokoll T-334 bis T-338; Browser-Durchlauf mit Merker, automatischer Abfrage, Abbrechen und Blockade.
+
 ## [0.30.3] – 2026-11-01
 
 Ursache des Reihe-Fehlers auf Staging (E-72 (11)) gefunden und gründlich behoben; Staging lässt sich zurücksetzen (E-74).
