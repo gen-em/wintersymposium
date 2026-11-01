@@ -20,25 +20,25 @@ $aufgaben = team_aufgaben();
 
 team_seite_kopf($konto, 'Übersicht', '/team');
 if ($zf['codes_offen'] <= 2) {
-    echo '<div class="meldung fehler" role="alert">Du hast nur noch ' . $zf['codes_offen'] . ' Wiederherstellungscodes. '
-        . 'Erzeuge unter <a href="/konto/zweitfaktor">Mein Konto › Zwei-Faktor</a> neue.</div>';
+    $text = 'Du hast nur noch ' . $zf['codes_offen'] . ' Wiederherstellungscodes. ';
+    echo meldung_html($text, 'fehler', ['text_html' => e($text) . 'Erzeuge unter <a href="/konto/zweitfaktor">Mein Konto › Zwei-Faktor</a> neue.']);
 }
 ?>
 <p>Hallo <?= e($konto['name']) ?>. <span class="meta klein mono">Stand <?= e(jetzt_text()) ?> · Version <?= e(app_version()) ?> · <?= e(ucfirst(umgebung())) ?></span></p>
 <div class="kacheln">
-    <div class="kachel"><div class="lbl">Anmeldungen</div><div class="zahl"><?= $z['symposium_belegt'] ?><?= $z['kapazitaet'] !== null ? ' / ' . $z['kapazitaet'] : '' ?></div><p class="meta klein"><?= $z['bestaetigt'] ?> bestätigt · +<?= $seitGestern ?> seit gestern · <?= $z['unbestaetigt'] ?> noch nicht bestätigt</p><p><a href="/team/personen">Personen</a></p></div>
-    <div class="kachel"><div class="lbl">Warteliste</div><div class="zahl"><?= array_sum(array_column($termine, 'warte')) ?></div><p class="meta klein"><?= $z['symposium_warte'] ?> fürs Symposium · über <?= count($wl) ?> Termine</p></div>
-    <div class="kachel"><div class="lbl">Offene Angebote</div><div class="zahl"><?= $z['angebote'] ?></div><p class="meta klein">Frist läuft</p></div>
-    <div class="kachel"><div class="lbl">Mails heute</div><div class="zahl"><?= $ms['heute'] ?> / <?= $ms['limit'] ?></div><p class="meta klein"><?= $ms['eingerichtet'] ? 'System-Postfach' : 'nicht eingerichtet' ?><?= $ms['offen'] > 0 ? ' · ' . $ms['offen'] . ' warten' : '' ?></p></div>
+    <?= kachel('Anmeldungen', $z['symposium_belegt'] . ($z['kapazitaet'] !== null ? ' / ' . $z['kapazitaet'] : ''), $z['bestaetigt'] . ' bestätigt · +' . $seitGestern . ' seit gestern · ' . $z['unbestaetigt'] . ' noch nicht bestätigt', ['/team/personen', 'Personen']) ?>
+    <?= kachel('Warteliste', array_sum(array_column($termine, 'warte')), $z['symposium_warte'] . ' fürs Symposium · über ' . count($wl) . ' Termine') ?>
+    <?= kachel('Offene Angebote', $z['angebote'], 'Frist läuft') ?>
+    <?= kachel('Mails heute', $ms['heute'] . ' / ' . $ms['limit'], ($ms['eingerichtet'] ? 'System-Postfach' : 'nicht eingerichtet') . ($ms['offen'] > 0 ? ' · ' . $ms['offen'] . ' warten' : '')) ?>
 </div>
 
 <div class="team-raster abstand-oben">
     <div class="kasten">
         <h2 class="zwischen">Zu erledigen</h2>
-        <?php if ($aufgaben === []): ?><p class="hinweis-leer">Nichts offen.</p><?php else: ?>
+        <?php if ($aufgaben === []): ?><?= leer_hinweis('Nichts offen.') ?><?php else: ?>
         <ul class="aufgaben">
             <?php foreach ($aufgaben as $af): ?>
-            <li><span class="chip <?= in_array($af['art'], ['Manuell', 'Betrieb'], true) ? 'wl' : 'offen' ?>"><?= e($af['art']) ?></span> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein-knopf" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
+            <li><?= chip(in_array($af['art'], ['Manuell', 'Betrieb'], true) ? 'wl' : 'offen', $af['art']) ?> <span><?= e($af['text']) ?></span> <a class="knopf zweit klein-knopf" href="<?= e($af['link']) ?>"><?= e($af['knopf']) ?></a></li>
             <?php endforeach; ?>
         </ul>
         <?php endif; ?>

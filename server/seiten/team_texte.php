@@ -22,14 +22,13 @@ const TEXTE_KATALOG = [
     'datenschutz' => ['Datenschutzerklärung', 'block', true],
 ];
 $fehler = [];
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    csrf_pruefen();
+if (ist_post()) {
     $geaendert = [];
     foreach (TEXTE_KATALOG as $k => [$titel, $art, $nurBetreiber]) {
         if (!isset($_POST[$k]) || $nurBetreiber === $startseite) {
             continue;
         }
-        $roh = (string)$_POST[$k];
+        $roh = post_text($k);
         if (mb_strlen($roh) > EDITOR_MAX) {
             $fehler[] = $titel . ': zu lang.';
             continue;
@@ -44,8 +43,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($geaendert !== []) {
             audit_schreiben('texte', 'Geändert: ' . implode(', ', $geaendert), (int)$konto['id'], $startseite ? -1 : 0);
         }
-        flash_setzen('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.');
-        umleiten($textSeite);
+        fertig('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.', $textSeite);
     }
 }
 team_seite_kopf($konto, $startseite ? 'Startseite' : 'Texte', $textSeite);

@@ -266,7 +266,7 @@ function kachel(string $label, string|int $zahl, string $meta = '', ?array $link
 /** Ton der Chips je Status (V-23). */
 const VA_STATUS_CHIP = ['aktuell' => 'ok', 'entwurf' => 'offen', 'abgeschlossen' => 'gesperrt'];
 const PLATZ_STATUS_CHIP = ['fest' => 'ok', 'warte' => 'wl', 'angebot' => 'wl'];
-const RM_STATUS_CHIP = ['entwurf' => 'offen', 'geplant' => 'offen', 'sendet' => 'offen', 'gesendet' => 'ok', 'abgebrochen' => 'gesperrt'];
+const RM_STATUS_CHIP = ['entwurf' => 'offen', 'geplant' => 'offen', 'versand' => 'offen', 'gesendet' => 'ok', 'abgebrochen' => 'gesperrt'];
 const ANM_STATUS_CHIP = ['bestaetigt' => 'ok', 'unbestaetigt' => 'offen'];
 const BETRIEB_AMPEL_CHIP = ['ok' => 'ok', 'warnung' => 'warnung', 'fehler' => 'wl'];
 
