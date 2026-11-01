@@ -42,10 +42,12 @@ if (ist_post()) {
     }
 }
 
-$liste = dozent_liste();
+$q = trim((string)($_GET['q'] ?? ''));
+$alle = dozent_liste();
+$liste = $q === '' ? $alle : dozent_liste($q);
 $bearbeiten = null;
 if (isset($_GET['id'])) {
-    foreach ($liste as $d) {
+    foreach ($alle as $d) {
         if ((int)$d['id'] === (int)$_GET['id']) {
             $bearbeiten = $d;
         }
@@ -58,12 +60,15 @@ team_seite_kopf($konto, 'Dozierende', '/team/dozierende');
 ?>
 <p><a href="/team/programm">← zurück zum Programm</a></p>
 <div class="filterzeile"><a class="knopf" href="/team/dozierende?neu=1">+ Person</a></div>
+<?php // Suche in Name und Funktion (Rückmeldung nach AP-19) ?>
+<?= filter_leiste(['ziel' => '/team/dozierende', 'suche' => true, 'felder' => feld('q', 'Suchen', ['typ' => 'search', 'id' => 'doz-q', 'wert' => $q, 'sr' => true, 'ohne_rahmen' => true, 'attr' => ['placeholder' => 'Name oder Funktion']]),
+    'nach_html' => $q !== '' ? '<a class="klein-link" href="/team/dozierende">alle zeigen</a>' : '']) ?>
 <div class="pg-raster">
     <div class="kasten">
-        <?php if ($liste === []): ?><?= leer_hinweis('Noch niemand eingetragen.') ?><?php else: ?>
+        <?php if ($liste === []): ?><?= $q !== '' ? leer_hinweis('Treffer für „' . $q . '“') : leer_hinweis('Noch niemand eingetragen.') ?><?php else: ?>
         <ul class="doz-liste">
         <?php foreach ($liste as $d): ?>
-            <li<?= (int)($bearbeiten['id'] ?? 0) === (int)$d['id'] ? ' class="aktiv"' : '' ?>><a href="/team/dozierende?id=<?= (int)$d['id'] ?>" class="doz">
+            <li<?= (int)($bearbeiten['id'] ?? 0) === (int)$d['id'] ? ' class="aktiv"' : '' ?>><a href="/team/dozierende?<?= e(http_build_query(array_filter(['id' => (int)$d['id'], 'q' => $q]))) ?>" class="doz">
                 <?php if ($d['foto']): ?><img class="foto" src="/bild/<?= e($d['foto']) ?>" alt="" width="56" height="56"><?php else: ?><span class="foto" aria-hidden="true"><?= e(mb_substr($d['name'], 0, 1)) ?></span><?php endif; ?>
                 <span><strong><?= e($d['name']) ?></strong><br><span class="meta klein"><?= e($d['funktion'] !== '' ? $d['funktion'] : '–') ?> · <?= (int)$d['punkte'] ?> <?= (int)$d['punkte'] === 1 ? 'Programmpunkt' : 'Programmpunkte' ?></span></span>
             </a></li>

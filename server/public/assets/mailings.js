@@ -34,9 +34,20 @@
         return "nl:" + ids.join(",") + (ids.length && z !== "beide" ? ";ziel:" + z : "");
     }
     function zielZeigen() { if (ziel) { ziel.hidden = !dachmarkeGewaehlt(); } }
+    // Newsletter: newsletter@ vorauswählen, wenn eingerichtet; sonst Hinweis (Rückmeldung nach AP-19)
+    var pfHinweis = document.getElementById("rm-postfach-hinweis");
+    function postfachWaehlen() {
+        if (!pfHinweis || !form.postfach) { return; }
+        var nl = art() === "newsletter";
+        var da = pfHinweis.getAttribute("data-newsletter-da") === "1";
+        if (nl && da) { form.postfach.value = "newsletter"; }
+        pfHinweis.hidden = !(nl && !da);
+    }
     form.querySelectorAll("input[name=art], input[name='listen[]'], select[name=nl_ziel]").forEach(function (el) {
         el.addEventListener("change", function () { artZeigen(); zielZeigen(); zaehlen(); });
     });
+    form.querySelectorAll("input[name=art]").forEach(function (el) { el.addEventListener("change", postfachWaehlen); });
+    if (!form.querySelector("input[name=id]")) { postfachWaehlen(); } // neues Mailing; gespeicherte behalten ihr Postfach
     artZeigen();
     zielZeigen();
     function zaehlen() {

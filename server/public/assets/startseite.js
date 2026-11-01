@@ -4,9 +4,11 @@
  * /team/startseite/vorschau (POST mit CSRF, speichert nichts); die Antwort
  * erscheint im iframe in 1440 / 390 / 768 px, passend verkleinert.
  * Gerätewahl Desktop · Handy · Tablet: auf breitem Bildschirm Desktop, in der
- * schmalen Ansicht Handy (O-49). Hinweise über der Vorschau: Größenstufe des
- * Titels (vom Server), ob der Titel getrennt wurde (im iframe gemessen: an
- * einer Trennstelle = Info, sonst Warnung) und leere Kacheln.
+ * schmalen Ansicht Handy (O-49). Hinweise über der Vorschau: Warnung, wenn ein
+ * Wort im Titel ohne Trennstelle getrennt wird (im iframe gemessen), und leere
+ * Kacheln. Zoom (Einpassen, 50/75/100 %) und „Groß ansehen“ (füllt das
+ * Fenster, Esc schließt); nach dem Speichern steht die Seite wieder an der
+ * Stelle von vorher (Rückmeldung nach AP-19).
  * Ohne JavaScript bleibt die Vorschau verborgen, das Formular funktioniert.
  */
 (function () {
@@ -21,6 +23,10 @@
     var knoepfe = box.querySelectorAll("[data-geraet]");
     var breit = window.matchMedia("(min-width: 1000px)");
     var breite = 1440;
+    var zoom = 0; // 0 = einpassen
+    var flaeche = box.querySelector(".vorschau-flaeche");
+    var zoomKnoepfe = box.querySelectorAll("[data-zoom]");
+    var gross = document.getElementById("st-gross");
     var warten = null;
     var scrollY = 0;
 
@@ -31,11 +37,30 @@
     function skalieren() {
         var w = rahmen.clientWidth, h = rahmen.clientHeight;
         if (!w) { return; }
-        var f = Math.min(1, w / breite);
+        var passt = Math.min(1, w / breite);
+        var f = zoom > 0 ? Math.max(zoom, passt) : passt;
+        rahmen.classList.toggle("zoom", f > passt);
+        flaeche.style.width = Math.max(w, Math.ceil(breite * f)) + "px";
+        flaeche.style.height = h + "px";
         frame.style.width = breite + "px";
         frame.style.height = Math.ceil(h / f) + "px";
         frame.style.transform = "scale(" + f + ")";
         frame.style.left = Math.max(0, Math.round((w - breite * f) / 2)) + "px";
+    }
+
+    function zoomen(z) {
+        zoom = z;
+        zoomKnoepfe.forEach(function (b) { b.setAttribute("aria-pressed", Number(b.getAttribute("data-zoom")) === z ? "true" : "false"); });
+        skalieren();
+    }
+
+    function grossSetzen(an) {
+        box.classList.toggle("vorschau-gross", an);
+        gross.setAttribute("aria-pressed", an ? "true" : "false");
+        gross.textContent = an ? "Schließen" : "Groß ansehen";
+        if (an) { box.open = true; }
+        skalieren();
+        window.setTimeout(zeigen, 80);
     }
 
     function waehlen(geraet) {
@@ -119,14 +144,9 @@
         if (!doc || !doc.body || !doc.body.getAttribute("data-hinweise")) { return; }
         var h = {};
         try { h = JSON.parse(doc.body.getAttribute("data-hinweise")); } catch (e) { return; }
-        var m = messen(doc);
-        var titel = "Titel: Größe " + h.stufe + " (längster Teil „" + h.laengster + "“). ";
-        if (m.notfall) {
-            hinweis(titel + "Ein Wort passt nicht in die Zeile, der Browser trennt es selbst. Setz eine Trennstelle oder kürze den Titel.", true);
-        } else if (m.trenn) {
-            hinweis(titel + "Getrennt an deiner Trennstelle – gewollt.", false);
-        } else {
-            hinweis(titel + "Passt ohne Trennung.", false);
+        // Nur die Warnung; Größe und gewollte Trennung braucht niemand (Rückmeldung nach AP-19)
+        if (messen(doc).notfall) {
+            hinweis("Titel: „" + h.laengster + "“ passt nicht in die Zeile, der Browser trennt das Wort selbst. Setz eine Trennstelle oder kürze den Titel.", true);
         }
         if (h.leer.length === 3) {
             hinweis("Keine Kachel ausgefüllt – der Abschnitt „Worum es geht“ erscheint nicht.", false);
@@ -143,6 +163,24 @@
     knoepfe.forEach(function (b) {
         b.addEventListener("click", function () { waehlen(b.getAttribute("data-geraet")); });
     });
+    zoomKnoepfe.forEach(function (b) {
+        b.addEventListener("click", function () { zoomen(Number(b.getAttribute("data-zoom"))); });
+    });
+    gross.addEventListener("click", function () { grossSetzen(!box.classList.contains("vorschau-gross")); });
+    document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape" && box.classList.contains("vorschau-gross")) { grossSetzen(false); }
+    });
+    // Nach dem Speichern an derselben Stelle weiter (Browser-Speicher nur als Komfort)
+    form.addEventListener("submit", function () {
+        try { window.sessionStorage.setItem("st-scroll", String(window.scrollY)); } catch (e) { /* ohne Speicher: oben */ }
+    });
+    try {
+        var y = window.sessionStorage.getItem("st-scroll");
+        if (y !== null) {
+            window.sessionStorage.removeItem("st-scroll");
+            window.scrollTo(0, Number(y));
+        }
+    } catch (e) { /* ohne Speicher: oben */ }
     function spaeter() {
         window.clearTimeout(warten);
         warten = window.setTimeout(laden, 500);

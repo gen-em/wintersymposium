@@ -1782,7 +1782,26 @@ function http_bereich_ap19(array $u): void
     pruefe(str_contains($r['text'], 'id="reihe"') && str_contains($r['text'], '<dt>Reihe</dt><dd>Wintersymposium</dd>') && str_contains($r['text'], 'name="zielgruppe"') && str_contains($r['text'], 'name="berufsgruppen_interesse[NotfallsanitäterIn]"'), 'Einstellungen: Kachel „Reihe & Zielgruppe“, Vorauswahl je Berufsgruppe');
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => '0', 'zielgruppe' => 'klinik'], $b);
     pruefe($r['status'] === 303 && va_reihe_von($vAkt) === null && va('zielgruppe') === 'klinik', 'BetreiberIn ändert Reihe und Zielgruppe');
-    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => (string)array_column(va_reihen(), 'id', 'name')['Wintersymposium'], 'zielgruppe' => 'beide'], $b);
+    $wid = (int)array_column(va_reihen(), 'id', 'name')['Wintersymposium'];
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'reihe', 'reihe_id' => (string)$wid, 'zielgruppe' => 'beide'], $b);
+    pruefe($r['status'] === 303 && (va_reihe_von($vAkt)['id'] ?? null) === $wid, 'von „einzeln“ zurück zur Reihe Wintersymposium (Rückmeldung Staging)');
+
+    // Rückmeldung nach AP-19 (T-327): Abbrechen lädt neu und schließt die Kachel, auch mit #gruppe in der Adresse
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'anmeldung', 'aktion' => 'abbrechen', 'workshop_limit' => '9'], $b);
+    pruefe($r['status'] === 303 && str_ends_with($r['kopf']['location'] ?? '', '/team/einstellungen#anmeldung') && va('workshop_limit') !== '9', 'Abbrechen: Umleitung ohne Speichern');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    pruefe(preg_match('#<div class="aktionen einst-knoepfe"><button type="submit" class="knopf">Speichern</button><button type="submit" class="knopf zweit" name="aktion" value="abbrechen">Abbrechen</button></div>#', $r['text']) === 1, 'Speichern zuerst im Markup (Enter speichert), Abbrechen als Knopf');
+    $r = http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'name="start_cme_titel"') && str_contains($r['text'], 'data-zoom="0.75"') && str_contains($r['text'], 'id="st-gross"') && strpos($r['text'], 'st-knoepfe') < strpos($r['text'], 'id="st-vorschau"'), 'Seite Startseite: Überschrift Merke, Zoom, Groß ansehen, Knopfleiste in der Formularspalte (T-326, T-328)');
+    $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'id="rm-postfach-hinweis"') && strpos($r['text'], 'data-dachmarke') < strpos($r['text'], '>Wintersymposium <'), 'Mailings: Allgäu Akut zuerst, Postfach-Hinweis für Newsletter vorbereitet (T-330)');
+
+    // Rückmeldung nach AP-19 (T-329): Suche in den Dozierenden nach Name und Funktion
+    $r = http_anfrage($basis, 'GET', '/team/dozierende?q=' . rawurlencode('Oberärztin'), $h, [], null, $b);
+    $r2 = http_anfrage($basis, 'GET', '/team/dozierende?q=Ben', $h, [], null, $b);
+    $r3 = http_anfrage($basis, 'GET', '/team/dozierende?q=xyz', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'role="search"') && str_contains($r['text'], 'Dr. Erika Muster') && !str_contains($r['text'], 'Ben Beispiel') && str_contains($r2['text'], 'Ben Beispiel') && !str_contains($r2['text'], 'Dr. Erika Muster') && str_contains($r3['text'], 'Keine Treffer'),
+        'Dozierende: Suche nach Funktion und Name');
 
     abschnitt('HTTP: Admin-Rechte je Reihe (AP-19 Unterpunkt 4, T-320)');
     $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
@@ -1831,7 +1850,7 @@ function http_bereich_ap19(array $u): void
     $nm = http_mail_an($tmp, 'nils@example.org', 20, '/newsletter/bestaetigen');
     $np = nl_person_per_email('nils@example.org');
     $abos = $np !== null ? nl_abos((int)$np['id']) : [];
-    pruefe($nm !== '' && str_contains($nm, 'Wintersymposium, Allgäu Akut (Präklinik)') && count($abos) === 2 && array_unique(array_values($abos)) === ['offen'], 'nach der Bestätigung: eine Mail für beide Listen (O-54)');
+    pruefe($nm !== '' && str_contains($nm, 'Allgäu Akut (Präklinik), Wintersymposium') && count($abos) === 2 && array_unique(array_values($abos)) === ['offen'], 'nach der Bestätigung: eine Mail für beide Listen (O-54)');
     preg_match('~/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})~', $nm, $bm);
     $r = http_anfrage($basis, 'GET', '/newsletter/bestaetigen?t=' . ($bm[1] ?? ''), $h, [], null, $a);
     http_anfrage($basis, 'POST', '/newsletter/bestaetigen', $h, [], ['csrf' => http_csrf($r['text']), 't' => $bm[1] ?? ''], $a);

@@ -26,7 +26,7 @@ function test_newsletter(): void
     pruefe(str_contains((string)test_mail_an('quinn@example.org')['text'], '/newsletter/verwalten?t=') && nl_abos((int)$qp['id']) === [$lw => 'bestaetigt'], 'schon eingetragen: Mail mit Link zum Verwalten, Abo unverändert');
     // Versand an Listen
     $nlw = rm_pruefen(['art' => 'newsletter', 'listen' => [$lw, $la], 'betreff' => 'Neu {vorname}', 'html' => '<p>Hallo {vorname},</p><p>Text</p>', 'postfach' => 'newsletter']);
-    pruefe($nlw['fehler'] === [] && $nlw['werte']['auswahl'] === 'nl:' . min($lw, $la) . ',' . max($lw, $la) && rm_auswahl_text($nlw['werte']['auswahl'], '') === 'Newsletter: Wintersymposium, Allgäu Akut', 'Mailing an zwei Listen');
+    pruefe($nlw['fehler'] === [] && $nlw['werte']['auswahl'] === 'nl:' . min($lw, $la) . ',' . max($lw, $la) && rm_auswahl_text($nlw['werte']['auswahl'], '') === 'Newsletter: Allgäu Akut, Wintersymposium', 'Mailing an zwei Listen');
     pruefe(array_keys(rm_pruefen(['art' => 'newsletter', 'listen' => [], 'betreff' => 'x', 'html' => '<p>x</p>'])['fehler']) === ['auswahl'], 'ohne Liste: Fehler');
     $nrm = rm_speichern(null, $nlw['werte'], null);
     db_ausfuehren('DELETE FROM mail_ausgang');
@@ -72,7 +72,7 @@ function test_newsletter(): void
     $erwartet = [$lw => 'offen', $la => 'offen'];
     ksort($erwartet);
     $rm = (string)(test_mail_an('rosa@example.org')['text'] ?? '');
-    pruefe($ra === $erwartet && str_contains($rm, '/newsletter/bestaetigen?t=') && str_contains($rm, 'Wintersymposium, Allgäu Akut (Klinik)') && db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'rosa@example.org' AND text LIKE '%/newsletter/bestaetigen?t=%'") === 1,
+    pruefe($ra === $erwartet && str_contains($rm, '/newsletter/bestaetigen?t=') && str_contains($rm, 'Allgäu Akut (Klinik), Wintersymposium') && db_zahl("SELECT COUNT(*) FROM mail_ausgang WHERE an = 'rosa@example.org' AND text LIKE '%/newsletter/bestaetigen?t=%'") === 1,
         'nach der Bestätigung: eine Bestätigungsmail für Reihe und Allgäu Akut mit Interesse');
     // Export
     $ex = export_erzeugen('newsletter', '', $la);

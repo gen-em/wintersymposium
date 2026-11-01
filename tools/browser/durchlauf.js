@@ -854,7 +854,21 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       notiere(engine, 'desktop-breit', 'team-startseite', 'Vorschau rechts, Desktop vorausgewählt, Titel mit Trennstelle (Beispieldaten)',
         await p.isVisible('.vorschau-frame') && await p.getAttribute('.geraet-wahl [data-geraet=desktop]', 'aria-pressed') === 'true'
         && (await vorschauH1().getAttribute('class')).includes('titel-xl') && await p.locator('#start_titel-feld .trennstelle').count() === 1);
-      notiere(engine, 'desktop-breit', 'team-startseite', 'Hinweise: Größe des Titels, leere Kachel 3', (await p.textContent('#st-hinweise')).includes('Größe XL') && (await p.textContent('#st-hinweise')).includes('Kachel 3'));
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Hinweise: nur leere Kachel 3, keine Größenangabe', (await p.textContent('#st-hinweise')).includes('Kachel 3') && !(await p.textContent('#st-hinweise')).includes('Größe'));
+      // Rückmeldung nach AP-19: Zoom und „Groß ansehen“, Speichern schwebt
+      await p.click('[data-zoom="1"]');
+      const zoomOk = await p.evaluate(() => { const r = document.querySelector('.vorschau-rahmen'); return r.classList.contains('zoom') && r.scrollWidth > r.clientWidth + 100; });
+      await p.click('[data-zoom="0"]');
+      await p.click('#st-gross');
+      const gross = await p.evaluate(() => { const b = document.getElementById('st-vorschau').getBoundingClientRect(); return document.getElementById('st-vorschau').classList.contains('vorschau-gross') && b.width >= window.innerWidth - 2; });
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-startseite-gross.png`) });
+      await p.keyboard.press('Escape');
+      const zu = !await p.evaluate(() => document.getElementById('st-vorschau').classList.contains('vorschau-gross'));
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Zoom 100 % scrollt seitlich, „Groß ansehen“ füllt das Fenster, Esc schließt', zoomOk && gross && zu);
+      await p.evaluate(() => window.scrollTo(0, 600));
+      const knopfUnten = await p.evaluate(() => { const r = document.querySelector('.st-knoepfe').getBoundingClientRect(); return r.bottom <= window.innerHeight + 1 && r.bottom >= window.innerHeight - 90; });
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Speichern schwebt am unteren Fensterrand', knopfUnten);
+      await p.evaluate(() => window.scrollTo(0, 0));
       await p.click('.geraet-wahl [data-geraet=handy]');
       await p.waitForTimeout(300);
       const handyBreite = await p.frameLocator('iframe.vorschau-frame').locator('body').evaluate(b => b.ownerDocument.defaultView.innerWidth);
@@ -940,6 +954,18 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.click('#anmeldung button[type=submit]');
       await p.waitForLoadState('load');
       notiere(engine, 'handy', 'team-einstellungen', 'Kachel Anmeldung: Auswahl übernommen', (await p.textContent('#anmeldung .einst-zus')).includes('Pflicht'));
+      // Rückmeldung nach AP-19: Abbrechen schließt die Kachel, auch mit #anmeldung in der Adresse
+      await p.click('#anmeldung summary');
+      await p.fill('#workshop_limit', '7');
+      await Promise.all([p.waitForNavigation(), p.click('#anmeldung button[value=abbrechen]')]);
+      notiere(engine, 'handy', 'team-einstellungen', 'Abbrechen schließt die Kachel und verwirft', await p.locator('.einst-auf[open]').count() === 0 && !(await p.textContent('#anmeldung .einst-zus')).includes('höchstens 7'));
+      // Rückmeldung Staging (nach AP-19): Reihe auf „einzeln“ und zurück zur Reihe
+      for (const ziel of ['einzeln', 'Wintersymposium']) {
+        await p.click('#reihe summary');
+        await p.selectOption('#reihe_id', { label: ziel === 'einzeln' ? 'einzeln (keine Reihe)' : ziel });
+        await Promise.all([p.waitForNavigation(), p.click('#reihe button[type=submit]')]);
+        notiere(engine, 'handy', 'team-einstellungen', 'Reihe gespeichert: ' + ziel, (await p.textContent('#reihe .einst-zus')).includes(ziel) && (await p.textContent('body')).includes('Gespeichert'), (await p.textContent('.meldung')).trim());
+      }
       await p.goto(basis + '/');
       notiere(engine, 'handy', 'start', 'Startseite zeigt neuen Ort', (await p.textContent('.eckdaten')).includes('Ort ' + engine));
 

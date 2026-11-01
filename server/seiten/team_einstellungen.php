@@ -19,6 +19,9 @@ $offen = null;
 
 if (ist_post()) {
     $gruppe = isset(VA_GRUPPEN[post_text('gruppe')]) ? post_text('gruppe') : null;
+    if (aktion() === 'abbrechen') {
+        umleiten('/team/einstellungen' . ($gruppe !== null ? '#' . $gruppe : ''));
+    }
     $r = va_gruppe_pruefen($_POST, $gruppe);
     // Kürzel der Veranstaltung (Adresse /kürzel, E-58) – in der Tabelle veranstaltung, Kachel Grunddaten
     $mitKuerzel = $gruppe === 'veranstaltung' || ($gruppe === null && isset($_POST['kuerzel']));
@@ -96,7 +99,9 @@ $formular = function (string $g, string $hilfe) use ($eingabe, $fehler, $konto):
             default => ['attr' => ['maxlength' => (int)$d['max']]],
         });
     }
-    return $h . '</div><div class="aktionen einst-knoepfe"><a class="knopf zweit" href="/team/einstellungen#' . e($g) . '">Abbrechen</a><button type="submit" class="knopf">Speichern</button></div></form>';
+    // Abbrechen als Absenden mit Umleitung: lädt immer neu, auch wenn #gruppe schon in der Adresse steht (sonst bliebe die Kachel offen).
+    // Speichern steht im Markup zuerst, damit Enter speichert; die Reihenfolge auf dem Schirm dreht .einst-knoepfe um.
+    return $h . '</div><div class="aktionen einst-knoepfe"><button type="submit" class="knopf">Speichern</button><button type="submit" class="knopf zweit" name="aktion" value="abbrechen">Abbrechen</button></div></form>';
 };
 
 /** Zusammenfassung einer Gruppe (Bausteine als Chips). */

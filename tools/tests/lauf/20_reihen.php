@@ -110,6 +110,19 @@ function test_reihen(): void
     pruefe(va_interesse('ÄrztIn') === 'klinik' && va_interesse('NotfallsanitäterIn') === 'praeklinik', 'gespeicherte Vorauswahl gilt, sonst die Regel');
     pruefe(va_gruppe_pruefen([VA_BG_INTERESSE => ['ÄrztIn' => 'irgendwas']], 'listen')['fehler'] !== [], 'ungültige Zuordnung abgelehnt');
 
+    abschnitt('Rückmeldung nach AP-19: Allgäu Akut zuerst, Überschrift Merke (T-326, T-330)');
+    pruefe(nl_listen()[0]['art'] === 'dachmarke' && nl_listen(true)[0]['art'] === 'dachmarke' && array_key_first(nl_zahlen()) === $dm, 'Allgäu Akut steht in allen Listen zuerst');
+    pruefe(str_contains(nl_listen_html([], 'klinik'), '<div class="kasten akzent-kasten stapel">') && strpos(nl_listen_html([], 'klinik'), 'Allgäu Akut') < strpos(nl_listen_html([], 'klinik'), 'Wintersymposium'), 'Formular: Allgäu Akut zuerst, hervorgehoben');
+    $w = start_werte();
+    pruefe($w['start_cme_titel'] === 'Merke · Fortbildungspunkte' && str_contains(start_html($w), '<div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p>'), 'Überschrift Merke: Startwert (Migration 24)');
+    $h = start_html(array_merge($w, ['start_cme_titel' => 'Gut zu wissen']));
+    $h0 = start_html(array_merge($w, ['start_cme_titel' => '']));
+    pruefe(str_contains($h, '<p class="kicker">Gut zu wissen</p>') && str_contains($h0, '<div class="merke"><p>') && !str_contains($h0, 'Merke · Fortbildungspunkte'), 'Überschrift änderbar, leer: Kasten ohne Überschrift');
+    db_ausfuehren("DELETE FROM inhalt WHERE schluessel = 'start_cme_titel'");
+    db()->exec(migration_katalog()[24]['sql'][0]);
+    ctx_weg('inhalt_cache');
+    pruefe(inhalt('start_cme_titel') === 'Merke · Fortbildungspunkte', 'Migration 24 setzt den Startwert je Veranstaltung');
+
     abschnitt('Beispieldaten (AP-19 Unterpunkt 8, T-324)');
     $rita = beispieldaten_admin_reihe();
     $rk = konto_laden($rita);
