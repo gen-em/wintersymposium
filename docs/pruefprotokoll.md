@@ -890,4 +890,4 @@ Nach dem Merge auf Staging. Ziel: Reihen und Newsletter so, wie in E-71 beschrie
 4. **Anmeldung:** /anmelden öffnen (ohne abzusenden). Erwartet: zwei Häkchen; bei Berufsgruppe NotfallsanitäterIn ist „Präklinik“ vorausgewählt, bei Pflege/MFA „Klinik“, sonst beides.
 5. **Rechte je Reihe:** Team-Konten → bei einem Admin „Veranstaltungen …“. Erwartet: Reihen und Veranstaltungen zum Ankreuzen.
 6. **Mailing an Allgäu Akut:** Mailings → Neu → Newsletter-Listen → Allgäu Akut. Erwartet: Feld „Zielgruppe“, Empfängerzahl ändert sich mit der Auswahl (nicht senden).
-7. **Bitte bestätigen:** Die Reihe einer Veranstaltung ändern nur BetreiberInnen; Admins sehen sie und ändern die Zielgruppe. Und: Wer bei der Anmeldung „Allgäu Akut“ ankreuzt, aber kein Interesse wählt, bekommt die Vorauswahl seiner Berufsgruppe statt einer Fehlermeldung.
+7. Vom Admin bestätigt (2026-11-01, E-71 (12), (13)): Die Reihe einer Veranstaltung ändern nur BetreiberInnen; „Allgäu Akut“ ohne gewähltes Interesse übernimmt die Vorauswahl der Berufsgruppe.
