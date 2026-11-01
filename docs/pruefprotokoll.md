@@ -936,6 +936,7 @@ Nach dem Merge auf Staging.
 - {id: T-332, ap: E-74, was: "Auswahlfelder: Schlüssel bleiben Werte, Textlisten über liste", wie: "formular_helfer: optionen [0 => …, 1 => …, 2 => …] behalten 0, 1, 2 als Werte, liste hängt sich an; konventionen.php: keine Listen in optionen, kein array_is_list in formular_lib; http_tests (ap19): Reihen in Nummern-Reihenfolge wie auf Staging → Optionen tragen die Nummer; Name statt Nummer → „Unbekannte Reihe.“, nichts gespeichert; Gegenprobe mit dem alten feld(): drei Prüfungen rot", status: "ok"}
 - {id: T-339, ap: E-74, was: "Staging durchgeklickt (E-74 (3))", wie: "Playwright gegen Staging 0.30.3 mit den Testkonten: alle Seiten je Rolle (Gast, Teilnehmende, Admin, BetreiberIn) in Chromium und Firefox, 390 und 1440 px, Popups und Aufklapper; Abläufe Teilnehmende, Gast, Admin, BetreiberIn; Fehlerprotokoll gelesen; danach zurückgesetzt", status: "ok"}
 - {id: T-340, ap: E-74, was: "Unverändert speichern meldet „Nichts geändert“; Testkonten mit Codes", wie: "http_tests (ap18): jede Kachel so abgeschickt, wie der Browser sie zeigt (DOM), auch mit leer gespeicherter Auswahl → kein Protokolleintrag; Gegenprobe mit altem Stand: veranstaltung, bausteine, reihe, listen gemeldet wie auf Staging; lauf.php (20_reihen): Team-Testkonten haben Codes, Teilnehmende nicht", status: "ok"}
+- {id: T-341, ap: E-74, was: "Status → Umgebung: Merkmale zur Proxy-Warnung", wie: "lauf.php (17_review2): intern/X-Forwarded-For/letzter Eintrag für drei Fälle, Zeile Umgebung enthält die Merkmale; Browser Stufe 2 (team-status)", status: "ok"}
 - {id: T-333, ap: E-74, was: "Staging zurücksetzen", wie: "lauf.php (12_sicherung): vorher Sicherung; nur das Team-Konto außerhalb der Testdaten bleibt (mit Codes, Rechten für die erste Veranstaltung und die Reihe Wintersymposium); Anmeldungen, Programm, Dozierende, Mailings, Newsletter leer; eine Veranstaltung in der Reihe Wintersymposium; Impressum, Betriebs-Einstellungen, Hostnamen bleiben; Kontonummern nicht neu vergeben; Protokoll-Eintrag. http_tests (daten): ohne Code abgelehnt, mit Code zurückgesetzt, eigenes Testkonto abgemeldet. Browser: Dialog mit Code-Feld (rot)", status: "ok"}
 ```
 
@@ -949,7 +950,7 @@ Nach dem Merge auf Staging.
 
 ### Noch zu prüfen
 
-1. **Status-Seite (E-74 (3) d):** Betrieb → Status im eigenen Browser öffnen. Steht bei „Umgebung“ „In Ordnung“, kam die Proxy-Warnung von Claudes Zugang; steht die Warnung auch dort, beim Hoster klären, ob Anfragen über einen Proxy kommen.
+1. **Status-Seite (E-74 (3) d):** Warnung erscheint auch im Browser des Admins (2026-11-01). Nach dem Merge von 0.30.5: Betrieb → Status → Umgebung → Details, die drei Merkmale (intern, X-Forwarded-For, letzter Eintrag) an Claude geben. Danach Prüfung oder Ratenschutz anpassen.
 2. **Fehlerseiten (E-74 (3) e):** beim Hoster nachfragen, wofür das Skript mit dem Cookie `_lcp3` auf 403/404-Seiten ist.
 3. **Testkonten:** vor dem nächsten Durchklicken Betrieb → Betrieb → „Testkonten anlegen“ (nach dem Zurücksetzen gibt es sie nicht mehr).
 4. **Mail-Links** (Bestätigung, Einmal-Link, Passwort-Link) und WebKit auf Staging sind noch nicht durchgeklickt.

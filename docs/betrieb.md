@@ -361,7 +361,7 @@ Team-Bereich → Betrieb → **Status** (nur BetreiberInnen). Oben stehen die Ze
 | Datenbank | Schema aktuell | Wartungsmodus an; Datenbank neuer als der Code | Migrationen stehen aus |
 | Sicherung | letzte automatische jünger als 6 Stunden | ab 6 Stunden | ab 24 Stunden oder keine automatische vorhanden |
 | Fehlerprotokoll | leer | Einträge seit dem letzten Leeren | – |
-| Umgebung | Laufzeitordner (Sitzungen, Sicherungen, Fotos, Zertifikat, Logs) beschreibbar | Anfragen kommen über einen Proxy (Absenderadresse im privaten Bereich 10/8, 172.16/12, 192.168/16, 127/8 oder Kopfzeile X-Forwarded-For), `https_ueber_proxy` ist aus (AP-16, Review S-6) | ein Ordner nicht beschreibbar |
+| Umgebung | Laufzeitordner (Sitzungen, Sicherungen, Fotos, Zertifikat, Logs) beschreibbar | Anfragen kommen über einen Proxy (Absenderadresse im privaten Bereich 10/8, 172.16/12, 192.168/16, 127/8 oder Kopfzeile X-Forwarded-For), `https_ueber_proxy` ist aus (AP-16, Review S-6); die Details zeigen dazu ohne Adressen: Absenderadresse intern, X-Forwarded-For vorhanden, Absender = letzter Eintrag darin (E-74 (3) d) – „intern: nein“ und „letzter Eintrag: ja“ heißt, der Hoster hat die echte Adresse schon eingesetzt | ein Ordner nicht beschreibbar |
 
 Die Grenzen sind technische Werte in `server/lib/betrieb_lib.php` (R-11, E-64 (3)).
 

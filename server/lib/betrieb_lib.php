@@ -331,6 +331,7 @@ function betrieb_zeile_umgebung(int $jetzt): array
     if ($nicht !== []) {
         return ['ampel' => 'fehler', 'text' => 'Nicht beschreibbar: ' . implode(', ', $nicht) . '. Rechte des Laufzeitordners beim Hoster prüfen.', 'details' => $details];
     }
+    $details = array_merge($details, betrieb_proxy_merkmale($_SERVER, umgebung()));
     if (betrieb_proxy_verdacht($_SERVER, (bool)konfig('https_ueber_proxy', false), umgebung())) {
         return ['ampel' => 'warnung', 'text' => BETRIEB_PROXY_TEXT, 'details' => $details];
     }
@@ -353,7 +354,12 @@ function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung)
     if (trim((string)($server['HTTP_X_FORWARDED_FOR'] ?? '')) !== '') {
         return true;
     }
-    $ip = (string)($server['REMOTE_ADDR'] ?? '');
+    return betrieb_ip_intern((string)($server['REMOTE_ADDR'] ?? ''), $umgebung);
+}
+
+/** Absenderadresse in einem privaten Bereich (10/8, 172.16/12, 192.168/16, 127/8, ::1); in der Entwicklung zählt die lokale nicht. */
+function betrieb_ip_intern(string $ip, string $umgebung): bool
+{
     if ($ip === '::1') {
         return $umgebung !== 'entwicklung';
     }
@@ -366,6 +372,24 @@ function betrieb_proxy_verdacht(array $server, bool $proxyEin, string $umgebung)
         return $umgebung !== 'entwicklung';
     }
     return $in('10.0.0.0', 8) || $in('172.16.0.0', 12) || $in('192.168.0.0', 16);
+}
+
+/**
+ * Merkmale für die Details der Zeile Umgebung (E-74 (3) d), ohne Adressen
+ * anzuzeigen: Ist die Absenderadresse intern (dann sieht die App alle mit
+ * einer Adresse), gibt es X-Forwarded-For, und ist die Absenderadresse der
+ * letzte Eintrag darin (dann hat der Hoster die echte Adresse schon
+ * eingesetzt, der Ratenschutz arbeitet richtig)?
+ */
+function betrieb_proxy_merkmale(array $server, string $umgebung): array
+{
+    $ip = (string)($server['REMOTE_ADDR'] ?? '');
+    $xff = array_values(array_filter(array_map('trim', explode(',', (string)($server['HTTP_X_FORWARDED_FOR'] ?? ''))), fn($x) => $x !== ''));
+    return [
+        ['Absenderadresse intern', betrieb_ip_intern($ip, $umgebung) ? 'ja' : 'nein'],
+        ['Kopfzeile X-Forwarded-For', $xff === [] ? 'fehlt' : 'vorhanden (' . count($xff) . (count($xff) === 1 ? ' Eintrag)' : ' Einträge)')],
+        ['Absender = letzter Eintrag darin', $xff === [] ? '–' : ($xff[count($xff) - 1] === $ip ? 'ja' : 'nein')],
+    ];
 }
 
 /* ---- Cron-Anleitung (E-64 (2), E-65 (2)) ---------------------------------- */

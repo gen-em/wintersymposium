@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://sem
 
 Befunde aus dem Durchklicken von Staging (E-74 (3)).
 
+### Neu
+
+- **Status → Umgebung, Details:** drei Merkmale zur Proxy-Warnung, ohne Adressen anzuzeigen – Absenderadresse intern (ja/nein), Kopfzeile X-Forwarded-For (fehlt/vorhanden), Absender = letzter Eintrag darin (ja/nein). Damit lässt sich klären, ob der Ratenschutz die echten Adressen sieht (die Warnung kam auf Staging auch im Browser des Admins).
+
 ### Behoben
 
 - **Einstellungen: „geändert“ ohne Änderung.** Wer eine Kachel öffnete und unverändert speicherte, bekam bei Art, Bausteinen, Zielgruppe und der Vorauswahl je Berufsgruppe „… Einstellungen geändert“ samt Protokolleintrag. Ursache: „Testdaten laden“ speicherte alle nicht gesetzten Einstellungen leer; die Auswahl zeigte den Startwert. Jetzt gilt eine leer gespeicherte Auswahl als ihr Startwert, eine leere Zuordnung als die Regel, die das Formular zeigt; eine leere Auswahl wird als Startwert gespeichert, und die Testdaten speichern nur, was sie setzen.
@@ -17,7 +21,7 @@ Befunde aus dem Durchklicken von Staging (E-74 (3)).
 
 ### Doku
 
-- Konzept E-74 (3) mit Ergebnis des Durchklickens, Prüfprotokoll T-339 und T-340, betrieb.md (Testkonten).
+- Konzept E-74 (3) mit Ergebnis des Durchklickens, Prüfprotokoll T-339 bis T-341, betrieb.md (Testkonten, Status → Umgebung).
 
 ## [0.30.4] – 2026-11-01
 
