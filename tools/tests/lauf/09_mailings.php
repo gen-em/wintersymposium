@@ -1,11 +1,13 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Mailings (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Mailings (Bereinigen, Empfänger, Tageslimits, Versand, Planen, Archiv, Bilder, Mail-Vorlagen) sowie Block-Zuordnung, Mail-Code und Protokoll (Rückmeldung 2026-10-30). */
 
 function test_mailings(): void
 {
     abschnitt('Mailings (AP-6)');
+    $f = test_frisch();
+    beispieldaten_angemeldete();
     // HTML bereinigen
     $bildTest = rm_bild_aus_daten((function (): string { $g = imagecreatetruecolor(1600, 400); ob_start(); imagejpeg($g); imagedestroy($g); return (string)ob_get_clean(); })(), null);
     pruefe($bildTest['breite'] === 1200 && $bildTest['hoehe'] === 300 && is_file(foto_ordner() . '/' . $bildTest['datei']), 'Bild auf 1200 px verkleinert und gespeichert');
@@ -15,12 +17,16 @@ function test_mailings(): void
     pruefe($sauber === '<h2>Titel</h2><p>Zeile <strong>fett</strong> <em>k</em> rot</p><p>böse <a href="https://example.org/x?a=1&amp;b=2">gut</a> <a href="{link}" class="knopf">Knopf</a></p><p><img src="/team/mailings/bild?id=' . $bildTest['id'] . '" alt="Plan" data-breite="50"></p>', 'HTML bereinigt: nur erlaubte Elemente, keine Skripte, fremden Bilder oder javascript:');
     pruefe(rm_html_bereinigen('<p>a &lt;b&gt; &amp; "c"</p>') === '<p>a &lt;b&gt; &amp; &quot;c&quot;</p>', 'Text bleibt maskiert');
     // Empfänger
-    $angem = (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND a.veranstaltung_id = " . va_id() . " AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')");
-    pruefe(count(rm_empfaenger('angemeldet')) === $angem && $angem > 3, 'Auswahl „Alle Angemeldeten“');
-    pruefe(count(rm_empfaenger('angemeldet', 'StudentIn')) === (int)db_wert("SELECT COUNT(*) FROM anmeldung a WHERE a.status = 'bestaetigt' AND berufsgruppe = 'StudentIn' AND EXISTS (SELECT 1 FROM platz p WHERE p.anmeldung_id = a.id AND p.termin_id = 0 AND p.status = 'fest')"), 'zusätzlich nach Berufsgruppe');
-    $wsT = $tt('WS 01', '19:30');
-    pruefe(array_column(rm_empfaenger('termin:' . $wsT), 'id') == array_map('intval', array_column(db_zeilen("SELECT a.id FROM platz p JOIN anmeldung a ON a.id = p.anmeldung_id WHERE p.termin_id = ? AND p.status = 'fest' AND a.status = 'bestaetigt' ORDER BY a.nachname, a.vorname, a.id", [$wsT]), 'id')), 'Auswahl Workshop-Termin');
-    pruefe(in_array('paula@example.org', array_column(rm_empfaenger('essen_kein'), 'email'), true) && !in_array('lea@example.org', array_column(rm_empfaenger('essen_kein'), 'email'), true), 'Auswahl „Ohne Essen“');
+    // Angemeldet: Lea, Paula und die acht aus beispieldaten_angemeldete(); nicht Tom (unbestätigt), Max (storniert), Ada (unbestätigt)
+    $angem = 10;
+    $alle = array_column(rm_empfaenger('angemeldet'), 'email');
+    pruefe(count($alle) === $angem && in_array('lea@example.org', $alle, true) && !in_array('tom@example.org', $alle, true) && !in_array('max@example.org', $alle, true) && !in_array('ada.abend@example.org', $alle, true), 'Auswahl „Alle Angemeldeten“: nur bestätigte mit Platz');
+    $studi = array_column(rm_empfaenger('angemeldet', 'StudentIn'), 'email');
+    sort($studi);
+    pruefe($studi === ['sam.studi@example.org', 'stella.studi@example.org'], 'zusätzlich nach Berufsgruppe');
+    $wsT = test_termin('WS 01', '19:30');
+    pruefe(array_column(rm_empfaenger('termin:' . $wsT), 'id') === [$f['bd']['anmeldungen']['lea']], 'Auswahl Workshop-Termin');
+    pruefe(array_column(rm_empfaenger('essen_kein'), 'email') === ['paula@example.org'], 'Auswahl „Ohne Essen“');
     pruefe(rm_empfaenger('unbekannt') === [] && !array_key_exists('termin:999999', rm_auswahl_optionen()), 'unbekannte Auswahl: niemand');
     // Tageslimit je Postfach: config kurz auf ein Limit von 5 setzen (Rundmails über anmeldung@ bis 4)
     $cfgDatei = konfig_datei();
@@ -44,7 +50,6 @@ function test_mailings(): void
     $weg = (int)db_wert('SELECT anmeldung_id FROM mail_ausgang WHERE rundmail_id = ? ORDER BY id DESC LIMIT 1', [$rmId]);
     anm_stornieren($weg);
     db_ausfuehren("DELETE FROM mail_ausgang WHERE rundmail_id IS NULL");
-    $vorMails = count(glob(laufzeit_pfad('mails') . '/*.eml') ?: []);
     $e1 = mail_senden_faellige(50, 20.0);
     pruefe($e1['gesendet'] === 4 && rm_fortschritt($rmId)['gesendet'] === 4, 'Rundmail über anmeldung@: 4 von 5 (Reserve bleibt frei)');
     mail_einreihen('system@example.org', 'System', 'Text');
@@ -52,10 +57,10 @@ function test_mailings(): void
     pruefe($e2['gesendet'] === 1 && db_wert("SELECT status FROM mail_ausgang WHERE rundmail_id IS NULL ORDER BY id DESC LIMIT 1") === 'gesendet', 'Bestätigungen gehen trotzdem sofort raus (Abnahme AP-6)');
     mail_einreihen('system2@example.org', 'System', 'Text');
     pruefe(mail_senden_faellige(50, 20.0)['gesendet'] === 1, 'auch über dem Tageslimit');
-        pruefe(rm_fortschritt($rmId)['wartet'] === $angem - 4, 'Rest der Rundmail wartet auf den nächsten Tag');
+    pruefe(rm_fortschritt($rmId)['wartet'] === $angem - 4, 'Rest der Rundmail wartet auf den nächsten Tag');
     $morgen = time() + 86400;
     $e3 = mail_senden_faellige(50, 20.0, $morgen);
-    pruefe($e3['gesendet'] === min(4, $angem - 5), 'am nächsten Tag geht es weiter');
+    pruefe($e3['gesendet'] === 4 && rm_fortschritt($rmId)['wartet'] === 2, 'am nächsten Tag geht es weiter');
     // Inhalt der gesendeten Mail
     $dateien = glob(laufzeit_pfad('mails') . '/*.eml') ?: [];
     sort($dateien);
@@ -90,20 +95,19 @@ function test_mailings(): void
     [, $ct] = mail_vorlage('zweitfaktor_code', ['vorname' => 'Bea', 'code' => '123456']);
     pruefe(str_contains(mail_html_aus_text('zweitfaktor_code', 'Code', $ct), 'letter-spacing:6px;color:#001E3A;">123456</p>'), 'Mail-HTML: Code groß und gut lesbar');
     pruefe(preg_match('#Ansehen: http\S+/link\?t=[A-Za-z0-9_-]{43}#', $dek) === 1 && str_contains($dek, 'Hallo ') && !str_contains($dek, '{vorname}') && !str_contains($dek, '{link}') && str_contains($dek, '/impressum'), 'Platzhalter ersetzt, persönlicher Einmal-Link, Impressum');
-    pruefe(!str_contains($roh, 'Auto-Submitted') && preg_match('/^Subject: .*f=C3=BCr.*Kim|^Subject: .*f=C3=BCr/m', $roh) === 1 && !str_contains($roh, '{vorname}'), 'Rundmail ohne Auto-Submitted, Betreff mit Vorname');
-    $rest = rm_fortschritt($rmId)['wartet'];
-    if ($rest > 0) {
-        pruefe(str_contains((string)rm_abbrechen($rmId, 0), 'abgebrochen') && rm_fortschritt($rmId)['wartet'] === 0 && rm_laden($rmId)['status'] === 'abgebrochen', 'Restlichen Versand abbrechen');
-    } else {
-        rm_job(time());
-        pruefe(rm_laden($rmId)['status'] === 'gesendet', 'fertig gesendet');
-    }
+    $betr = preg_match('/^Subject: (.*(?:\r?\n[ \t].*)*)/m', $roh, $sm) === 1 ? iconv_mime_decode(trim($sm[1]), 0, 'UTF-8') : '';
+    $vornamen = array_column(db_zeilen('SELECT vorname FROM anmeldung WHERE veranstaltung_id = ?', [va_id()]), 'vorname');
+    pruefe(!str_contains($roh, 'Auto-Submitted') && str_starts_with($betr, 'Info für ') && in_array(substr($betr, strlen('Info für ')), $vornamen, true), "Rundmail ohne Auto-Submitted, Betreff mit Vorname ($betr)");
+    // dritter Tag: eine Mail geht noch raus, die der stornierten Person entfällt
+    $e4 = mail_senden_faellige(50, 20.0, $morgen + 86400);
+    rm_job(time());
+    pruefe($e4['gesendet'] === 1 && db_wert('SELECT COUNT(*) FROM mail_ausgang WHERE anmeldung_id = ?', [$weg]) == 0 && rm_fortschritt($rmId) === ['gesendet' => $angem - 1, 'wartet' => 0, 'fehler' => 0] && rm_laden($rmId)['status'] === 'gesendet', 'Storniert: Mail entfällt, Rundmail fertig gesendet');
     // Newsletter-Postfach eigenes Limit
     $w2 = rm_pruefen(['betreff' => 'NL', 'html' => '<p>Hallo</p>', 'auswahl' => 'angemeldet', 'postfach' => 'newsletter']);
     $nl = rm_speichern(null, $w2['werte'], null);
     rm_einreihen($nl, null);
     pruefe(mail_senden_faellige(50, 20.0, $morgen + 86400)['gesendet'] === 3 && db_wert("SELECT COUNT(*) FROM mail_ausgang WHERE postfach = 'newsletter' AND status = 'gesendet'") == 3, 'newsletter@ mit eigenem Tageslimit');
-    rm_abbrechen($nl, 0);
+    pruefe(str_contains((string)rm_abbrechen($nl, 0), 'abgebrochen') && rm_fortschritt($nl)['wartet'] === 0 && rm_laden($nl)['status'] === 'abgebrochen', 'Restlichen Versand abbrechen');
     // Planen und Job
     $pl = rm_speichern(null, $w['werte'], null);
     pruefe(rm_planen($pl, gmdate('Y-m-d H:i:s', time() + 3600), 0) && rm_laden($pl)['status'] === 'geplant', 'Mailing geplant');
@@ -114,7 +118,7 @@ function test_mailings(): void
     $j = rm_job(time() + 3700);
     pruefe($j['gestartet'] === 1 && rm_laden($pl)['status'] === 'versand', 'Job startet das geplante Mailing');
     db_ausfuehren("UPDATE mail_ausgang SET status = 'gesendet', gesendet_am = ? WHERE rundmail_id = ?", [db_jetzt(), $pl]);
-    pruefe(rm_job(time() + 3800)['fertig'] >= 1 && rm_laden($pl)['status'] === 'gesendet', 'Job schließt fertige Mailings ab');
+    pruefe(rm_job(time() + 3800)['fertig'] === 1 && rm_laden($pl)['status'] === 'gesendet', 'Job schließt fertige Mailings ab');
     pruefe(rm_job(strtotime(rm_laden($pl)['loeschen_ab'] . ' 12:00:00 UTC'))['archiv'] > 0 && (int)db_wert('SELECT COUNT(*) FROM rundmail_empfaenger WHERE rundmail_id = ?', [$pl]) === 0, 'Empfängerliste nach der Löschfrist entfernt');
     $leer = rm_speichern(null, ['betreff' => 'Leer', 'html' => '<p>x</p>', 'auswahl' => 'termin:' . $wsT, 'berufsgruppe' => 'Sonstige', 'postfach' => 'system'], null);
     pruefe(rm_sendefehler(rm_laden($leer)) !== [] && rm_einreihen($leer, null) === null, 'ohne Empfänger nicht sendbar');
@@ -123,7 +127,7 @@ function test_mailings(): void
     pruefe(rm_loeschen($kopie, 0) && !rm_loeschen($rmId, 0), 'nur Entwürfe lassen sich löschen');
     // Bilder aufräumen: unbenutzt und älter als ein Tag
     $alt = rm_bild_aus_daten((function (): string { $g = imagecreatetruecolor(10, 10); ob_start(); imagepng($g); imagedestroy($g); return (string)ob_get_clean(); })(), null);
-    pruefe($alt['typ'] === 'png' && rm_bilder_aufraeumen(time() + 2 * 86400) >= 1 && rm_bild($alt['id']) === null && !is_file(foto_ordner() . '/' . $alt['datei']) && rm_bild($bildTest['id']) !== null, 'unbenutzte Bilder entfernt, benutzte bleiben');
+    pruefe($alt['typ'] === 'png' && rm_bilder_aufraeumen(time() + 2 * 86400) === 1 && rm_bild($alt['id']) === null && !is_file(foto_ordner() . '/' . $alt['datei']) && rm_bild($bildTest['id']) !== null, 'unbenutzte Bilder entfernt, benutzte bleiben');
     // Text-Bilder im Programm und bei Dozierenden bleiben beim Aufräumen stehen (Admin 2026-10-31)
     $tb = foto_ordner() . '/text-aaaaaaaaaaaaaaa1.jpg';
     $tbWeg = foto_ordner() . '/text-aaaaaaaaaaaaaaa2.jpg';
@@ -134,10 +138,8 @@ function test_mailings(): void
     pruefe(is_file($tb) && !is_file($tbWeg), 'Aufräumen: Bild aus einer Kurzbio bleibt, unbenutztes Text-Bild geht');
     dozent_loeschen($dz, null); @unlink($tb);
     // Team: Passwort vergessen per Mail (AP-6)
-    $tkId = konto_anlegen('Tina Team', 'tina@example.org', 'admin', 'tina-ihr-passwort-1', null);
-    tk_passwort_vergessen('tina@example.org');
-    pruefe(str_contains((string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'tina@example.org' ORDER BY id DESC LIMIT 1"), '/einrichten?t='), 'Team: Passwort vergessen schickt einen Link');
-    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$tkId]);
+    tk_passwort_vergessen(TEST_ADMIN);
+    pruefe(str_contains((string)test_mail_an(TEST_ADMIN)['text'], '/einrichten?t='), 'Team: Passwort vergessen schickt einen Link');
     file_put_contents($cfgDatei, $cfgAlt);
     konfig_verwerfen();
     // Tageslimit als Zahl vergleichen (Fehler gefunden mit AP-10): 4 gesendet, Grenze 360 → Rundmail geht raus
@@ -151,8 +153,10 @@ function test_mailings(): void
 
     abschnitt('Rückmeldung 2026-10-30: Block-Zuordnung, Mail-Code, Protokoll');
     // Block-Zuordnung
-    $blockId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'block' LIMIT 1");
-    $wsId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'workshop' ORDER BY id LIMIT 1");
+    // Kürzel wie VT 01 gibt es auch im Vorjahr und im Abend: nur in der aktuellen Veranstaltung suchen
+    $punkt = fn(string $wo, array $p = []) => (int)db_wert("SELECT id FROM programmpunkt WHERE veranstaltung_id = ? AND $wo ORDER BY id LIMIT 1", array_merge([va_id()], $p));
+    $blockId = $punkt("typ = 'block'");
+    $wsId = $punkt("kuerzel = 'WS 01'");
     $r = programm_punkt_pruefen(['typ' => 'workshop', 'titel' => 'Ohne Termin', 'kuerzel' => 'WS 99', 'block_id' => (string)$blockId]);
     $neuWs = programm_punkt_speichern(null, $r, null);
     $kind = function (int $punkt) use ($blockId): int {
@@ -165,23 +169,23 @@ function test_mailings(): void
     };
     $termineWs = (int)db_wert('SELECT COUNT(*) FROM workshop_termin WHERE punkt_id = ?', [$wsId]);
     pruefe($kind($neuWs) === 1, 'Workshop ohne Termin über das Formular einem Block zugeordnet');
-    $pauseId = (int)db_wert("SELECT id FROM programmpunkt WHERE typ = 'pause' LIMIT 1");
+    $pauseId = $punkt("typ = 'pause'");
     pruefe(!programm_zuordnen($blockId, $blockId, null) && !programm_zuordnen($neuWs, $wsId, null) && !programm_zuordnen($pauseId, $blockId, null), 'nur Inhalte (keine Pause, kein Block), nur zu einem Block');
     // Vorträge und Fallbesprechungen im Block (Rückmeldung 2026-10-30)
-    $fb2 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'FB 02'");
-    $vt1 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'VT 01'");
+    $fb2 = $punkt("kuerzel = 'FB 02'");
+    $vt1 = $punkt("kuerzel = 'VT 01'");
     $haupt = fn() => array_map(fn($g) => $g['punkt']['id'], array_filter(programm_gliederung(programm_arbeitsstand()), fn($g) => $g['art'] !== 'termin'));
     pruefe($kind($fb2) === 1 && !in_array($fb2, $haupt(), true), 'Fallbesprechung (Beispieldaten) steht im Block, nicht im Hauptprogramm');
     pruefe($kind($vt1) === 0, 'Vortrag ohne Zuordnung bleibt im Hauptprogramm, auch wenn ein Block läuft');
-    $faelle = db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'");
-    pruefe(programm_verschieben('punkt', $fb2, '19:40', null, true, $nachNr) === '19:40–20:10' && db_zeile("SELECT beginn FROM programmpunkt WHERE kuerzel = 'FB 01'") == $faelle && $nachNr === 0, 'Punkt im Block verschieben schiebt die Hauptspur nicht');
-    $blockAlt = db_zeile('SELECT beginn FROM programmpunkt WHERE id = ?', [$blockId]);
+    $fb1 = $punkt("kuerzel = 'FB 01'");
+    $faelle = db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb1]);
+    pruefe(programm_verschieben('punkt', $fb2, '19:40', null, true, $nachNr) === '19:40–20:10' && db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb1]) === $faelle && $nachNr === 0, 'Punkt im Block verschieben schiebt die Hauptspur nicht');
     programm_verschieben('punkt', $blockId, '19:40', null);
     pruefe(hm((string)db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb2])) === '19:50', 'Block verschieben nimmt die zugeordnete Fallbesprechung mit');
     programm_verwerfen(null);
     pruefe($kind($fb2) === 1 && hm((string)db_wert('SELECT beginn FROM programmpunkt WHERE id = ?', [$fb2])) === '20:00', 'Verwerfen: Fallbesprechung wieder im Block um 20:00');
     // Dozierende je Termin
-    $ws1 = (int)db_wert("SELECT id FROM programmpunkt WHERE kuerzel = 'WS 01'");
+    $ws1 = $wsId;
     $ws1p = array_values(array_filter(programm_arbeitsstand(), fn($p) => $p['id'] === $ws1))[0];
     pruefe(!isset($ws1p['termine'][0]['dozenten']) && array_column($ws1p['termine'][1]['dozenten'] ?? [], 'name') === ['Dr. Erika Muster'], 'Dozierende je Termin: erster wie Workshop, zweiter abweichend');
     $pub = programm_veroeffentlicht()['punkte'];
@@ -204,19 +208,19 @@ function test_mailings(): void
     programm_verwerfen(null);
     pruefe(db_wert('SELECT COUNT(*) FROM programmpunkt WHERE id = ?', [$neuWs]) == 0 && $kind($wsId) === $termineWs, 'Verwerfen stellt den veröffentlichten Stand her');
     // Zweiter Faktor per E-Mail-Code
-    $zk = konto_anlegen('Zora Zwei', 'zora@example.org', 'admin', 'zora-ihr-passwort-1', null);
+    $zk = $f['admin'];
     pruefe(!zweitfaktor_da(konto_laden($zk)), 'ohne zweiten Faktor nicht fertig');
     $codes = mailcode_einschalten($zk, true);
     pruefe(is_array($codes) && count($codes) === TOTP_CODES && zweitfaktor_da(konto_laden($zk)) && totp_zustand($zk)['mail'] && !totp_zustand($zk)['an'], 'Code per E-Mail eingeschaltet, Wiederherstellungscodes erzeugt');
     mailcode_senden(konto_laden($zk));
-    $mcode = preg_match('/\b(\d{6})\b/', (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'zora@example.org' ORDER BY id DESC LIMIT 1"), $m) === 1 ? $m[1] : '';
+    $mcode = preg_match('/\b(\d{6})\b/', (string)test_mail_an(TEST_ADMIN)['text'], $m) === 1 ? $m[1] : '';
     pruefe($mcode !== '' && db_wert('SELECT mailcode_hash FROM konto WHERE id = ?', [$zk]) !== $mcode, 'Code per Mail, gespeichert nur als Hash');
-    pruefe(!totp_anmeldung_pruefen($zk, '000000')['ok'] || $mcode === '000000', 'falscher Code abgelehnt');
+    pruefe(!totp_anmeldung_pruefen($zk, $mcode === '000000' ? '111111' : '000000')['ok'], 'falscher Code abgelehnt');
     pruefe(totp_anmeldung_pruefen($zk, $mcode)['art'] === 'mail' && !totp_anmeldung_pruefen($zk, $mcode)['ok'], 'Code gilt einmal');
     db_ausfuehren('DELETE FROM rate_limit'); // höchstens ein Code je Minute (Review S-9)
     mailcode_senden(konto_laden($zk));
     db_ausfuehren('UPDATE konto SET mailcode_bis = ? WHERE id = ?', [gmdate('Y-m-d H:i:s', time() - 1), $zk]);
-    $alt2 = preg_match('/\b(\d{6})\b/', (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'zora@example.org' ORDER BY id DESC LIMIT 1"), $m) === 1 ? $m[1] : '';
+    $alt2 = preg_match('/\b(\d{6})\b/', (string)test_mail_an(TEST_ADMIN)['text'], $m) === 1 ? $m[1] : '';
     pruefe(!mailcode_pruefen($zk, $alt2), 'abgelaufener Code abgelehnt');
     pruefe(totp_anmeldung_pruefen($zk, $codes[0])['art'] === 'code', 'Wiederherstellungscode geht auch ohne App');
     totp_zuruecksetzen($zk, 'Test');
@@ -235,5 +239,4 @@ function test_mailings(): void
     pruefe(audit_ausblenden($pidA, true, 1) && !$sieht($admin, $pidA) && $sieht($betr, $pidA), 'ausgeblendet: nur noch Betreiber');
     pruefe(db_wert("SELECT art FROM audit ORDER BY id DESC LIMIT 1") === 'protokoll' && audit_ausblenden($pidA, false, 1) && $sieht($admin, $pidA), 'Ausblenden steht im Protokoll, Einblenden geht');
     pruefe(!audit_ausblenden((int)db_wert("SELECT id FROM audit WHERE art = 'protokoll' ORDER BY id DESC LIMIT 1"), true, 1), 'Protokoll-Einträge zum Ausblenden lassen sich nicht ausblenden');
-    db_ausfuehren('DELETE FROM konto WHERE id = ?', [$zk]);
 }

@@ -1,20 +1,21 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Newsletter (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Newsletter – Double-Opt-in, Versand an Listen mit Abmeldelink, Abmelden, Verwalten, Aufräumen, Häkchen bei der Anmeldung, Export (AP-7). */
 
 function test_newsletter(): void
 {
     abschnitt('Newsletter (AP-7)');
+    test_frisch();
     $ls = array_column(nl_listen(), 'id', 'name');
     $lw = (int)$ls['Wintersymposium'];
     $la = (int)$ls['Allgäu Akut'];
-    pruefe(count($ls) >= 2 && nl_liste_anmeldung()['name'] === 'Allgäu Akut', 'Zwei Listen, „Allgäu Akut“ bei der Anmeldung angeboten');
+    pruefe(nl_liste_anmeldung()['name'] === 'Allgäu Akut' && (int)nl_liste((int)$ls['Referierende (intern)'])['sichtbar'] === 0, '„Allgäu Akut“ bei der Anmeldung angeboten, interne Liste ausgeblendet');
     $nn = array_column(nl_empfaenger([$lw, $la]), 'email');
-    pruefe(in_array('nina@example.org', $nn, true) && in_array('otto@example.org', $nn, true) && !in_array('pia@example.org', $nn, true) && count($nn) === count(array_unique($nn)), 'Beispieldaten: bestätigt bekommen Mails, Pia (unbestätigt) nicht, jede Person einmal');
-    db_ausfuehren('DELETE FROM mail_ausgang');
+    sort($nn);
+    pruefe($nn === ['nina@example.org', 'otto@example.org'], 'Beispieldaten: bestätigt bekommen Mails, Pia (unbestätigt) und Lea (andere Liste) nicht, Nina (zwei Listen) einmal');
     nl_anfragen('Quinn@Example.org', 'Quinn', [$lw, 999], 'formular');
-    $qm = (string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'quinn@example.org' ORDER BY id DESC LIMIT 1");
+    $qm = (string)(test_mail_an('quinn@example.org')['text'] ?? '');
     $qtok = preg_match('#/newsletter/bestaetigen\?t=([A-Za-z0-9_-]{43})#', $qm, $m) === 1 ? $m[1] : '';
     $qp = nl_person_per_email('quinn@example.org');
     pruefe($qtok !== '' && $qp !== null && nl_abos((int)$qp['id']) === [$lw => 'offen'] && str_contains($qm, NL_EINWILLIGUNG), 'Anfrage: offen, Bestätigungsmail mit Einwilligungstext, unbekannte Liste ignoriert');
@@ -22,15 +23,15 @@ function test_newsletter(): void
     pruefe(nl_bestaetigen($qtok) !== null && nl_abos((int)$qp['id']) === [$lw => 'bestaetigt'] && db_wert('SELECT fassung FROM newsletter_abo WHERE person_id = ?', [$qp['id']]) === nl_fassung() && db_wert('SELECT text FROM newsletter_fassung WHERE fassung = ?', [nl_fassung()]) === NL_EINWILLIGUNG, 'Bestätigt mit Zeitpunkt und Fassung (Wortlaut gespeichert)');
     pruefe(nl_bestaetigen($qtok) === null, 'Bestätigungslink gilt einmal');
     nl_anfragen('quinn@example.org', '', [$lw], 'formular');
-    pruefe(str_contains((string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'quinn@example.org' ORDER BY id DESC LIMIT 1"), '/newsletter/verwalten?t='), 'schon eingetragen: Mail mit Link zum Verwalten');
+    pruefe(str_contains((string)test_mail_an('quinn@example.org')['text'], '/newsletter/verwalten?t=') && nl_abos((int)$qp['id']) === [$lw => 'bestaetigt'], 'schon eingetragen: Mail mit Link zum Verwalten, Abo unverändert');
     // Versand an Listen
     $nlw = rm_pruefen(['art' => 'newsletter', 'listen' => [$lw, $la], 'betreff' => 'Neu {vorname}', 'html' => '<p>Hallo {vorname},</p><p>Text</p>', 'postfach' => 'newsletter']);
     pruefe($nlw['fehler'] === [] && $nlw['werte']['auswahl'] === 'nl:' . min($lw, $la) . ',' . max($lw, $la) && rm_auswahl_text($nlw['werte']['auswahl'], '') === 'Newsletter: Wintersymposium, Allgäu Akut', 'Mailing an zwei Listen');
-    pruefe(rm_pruefen(['art' => 'newsletter', 'listen' => [], 'betreff' => 'x', 'html' => '<p>x</p>'])['fehler'] !== [], 'ohne Liste: Fehler');
+    pruefe(array_keys(rm_pruefen(['art' => 'newsletter', 'listen' => [], 'betreff' => 'x', 'html' => '<p>x</p>'])['fehler']) === ['auswahl'], 'ohne Liste: Fehler');
     $nrm = rm_speichern(null, $nlw['werte'], null);
     db_ausfuehren('DELETE FROM mail_ausgang');
     $anz = rm_einreihen($nrm, null);
-    pruefe($anz === count(nl_empfaenger([$lw, $la])) && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang WHERE nl_person_id IS NOT NULL') === $anz && rm_laden($nrm)['loeschen_ab'] === (new DateTimeImmutable(gmdate('Y-m-d')))->modify('+14 months')->format('Y-m-d'), 'eingereiht, jede Person einmal, Archiv 14 Monate ab Versand');
+    pruefe($anz === 3 && (int)db_wert('SELECT COUNT(*) FROM mail_ausgang WHERE nl_person_id IS NOT NULL') === $anz && rm_laden($nrm)['loeschen_ab'] === (new DateTimeImmutable(gmdate('Y-m-d')))->modify('+14 months')->format('Y-m-d'), 'eingereiht, jede Person einmal, Archiv 14 Monate ab Versand');
     nl_abmelden((int)nl_person_per_email('quinn@example.org')['id']);
     $vorher = count(glob(laufzeit_pfad('mails') . '/*.eml') ?: []);
     mail_senden_faellige(50, 20.0);
@@ -38,13 +39,15 @@ function test_newsletter(): void
     sort($nachher);
     $otto = '';
     $quinn = false;
+    $nina = false;
     foreach (array_slice($nachher, $vorher) as $d) {
         $t = (string)file_get_contents($d);
         $otto = str_contains($t, 'To: <otto@example.org>') ? $t : $otto;
         $quinn = $quinn || str_contains($t, 'To: <quinn@example.org>');
+        $nina = $nina || str_contains($t, 'To: <nina@example.org>');
     }
     $od = quoted_printable_decode($otto);
-    pruefe($otto !== '' && !$quinn, 'Mail an Abonnierende, nicht an inzwischen Abgemeldete');
+    pruefe($otto !== '' && $nina && !$quinn, 'Mail an Abonnierende, nicht an inzwischen Abgemeldete');
     pruefe(preg_match('#^List-Unsubscribe: <https?://[^>]+/newsletter/abmelden\?t=[A-Za-z0-9_-]{43}>#m', $otto) === 1 && str_contains($otto, 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'), 'List-Unsubscribe mit One-Click');
     pruefe(str_contains($od, 'Hallo,') && !str_contains($od, 'Hallo ,') && str_contains($od, 'Abmelden oder Listen ändern') && str_contains($od, '/newsletter/verwalten?t='), 'ohne Vorname „Hallo,“, Abmeldelink im Fuß');
     pruefe(str_contains($otto, 'From: =?UTF-8?Q?Allg=C3=A4u=20Akut?='), 'Absendername der Liste');
@@ -63,7 +66,7 @@ function test_newsletter(): void
     pruefe(nl_person_per_email('rosa@example.org') === null, 'Häkchen: vor der Bestätigung der Anmeldung nichts');
     anm_link_einloesen(anm_link_erzeugen($nlAnm['id'], 'bestaetigen', time() + 3600));
     $rp = nl_person_per_email('rosa@example.org');
-    pruefe($rp !== null && nl_abos((int)$rp['id']) === [$la => 'offen'] && str_contains((string)db_wert("SELECT text FROM mail_ausgang WHERE an = 'rosa@example.org' ORDER BY id DESC LIMIT 1"), '/newsletter/bestaetigen?t='), 'nach der Bestätigung: eigene Newsletter-Bestätigungsmail');
+    pruefe($rp !== null && nl_abos((int)$rp['id']) === [$la => 'offen'] && str_contains((string)test_mail_an('rosa@example.org')['text'], '/newsletter/bestaetigen?t='), 'nach der Bestätigung: eigene Newsletter-Bestätigungsmail');
     // Export
     $ex = export_erzeugen('newsletter', '', $la);
     pruefe($ex !== null && str_contains($ex['text'], 'nina@example.org') && !str_contains($ex['text'], 'rosa@example.org') && str_contains($ex['text'], nl_fassung()), 'CSV je Liste: nur bestätigte, mit Fassung');
