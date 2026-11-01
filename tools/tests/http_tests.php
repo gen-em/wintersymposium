@@ -171,7 +171,7 @@ function test_va_form(string $csrf): array
 
 /** HTTP-Bereiche in der Reihenfolge des Laufs (Funktion http_bereich_<name>). */
 const HTTP_BEREICHE = ['login', 'einstellungen', 'programm', 'anmeldung', 'konto', 'daten', 'betrieb', 'team', 'mailings',
-    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16'];
+    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18'];
 
 function http_tests(string $wurzel, string $tmp): void
 {
@@ -338,7 +338,7 @@ function http_installer(array $u): void
     $r = http_anfrage($basis, 'GET', '/', $h);
     $html = $r['text'];
     pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
-    pruefe(str_contains($html, '<h1 class="titel">Allgäuer <em>Winter-Notfallsymposium</em></h1>') && str_contains($html, '<p class="kicker">Allgäu Akut · Wintersymposium</p>'), 'Titel und Zeile aus der Veranstaltung (erstes Wort weiß, Rest lila)');
+    pruefe(str_contains($html, '<h1 class="titel titel-l">Allgäuer <em>Winter-Notfallsymposium</em></h1>') && str_contains($html, '<p class="kicker">Allgäu Akut · Wintersymposium</p>'), 'Titel und Zeile aus der Veranstaltung (erstes Wort weiß, Rest lila; Größenstufe L nach „Notfallsymposium“)');
     pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
     pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten aus den Einstellungen (Startwerte)');
     pruefe(str_contains($html, 'Das Programm erscheint hier, sobald es veröffentlicht ist') && !str_contains($html, 'Tigerente'), 'ohne veröffentlichtes Programm: Hinweis, kein Beispielprogramm');
@@ -1073,16 +1073,16 @@ function http_bereich_team(array $u): void
     http_anfrage($basis, 'POST', '/team/teilnahme', $h, [], ['csrf' => $c, 'aktion' => 'erschienen', 'platz' => $pPlatz, 'wert' => '0'], $b);
     pruefe(http_anfrage($basis, 'GET', '/deine-anmeldung/zertifikat', $h, [], null, $kp)['status'] === 303, 'Nachträglich „nicht erschienen“: kein Download');
     pruefe((int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'teilnahme'") >= $teilnahme + 4, 'Teilnahme im Protokoll');
-    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + ['start_sticker' => 'Gratis!', 'impressum' => 'nicht hier'], $b);
+    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_sticker' => 'Gratis!', 'impressum' => 'nicht hier'], $b);
     http_anfrage($basis, 'POST', '/team/texte', $h, [], ['csrf' => $c, 'impressum' => "## Verantwortlich\nTest Impressum", 'start_sticker' => 'nicht hier'], $b);
     $start = http_anfrage($basis, 'GET', '/', $h)['text'];
     pruefe($r['status'] === 303 && str_contains($start, 'Gratis!') && !str_contains($start, 'nicht hier') && str_contains(http_anfrage($basis, 'GET', '/impressum', $h)['text'], 'Test Impressum'), 'Texte: Startseite und Impressum sofort geändert (jedes Feld nur auf seiner Seite)');
-    // Drei Kacheln bei den Einstellungen (Admin 2026-10-31); das frühere Feld „Infokästen“ wird danach geleert
+    // Drei Kacheln auf der Seite „Startseite“ (AP-18, E-70 (1)); das frühere Feld „Infokästen“ wird danach geleert
     $kach = ['start_kachel_1_titel' => 'Für alle', 'start_kachel_1_text' => '<p>Kachel eins</p>', 'start_kachel_2_titel' => 'Ablauf', 'start_kachel_2_text' => '<p>Kachel zwei</p>', 'start_kachel_3_titel' => 'Kosten', 'start_kachel_3_text' => '<p>Kachel drei</p>'];
-    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + $kach, $b);
+    http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c] + $kach, $b);
     $start = http_anfrage($basis, 'GET', '/', $h)['text'];
-    pruefe(str_contains($start, '<strong>Für alle</strong>') && str_contains($start, 'Kachel drei') && !str_contains($start, 'Für wen') && inhalt('start_infos') === '', 'Startseite: drei Kacheln aus den Einstellungen, alte Infokästen ersetzt');
-    pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b)['status'] === 303, 'Alte Seite „Startseite“ leitet zu den Einstellungen');
+    pruefe(str_contains($start, '<strong>Für alle</strong>') && str_contains($start, 'Kachel drei') && !str_contains($start, 'Für wen') && inhalt('start_infos') === '', 'Startseite: drei Kacheln von der Seite „Startseite“, alte Infokästen ersetzt');
+    pruefe(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $b)['status'] === 200, 'Seite „Startseite“ wieder eigene Seite (E-70 (1))');
     $r = http_anfrage($basis, 'GET', '/team/protokoll?art=texte', $h, [], null, $b);
     pruefe(str_contains($r['text'], 'start_sticker'), 'Protokoll mit Filter');
     $r = http_anfrage($basis, 'POST', '/team/personen?a=' . $paula, $h, [], ['csrf' => $c, 'aktion' => 'storno', 'a' => $paula, 'ohne_mail' => '1'], $b);
@@ -1179,11 +1179,9 @@ function http_bereich_rueckmeldung(array $u): void
     pruefe(str_contains($r['text'], 'Anmeldung noch nicht möglich') && !str_contains($r['text'], 'Link per Mail') && str_contains($r['text'], 'Einloggen'), 'Vor dem Start: Hinweis über zwei Kacheln, kein „Link per Mail“');
     einstellung_setzen('anmeldung_start', (string)$start);
     pruefe(str_contains(http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $gast)['text'], 'Link per Mail'), 'Nach dem Start: „Link per Mail“ wieder da');
-    // Einstellungen gesperrt
+    // Einstellungen als Übersicht (AP-18): alle Kacheln zu, „Bearbeiten“ statt Entsperren
     $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'Gesperrt.') && str_contains($r['text'], '<fieldset class="kasten gruppe" id="veranstaltung" disabled>') && !str_contains($r['text'], 'Einstellungen speichern'), 'Einstellungen zuerst gesperrt');
-    $r = http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $b);
-    pruefe(str_contains($r['text'], 'Entsperrt.') && !str_contains($r['text'], ' disabled>') && str_contains($r['text'], 'Einstellungen speichern'), 'Entsperren zeigt die Felder zum Bearbeiten');
+    pruefe(substr_count($r['text'], '<details class="einst-auf" name="einstellungen">') === count(VA_GRUPPEN) && !str_contains($r['text'], ' open>') && !str_contains($r['text'], 'Entsperren'), 'Einstellungen: alle Kacheln zu, ohne Entsperren');
     // Texte: Bild hochladen, öffentlich sichtbar
     $png = "$tmp/text.png";
     $g = imagecreatetruecolor(50, 30);
@@ -1197,7 +1195,7 @@ function http_bereich_rueckmeldung(array $u): void
     $url = (string)($j['url'] ?? '');
     pruefe(preg_match('#^/bild/text-[0-9a-f]{16}\.png$#', $url) === 1, 'Bild für einen Text hochgeladen');
     pruefe(http_anfrage($basis, 'GET', $url, $h, [], null, $gast)['status'] === 200, 'Text-Bild öffentlich abrufbar');
-    http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], test_va_form($c) + ['start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
+    http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_cme' => '<p>Mit Bild:</p><p><img src="' . $url . '" alt="Lageplan" data-breite="50"><script>x()</script></p>'], $b);
     $start = http_anfrage($basis, 'GET', '/', $h, [], null, $gast)['text'];
     pruefe(str_contains($start, '<img class="text-bild" loading="lazy" src="' . $url . '" alt="Lageplan" data-breite="50">') && !str_contains($start, '<script>x()'), 'Bild erscheint auf der Startseite (halbe Breite), Skript entfernt');
     $r = http_anfrage($basis, 'GET', '/team/texte', $h, [], null, $b);
@@ -1523,7 +1521,7 @@ function http_bereich_rechte(array $u): void
         $nur[$pfad] = http_anfrage($basis, 'GET', $pfad, $h, [], null, $k)['status'];
     }
     pruefe(count($nur) >= 7 && array_unique(array_values($nur)) === [403], 'Betrieb-Seiten aus der Seitenliste (' . count($nur) . ') nur für BetreiberInnen: ' . json_encode($nur));
-    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/einstellungen?bearbeiten=1', $h, [], null, $k)['text'], 'name="start_kachel_1_titel"') && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja (bei den Einstellungen), Newsletter-Export nein');
+    pruefe(str_contains(http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k)['text'], 'name="start_kachel_1_titel"') && http_anfrage($basis, 'GET', '/team/export?art=newsletter', $h, [], null, $k)['status'] === 404, 'Startseiten-Texte ja (Seite „Startseite“), Newsletter-Export nein');
     $r = http_anfrage($basis, 'GET', '/team/mailings?neu=1', $h, [], null, $k);
     pruefe($r['status'] === 200 && !str_contains($r['text'], 'name="art" value="newsletter"') && !str_contains($r['text'], 'name="listen[]"'), 'Mailings: Newsletter-Listen nur für BetreiberInnen');
     // Protokoll: nur Einträge der freigeschalteten Veranstaltung
@@ -1678,4 +1676,81 @@ function http_bereich_ap16(array $u): void
     $r = http_anfrage($basis, 'GET', '/einloggen', $h, ['Cookie: ws_sitzung=' . $erfunden]);
     $neu = preg_match('/ws_sitzung=([^;]+)/', (string)($r['kopf']['set-cookie'] ?? ''), $m) === 1 ? $m[1] : '';
     pruefe($r['status'] === 200 && $neu !== '' && $neu !== $erfunden && !is_file(sitzung_ablage_pfad() . '/sess_' . $erfunden), 'S-12: erfundene Sitzungs-ID im Keks → neue ID (use_strict_mode wirkt)');
+}
+
+/** Startseite mit Vorschau, Einstellungen als Übersicht (AP-18, E-70): T-312 bis T-315 über HTTP. */
+function http_bereich_ap18(array $u): void
+{
+    ['basis' => $basis, 'h' => $h, 'tmp' => $tmp] = $u;
+    $f = http_frisch($u);
+    $vorjahr = (int)$f['bd']['vorjahr']['id'];
+    $aktuell = (int)va_aktuell_id();
+    $k = http_team_einloggen($u, TEST_ADMIN, TEST_PASSWORT)['keks'];
+
+    abschnitt('HTTP: Seite „Startseite“ (AP-18 Unterpunkt 5, T-313)');
+    $r = http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k);
+    $c = http_csrf($r['text']);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'aria-label="Unterseiten von Verwaltung"') && str_contains($r['text'], 'href="/team/startseite" aria-current="page"'), 'Admin: Verwaltung → Startseite mit Unterreiter');
+    pruefe(str_contains($r['text'], 'name="start_titel"') && str_contains($r['text'], 'data-editor="titel" data-werkzeug="lila trennstelle"') && str_contains($r['text'], 'name="start_programm_titel"')
+        && str_contains($r['text'], 'Fest, nicht hier zu ändern') && str_contains($r['text'], 'data-vorschau="/team/startseite/vorschau"'), 'Abschnitte Kopf, Worum es geht, Programm, Merke; Titel mit Editor „Lila · Trennstelle“; feste Teile genannt');
+    $alleFelder = array_map(fn($k) => start_text_wert($k), array_combine(array_keys(START_TEXTE), array_keys(START_TEXTE)));
+    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_titel' => 'Neuer <i>Abend</i>', 'start_programm_titel' => 'Unser Abend', 'start_kachel_2_text' => ''] + $alleFelder, $k);
+    $start = http_anfrage($basis, 'GET', '/', $h)['text'];
+    pruefe($r['status'] === 303 && str_contains($start, '>Neuer <em>Abend</em></h1>') && str_contains($start, 'id="programm-titel">Unser Abend</h2>') && str_contains($start, '<strong>Wie</strong>'), 'Speichern: Startseite zeigt Titel und eigene Programm-Überschrift (Kachel mit Titel bleibt)');
+    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_sticker' => str_repeat('x', START_TEXT_MAX + 1), 'start_unter' => 'Nicht gespeichert'], $k);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Nicht gespeichert') && str_contains($r['text'], 'aria-invalid="true"') && inhalt('start_unter') !== 'Nicht gespeichert', 'Fehler: markiert, nichts gespeichert');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $k);
+    pruefe(!str_contains($r['text'], 'name="start_') && str_contains($r['text'], 'href="/team/startseite">Startseite bearbeiten</a>') && str_contains($r['text'], '<p class="titel">Neuer <em>Abend</em></p>'), 'Einstellungen ohne Startseiten-Felder, Kachel „Startseite“ mit Mini-Vorschau und Link');
+    $r = http_anfrage($basis, 'GET', '/team/startseite?va=' . $vorjahr, $h, [], null, $k);
+    pruefe(substr_count($r['text'], '<fieldset class="st-gruppe stapel" disabled>') === 4 && !str_contains($r['text'], '>Speichern</button>') && !str_contains($r['text'], 'data-editor='), 'abgeschlossene Veranstaltung: nur lesen');
+    $r = http_anfrage($basis, 'POST', '/team/startseite', $h, [], ['csrf' => $c, 'start_unter' => 'Darf nicht'], $k);
+    pruefe($r['status'] === 303 && va_mit($vorjahr, fn() => inhalt('start_unter')) !== 'Darf nicht', 'abgeschlossene Veranstaltung: Speichern abgewiesen');
+    http_anfrage($basis, 'GET', '/team/startseite?va=' . $aktuell, $h, [], null, $k);
+
+    abschnitt('HTTP: Vorschau (AP-18 Unterpunkt 6, T-314)');
+    $vorher = inhalt('start_titel');
+    $r = http_anfrage($basis, 'POST', '/team/startseite/vorschau', $h, [], ['csrf' => $c, 'start_titel' => "Vorschau <em>Titel</em>", 'start_kachel_1_titel' => '', 'start_kachel_1_text' => '', 'start_infos_titel' => 'Kacheln'] + $alleFelder, $k);
+    $kopf = $r['kopf'];
+    pruefe($r['status'] === 200 && str_contains($r['text'], '>Vorschau <em>Titel</em></h1>') && inhalt('start_titel') === $vorher, 'Vorschau zeigt die Formularwerte, speichert nichts');
+    pruefe(($kopf['x-frame-options'] ?? '') === 'SAMEORIGIN' && str_contains($kopf['content-security-policy'] ?? '', "frame-ancestors 'self'") && ($kopf['cache-control'] ?? '') === 'no-store', 'nur in derselben Herkunft einbettbar, nicht zwischengespeichert');
+    $hw = preg_match('/<body class="akzent-lila vorschau-seite" data-hinweise="([^"]*)">/', $r['text'], $m) === 1 ? json_decode(html_entity_decode($m[1], ENT_QUOTES), true) : null;
+    pruefe(is_array($hw) && $hw['stufe'] === 'XL' && $hw['leer'] === [1, 3], 'Hinweise am body: Größenstufe, leere Kacheln');
+    pruefe(!str_contains($r['text'], 'nav-team') && !str_contains($r['text'], 'person-menue') && str_contains($r['text'], 'href="/einloggen"'), 'Navigation wie für Besucherinnen und Besucher');
+    $normal = http_anfrage($basis, 'GET', '/team/startseite', $h, [], null, $k)['kopf'];
+    pruefe(($normal['x-frame-options'] ?? '') === 'DENY' && str_contains($normal['content-security-policy'] ?? '', "frame-ancestors 'none'"), 'übrige Seiten bleiben nicht einbettbar');
+    $r = http_anfrage($basis, 'POST', '/team/startseite/vorschau', $h, [], ['start_titel' => 'Ohne CSRF'], $k);
+    pruefe($r['status'] === 403 && !str_contains($r['text'], 'Ohne CSRF'), 'ohne CSRF 403');
+    pruefe(http_anfrage($basis, 'GET', '/team/startseite/vorschau', $h, [], null, $k)['status'] === 303, 'GET: zurück zur Seite „Startseite“');
+    $leer = "$tmp/kekse-ap18-gast.txt";
+    $r = http_anfrage($basis, 'GET', '/', $h, [], null, $leer);
+    $r = http_anfrage($basis, 'POST', '/team/startseite/vorschau', $h, [], ['csrf' => http_csrf($r['text']), 'start_titel' => 'Gast'], $leer);
+    pruefe($r['status'] === 303 && str_contains($r['kopf']['location'] ?? '', '/einloggen') && !str_contains($r['text'], 'Gast'), 'ohne Team-Login: zum Einloggen, keine Vorschau');
+    $lea = "$tmp/kekse-ap18-lea.txt";
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h, [], null, $lea);
+    http_anfrage($basis, 'POST', '/einloggen', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'passwort', 'email' => 'lea@example.org', 'passwort' => BEISPIEL_PASSWORT], $lea);
+    $r = http_anfrage($basis, 'GET', '/konto', $h, [], null, $lea);
+    $r = http_anfrage($basis, 'POST', '/team/startseite/vorschau', $h, [], ['csrf' => http_csrf($r['text']), 'start_titel' => 'Teilnehmerin'], $lea);
+    pruefe($r['status'] !== 200 && !str_contains($r['text'], 'Teilnehmerin'), 'als Teilnehmende: keine Vorschau (Status ' . $r['status'] . ', wie alle Team-Seiten)');
+
+    abschnitt('HTTP: Einstellungen als Übersicht (AP-18 Unterpunkt 7, T-315)');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $k);
+    pruefe(substr_count($r['text'], '<details class="einst-auf" name="einstellungen">') === count(VA_GRUPPEN) && str_contains($r['text'], '<dt>Wo</dt><dd>Hörsaal Testklinik</dd>') && str_contains($r['text'], '<span class="chip ok">Essen</span>'), 'je Gruppe eine Kachel (zu) mit Zusammenfassung');
+    $gruppe = fn(string $g) => array_map('va_formularwert', array_combine($ks = array_keys(array_filter(VA_KATALOG, fn($d) => $d['gruppe'] === $g)), $ks));
+    $audit = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'");
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'nachruecken', 'nachrueck_frist_h' => '12', 'veranstaltung_ort' => 'Fremd'] + $gruppe('nachruecken'), $k);
+    pruefe($r['status'] === 303 && str_ends_with($r['kopf']['location'] ?? '', '/team/einstellungen#nachruecken') && va('nachrueck_frist_h') === '12' && va('veranstaltung_ort') === 'Hörsaal Testklinik'
+        && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'") === $audit + 1, 'Speichern einer Kachel ändert nur deren Werte (protokolliert)');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'veranstaltung', 'kuerzel' => va_zeile()['kuerzel'], 'veranstaltung_ende' => '17:00'] + $gruppe('veranstaltung'), $k);
+    pruefe($r['status'] === 200 && str_contains($r['text'], 'Nicht gespeichert') && preg_match('#id="veranstaltung"><details class="einst-auf" open>#', $r['text']) === 1 && substr_count($r['text'], ' open>') === 1
+        && str_contains($r['text'], 'value="17:00"') && va('veranstaltung_ende') === '22:00', 'Fehler: nur diese Kachel offen, Eingabe bleibt, nichts gespeichert');
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen?va=' . $vorjahr, $h, [], null, $k);
+    pruefe(!str_contains($r['text'], 'einst-auf') && str_contains($r['text'], 'class="kasten einst-kachel" id="veranstaltung"><h2'), 'abgeschlossene Veranstaltung: Kacheln ohne Bearbeiten');
+    http_anfrage($basis, 'GET', '/team/einstellungen?va=' . $aktuell, $h, [], null, $k);
+
+    abschnitt('HTTP: Ohne aktuelle Veranstaltung (AP-18 Unterpunkt 4, T-312)');
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(str_contains($r['text'], 'href="/#programm"'), 'mit aktueller Veranstaltung: „Programm“ in der Navigation');
+    db_ausfuehren("UPDATE veranstaltung SET status = 'abgeschlossen' WHERE id = ?", [$aktuell]);
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(str_contains($r['text'], '<h1 class="titel titel-xl">Allgäu <em>Akut</em></h1>') && !str_contains($r['text'], 'href="/#programm"') && !str_contains($r['text'], 'id="programm"'), 'keine aktuelle: Titel = Dachmarke, kein „Programm“ in der Navigation');
 }

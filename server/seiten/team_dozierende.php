@@ -81,9 +81,8 @@ team_seite_kopf($konto, 'Dozierende', '/team/dozierende');
             <?= csrf_feld() . versteckt_html(['aktion' => 'speichern', 'id' => $bearbeiten !== null ? (int)$bearbeiten['id'] : null]) ?>
             <?= feld('name', 'Name', ['id' => 'd-name', 'wert' => $w('name'), 'fehler' => $fehler['name'] ?? null, 'pflicht' => true, 'attr' => ['maxlength' => 120]]) ?>
             <?= feld('funktion', 'Funktion', ['id' => 'd-funktion', 'wert' => $w('funktion'), 'fehler' => $fehler['funktion'] ?? null, 'hilfe' => 'z. B. „Oberärztin, Zentrale Notaufnahme“', 'attr' => ['maxlength' => 160]]) ?>
-            <?php // Editor-Attribute wie editor_attribute() (liefert nur einen String, feld() braucht ein Array) ?>
             <?= feld('kurzbio', 'Kurzbio', ['typ' => 'textarea', 'id' => 'd-kurzbio', 'wert' => $w('kurzbio'), 'fehler' => $fehler['kurzbio'] ?? null,
-                'attr' => ['rows' => 4, 'data-editor' => 'block', 'data-werkzeug' => EDITOR_LEISTE['block'], 'data-bild-url' => '/team/texte/bild']]) ?>
+                'attr' => ['rows' => 4] + editor_attr()]) ?>
             <?php if (foto_moeglich()): ?>
             <div class="feld"><label for="d-foto">Foto (optional)</label>
                 <?php if (!empty($bearbeiten['foto'])): ?><img class="foto gross" src="/bild/<?= e($bearbeiten['foto']) ?>" alt="Aktuelles Foto" width="120" height="120">

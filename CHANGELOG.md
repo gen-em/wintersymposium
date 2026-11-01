@@ -2,6 +2,54 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.29.0] – 2026-11-01
+
+AP-18 Startseite mit Vorschau, Einstellungen als Übersicht (E-70, Mockup Variante B).
+
+### Neu
+
+- **Seite „Startseite“** unter Verwaltung (wieder eine eigene Seite, E-70 (1)), mit den Abschnitten der Startseite:
+  - **Kopf:** Zeile über dem Titel, **Titel**, Untertitel, Sticker.
+  - **Worum es geht:** Zeile, Überschrift, drei Kacheln.
+  - **Programm:** Zeile und Überschrift (bisher fest).
+  - **Merke · Fortbildungspunkte.**
+  - Leere Felder und Abschnitte erscheinen nicht. Eckdaten und Newsletter-Hinweis bleiben fest. Abgeschlossene Veranstaltung: nur ansehen.
+- **Vorschau** der Startseite mit den noch nicht gespeicherten Werten:
+  - Gerätewahl Desktop · Handy · Tablet (1440 / 390 / 768 px). Desktop ist vorausgewählt, in der schmalen Ansicht Handy (O-49).
+  - Breit rechts und mitlaufend, schmal darunter und aufklappbar.
+  - Hinweise zu Größenstufe, Trennung im Titel (Info oder Warnung) und leeren Kacheln.
+  - Neuer Endpunkt `/team/startseite/vorschau` (POST mit CSRF, speichert nichts, nur in derselben Herkunft einbettbar); `assets/startseite.js`.
+- **Titel der Startseite:**
+  - Editor im Titel-Modus mit den Knöpfen **„Lila“** und **„Trennstelle“**; Bereinigungsprofil `titel` (nur `em` und weiches Trennzeichen).
+  - Größenstufen XL/L/M/S nach dem längsten unteilbaren Teil, Mindestgröße 2rem. Getrennt wird nur an Trennstellen; der Browser trennt nur im Notfall.
+- **Einstellungen als Übersicht:**
+  - Je Gruppe eine Kachel mit Zusammenfassung (Grunddaten, Bausteine, Anmeldung, Warteliste, Stichtage, Fortbildungspunkte, Bescheinigung, Berufsgruppen).
+  - „Bearbeiten“ öffnet eine Kachel zur Zeit, gespeichert wird je Kachel. Fehler öffnen ihre Kachel.
+  - Kachel „Startseite“ mit Mini-Vorschau und Link.
+- **Migration 22:** Zeile und Titel der Startseite leer (= automatisch); Zeilen und Überschriften der Abschnitte mit den bisher festen Texten.
+- **Komponentenblatt:** neuer Abschnitt „Startseite“ (Titel-Stufen, Titel-Editor, Gerätewahl, Vorschau-Hinweise, Einstellungs-Kacheln).
+- **Tests:** T-309 bis T-316 (`tools/tests/lauf/19_startseite.php`, HTTP-Bereich `ap18`, Browser-Durchlauf: Seite „Startseite“, Lila/Trennstelle, Vorschau, Kacheln der Einstellungen). Beispieldatensatz mit Trennstelle im Titel und leerer dritter Kachel.
+
+### Geändert
+
+- **Ohne aktuelle Veranstaltung:** Die Startseite zeigt als Titel die Dachmarke, und „Programm“ fehlt in der Navigation (E-70 (7)).
+- **Zeile über dem Titel und Titel** sind wieder Felder; leer gelten Dachmarke · Kurzname bzw. der Name der Veranstaltung (ändert E-68 (1)).
+- **Kopie einer Veranstaltung mit anderem Namen:** Der eigene Titel der Startseite wird geleert, damit der neue Name erscheint.
+- **Neue Veranstaltung ohne Vorlage:** bekommt die Zeilen und Überschriften der Abschnitte als Startwerte.
+- **Navigation:** Verwaltung hat die Unterseiten Einstellungen, Startseite, Protokoll.
+- **Startseite** zeichnet sich aus `start_html()` (dieselbe Funktion wie die Vorschau); `editor_attr()` liefert die Editor-Attribute als Liste für `feld()`.
+
+### Entfernt
+
+- **Sperre der Einstellungen** („Entsperren“/„Wieder sperren“, Klassen `sperre*`): ersetzt durch „Bearbeiten“ je Kachel (Admin 2026-11-01).
+- Startseiten-Felder in den Einstellungen, die Weiterleitung `/team/startseite` → Einstellungen und der Startseiten-Modus in `team_texte.php`.
+- `va_titel_html()` (ersetzt durch `start_titel_html()`).
+
+### Doku
+
+- betrieb.md: Startseite mit Titel-Regeln und Vorschau (Abschnitt 7), keine aktuelle Veranstaltung (9), Einstellungen als Übersicht (10), Team-Bereich (14), Aufbau, Beispieldatensatz.
+- Konzept: AP-18 status, fortschritt, ergebnis, probleme; E-70 und E-68 mit Stand. Prüfprotokoll: AP-18 mit T-309 bis T-316.
+
 ## [0.28.1] – 2026-11-01
 
 ### Behoben

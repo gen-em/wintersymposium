@@ -14,9 +14,9 @@ function test_programm(): void
     $r = programm_punkt_pruefen(['typ' => 'vortrag', 'titel' => 'X', 'beginn' => '18:00']);
     pruefe(isset($r['fehler']['ende']), 'Beginn ohne Ende abgelehnt');
     einstellung_setzen('veranstaltung_name', 'Abend');
-    $t1 = va_titel_html();
+    $t1 = start_titel_html('');
     einstellung_setzen('veranstaltung_name', 'Fortbildungsabend klinische Notfallmedizin');
-    $t3 = va_titel_html();
+    $t3 = start_titel_html('');
     pruefe($t1 === '<em>Abend</em>' && $t3 === 'Fortbildungsabend <em>klinische Notfallmedizin</em>', 'Titel der Startseite: ein Wort lila, sonst erstes Wort weiß und Rest lila');
     $r = programm_punkt_pruefen(['typ' => 'pause', 'titel' => 'P']);
     pruefe($r['fehler'] === [], 'Punkt ohne Uhrzeit speicherbar (wird im Plan gezogen)');

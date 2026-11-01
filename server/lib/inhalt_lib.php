@@ -69,23 +69,30 @@ const EDITOR_MAX = 60000;
  * (Titel, Untertitel) nur fett, kursiv und Link. Platzhalter gibt es nur in
  * Mails, weil nur dort beim Versand ersetzt wird.
  */
-const EDITOR_LEISTE = ['block' => 'fett kursiv titel | liste nliste link bild knopf | html', 'inline' => 'fett kursiv link'];
+const EDITOR_LEISTE = ['block' => 'fett kursiv titel | liste nliste link bild knopf | html', 'inline' => 'fett kursiv link', 'titel' => 'lila trennstelle'];
 
 /**
  * Attribute für ein <textarea> mit Editor. $mail: Bilder der Mailings,
  * Platzhalter und {link} als Knopf-Ziel; sonst Bilder der Webseite.
+ * Art 'titel': Titel der Startseite, nur „Lila“ und „Trennstelle“ (E-70 (3), (4)).
  */
 function editor_attribute(string $art = 'block', bool $mail = false): string
 {
-    $art = $art === 'inline' ? 'inline' : 'block';
-    $h = ' data-editor="' . $art . '" data-werkzeug="' . EDITOR_LEISTE[$art] . '"';
+    return attr_html(editor_attr($art, $mail));
+}
+
+/** Dieselben Attribute als Liste (für feld(…, ['attr' => …])). */
+function editor_attr(string $art = 'block', bool $mail = false): array
+{
+    $art = in_array($art, ['inline', 'titel'], true) ? $art : 'block';
+    $a = ['data-editor' => $art, 'data-werkzeug' => EDITOR_LEISTE[$art]];
     if ($art === 'block') {
-        $h .= ' data-bild-url="' . ($mail ? '/team/mailings/bild' : '/team/texte/bild') . '"';
+        $a['data-bild-url'] = $mail ? '/team/mailings/bild' : '/team/texte/bild';
     }
     if ($mail) {
-        $h .= ' data-knopf-ziel="{link}" data-platzhalter="' . e(json_encode(RM_PLATZHALTER, JSON_UNESCAPED_UNICODE)) . '"';
+        $a += ['data-knopf-ziel' => '{link}', 'data-platzhalter' => json_encode(RM_PLATZHALTER, JSON_UNESCAPED_UNICODE)];
     }
-    return $h;
+    return $a;
 }
 
 /**
@@ -95,7 +102,9 @@ function editor_attribute(string $art = 'block', bool $mail = false): string
 /**
  * Ein Einstieg für alle HTML-Bereinigungen (V-13): Profil 'inline' (eine
  * Zeile: fett, kursiv, Link), 'block' (Absätze, Überschriften, Listen,
- * Links; mit $bilder auch Bilder der Texte) und 'mail' (Mailings: wie block,
+ * Links; mit $bilder auch Bilder der Texte), 'titel' (Titel der Startseite:
+ * nur Lila als em und Trennstellen als weiches Trennzeichen, E-70 (3), (4))
+ * und 'mail' (Mailings: wie block,
  * dazu Bilder der Mailings und der Platzhalter {link}). Unter 'mail' arbeitet
  * der Bereiniger der Mailings (rm_html_bereinigen), weil derselbe Durchlauf
  * auch Text- und HTML-Mail erzeugt; gespeichertes Mailing-HTML bleibt so
@@ -104,7 +113,7 @@ function editor_attribute(string $art = 'block', bool $mail = false): string
 function html_bereinigen(string $html, string $profil = 'block', bool $bilder = false): string
 {
     return match ($profil) {
-        'inline', 'block' => editor_bereinigen($html, $profil, $bilder),
+        'inline', 'block', 'titel' => editor_bereinigen($html, $profil, $bilder),
         'mail' => rm_html_bereinigen($html),
         default => throw new InvalidArgumentException('Unbekanntes Profil: ' . $profil),
     };
@@ -116,20 +125,30 @@ function editor_bereinigen(string $html, string $art = 'block', bool $bilder = f
     if ($html === '') {
         return '';
     }
+    if ($art === 'titel') {
+        // Trennstelle ohne Skript als &shy; eingetippt
+        $html = str_ireplace('&shy;', "\u{AD}", $html);
+    }
     if (!str_contains($html, '<')) {
         // Klartext (ohne Skript abgeschickt oder älterer Wert): Absätze und Zeilen übernehmen
-        if ($art === 'inline') {
-            return e(preg_replace('/\s+/u', ' ', $html) ?? $html);
+        if ($art === 'block') {
+            return implode('', array_map(fn($a) => '<p>' . str_replace("\n", '<br>', e(trim($a))) . '</p>', preg_split('/\n[ \t]*\n/', $html) ?: []));
         }
-        return implode('', array_map(fn($a) => '<p>' . str_replace("\n", '<br>', e(trim($a))) . '</p>', preg_split('/\n[ \t]*\n/', $html) ?: []));
+        $h = e($html);
+    } else {
+        $wurzel = rm_dom($html);
+        if ($wurzel === null) {
+            return '';
+        }
+        $h = editor_kinder($wurzel, $art, $bilder);
     }
-    $wurzel = rm_dom($html);
-    if ($wurzel === null) {
-        return '';
-    }
-    $h = editor_kinder($wurzel, $art, $bilder);
     $h = preg_replace('#(<br>\s*)+(</(p|h2|h3|li)>)#', '$2', $h) ?? $h;
-    return trim($art === 'inline' ? (preg_replace('/\s+/u', ' ', $h) ?? $h) : $h);
+    if ($art === 'titel') {
+        // Trennstellen nur mitten im Wort, nie doppelt
+        $h = preg_replace(['/\x{AD}+/u', '/(^|[\s>])\x{AD}|\x{AD}(?=$|[\s<-])/u'], ["\u{AD}", '$1'], $h) ?? $h;
+        $h = str_replace('<em></em>', '', $h);
+    }
+    return trim($art !== 'block' ? (preg_replace('/\s+/u', ' ', $h) ?? $h) : $h);
 }
 
 function editor_kinder(DOMNode $n, string $art, bool $bilder): string
@@ -154,7 +173,17 @@ function editor_knoten(DOMNode $n, string $art, bool $bilder): string
         return '';
     }
     $tag = ['b' => 'strong', 'i' => 'em', 'h1' => 'h2', 'h4' => 'h3', 'h5' => 'h3', 'h6' => 'h3', 'div' => 'p'][$tag] ?? $tag;
+    if ($art === 'titel' && $tag === 'span' && in_array('trennstelle', preg_split('/\s+/', $n->getAttribute('class')) ?: [], true)) {
+        return "\u{AD}"; // Markierung des Editors
+    }
     $innen = editor_kinder($n, $art, $bilder);
+    if ($art === 'titel') {
+        return match ($tag) {
+            'em' => trim(strip_tags($innen)) === '' ? $innen : '<em>' . strip_tags($innen) . '</em>',
+            'br', 'p', 'h2', 'h3', 'li' => ' ' . $innen . ' ',
+            default => $innen,
+        };
+    }
     if ($art === 'inline') {
         return match ($tag) {
             'strong', 'em' => trim(strip_tags($innen)) === '' ? $innen : "<$tag>$innen</$tag>",
@@ -244,26 +273,50 @@ function editor_abschnitte(string $s): array
     return $erg;
 }
 
-/* ---- Startseite einer Veranstaltung (Admin 2026-10-31) ------------------- */
+/* ---- Startseite einer Veranstaltung (E-70, AP-18) ------------------------ */
 
 /**
- * Texte der Startseite, bearbeitet unter Verwaltung → Einstellungen (eine
- * Seite für alles einer Veranstaltung). Zeile und Titel oben entstehen aus
- * den Einstellungen (Reihe · Kurzname, Name). Immer genau drei Kacheln.
- * Schlüssel => [Titel, Art: inline | block | text, Hilfe].
+ * Felder der Startseite je Veranstaltung, bearbeitet unter Verwaltung →
+ * Startseite (E-70 (1), (2)). Leer = nicht angezeigt; Ausnahmen: Zeile über
+ * dem Titel (leer: Dachmarke · Kurzname) und Titel (leer: Name der
+ * Veranstaltung). Eckdaten und Newsletter-Hinweis sind fest.
+ * Schlüssel => [Titel, Art: text | inline | block | titel, Hilfe, Abschnitt].
  */
 const START_TEXTE = [
-    'start_unter' => ['Untertitel', 'inline', 'Ein, zwei Sätze unter dem Titel.'],
-    'start_sticker' => ['Sticker', 'text', 'Schräger Aufkleber oben rechts, z. B. „Kostenlos“. Leer: kein Sticker.'],
-    'start_infos_titel' => ['Überschrift der Kacheln', 'inline', ''],
-    'start_kachel_1_titel' => ['Kachel 1 – Titel', 'text', ''],
-    'start_kachel_1_text' => ['Kachel 1 – Text', 'block', ''],
-    'start_kachel_2_titel' => ['Kachel 2 – Titel', 'text', ''],
-    'start_kachel_2_text' => ['Kachel 2 – Text', 'block', ''],
-    'start_kachel_3_titel' => ['Kachel 3 – Titel', 'text', ''],
-    'start_kachel_3_text' => ['Kachel 3 – Text', 'block', ''],
-    'start_cme' => ['Hinweis Fortbildungspunkte („Merke“)', 'block', 'Nur sichtbar, wenn ausgefüllt.'],
+    'start_kicker' => ['Zeile über dem Titel', 'text', 'Leer: Dachmarke · Kurzname.', 'kopf'],
+    'start_titel' => ['Titel', 'titel', 'Leer: Name der Veranstaltung. „Lila“ färbt das markierte Wort; ohne Markierung ist das erste Wort weiß, der Rest lila. Eine Trennstelle erlaubt die Trennung nur dort – der Titel bleibt dann größer.', 'kopf'],
+    'start_unter' => ['Untertitel', 'inline', 'Ein, zwei Sätze unter dem Titel.', 'kopf'],
+    'start_sticker' => ['Sticker', 'text', 'Schräger Aufkleber oben rechts, z. B. „Kostenlos“. Leer: kein Sticker.', 'kopf'],
+    'start_infos_kicker' => ['Zeile darüber', 'text', '', 'infos'],
+    'start_infos_titel' => ['Überschrift', 'inline', '', 'infos'],
+    'start_kachel_1_titel' => ['Kachel 1 – Titel', 'text', '', 'infos'],
+    'start_kachel_1_text' => ['Kachel 1 – Text', 'block', '', 'infos'],
+    'start_kachel_2_titel' => ['Kachel 2 – Titel', 'text', '', 'infos'],
+    'start_kachel_2_text' => ['Kachel 2 – Text', 'block', '', 'infos'],
+    'start_kachel_3_titel' => ['Kachel 3 – Titel', 'text', '', 'infos'],
+    'start_kachel_3_text' => ['Kachel 3 – Text', 'block', '', 'infos'],
+    'start_programm_kicker' => ['Zeile darüber', 'text', '', 'programm'],
+    'start_programm_titel' => ['Überschrift', 'inline', '', 'programm'],
+    'start_cme' => ['Text', 'block', 'Leer: kein Kasten.', 'merke'],
 ];
+
+/** Abschnitte der Seite „Startseite“ in der Reihenfolge der Startseite. */
+const START_ABSCHNITTE = ['kopf' => 'Kopf', 'infos' => 'Worum es geht', 'programm' => 'Programm', 'merke' => 'Merke · Fortbildungspunkte'];
+
+/** Startwerte für eine neue Veranstaltung ohne Vorlage und beim Update (Migration 22): die bisher festen Texte. */
+const START_STANDARD = ['start_infos_kicker' => 'Worum es geht', 'start_programm_kicker' => 'Programm', 'start_programm_titel' => 'Der Abend im Überblick'];
+
+/** Längste Zeile einfacher Textfelder (Sticker, Zeilen über Überschriften). */
+const START_TEXT_MAX = 120;
+
+/**
+ * Größenstufen des Titels (E-70 (4)): nach Zeichen des längsten unteilbaren
+ * Teils. Größen in site.css (Abschnitt 14), Werte im Komponentenblatt. Über
+ * der letzten Grenze passt der Teil auch in der Mindestgröße (2rem) auf dem
+ * Handy (390 px) nicht: dann darf der Browser trennen (titel-notfall).
+ */
+const START_TITEL_STUFEN = ['titel-xl' => [12, 'XL'], 'titel-l' => [16, 'L'], 'titel-m' => [21, 'M'], 'titel-s' => [PHP_INT_MAX, 'S']];
+const START_TITEL_NOTFALL = 21;
 
 /**
  * Die drei Kacheln der Startseite: [['titel' => Text, 'text' => HTML], …].
@@ -293,31 +346,219 @@ function start_text_wert(string $schluessel): string
     return inhalt($schluessel);
 }
 
-/** Startseiten-Texte aus dem Formular speichern. Gibt [geänderte Schlüssel, Fehler je Schlüssel] zurück. */
-function start_texte_speichern(array $eingabe, int $kontoId): array
+/** Einen Startseiten-Text bereinigen; null bei zu langer Eingabe. */
+function start_text_bereinigen(string $schluessel, string $roh): ?string
 {
-    $geaendert = [];
+    $art = START_TEXTE[$schluessel][1];
+    if (mb_strlen($roh) > EDITOR_MAX || ($art === 'text' && mb_strlen($roh) > START_TEXT_MAX)) {
+        return null;
+    }
+    return $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
+}
+
+/**
+ * Alle Werte der Startseite: gespeichert oder – für die Vorschau (E-70 (6))
+ * und nach einem Fehler – aus $eingabe, bereinigt wie beim Speichern.
+ */
+function start_werte(?array $eingabe = null): array
+{
+    $w = [];
+    foreach (START_TEXTE as $k => $_) {
+        $w[$k] = $eingabe === null ? start_text_wert($k) : (start_text_bereinigen($k, (string)($eingabe[$k] ?? '')) ?? '');
+    }
+    return $w;
+}
+
+/** Startseiten-Texte aus dem Formular speichern. Gibt [geänderte Schlüssel, Fehler je Schlüssel] zurück. */
+function start_texte_speichern(array $eingabe, ?int $kontoId): array
+{
+    $neu = [];
     $fehler = [];
-    foreach (START_TEXTE as $k => [$titel, $art]) {
+    foreach (START_TEXTE as $k => [$titel]) {
         if (!isset($eingabe[$k])) {
             continue;
         }
-        $roh = (string)$eingabe[$k];
-        if (mb_strlen($roh) > EDITOR_MAX || ($art === 'text' && mb_strlen($roh) > 120)) {
+        $wert = start_text_bereinigen($k, (string)$eingabe[$k]);
+        if ($wert === null) {
             $fehler[$k] = 'Zu lang.';
-            continue;
+        } else {
+            $neu[$k] = $wert;
         }
-        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
-        if ($neu !== inhalt($k)) {
-            inhalt_setzen($k, $neu, $kontoId);
+    }
+    if ($fehler !== []) {
+        return [[], $fehler];
+    }
+    $geaendert = [];
+    foreach ($neu as $k => $wert) {
+        if ($wert !== inhalt($k)) {
+            inhalt_setzen($k, $wert, $kontoId);
             $geaendert[] = $k;
         }
     }
     // Die Kacheln sind jetzt gespeichert: das frühere Feld „Infokästen“ wird nicht mehr gebraucht
-    if ($fehler === [] && isset($eingabe['start_kachel_1_titel']) && inhalt('start_infos') !== '') {
+    if (isset($eingabe['start_kachel_1_titel']) && inhalt('start_infos') !== '') {
         inhalt_setzen('start_infos', '', $kontoId);
     }
-    return [$geaendert, $fehler];
+    return [$geaendert, []];
+}
+
+/**
+ * Titel als HTML (E-70 (3), E-68): gespeicherter Titel oder, wenn leer, der
+ * Name der Veranstaltung (ohne Veranstaltung die Dachmarke, E-70 (7)). Ohne
+ * Lila-Markierung ist das erste Wort weiß und der Rest lila, ein einzelnes
+ * Wort ganz lila.
+ */
+function start_titel_html(string $titel): string
+{
+    $h = trim(html_bereinigen($titel, 'titel'));
+    if ($h === '') {
+        $name = va_keine() ? reihe_name() : (va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz());
+        $h = e(trim(preg_replace('/\s+/u', ' ', $name) ?? ''));
+    }
+    if (str_contains($h, '<em>')) {
+        return $h;
+    }
+    $teile = explode(' ', $h, 2);
+    return count($teile) === 1 ? '<em>' . $h . '</em>' : $teile[0] . ' <em>' . $teile[1] . '</em>';
+}
+
+/** Zeile über dem Titel: eigener Text, sonst Dachmarke · Kurzname (ohne Veranstaltung: keine Zeile, E-70 (7)). */
+function start_kicker_text(string $kicker): string
+{
+    if ($kicker !== '') {
+        return $kicker;
+    }
+    return va_keine() ? '' : reihe_name() . ' · ' . va_kurz();
+}
+
+/**
+ * Unteilbare Teile eines Titels (E-70 (4)): getrennt wird an Leerzeichen,
+ * nach einem Bindestrich und an Trennstellen (weiches Trennzeichen; der Teil
+ * davor bekommt dort beim Trennen einen Strich). Gibt [Teil, …] zurück.
+ */
+function start_titel_teile(string $titelHtml): array
+{
+    $text = html_entity_decode(strip_tags($titelHtml), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $teile = [];
+    foreach (preg_split('/\s+/u', trim($text)) ?: [] as $wort) {
+        foreach (preg_split('/(?<=-)|(?<=\x{AD})/u', $wort) ?: [] as $t) {
+            if ($t !== '') {
+                $teile[] = str_replace("\u{AD}", '-', $t);
+            }
+        }
+    }
+    return $teile;
+}
+
+/**
+ * Größenstufe des Titels: ['klasse' => CSS-Klassen, 'stufe' => XL|L|M|S,
+ * 'laengster' => Teil, 'notfall' => bool (der Browser darf trennen),
+ * 'trennstelle' => bool].
+ */
+function start_titel_stufe(string $titelHtml): array
+{
+    $teile = start_titel_teile($titelHtml);
+    $laengster = '';
+    foreach ($teile as $t) {
+        if (mb_strlen($t) > mb_strlen($laengster)) {
+            $laengster = $t;
+        }
+    }
+    $n = mb_strlen($laengster);
+    foreach (START_TITEL_STUFEN as $klasse => [$bis, $name]) {
+        if ($n <= $bis) {
+            break;
+        }
+    }
+    $notfall = $n > START_TITEL_NOTFALL;
+    return ['klasse' => $klasse . ($notfall ? ' titel-notfall' : ''), 'stufe' => $name, 'laengster' => $laengster, 'notfall' => $notfall,
+        'trennstelle' => str_contains(html_entity_decode($titelHtml, ENT_QUOTES | ENT_HTML5, 'UTF-8'), "\u{AD}")];
+}
+
+/** Hinweise zur Vorschau (E-70 (6)): Größenstufe, Notfall-Trennung, leere Kacheln. */
+function start_hinweise(array $w): array
+{
+    $st = start_titel_stufe(start_titel_html($w['start_titel']));
+    $h = ['stufe' => $st['stufe'], 'laengster' => $st['laengster'], 'notfall' => $st['notfall'], 'trennstelle' => $st['trennstelle'], 'leer' => []];
+    for ($i = 1; $i <= 3; $i++) {
+        if ($w["start_kachel_{$i}_titel"] === '' && $w["start_kachel_{$i}_text"] === '') {
+            $h['leer'][] = $i;
+        }
+    }
+    return $h;
+}
+
+/**
+ * Inhalt der Startseite (ohne Rahmen) aus den Werten von start_werte():
+ * Kopf mit Eckdaten, „Worum es geht“, Programm, Merke, Newsletter-Hinweis.
+ * Leere Felder und leere Abschnitte erscheinen nicht (E-70 (2)).
+ */
+function start_html(array $w): string
+{
+    $keine = va_keine();
+    $archiv = va_abgeschlossen();
+    $h = '';
+    if ($archiv) {
+        $akt = va_aktuell_id();
+        $h .= '<div class="innen"><p class="va-archiv" role="status"><strong>Diese Veranstaltung ist vorbei.</strong> Die Seite bleibt als Rückblick stehen'
+            . ($akt !== null ? ' – die aktuelle findest du auf der <a href="/">Startseite</a>' : '') . '.</p></div>';
+    }
+    if ($keine) {
+        $h .= '<div class="innen"><p class="va-archiv" role="status"><strong>Derzeit keine Veranstaltung.</strong> Die nächste kündigen wir hier und im <a href="/newsletter">Newsletter</a> an.</p></div>';
+    }
+    $titel = start_titel_html($w['start_titel']);
+    $kicker = start_kicker_text($w['start_kicker']);
+    $h .= '<div class="innen held"><div>'
+        . ($kicker !== '' ? '<p class="kicker">' . e($kicker) . '</p>' : '')
+        . '<h1 class="titel ' . start_titel_stufe($titel)['klasse'] . '">' . $titel . '</h1>'
+        . ($w['start_unter'] !== '' ? '<p class="unter">' . editor_html($w['start_unter'], 'inline') . '</p>' : '')
+        . '</div>'
+        . ($w['start_sticker'] !== '' ? '<span class="sticker hinweis frei">' . e($w['start_sticker']) . '</span>' : '');
+    $eck = $keine ? [] : va_eckdaten();
+    if ($eck !== []) {
+        $h .= '<dl class="eckdaten">' . implode('', array_map(fn($x) => '<div><dt>' . e($x[0]) . '</dt><dd>' . e($x[1]) . '</dd></div>', $eck)) . '</dl>';
+    }
+    if (!$keine && !$archiv && va_anmeldung_vor_start()) {
+        $h .= '<p class="mono meta klein anmeldung-ab">' . e('Anmeldung ab ' . datum_text(va('anmeldung_start'))) . '</p>';
+    }
+    if (anm_zeitraum() === 'offen') {
+        $h .= '<div class="held-knoepfe"><a class="knopf gruen" href="/anmelden">Jetzt anmelden</a><a class="knopf zweit" href="/deine-anmeldung">Anmeldung ändern</a></div>';
+    }
+    $h .= '</div>';
+
+    $kacheln = [];
+    for ($i = 1; $i <= 3; $i++) {
+        if ($w["start_kachel_{$i}_titel"] !== '' || $w["start_kachel_{$i}_text"] !== '') {
+            $kacheln[] = '<div class="kasten">' . ($w["start_kachel_{$i}_titel"] !== '' ? '<strong>' . e($w["start_kachel_{$i}_titel"]) . '</strong>' : '') . editor_html($w["start_kachel_{$i}_text"]) . '</div>';
+        }
+    }
+    if ($kacheln !== []) {
+        $h .= start_abschnitt_kopf_html('infos', $w['start_infos_kicker'], $w['start_infos_titel'])
+            . '<div class="drei">' . implode('', $kacheln) . '</div></div></section>';
+    }
+    if (!$keine) {
+        $h .= start_abschnitt_kopf_html('programm', $w['start_programm_kicker'], $w['start_programm_titel'], ' id="programm"')
+            . programm_html(programm_veroeffentlicht()['punkte'] ?? []) . '</div></section>';
+    }
+    if ($w['start_cme'] !== '') {
+        $h .= '<section class="abschnitt"><div class="innen"><div class="merke"><p class="kicker">Merke · Fortbildungspunkte</p>' . editor_html($w['start_cme']) . '</div></div></section>';
+    }
+    return $h . '<section class="abschnitt"><div class="innen">'
+        . '<p class="nl-hinweis"><span class="kicker">Newsletter</span> Termine und Neuigkeiten per Mail – kostenlos, jederzeit abbestellbar. <a href="/newsletter">Newsletter bestellen</a></p>'
+        . '</div></section>';
+}
+
+/** Anfang eines Abschnitts der Startseite mit Zeile und Überschrift (beide nur, wenn ausgefüllt). */
+function start_abschnitt_kopf_html(string $id, string $kicker, string $titel, string $attr = ''): string
+{
+    $h = '<section class="abschnitt"' . $attr . ($titel !== '' ? ' aria-labelledby="' . $id . '-titel"' : '') . '><div class="innen">';
+    if ($kicker !== '') {
+        $h .= '<p class="kicker">' . e($kicker) . '</p>';
+    }
+    if ($titel !== '') {
+        $h .= '<h2 class="zwischen" id="' . $id . '-titel">' . editor_html($titel, 'inline') . '</h2>';
+    }
+    return $h;
 }
 
 /** Geänderte Texte protokollieren; Startseiten-Texte gehören zur Veranstaltung, die übrigen nicht. */

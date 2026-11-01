@@ -240,11 +240,6 @@ details > summary.knopf { cursor: pointer; }
 .formular label { font-weight: 700; margin-top: 8px; }
 .formular input, .formular textarea, .formular select { font: 400 1rem var(--f-text); min-height: var(--h-feld); padding: 10px 12px; border: 1px solid var(--meta); background: var(--flaeche); color: var(--fg); border-radius: 0; width: 100%; }
 .formular button { margin-top: 14px; justify-self: start; }
-.einstellungen { display: grid; gap: 18px; }
-.einstellungen .gruppe { margin: 0; min-width: 0; }
-.einstellungen legend { padding: 0; margin-bottom: 4px; font-size: 1.25rem; }
-.einstellungen .felder { display: grid; gap: 14px; margin-top: 12px; }
-@media (min-width: 760px) { .einstellungen .felder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .feld { display: grid; gap: 6px; align-content: start; min-width: 0; grid-template-columns: minmax(0, 1fr); }
 .feld.breit { grid-column: 1 / -1; }
 .feld label { font-weight: 700; font-size: .95rem; }
@@ -254,7 +249,6 @@ details > summary.knopf { cursor: pointer; }
 .feld input[type=checkbox], .feld input[type=radio] { width: 18px; height: 18px; min-height: 0; padding: 0; flex: none; accent-color: var(--lila); }
 .feld [aria-invalid="true"] { border-color: var(--rot); border-width: 2px; }
 .feld .hilfe { margin: 0; font-size: .85rem; color: var(--meta); }
-.einstellungen .knopf { justify-self: start; }
 .formular .knopf { margin-top: 14px; justify-self: start; }
 .form { display: grid; gap: 20px; max-width: 760px; }
 fieldset.feld { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -392,11 +386,6 @@ select { contain: paint; max-width: 100%; }
 .feldfehler { margin: 0; font-size: .88rem; color: var(--rot); font-weight: 700; }
 .warteliste-hinweis { margin-bottom: 16px; border-left-color: var(--rot); }
 /* Einstellungen: Sperre (Rückmeldung 2026-10-30) */
-.sperre { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 12px 16px; margin: 0 0 16px; border: 2px solid var(--linie); border-radius: var(--radius-band); background: var(--flaeche); }
-.sperre.offen { border-color: var(--gruen); background: color-mix(in srgb, var(--gruen) 12%, transparent); }
-.sperre-text { flex: 1 1 260px; }
-.sperre-symbol { color: var(--meta); flex: none; }
-.sperre.offen .sperre-symbol { color: var(--gruen); }
 .nl-hinweis { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin: 0; padding: 12px 16px; border: 1px dashed var(--linie); }
 .nl-hinweis a { color: var(--akz); }
 .va-hinweis { margin-top: -4px; }
@@ -625,7 +614,19 @@ dialog.dlg::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); 
 
 /* ==== 14. Seiten: Startseite und Programm ============================= */
 .held { position: relative; padding-top: 56px; padding-bottom: 40px; }
-.held .titel { font-size: clamp(2.7rem, 12vw, 8.6rem); }
+/* Titel der Startseite (E-70 (4), AP-18): Größe vor Trennung. Der Server ordnet den Titel nach dem längsten
+   unteilbaren Teil einer Stufe zu (START_TITEL_STUFEN in inhalt_lib); getrennt wird nur an Trennstellen.
+   Mindestgröße 2rem; passt ein Teil auch so nicht (titel-notfall), darf der Browser trennen. */
+/* overflow-wrap: anywhere statt break-word: zählt auch für die Mindestbreite (sonst sprengt ein langes Wort in
+   WebKit, das unter Linux kein Deutsch trennt, Flex- und Grid-Container); getrennt wird damit nur, wenn nichts anderes passt */
+.held .titel, .held .titel.titel-xl { font-size: clamp(2.7rem, 12vw, 8.6rem); hyphens: manual; -webkit-hyphens: manual; overflow-wrap: anywhere; }
+.held .titel.titel-l { font-size: clamp(2.2rem, 10vw, 7rem); }
+.held .titel.titel-m { font-size: clamp(2rem, 7.6vw, 5.4rem); }
+.held .titel.titel-s { font-size: clamp(2rem, 6vw, 4.2rem); }
+.held .titel.titel-notfall { hyphens: auto; -webkit-hyphens: auto; }
+/* Vorschau der Startseite im iframe (E-70 (6)): Links und Knöpfe ohne Wirkung */
+.vorschau-seite a, .vorschau-seite button, .vorschau-seite summary, .vorschau-seite input, .vorschau-seite select { pointer-events: none; }
+.vorschau-seite .sprung { display: none; }
 .held .unter { font-size: 1.2rem; max-width: 40ch; margin: 14px 0 0; }
 .held .sticker.frei { position: absolute; right: 20px; top: 26px; }
 @media (min-width: 760px) { .held .sticker.frei { right: 40px; top: 10px; font-size: 1.5rem; } }
@@ -867,6 +868,10 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 /* Ein Editor überall (E-54): einzeilige Felder, Status */
 .schreibfeld-zeile { min-height: 0; padding: 9px 12px; }
 .schreibfeld-zeile p { margin: 0; display: inline; }
+/* Titel der Startseite (AP-18): Schrift des Titels, Lila markiert, Trennstelle als grüner Strich */
+.schreibfeld-titel { font-family: var(--f-titel); text-transform: uppercase; font-size: 1.35rem; letter-spacing: .01em; }
+.schreibfeld-titel em, .schreibfeld-titel i { font-style: normal; color: var(--lila-600); background: color-mix(in srgb, var(--lila) 22%, transparent); }
+.schreibfeld .trennstelle { display: inline-block; width: 3px; height: 1.05em; margin: 0 1px; vertical-align: -2px; background: var(--gruen); }
 .schreibfeld ol { padding-left: 22px; }
 .schreibfeld ul { padding-left: 22px; }
 .text-bild[data-breite="50"] { width: 50%; }
@@ -880,6 +885,56 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 /* Komponentenblatt /team/komponenten (AP-17, E-64): Beispiel und Aufruf darunter */
 .kb-muster { display: grid; gap: 12px; padding: 16px; border: 1px dashed var(--linie); background: var(--bg); }
 .kb-code { margin: 6px 0 24px; padding: 10px 12px; font: .78rem/1.5 var(--f-mono); color: var(--meta); background: var(--flaeche); border: 1px solid var(--linie); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Verwaltung → Startseite (AP-18, E-70): Formular links, Vorschau rechts mitlaufend; schmaler darunter, aufklappbar */
+.st-raster { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+.st-gruppe { border: 0; padding: 0; margin: 0; min-width: 0; }
+.st-fest { margin: 0; }
+.st-knoepfe { justify-content: flex-end; }
+.st-vorschau > summary { display: flex; align-items: center; min-height: var(--h-knopf); padding: 0 16px; background: var(--akz); color: var(--auf-akz); font: 700 1rem var(--f-zwischen); text-transform: uppercase; letter-spacing: var(--etikett-abstand); cursor: pointer; }
+.st-vorschau[open] > summary { margin-bottom: 12px; }
+@media (min-width: 1000px) {
+    .st-raster { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "felder vorschau" "knoepfe vorschau"; align-items: start; }
+    .st-felder { grid-area: felder; }
+    .st-knoepfe { grid-area: knoepfe; }
+    .st-vorschau, .st-ohne-js { grid-area: vorschau; }
+    .st-vorschau { position: sticky; top: 84px; }
+    .st-vorschau > summary { display: none; }
+}
+.geraet-wahl { display: flex; gap: 4px; padding: 4px; background: var(--flaeche); border: 1px solid var(--linie); }
+.geraet-wahl button { flex: 1; min-height: var(--h-knopf); border: 0; background: transparent; color: var(--meta); font: 700 .9rem var(--f-zwischen); text-transform: uppercase; letter-spacing: var(--etikett-abstand); cursor: pointer; }
+.geraet-wahl button[aria-pressed="true"] { background: var(--akz); color: var(--auf-akz); }
+.vorschau-hinweise { display: grid; gap: 8px; }
+.vorschau-hinweise .meldung { margin: 0; }
+.vorschau-hinweise:empty { display: none; }
+.vorschau-rahmen { position: relative; overflow: hidden; height: 70vh; min-height: 420px; background: color-mix(in srgb, var(--nachtblau) 55%, var(--schwarz)); border: 1px solid var(--linie); }
+@media (min-width: 1000px) { .vorschau-rahmen { height: calc(100vh - 290px); } }
+.vorschau-frame { position: absolute; top: 0; left: 0; border: 0; background: var(--bg); transform-origin: 0 0; }
+/* Einstellungen als Übersicht (AP-18, E-70 (8), Variante B): Kacheln, die offene über zwei Spalten */
+.einst-raster { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; grid-auto-flow: row dense; }
+@media (min-width: 760px) { .einst-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .einst-kachel:has(> .einst-auf[open]) { grid-column: 1 / -1; } }
+@media (min-width: 1000px) { .einst-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); } .einst-kachel:has(> .einst-auf[open]) { grid-column: span 2; } }
+.einst-kachel { min-width: 0; }
+.einst-kachel:has(> .einst-auf[open]), .einst-start { border-color: var(--akz); }
+.einst-kachel:has(> .einst-auf[open]) > .einst-zus { display: none; }
+.einst-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 10px; }
+.einst-kopf .klein-titel { margin: 0; }
+summary.einst-kopf { list-style: none; cursor: pointer; }
+summary.einst-kopf::-webkit-details-marker { display: none; }
+.einst-offen { display: none; }
+.einst-auf[open] .einst-zu { display: none; }
+.einst-auf[open] .einst-offen { display: inline; }
+.einst-zus { margin: 12px 0 0; }
+.liste-def.einst-zus > div { grid-template-columns: minmax(64px, 96px) minmax(0, 1fr); padding: 8px 0; }
+.einst-form { margin-top: 12px; }
+.einst-form .felder { display: grid; gap: 14px; }
+@media (min-width: 760px) { .einst-form .felder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.einst-knoepfe { justify-content: flex-end; }
+.einst-mini { margin: 14px 0 10px; padding: 14px; background: var(--bg); border: 1px solid var(--linie); }
+.einst-mini p { margin: 0; }
+.einst-mini .titel { font-size: 1.5rem; hyphens: manual; -webkit-hyphens: manual; overflow-wrap: anywhere; }
+.einst-mini .kicker { font-size: .66rem; }
+.einst-mini .meta { margin-top: 6px; }
 
 /* ==== 17. Fuß ========================================================= */
 .fuss { border-top: 1px solid var(--linie); margin-top: 56px; }

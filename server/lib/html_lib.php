@@ -21,11 +21,14 @@ function e(mixed $wert): string
  *       'nav' => false für Seiten ohne Navigation (Installer, Fehler),
  *       'konto' => angemeldetes Konto (zeigt Name und „Ausloggen“, E-40/E-42),
  *       'skripte' => Liste eigener Skripte unter /assets/,
- *       'meldung' => true: Flash-Meldung aus der Umleitung unter dem Kopf ausgeben.
+ *       'meldung' => true: Flash-Meldung aus der Umleitung unter dem Kopf ausgeben,
+ *       'vorschau' => Hinweise (Liste): Vorschau der Startseite im iframe (E-70 (6)) –
+ *                     einbettbar, Navigation wie für Besucherinnen und Besucher, Links ohne Wirkung.
  */
 function seite_kopf(string $titel, array $opt = []): void
 {
-    kopfzeilen_seite();
+    $vorschau = isset($opt['vorschau']);
+    kopfzeilen_seite($vorschau);
     $akzent = ($opt['akzent'] ?? 'lila') === 'rot' ? 'rot' : 'lila';
     $nav = $opt['nav'] ?? true;
     $aktiv = (string)($opt['aktiv'] ?? '');
@@ -36,7 +39,7 @@ function seite_kopf(string $titel, array $opt = []): void
         // (Rückmeldung 2026-10-31).
         $konto = $opt['konto'] ?? null;
         // Auch mit übergebener Anmeldung (Meine Anmeldung): Team-Bereich in der Leiste (Rückmeldung 2026-10-31)
-        $wer = ich();
+        $wer = $vorschau ? ['team' => null, 'anmeldung' => null, 'konto' => null] : ich();
         $team = is_array($konto) ? $konto : $wer['team'];
         $tn = $opt['teilnehmer'] ?? $wer['anmeldung'];
         $tk = $wer['konto'];
@@ -59,7 +62,7 @@ function seite_kopf(string $titel, array $opt = []): void
         . (session_status() === PHP_SESSION_ACTIVE ? '<meta name="csrf" content="' . e(csrf_token()) . '">' : '')
         // basis.js zuerst (AP-17, V-42): window.ws, Bestätigungsdialoge, Kopfleiste
         . implode('', array_map(fn($js) => '<script src="/assets/' . e($js) . '" defer></script>', array_values(array_unique(array_merge(['basis.js'], $opt['skripte'] ?? [])))))
-        . '</head><body class="akzent-' . $akzent . '">'
+        . '</head><body class="akzent-' . $akzent . ($vorschau ? ' vorschau-seite" data-hinweise="' . e(json_encode($opt['vorschau'], JSON_UNESCAPED_UNICODE)) : '') . '">'
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'
         . '<a href="/" aria-label="Zur Startseite">'
@@ -69,7 +72,8 @@ function seite_kopf(string $titel, array $opt = []): void
     if ($nav) {
         $a = fn(string $href, string $text, string $pfad, string $klasse = '') => '<li><a' . ($klasse !== '' ? ' class="' . $klasse . '"' : '') . ' href="' . e($href) . '"'
             . ($aktiv === $pfad ? ' aria-current="page"' : '') . '>' . e($text) . '</a></li>';
-        $liste = $a('/#programm', 'Programm', '/');
+        // Ohne aktuelle Veranstaltung gibt es kein Programm (E-70 (7))
+        $liste = va_tabellen_da() && va_aktuell_id() === null ? '' : $a('/#programm', 'Programm', '/');
         // Rückmeldung 2026-10-30: erkannt „Meine Anmeldung“, sonst der grüne Knopf „Anmelden“ zur Einstiegsseite (E-42)
         $liste .= $erkannt ? $a('/deine-anmeldung', 'Meine Anmeldung', '/deine-anmeldung') : $a('/deine-anmeldung', 'Anmelden', in_array($aktiv, ['/anmelden', '/deine-anmeldung'], true) ? $aktiv : '-', 'nav-anmelden');
         if (is_array($team)) {
@@ -167,7 +171,7 @@ const TEAM_BEREICHE = [
     'Programm' => [['/team/programm', 'Programm'], ['/team/dozierende', 'Dozierende']],
     'Mailings' => [['/team/mailings', 'Mailings']],
     'Statistik' => [['/team/statistik', 'Statistik']],
-    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/protokoll', 'Protokoll']],
+    'Verwaltung' => [['/team/einstellungen', 'Einstellungen'], ['/team/startseite', 'Startseite'], ['/team/protokoll', 'Protokoll']],
     'Betrieb' => [['/team/status', 'Status', true], ['/team/veranstaltungen', 'Veranstaltungen', true], ['/team/konten', 'Team-Konten', true], ['/team/newsletter', 'Newsletter', true], ['/team/texte', 'Texte', true], ['/team/daten', 'Betrieb', true], ['/team/komponenten', 'Komponenten', true]],
 ];
 

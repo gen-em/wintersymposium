@@ -143,6 +143,7 @@ async function pruefeBedienung(p, engine, breite, name) {
     const label = ((await sum.textContent()) || '').trim().slice(0, 30);
     // Schon offen (z. B. für das Bildschirmfoto aufgeklappt): erst schließen, am Ende wieder öffnen
     const warOffen = await d.evaluate(e => e.open);
+    if (warOffen) await sum.click();
     await sum.click();
     const offen = await d.evaluate(e => e.open);
     const inhaltSichtbar = await d.evaluate(e => [...e.children].some(c => c.tagName !== 'SUMMARY' && c.getBoundingClientRect().height > 0));
@@ -539,7 +540,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
           ['.team-nav a:has-text("Programm")', '/team/programm', 'team-programm'], ['.team-unter a:has-text("Dozierende")', '/team/dozierende', 'team-dozierende'],
           ['.team-nav a:has-text("Mailings")', '/team/mailings', 'team-mailings'],
           ['.team-nav a:has-text("Statistik")', '/team/statistik', 'team-statistik'],
-          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
+          ['.team-nav a:has-text("Verwaltung")', '/team/einstellungen', 'team-einstellungen'], ['.team-unter a:has-text("Startseite")', '/team/startseite', 'team-startseite'], ['.team-unter a:has-text("Protokoll")', '/team/protokoll', 'team-protokoll'],
           // AP-12: Reiter Betrieb (nur BetreiberInnen)
           ['.team-nav a:has-text("Betrieb")', '/team/status', 'team-status'], ['.team-unter a:has-text("Veranstaltungen")', '/team/veranstaltungen', 'team-veranstaltungen'], ['.team-unter a:has-text("Team-Konten")', '/team/konten', 'team-konten'], ['.team-unter a:has-text("Newsletter")', '/team/newsletter', 'team-newsletter'], ['.team-unter a:has-text("Texte")', '/team/texte', 'team-texte'], ['.team-unter a:has-text("Betrieb")', '/team/daten', 'team-daten'],
           // AP-17 Unterpunkt 6: Komponentenblatt (Regressionstest für das CSS)
@@ -823,14 +824,59 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       await p.keyboard.press('Escape');
       await p.setViewportSize({ width: 1440, height: 900 });
 
-      // Startseiten-Texte bei den Einstellungen (Admin 2026-10-31): Werkzeugleiste
-      await p.goto(basis + '/team/einstellungen?bearbeiten=1');
-      notiere(engine, 'desktop-breit', 'team-einstellungen', 'Startseite bei den Einstellungen: drei Kacheln, kein Titelfeld', await p.isVisible('#startseite #t-start_kachel_3_titel') && await p.isVisible('#startseite #t-start_kachel_3_text-feld') && await p.locator('#t-start_titel, #t-start_kicker').count() === 0);
-      await p.locator('#startseite').scrollIntoViewIfNeeded();
-      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-einstellungen-startseite.png`) });
+      // AP-18: Seite „Startseite“ mit Vorschau (E-70)
+      const vorschauH1 = () => p.frameLocator('iframe.vorschau-frame').locator('.held .titel');
+      const vorschauNeu = async (tun) => {
+        const geladen = p.waitForEvent('requestfinished', r => r.url().endsWith('/team/startseite/vorschau'));
+        await tun();
+        await geladen;
+        await p.waitForTimeout(250);
+      };
+      await vorschauNeu(() => p.goto(basis + '/team/startseite'));
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Vorschau rechts, Desktop vorausgewählt, Titel mit Trennstelle (Beispieldaten)',
+        await p.isVisible('.vorschau-frame') && await p.getAttribute('.geraet-wahl [data-geraet=desktop]', 'aria-pressed') === 'true'
+        && (await vorschauH1().getAttribute('class')).includes('titel-xl') && await p.locator('#start_titel-feld .trennstelle').count() === 1);
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Hinweise: Größe des Titels, leere Kachel 3', (await p.textContent('#st-hinweise')).includes('Größe XL') && (await p.textContent('#st-hinweise')).includes('Kachel 3'));
+      await p.click('.geraet-wahl [data-geraet=handy]');
+      await p.waitForTimeout(300);
+      const handyBreite = await p.frameLocator('iframe.vorschau-frame').locator('body').evaluate(b => b.ownerDocument.defaultView.innerWidth);
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Gerätewahl Handy: 390 px, keine Warnung', handyBreite === 390 && await p.locator('#st-hinweise .meldung.fehler').count() === 0, String(handyBreite));
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-startseite-vorschau-handy.png`) });
+      // Titel tippen: Vorschau folgt; Lila und Trennstelle setzen und entfernen
+      const titel = p.locator('#start_titel-feld');
+      const leiste = p.locator('.feld:has(#start_titel) .werkzeug');
+      await vorschauNeu(async () => {
+        await titel.click();
+        await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+        await p.keyboard.type('Kurzer Testtitel');
+      });
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Vorschau folgt dem Tippen', (await vorschauH1().textContent()).trim() === 'Kurzer Testtitel');
+      await titel.press('End');
+      for (let i = 0; i < 9; i++) await p.keyboard.press('Shift+ArrowLeft');
+      await leiste.locator('[data-befehl=lila]').click();
+      const lilaAn = await titel.locator('em, i').count() === 1 && await leiste.locator('[data-befehl=lila]').getAttribute('aria-pressed') === 'true';
+      await leiste.locator('[data-befehl=lila]').click();
+      const lilaAus = await titel.locator('em, i').count() === 0;
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Knopf „Lila“ setzt und entfernt', lilaAn && lilaAus, await titel.innerHTML());
+      await titel.press('End');
+      for (let i = 0; i < 5; i++) await p.keyboard.press('ArrowLeft');
+      await leiste.locator('[data-befehl=trennstelle]').click();
+      const trennAn = await titel.locator('.trennstelle').count() === 1 && await leiste.locator('[data-befehl=trennstelle]').getAttribute('aria-pressed') === 'true';
+      await leiste.locator('[data-befehl=trennstelle]').click();
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Knopf „Trennstelle“ setzt und entfernt', trennAn && await titel.locator('.trennstelle').count() === 0, await titel.innerHTML());
+      // Wort ohne Trennstelle, das auf dem Handy nicht passt: Warnung
+      await vorschauNeu(async () => {
+        await titel.click();
+        await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+        await p.keyboard.type('Donaudampfschifffahrtsgesellschaftskapitän');
+      });
+      notiere(engine, 'desktop-breit', 'team-startseite', 'zu langes Wort: Warnung über der Vorschau', await p.locator('#st-hinweise .meldung.fehler').count() === 1);
+      await p.screenshot({ path: path.join(AUS, `${engine}-desktop-breit-startseite-warnung.png`) });
+      await Promise.all([p.waitForNavigation(), p.click('.st-knoepfe a:has-text("Verwerfen")')]);
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Verwerfen: gespeicherter Titel bleibt', await p.locator('#start_titel-feld .trennstelle').count() === 1);
       // Texte: derselbe Editor; Fett schaltet an und aus, nummerierte Liste (Rückmeldung 2026-10-30 (2))
-      const cme = p.locator('#t-start_cme-feld');
-      const cmeLeiste = p.locator('.feld:has(#t-start_cme) .werkzeug');
+      const cme = p.locator('#start_cme-feld');
+      const cmeLeiste = p.locator('.feld:has(#start_cme) .werkzeug');
       await cme.click();
       await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
       await p.keyboard.type('Wort');
@@ -842,25 +888,40 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       notiere(engine, 'desktop-breit', 'team-texte', 'Editor: Fett schaltet an und wieder aus', fettAn && fettAus, await cme.innerHTML());
       await cmeLeiste.locator('[data-befehl=nliste]').click();
       notiere(engine, 'desktop-breit', 'team-texte', 'Editor: nummerierte Liste', await cme.locator('ol li').count() === 1, await cme.innerHTML());
-      notiere(engine, 'desktop-breit', 'team-texte', 'Einzeilige Felder mit Editor (Untertitel)', await p.isVisible('#t-start_unter-feld'));
-
-      // Einstellungen speichern: Fehler wird markiert, gültige Werte erscheinen auf der Startseite
+      notiere(engine, 'desktop-breit', 'team-texte', 'Einzeilige Felder mit Editor (Untertitel)', await p.isVisible('#start_unter-feld'));
+      // Handy: Vorschau unter dem Formular, aufklappbar, Handy vorausgewählt (O-49)
       await p.setViewportSize({ width: 390, height: 844 });
+      await vorschauNeu(() => p.goto(basis + '/team/startseite'));
+      notiere(engine, 'handy', 'team-startseite', 'Vorschau unter dem Formular, Handy vorausgewählt', await p.isVisible('.st-vorschau > summary') && await p.getAttribute('.geraet-wahl [data-geraet=handy]', 'aria-pressed') === 'true'
+        && (await p.locator('.st-vorschau').boundingBox()).y > (await p.locator('.st-felder').boundingBox()).y);
+      await p.locator('.st-vorschau').scrollIntoViewIfNeeded();
+      await p.screenshot({ path: path.join(AUS, `${engine}-handy-startseite-vorschau.png`) });
+
+      // Einstellungen als Übersicht (AP-18, Variante B): Kachel aufklappen, Fehler, Speichern je Kachel
       await p.goto(basis + '/team/einstellungen');
-      notiere(engine, 'handy', 'team-einstellungen', 'zuerst gesperrt', await p.isDisabled('#veranstaltung_ende') && !await p.isVisible('form.einstellungen button[type=submit]'));
-      await Promise.all([p.waitForNavigation(), p.click('.sperre a:has-text("Entsperren")')]);
+      notiere(engine, 'handy', 'team-einstellungen', 'Kacheln zu, Felder verborgen', !await p.isVisible('#veranstaltung_ende') && await p.locator('.einst-auf[open]').count() === 0);
+      await p.click('#veranstaltung summary');
+      await p.click('#bausteine summary');
+      notiere(engine, 'handy', 'team-einstellungen', 'eine Kachel zur Zeit offen', await p.locator('.einst-auf[open]').count() === 1 && await p.isVisible('#mit_essen'));
+      await p.click('#veranstaltung summary');
       await pruefeSeite(p, fehler, engine, 'handy', 'team-einstellungen-offen', null);
+      // Die Bedienungsprüfung klappt jede Kachel einmal auf (eine zur Zeit): Grunddaten wieder öffnen
+      if (!await p.locator('#veranstaltung details').evaluate(d => d.open)) await p.click('#veranstaltung summary');
       await p.fill('#veranstaltung_ende', '17:00');
-      await p.click('form.einstellungen button[type=submit]');
+      await p.click('#veranstaltung button[type=submit]');
       await p.waitForLoadState('load');
-      notiere(engine, 'handy', 'team-einstellungen', 'Fehler markiert, Eingabe bleibt', await p.isVisible('#veranstaltung_ende[aria-invalid="true"]') && await p.inputValue('#veranstaltung_ende') === '17:00');
+      notiere(engine, 'handy', 'team-einstellungen', 'Fehler markiert, Kachel offen, Eingabe bleibt', await p.isVisible('#veranstaltung_ende[aria-invalid="true"]') && await p.inputValue('#veranstaltung_ende') === '17:00');
       await pruefeSeite(p, fehler, engine, 'handy', 'team-einstellungen-fehler', null);
       await p.fill('#veranstaltung_ende', '22:00');
       await p.fill('#veranstaltung_ort', 'Ort ' + engine);
-      await p.selectOption('#workshop_pflicht', 'pflicht');
-      await p.click('form.einstellungen button[type=submit]');
+      await p.click('#veranstaltung button[type=submit]');
       await p.waitForLoadState('load');
-      notiere(engine, 'handy', 'team-einstellungen', 'gespeichert, Auswahl übernommen', (await p.textContent('body')).includes('Gespeichert') && await p.inputValue('#workshop_pflicht') === 'pflicht');
+      notiere(engine, 'handy', 'team-einstellungen', 'gespeichert, Zusammenfassung zeigt den Ort', (await p.textContent('body')).includes('Gespeichert') && (await p.textContent('#veranstaltung .einst-zus')).includes('Ort ' + engine));
+      await p.click('#anmeldung summary');
+      await p.selectOption('#workshop_pflicht', 'pflicht');
+      await p.click('#anmeldung button[type=submit]');
+      await p.waitForLoadState('load');
+      notiere(engine, 'handy', 'team-einstellungen', 'Kachel Anmeldung: Auswahl übernommen', (await p.textContent('#anmeldung .einst-zus')).includes('Pflicht'));
       await p.goto(basis + '/');
       notiere(engine, 'handy', 'start', 'Startseite zeigt neuen Ort', (await p.textContent('.eckdaten')).includes('Ort ' + engine));
 

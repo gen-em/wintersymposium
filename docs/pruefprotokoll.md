@@ -38,7 +38,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-15 | Status-Seite unter Betrieb (E-65) | auf Staging abgenommen | lokal und Staging T-282 bis T-287 | – |
 | AP-16 | Review-Behebung 2: restliche Bugs und kleine Sicherheitspunkte (E-63) | umgesetzt, Staging offen | lokal T-288 bis T-296 | Staging (siehe unten); T-296 Proxy-Prüfung durch den Admin |
 | AP-17 | Vereinheitlichung (E-69) | umgesetzt (Teil 1 in 0.27.0, Teil 2 in 0.28.0), Staging offen | lokal T-297 bis T-308 | Staging Teil 1 und Teil 2 (siehe unten) |
-| AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | geplant | – | T-309 bis T-316 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
+| AP-18 | Startseite mit Vorschau, Einstellungen als Übersicht (E-70) | umgesetzt, Staging offen | lokal T-309 bis T-316 | Staging (siehe unten) |
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | geplant | – | T-317 bis T-325 (ein Test je Unterpunkt, bei der Umsetzung anlegen) |
 
 ## Wie geprüft wird
@@ -828,7 +828,35 @@ Ziel: Alles sieht aus und funktioniert wie vorher, bis auf die Punkte im CHANGEL
 
 ## AP-18 Startseite mit Vorschau, Einstellungen als Übersicht (E-70)
 
-Geplant; T-309 bis T-316 (ein Test je Unterpunkt) werden bei der Umsetzung angelegt.
+### Geplante Prüfungen
+
+```yaml
+- {id: T-309, ap: AP-18, was: "Unterpunkt 1: Felder der Startseite je Veranstaltung", wie: "lauf.php (19_startseite): Zeile leer = Dachmarke · Kurzname; leere Kachel, leere Felder und Abschnitt „Worum es geht“ ohne Kachel fehlen; Programm ohne Überschrift, Eckdaten und Newsletter-Hinweis fest; Formularwerte bereinigt wie beim Speichern; zu langer Text speichert nichts; Migration 22 (Zeile/Titel leer, feste Texte als Werte); neue Veranstaltung ohne Vorlage mit Startwerten. http_tests: Startseite zeigt eigene Programm-Überschrift (T-313)", status: "lokal bestanden"}
+- {id: T-310, ap: AP-18, was: "Unterpunkt 2: Titel mit Lila und Trennstelle", wie: "lauf.php: Profil titel entfernt fett, Link, Skript, Überschrift; i → em ohne Verschachtelung; span.trennstelle und &shy; → U+00AD, nie am Wortrand oder doppelt; Regel ohne Markierung (erstes Wort weiß, ein Wort ganz lila), leer = Name. Browser (3 Engines): „Lila“ und „Trennstelle“ setzen und entfernen", status: "lokal bestanden"}
+- {id: T-311, ap: AP-18, was: "Unterpunkt 3: Größenstufen des Titels", wie: "lauf.php: XL/L/M/S nach dem längsten Teil, Trennstelle hält XL, über 21 Zeichen titel-notfall, Klasse am h1. Browser: Startseite und Vorschau in 390/768/1024/1440 px ohne seitliches Scrollen; Trennung an der Trennstelle (Info), überlanges Wort → Warnung; Messung in Chromium, Firefox, WebKit nachgeprüft", status: "lokal bestanden"}
+- {id: T-312, ap: AP-18, was: "Unterpunkt 4: ohne aktuelle Veranstaltung", wie: "lauf.php und http_tests (ap18): Titel = Dachmarke (auch geänderte), keine Zeile, kein Programm-Abschnitt, kein „Programm“ in der Navigation; Browser: Seite start-ohne-va", status: "lokal bestanden"}
+- {id: T-313, ap: AP-18, was: "Unterpunkt 5: Seite „Startseite“", wie: "http_tests (ap18): Unterreiter, Abschnitte und Titel-Editor; Speichern wirkt auf die Startseite; Fehler markiert ohne Speichern; Einstellungen ohne Startseiten-Felder mit Kachel und Mini-Vorschau; abgeschlossene Veranstaltung nur lesen, Speichern abgewiesen. Browser: Reiter, alle Breiten", status: "lokal bestanden"}
+- {id: T-314, ap: AP-18, was: "Unterpunkt 6: Vorschau", wie: "http_tests: zeigt Formularwerte, speichert nichts; SAMEORIGIN, frame-ancestors 'self', no-store (andere Seiten weiter DENY/'none'); Hinweise am body; Navigation wie für Gäste; ohne CSRF 403; GET → zurück; ohne Login und als Teilnehmende keine Vorschau (303 zum Einloggen). Browser: Desktop vorausgewählt, Gerätewahl Handy = 390 px, Vorschau folgt dem Tippen, Hinweise, Verwerfen; Handy: Vorschau darunter, Handy vorausgewählt", status: "lokal bestanden"}
+- {id: T-315, ap: AP-18, was: "Unterpunkt 7: Einstellungen als Übersicht", wie: "lauf.php: Kachel prüft nur ihre Gruppe, speichert nur sie, Prüfung über Gruppen hinweg, Zusammenfassungen. http_tests: alle Kacheln zu, Speichern einer Kachel ändert nur deren Werte (Protokoll), Fehler öffnet nur diese Kachel mit Eingabe, abgeschlossen ohne Bearbeiten. Browser: eine Kachel zur Zeit, Fehler, Speichern, Auswahl übernommen", status: "lokal bestanden"}
+- {id: T-316, ap: AP-18, was: "Unterpunkt 8: Abschluss", wie: "Beispieldatensatz (Trennstelle, leere Kachel 3); lauf.php ohne Fehler; Browser-Durchlauf Stufe 3; Fotos angesehen", status: "lokal bestanden"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-309 bis T-316 | 2026-11-01 | claude-dev | lokal bestanden | 0.29.0 AP-18: `lauf.php` 1095 ok, 0 Fehler in 2:58 min (vorher 1047; neu: Bereich `startseite` mit T-309 bis T-312, T-315, T-316 und HTTP-Bereich `ap18`); Browser-Durchlauf Stufe 3 (Ende des AP, gemeinsame Teile: Navigation, Kopfzeilen, Editor, CSS): 9110 ok, 0 Fehler in Chromium, Firefox und WebKit × 4 Breiten (vorher 8570), 15 min; Fotos der Startseite, der Seite „Startseite“ (Desktop mit Vorschau, Handy mit Vorschau darunter, Warnung), der Einstellungen (zu, offen, Fehler) und des Komponentenblatts in allen Engines angesehen | Im Browser gefunden und behoben: „Lila“ ließ sich nicht entfernen (Lila ist im Editor nicht kursiv), Trennstelle bekam in Chromium Stil und Umbruch, die Messung der Trennung meldete in Chromium fälschlich eine Warnung; im Volllauf: Kopie einer Veranstaltung zeigte den alten Titel; erster Stufe-3-Lauf: WebKit-Überstand der Titel-Beispiele im Komponentenblatt (overflow-wrap: anywhere) und ein einmaliger Abbruch beim Login mit Wiederherstellungscode in WebKit, während parallel lauf.php lief – im zweiten Lauf ohne Befund (Konzept AP-18 probleme) |
+
+### Noch zu prüfen
+
+Nach dem Merge auf Staging. Ziel: Startseite und Einstellungen sehen aus wie im Mockup; die Startseite sieht nach dem Update aus wie vorher.
+
+1. **Migration 22:** Team-Bereich → Betrieb → Status. Erwartet: Datenbank „Schema = Soll“, alles grün.
+2. **Startseite unverändert:** die öffentliche Startseite öffnen. Erwartet: wie vor dem Update (Zeile „Allgäu Akut · …“, Titel aus dem Namen, Kacheln, „Programm / Der Abend im Überblick“).
+3. **Seite „Startseite“:** Verwaltung → Startseite. Im Titel ein Wort markieren → „Lila“; in ein langes Wort klicken → „Trennstelle“. Erwartet: Die Vorschau rechts zeigt es nach kurzer Zeit; „Handy“ wählen → schmale Ansicht mit Trennung an deiner Stelle und dem Hinweis „gewollt“. Dann „Verwerfen“ (oder speichern, wenn es dir gefällt).
+4. **Am Handy:** dieselbe Seite. Erwartet: Vorschau unter dem Formular, „Handy“ vorausgewählt, aufklappbar.
+5. **Einstellungen:** Verwaltung → Einstellungen. Erwartet: Kacheln mit dem Stand; „Bearbeiten“ öffnet eine Kachel, Speichern ändert nur sie. Kachel „Startseite“ führt zur neuen Seite.
+6. **Ohne aktuelle Veranstaltung** (nur wenn es passt, z. B. auf Staging mit einer Test-Veranstaltung): Erwartet: Titel „Allgäu Akut“ ohne Zeile darüber, kein „Programm“ oben. **Bitte bestätigen**, dass die Zeile über dem Titel dann fehlen soll (E-70 (7) sagt „Zeile und Titel aus der Dachmarke“; beides gleich wäre doppelt).
 
 ## AP-19 Veranstaltungsreihen und Newsletter (E-71)
 

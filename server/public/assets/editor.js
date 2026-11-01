@@ -7,9 +7,13 @@
  *
  * Attribute am Textfeld:
  *   data-editor="block"   Absätze, Überschrift, Listen, Links (Standard)
- *   data-editor="inline"  eine Zeile: fett, kursiv, Link (Titel, Untertitel …)
+ *   data-editor="inline"  eine Zeile: fett, kursiv, Link (Untertitel, Überschriften …)
+ *   data-editor="titel"   Titel der Startseite (AP-18, E-70 (3), (4)): eine Zeile, nur
+ *                         „Lila“ (markiertes Wort, gespeichert als em) und „Trennstelle“
+ *                         (weiches Trennzeichen; im Feld ein grüner Strich, im Textfeld
+ *                         als <span class="trennstelle">, der Server macht daraus &shy;)
  *   data-werkzeug="…"     Knöpfe, durch Leerzeichen getrennt, aus:
- *                         fett kursiv titel liste nliste link bild knopf html
+ *                         fett kursiv titel liste nliste link bild knopf html lila trennstelle
  *   data-bild-url="…"     Hochladen für „Bild“ (Antwort JSON {url, breite, hoehe})
  *   data-platzhalter='{"{vorname}": "Vorname", …}'  Knöpfe für Platzhalter
  *   data-knopf-ziel="{link}"  Vorgabe-Ziel für „Knopf“
@@ -27,9 +31,12 @@
         link: ["Link", "Link einfügen"],
         bild: ["Bild", "Bild hochladen und einfügen"],
         knopf: ["Knopf", "Knopf (Link als Schaltfläche) einfügen"],
-        html: ["&lt;/&gt; HTML", "HTML-Quelltext bearbeiten"]
+        html: ["&lt;/&gt; HTML", "HTML-Quelltext bearbeiten"],
+        lila: ["Lila", "Markiertes Wort lila färben (Strg+I)"],
+        trennstelle: ["Trennstelle", "Trennstelle an der Schreibmarke setzen oder entfernen"]
     };
-    var STANDARD = { block: "fett kursiv titel liste nliste link", inline: "fett kursiv link" };
+    var STANDARD = { block: "fett kursiv titel liste nliste link", inline: "fett kursiv link", titel: "lila trennstelle" };
+    var TRENN = "<span class=\"trennstelle\" contenteditable=\"false\" title=\"Trennstelle\"></span>"; // beim Laden
     var nr = 0;
 
     function esc(t) {
@@ -40,7 +47,8 @@
         if (ta.getAttribute("data-editor-fertig")) { return; }
         ta.setAttribute("data-editor-fertig", "1");
         nr += 1;
-        var art = ta.getAttribute("data-editor") === "inline" ? "inline" : "block";
+        var art = ["inline", "titel"].indexOf(ta.getAttribute("data-editor")) !== -1 ? ta.getAttribute("data-editor") : "block";
+        var zeile = art !== "block";
         var werkzeug = (ta.getAttribute("data-werkzeug") || STANDARD[art]).split(/\s+/);
         var bildUrl = ta.getAttribute("data-bild-url");
         var platzhalter = {};
@@ -58,7 +66,7 @@
         werkzeug.forEach(function (w) {
             if (w === "|") { html += '<span class="trenn"></span>'; return; }
             if (!KNOPF[w] || (w === "bild" && !bildUrl)) { return; }
-            var toggle = ["fett", "kursiv", "titel", "liste", "nliste", "html"].indexOf(w) !== -1;
+            var toggle = ["fett", "kursiv", "titel", "liste", "nliste", "html", "lila", "trennstelle"].indexOf(w) !== -1;
             html += '<button type="button" data-befehl="' + w + '" title="' + KNOPF[w][1] + '"' + (toggle ? ' aria-pressed="false"' : "") + ">" + KNOPF[w][0] + "</button>";
         });
         var phs = Object.keys(platzhalter);
@@ -70,10 +78,10 @@
 
         // Schreibfeld
         var ed = document.createElement("div");
-        ed.className = "schreibfeld" + (art === "inline" ? " schreibfeld-zeile" : "");
+        ed.className = "schreibfeld" + (zeile ? " schreibfeld-zeile" : "") + (art === "titel" ? " schreibfeld-titel" : "");
         ed.contentEditable = "true";
         ed.setAttribute("role", "textbox");
-        ed.setAttribute("aria-multiline", art === "inline" ? "false" : "true");
+        ed.setAttribute("aria-multiline", zeile ? "false" : "true");
         ed.id = (ta.id || "editor-" + nr) + "-feld";
         if (label) {
             if (!label.id) { label.id = ed.id + "-label"; }
@@ -85,9 +93,13 @@
         var start = ta.value.trim();
         if (start !== "" && start.indexOf("<") === -1) {
             // Klartext: Absätze übernehmen
-            start = art === "inline" ? esc(start) : start.split(/\n\s*\n/).map(function (a) { return "<p>" + esc(a).replace(/\n/g, "<br>") + "</p>"; }).join("");
+            start = zeile ? esc(start) : start.split(/\n\s*\n/).map(function (a) { return "<p>" + esc(a).replace(/\n/g, "<br>") + "</p>"; }).join("");
         }
-        ed.innerHTML = start !== "" ? start : (art === "inline" ? "" : "<p><br></p>");
+        if (art === "titel") {
+            // Trennstellen sichtbar machen (gespeichert als weiches Trennzeichen)
+            start = start.replace(/&shy;|\u00AD/g, TRENN);
+        }
+        ed.innerHTML = start !== "" ? start : (zeile ? "" : "<p><br></p>");
 
         var status = document.createElement("p");
         status.className = "meta klein editor-status";
@@ -162,6 +174,66 @@
             setz("liste", document.queryCommandState("insertUnorderedList"));
             setz("nliste", document.queryCommandState("insertOrderedList"));
             setz("titel", String(document.queryCommandValue("formatBlock")).toLowerCase().replace(/[<>]/g, "") === "h2");
+            setz("lila", lilaBeiMarke().length > 0);
+            setz("trennstelle", trennstelleBeiMarke() !== null);
+        }
+        // Lila-Markierungen (em/i), die die Auswahl berühren. Lila ist im Editor nicht kursiv,
+        // deshalb hilft queryCommandState("italic") hier nicht.
+        function lilaBeiMarke() {
+            var s = window.getSelection();
+            if (!s || s.rangeCount === 0 || !ed.contains(s.anchorNode)) { return []; }
+            var r = s.getRangeAt(0);
+            var treffer = [];
+            ed.querySelectorAll("em, i").forEach(function (x) { if (r.intersectsNode(x)) { treffer.push(x); } });
+            var n = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode;
+            var hoch = n.closest ? n.closest("em, i") : null;
+            if (hoch && ed.contains(hoch) && treffer.indexOf(hoch) === -1) { treffer.push(hoch); }
+            return treffer;
+        }
+        // Direkt über die Auswahl: insertHTML hängt in Chromium Stile und einen Umbruch an
+        function trennstelleEinfuegen() {
+            var s = window.getSelection();
+            if (!s || s.rangeCount === 0 || !ed.contains(s.anchorNode)) { return; }
+            var r = s.getRangeAt(0);
+            r.deleteContents();
+            var t = document.createElement("span");
+            t.className = "trennstelle";
+            t.contentEditable = "false";
+            t.title = "Trennstelle";
+            r.insertNode(t);
+            r.setStartAfter(t);
+            r.collapse(true);
+            s.removeAllRanges();
+            s.addRange(r);
+            gemerkt = r.cloneRange();
+        }
+        function lilaUmschalten() {
+            var weg = lilaBeiMarke();
+            if (weg.length === 0) {
+                document.execCommand("italic", false, null);
+                return;
+            }
+            weg.forEach(function (x) {
+                while (x.firstChild) { x.parentNode.insertBefore(x.firstChild, x); }
+                x.parentNode.removeChild(x);
+            });
+            ed.normalize();
+        }
+        // Trennstelle direkt vor oder hinter der Schreibmarke (oder null)
+        function trennstelleBeiMarke() {
+            var s = window.getSelection();
+            if (!s || s.rangeCount === 0 || !s.isCollapsed || !ed.contains(s.anchorNode)) { return null; }
+            var n = s.anchorNode, o = s.anchorOffset, kand = [];
+            if (n.nodeType === 3) {
+                if (o === 0) { kand.push(n.previousSibling); }
+                if (o === n.length) { kand.push(n.nextSibling); }
+            } else {
+                kand.push(n.childNodes[o - 1], n.childNodes[o]);
+            }
+            for (var i = 0; i < kand.length; i++) {
+                if (kand[i] && kand[i].nodeType === 1 && kand[i].classList.contains("trennstelle")) { return kand[i]; }
+            }
+            return null;
         }
         document.addEventListener("selectionchange", function () {
             var s = window.getSelection();
@@ -171,9 +243,18 @@
         ed.addEventListener("mouseup", auswahlMerken);
         ed.addEventListener("blur", auswahlMerken);
 
-        if (art === "inline") {
-            // Eine Zeile: Enter nicht als Absatz, Einfügen nur als Text
-            ed.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); } });
+        if (zeile) {
+            // Eine Zeile: Enter nicht als Absatz, Einfügen nur als Text; im Titel kein Fett und Unterstrichen
+            ed.addEventListener("keydown", function (ev) {
+                var taste = String(ev.key).toLowerCase();
+                if (ev.key === "Enter" || (art === "titel" && (ev.ctrlKey || ev.metaKey) && (taste === "b" || taste === "u"))) { ev.preventDefault(); }
+                if (art === "titel" && (ev.ctrlKey || ev.metaKey) && taste === "i") {
+                    ev.preventDefault();
+                    lilaUmschalten();
+                    sync();
+                    zustand();
+                }
+            });
             ed.addEventListener("paste", function (ev) {
                 var t = (ev.clipboardData || window.clipboardData).getData("text");
                 ev.preventDefault();
@@ -269,6 +350,17 @@
                 document.execCommand("bold", false, null);
             } else if (befehl === "kursiv") {
                 document.execCommand("italic", false, null);
+            } else if (befehl === "lila") {
+                lilaUmschalten();
+            } else if (befehl === "trennstelle") {
+                var t = trennstelleBeiMarke();
+                if (t) {
+                    t.parentNode.removeChild(t);
+                    melden("Trennstelle entfernt.");
+                } else {
+                    trennstelleEinfuegen();
+                    melden("Trennstelle gesetzt: Das Wort darf nur hier getrennt werden.");
+                }
             } else if (befehl === "titel") {
                 var block = String(document.queryCommandValue("formatBlock")).toLowerCase().replace(/[<>]/g, "");
                 document.execCommand("formatBlock", false, block === "h2" ? "<p>" : "<h2>");
