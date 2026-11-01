@@ -892,6 +892,7 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
       // Staging zurücksetzen (Admin 2026-11-01): Dialog mit Code-Feld, hier nur öffnen und schließen
       await p.click('button:has-text("Staging zurücksetzen")');
       await p.waitForSelector('dialog[open]');
+      await p.waitForTimeout(400);
       notiere(engine, 'handy', 'team-daten', 'Zurücksetzen fragt im roten Dialog nach dem Code', await p.isVisible('dialog.dlg-rot[open] input[name=totp]') && await p.isVisible('dialog[open] button:has-text("Ja, zurücksetzen")'));
       await p.screenshot({ path: path.join(AUS, `${engine}-handy-dialog-zuruecksetzen.png`) });
       await p.keyboard.press('Escape');

@@ -940,7 +940,7 @@ Nach dem Merge auf Staging.
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
-| T-332, T-333 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1183 ok, 0 Fehler; Gegenprobe mit altem `feld()` (WS_HTTP=ap19) → 3 Fehler wie erwartet | Ursache vorher live auf Staging nachgestellt (Chromium, Testkonto BetreiberIn): POST `gruppe=reihe&reihe_id=Wintersymposium&zielgruppe=beide`, Meldung „Nichts geändert. Reihe: einzeln.“ – nicht browserabhängig, sondern abhängig von der Reihenfolge der Reihen-Nummern |
+| T-332, T-333 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1183 ok, 0 Fehler; Gegenprobe mit altem `feld()` (WS_HTTP=ap19) → 3 Fehler wie erwartet; Browser **Stufe 3** (gemeinsame Teile: `feld()` in allen Formularen) `node tools/browser/durchlauf.js` → 9374 ok, 0 Fehler (3 Engines × 4 Breiten); danach nur das Foto des neuen Dialogs nachgebessert (400 ms Warten wie beim Dialog „Testdaten laden“) und gezielt nachgeprüft: `WS_STUFE=2 WS_ENGINES=webkit WS_SEITEN=team-daten` → 238 ok, 0 Fehler; Fotos angesehen (Dialog „Staging zurücksetzen“ rot, mit Code-Feld, Handy) | Ursache vorher live auf Staging nachgestellt (Chromium, Testkonto BetreiberIn): POST `gruppe=reihe&reihe_id=Wintersymposium&zielgruppe=beide`, Meldung „Nichts geändert. Reihe: einzeln.“ – nicht browserabhängig, sondern abhängig von der Reihenfolge der Reihen-Nummern |
 
 ### Noch zu prüfen
 
