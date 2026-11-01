@@ -75,7 +75,16 @@
         window.setTimeout(zeigen, 80);
     }
 
+    // Firefox verwirft eine Formular-Navigation, wenn die vorige ins selbe iframe noch lädt:
+    // dann nicht neu absenden, sondern nach dem Laden mit dem neuesten Stand (Browser-Lauf nach AP-19)
+    var laedt = 0; // Zeitpunkt des laufenden Ladens, 0 = keins
+    var nochmal = false;
     function laden() {
+        if (laedt && Date.now() - laedt < 8000) {
+            nochmal = true;
+            return;
+        }
+        laedt = Date.now();
         var doc = frame.contentDocument;
         scrollY = doc && doc.defaultView ? doc.defaultView.scrollY : 0;
         var aktion = form.getAttribute("action");
@@ -156,6 +165,12 @@
     }
 
     frame.addEventListener("load", function () {
+        laedt = 0;
+        if (nochmal) {
+            nochmal = false;
+            laden();
+            return;
+        }
         var doc = frame.contentDocument;
         if (doc && doc.defaultView && scrollY) { doc.defaultView.scrollTo(0, scrollY); }
         zeigen();

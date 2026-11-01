@@ -882,7 +882,9 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         await p.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
         await p.keyboard.type('Kurzer Testtitel');
       });
-      notiere(engine, 'desktop-breit', 'team-startseite', 'Vorschau folgt dem Tippen', (await vorschauH1().textContent()).trim() === 'Kurzer Testtitel');
+      // Bei Abweichung festhalten, was das iframe zeigt (statt abzubrechen)
+      const vorschauText = await vorschauH1().textContent({ timeout: 8000 }).catch(async () => 'kein Titel; iframe: ' + await p.evaluate(() => { const f = document.querySelector('iframe.vorschau-frame'); const d = f && f.contentDocument; return d ? (d.location.href + ' | ' + (d.body ? d.body.innerText.slice(0, 160) : 'ohne body')) : 'kein Dokument'; }));
+      notiere(engine, 'desktop-breit', 'team-startseite', 'Vorschau folgt dem Tippen', vorschauText.trim() === 'Kurzer Testtitel', vorschauText.trim());
       await titel.press('End');
       for (let i = 0; i < 9; i++) await p.keyboard.press('Shift+ArrowLeft');
       await leiste.locator('[data-befehl=lila]').click();
