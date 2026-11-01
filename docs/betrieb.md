@@ -14,11 +14,19 @@ Diese Anleitung enthält keine Zugangsdaten, Kontonamen oder Hosting-Interna (R-
 server/                 → wird in den Zielordner der Umgebung übertragen
   public/               → Webroot (die Domain zeigt hierher, E-34)
     index.php           → einziger Einstieg, leitet alle Seiten
-    assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/,
+    assets/             → site.css (Erscheinungsbild), fonts/ (WOFF2 + Lizenzen), logo/, icons/,
+                          basis.js (auf jeder Seite: window.ws mit csrf, post, get, melden,
+                          dialog; Bestätigungsdialoge und stehende Kopfleiste),
                           qr.js und vendor/qrcode.js (QR-Code für den zweiten Faktor, MIT),
                           anmelden.js, pow.js und pow-worker.js (Anmeldung, Spamschutz),
-                          status.js (Kopieren auf der Status-Seite)
-  lib/                  → Bibliotheken (über HTTP nicht erreichbar)
+                          weitere Seitenskripte (editor, mailings, passkey, programm,
+                          programm-team, status, zweitfaktor) – alle im selben Stil (AP-17)
+  routen.php            → Pfade und Seiten (ROUTEN); auch die Testwerkzeuge lesen sie
+  lib/                  → Bibliotheken (über HTTP nicht erreichbar), je Präfix eine Lib
+                          (Konzept 5a K-h), z. B. login_lib (Einloggen), anmeldung_lib
+                          (Anmeldungen), link_lib (alle Einmal-Links in einer Tabelle),
+                          kontext_lib (Zustand der Anfrage: ctx), bild_lib (Upload und
+                          Auslieferung von Bildern und Dateien), zweitfaktor_lib, zertifikat_lib
   seiten/               → Seiten (über HTTP nicht erreichbar)
   pdf/                  → Schriften (TTF) und Logo für die PDF-Exporte (E-56)
   daten/                → wegwerfdomains.txt (Spamschutz, Quelle: disposable-email-domains)
@@ -32,7 +40,8 @@ server/                 → wird in den Zielordner der Umgebung übertragen
                           Fotos der Dozierenden, sicherungen/ mit den Sicherungen,
                           mails/ nur im Test-Modus 'datei');
                           wird nie ausgeliefert
-tools/tests/            → Testlauf (lokal und im Prüf-Workflow)
+tools/tests/            → Testlauf (lokal und im Prüf-Workflow); lauf/ mit einem Bereich je
+                          Datei, jeder beginnt mit frischer DB und dem Beispieldatensatz
 tools/browser/          → Browser-Durchlauf (R-12)
 ```
 
@@ -111,6 +120,8 @@ php tools/tests/lauf.php
 ```
 
 Ohne Datenbank laufen nur die Teile ohne DB. Mit einer **eigenen, leeren** Testdatenbank (wird geleert!) die Umgebungsvariablen `WS_TEST_DB_HOST`, `WS_TEST_DB_PORT`, `WS_TEST_DB_NAME`, `WS_TEST_DB_USER`, `WS_TEST_DB_PASS` setzen. Der Workflow „Prüfung“ macht das bei jedem PR mit MySQL 8.4.
+
+**Aufbau der Tests (AP-17, V-50):** `lauf.php` prüft zuerst alles ohne Datenbank (Formate, Helfer, Grep-Tests), dann die Bereiche in `tools/tests/lauf/NN_name.php` (je eine Funktion `test_name()`) und zum Schluss den HTTP-Teil (`http_tests.php`). Jeder Bereich beginnt mit `test_frisch()` aus `tools/tests/basis.php`: leere Datenbank, alle Migrationen, Installation (BetreiberIn und Admin), Test-Beispieldatensatz – kein Bereich hängt vom Zustand eines anderen ab. Einzelne Bereiche: `WS_TESTS=anmeldung,team php tools/tests/lauf.php` (`http` für den HTTP-Teil). Daten, die ein Test braucht, kommen als Funktion in den Beispieldatensatz; selbst angelegt wird nur, wo das Anlegen geprüft wird (Grep-Test mit begründeten Ausnahmen).
 
 **Stufen** (R-12, E-62):
 
