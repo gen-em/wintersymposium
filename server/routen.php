@@ -37,6 +37,7 @@ const ROUTEN = [
     '/team/export' => 'team_export',
     '/team/texte' => 'team_texte',
     '/team/startseite' => 'team_startseite',
+    '/team/startseite/vorschau' => 'team_startseite_vorschau',
     '/team/texte/bild' => 'team_texte_bild',
     '/team/protokoll' => 'team_protokoll',
     '/team/mailings' => 'team_mailings',

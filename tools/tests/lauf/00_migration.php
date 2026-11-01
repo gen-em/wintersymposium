@@ -20,10 +20,10 @@ function test_migration(): void
     db_ausfuehren("INSERT INTO team_konto (id, email, name, passwort_hash, rolle, aktiv, erstellt_am, geaendert_am) VALUES (7, 'alt@example.org', 'Alt', 'h', 'betreiber', 1, ?, ?)", [db_jetzt(), db_jetzt()]);
     // Einstellung der Veranstaltung und Startseiten-Text im alten Stand (vor E-58)
     db_ausfuehren("INSERT INTO einstellung (schluessel, wert, geaendert_am) VALUES ('veranstaltung_ort', 'Alter Ort', ?)", [db_jetzt()]);
-    db_ausfuehren("UPDATE inhalt SET text = 'Alter Titel' WHERE schluessel = 'start_titel'");
+    db_ausfuehren("UPDATE inhalt SET text = 'Alter Untertitel' WHERE schluessel = 'start_unter'");
     $neu = migration_anwenden();
     pruefe(va_zeile(1)['status'] === 'aktuell' && va_id() === 1 && va('veranstaltung_ort') === 'Alter Ort' && db_wert("SELECT COUNT(*) FROM einstellung WHERE schluessel = 'veranstaltung_ort'") == 0
-        && inhalt('start_titel') === 'Alter Titel' && inhalt('impressum') === '', 'Migration 15: alles wird Veranstaltung 1 (aktuell), Einstellungen und Startseiten-Texte umgezogen');
+        && inhalt('start_unter') === 'Alter Untertitel' && inhalt('impressum') === '', 'Migration 15: alles wird Veranstaltung 1 (aktuell), Einstellungen und Startseiten-Texte umgezogen');
     pruefe($neu === array_values(array_filter(array_keys(migration_katalog()), fn($n) => $n > 3)), 'restliche Schritte angewendet');
     $alt = db_zeile('SELECT id, rolle, totp_seit FROM konto WHERE email = ?', ['alt@example.org']);
     pruefe($alt !== null && (int)$alt['id'] === 7 && $alt['rolle'] === 'betreiber' && $alt['totp_seit'] === null, 'Team-Konto mit gleicher id in konto übernommen, ohne zweiten Faktor');

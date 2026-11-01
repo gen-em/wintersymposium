@@ -4,28 +4,22 @@ declare(strict_types=1);
 /*
  * Texte (AP-5, E-49; pflegbare Texte aus AP-2): /team/texte – Impressum und
  * Datenschutz, gemeinsam für alle Veranstaltungen (Betrieb, nur Betreiber).
- * Die Texte der Startseite stehen seit 2026-10-31 bei den Einstellungen der
- * Veranstaltung (team_einstellungen.php, START_TEXTE). Derselbe Editor wie bei
+ * Die Texte der Startseite stehen je Veranstaltung unter Verwaltung →
+ * Startseite (team_startseite.php, START_TEXTE). Derselbe Editor wie bei
  * den Mailings (E-54), gespeichert als bereinigtes HTML (inhalt_lib.php).
  */
 
-$textSeite = ($TEXTE_SEITE ?? '') === '/team/startseite' ? '/team/startseite' : '/team/texte';
-$startseite = $textSeite === '/team/startseite';
-$konto = $startseite ? team_tor() : team_tor(['betreiber']);
-if ($startseite) {
-    team_schreibschutz('/team/startseite'); // abgeschlossene Veranstaltung: nur lesen (E-58)
-}
-$betreiber = $konto['rolle'] === 'betreiber';
-// Schlüssel => [Titel, Art (inline: eine Zeile mit fett/kursiv/Link; block: ganzer Text; text: ohne Auszeichnung), nur Betreiber]
+$konto = team_tor(['betreiber']);
+// Schlüssel => Titel (ganzer Text mit Editor)
 const TEXTE_KATALOG = [
-    'impressum' => ['Impressum', 'block', true],
-    'datenschutz' => ['Datenschutzerklärung', 'block', true],
+    'impressum' => 'Impressum',
+    'datenschutz' => 'Datenschutzerklärung',
 ];
 $fehler = [];
 if (ist_post()) {
     $geaendert = [];
-    foreach (TEXTE_KATALOG as $k => [$titel, $art, $nurBetreiber]) {
-        if (!isset($_POST[$k]) || $nurBetreiber === $startseite) {
+    foreach (TEXTE_KATALOG as $k => $titel) {
+        if (!isset($_POST[$k])) {
             continue;
         }
         $roh = post_text($k);
@@ -33,7 +27,7 @@ if (ist_post()) {
             $fehler[] = $titel . ': zu lang.';
             continue;
         }
-        $neu = $art === 'text' ? trim(preg_replace('/\s+/u', ' ', $roh) ?? '') : html_bereinigen($roh, $art, $art === 'block');
+        $neu = html_bereinigen($roh, 'block', true);
         if ($neu !== inhalt($k)) {
             inhalt_setzen($k, $neu, (int)$konto['id']);
             $geaendert[] = $k;
@@ -41,27 +35,25 @@ if (ist_post()) {
     }
     if ($fehler === []) {
         if ($geaendert !== []) {
-            inhalt_protokollieren('Geändert', $geaendert, (int)$konto['id'], $startseite);
+            inhalt_protokollieren('Geändert', $geaendert, (int)$konto['id'], false);
         }
-        fertig('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.', $textSeite);
+        fertig('ok', $geaendert === [] ? 'Nichts geändert.' : 'Gespeichert. Die Seiten zeigen den neuen Text sofort.', '/team/texte');
     }
 }
-team_seite_kopf($konto, $startseite ? 'Startseite' : 'Texte', $textSeite);
+team_seite_kopf($konto, 'Texte', '/team/texte');
 ?>
 <?= fehler_html($fehler) ?>
 <p class="meta">Derselbe Editor wie bei den Mailings: Knöpfe für fett, kursiv, Zwischenüberschrift, Listen, Link, Bild, Knopf und HTML-Quelltext; sie zeigen an, was an der Schreibmarke gilt, und schalten es an und aus. Ohne JavaScript bleibt ein einfaches Textfeld.</p>
-<p class="meta klein"><?= $startseite ? 'Texte der Startseite dieser Veranstaltung.' : 'Impressum und Datenschutz gelten für alle Veranstaltungen.' ?></p>
-<form class="form breit-form" method="post" action="<?= e($textSeite) ?>">
+<p class="meta klein">Impressum und Datenschutz gelten für alle Veranstaltungen. Die Texte der Startseite stehen je Veranstaltung unter Verwaltung → <a href="/team/startseite">Startseite</a>.</p>
+<form class="form breit-form" method="post" action="/team/texte">
     <?= csrf_feld() ?>
-    <?php foreach (TEXTE_KATALOG as $k => [$titel, $art, $nurBetreiber]): if ($nurBetreiber === $startseite) continue; ?>
+    <?php foreach (TEXTE_KATALOG as $k => $titel): ?>
     <div class="feld"><label for="t-<?= e($k) ?>"><?= e($titel) ?></label>
-        <?php if ($art === 'text'): ?><input id="t-<?= e($k) ?>" name="<?= e($k) ?>" type="text" maxlength="300" value="<?= e(inhalt($k)) ?>">
-        <?php elseif ($art === 'inline'): ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="2"<?= editor_attribute('inline') ?>><?= e(inhalt($k)) ?></textarea>
-        <?php else: ?><textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="10"<?= editor_attribute() ?>><?= e(inhalt($k)) ?></textarea><?php endif; ?>
+        <textarea id="t-<?= e($k) ?>" name="<?= e($k) ?>" rows="10"<?= editor_attribute() ?>><?= e(inhalt($k)) ?></textarea>
         <?php if ($k === 'datenschutz'): ?><p class="hilfe">Muss Anmeldung, Konten, Mails und Löschfristen beschreiben (betrieb.md, Abschnitt Anmeldung).</p><?php endif; ?>
     </div>
     <?php endforeach; ?>
-    <div class="aktionen"><button class="knopf" type="submit">Speichern</button><?php if ($startseite): ?><a class="knopf zweit" href="/<?= e(va_zeile()['kuerzel'] ?? '') ?>" target="_blank" rel="noopener">Startseite ansehen</a><?php else: ?><a class="knopf zweit" href="/datenschutz" target="_blank" rel="noopener">Datenschutz ansehen</a><?php endif; ?></div>
+    <div class="aktionen"><button class="knopf" type="submit">Speichern</button><a class="knopf zweit" href="/datenschutz" target="_blank" rel="noopener">Datenschutz ansehen</a></div>
 </form>
 <?php
 team_seite_fuss();

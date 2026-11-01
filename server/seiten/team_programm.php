@@ -225,9 +225,8 @@ if ($st['offen']):
                 'hilfe' => 'Auch im Plan: den Punkt auf die Mitte eines Blocks ziehen.']) ?>
             <?= feld('titel', 'Titel', $feldOpt('titel', 'pg-titel', ['pflicht' => true, 'attr' => ['maxlength' => 160]])) ?>
             <?= feld('untertitel', 'Untertitel', ['rahmen_attr' => ['data-fuer' => implode(' ', ['vortrag', 'fall', 'workshop'])]] + $feldOpt('untertitel', 'pg-untertitel', ['attr' => ['maxlength' => 200]])) ?>
-            <?php // Editor-Attribute wie editor_attribute() (liefert nur einen String, feld() braucht ein Array) ?>
             <?= feld('beschreibung', 'Beschreibung', ['rahmen_attr' => ['data-fuer' => implode(' ', ['vortrag', 'fall', 'workshop', 'station', 'pause'])]] + $feldOpt('beschreibung', 'pg-beschreibung', ['typ' => 'textarea', 'hilfe' => 'Erscheint im Popup.',
-                'attr' => ['rows' => 4, 'data-editor' => 'block', 'data-werkzeug' => EDITOR_LEISTE['block'], 'data-bild-url' => '/team/texte/bild']])) ?>
+                'attr' => ['rows' => 4] + editor_attr()])) ?>
             <div class="paar"<?= $fuer(['vortrag', 'fall', 'station', 'block', 'pause']) ?>>
                 <?= feld('beginn', 'Beginn', $feldOpt('beginn', 'pg-beginn', ['typ' => 'time', 'attr' => ['step' => 60]])) ?>
                 <?= feld('ende', 'Ende', $feldOpt('ende', 'pg-ende', ['typ' => 'time', 'attr' => ['step' => 60]])) ?>

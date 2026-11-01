@@ -18,15 +18,19 @@ declare(strict_types=1);
 /** Arten von Veranstaltungen (E-58): beeinflussen nur Texte, das Grundmuster ist für alle gleich. */
 const VA_ARTEN = ['symposium' => 'Symposium', 'vortrag' => 'Vortragsabend', 'journalclub' => 'Journal Club', 'workshop' => 'Workshop-Abend', 'fall' => 'Fallbesprechung', 'sonstige' => 'Sonstige'];
 
+/**
+ * Gruppen der Einstellungen, je eine Kachel in der Übersicht (E-70 (8),
+ * Variante B); Reihenfolge wie dort. [Titel, Hilfe].
+ */
 const VA_GRUPPEN = [
-    'veranstaltung' => ['Veranstaltung', 'Erscheint in den Eckdaten auf der Startseite.'],
+    'veranstaltung' => ['Grunddaten', 'Erscheint in den Eckdaten auf der Startseite.'],
     'bausteine' => ['Bausteine', 'Was diese Veranstaltung braucht. Workshops gibt es, sobald das Programm welche enthält (E-58).'],
-    'cme' => ['Fortbildungspunkte (CME)', 'Die Anzeige erscheint auf der Startseite; Punkte, Kategorie, Kammer und Nummer stehen auf der Teilnahmebescheinigung (AP-10).'],
-    'zertifikat' => ['Teilnahmebescheinigung', 'Steht auf dem Zertifikat (AP-10, E-57). Die Unterschrift als Bild lädst du unter „Teilnahme“ hoch.'],
     'anmeldung' => ['Anmeldung', 'Zeitraum und Regeln des Anmeldeformulars.'],
-    'nachruecken' => ['Warteliste und Nachrücken', 'Ein frei gewordener Platz wird der ersten Person der Warteliste angeboten (E-19).'],
-    'stichtage' => ['Stichtage für Teilnehmende', 'Bis einschließlich dieses Tages können Teilnehmende selbst ändern; danach nur noch das Team (E-31). Leer: bis zur Veranstaltung.'],
-    'listen' => ['Auswahllisten', 'Je Zeile ein Eintrag; die Reihenfolge gilt im Formular.'],
+    'nachruecken' => ['Warteliste', 'Ein frei gewordener Platz wird der ersten Person der Warteliste angeboten (E-19).'],
+    'stichtage' => ['Stichtage', 'Bis einschließlich dieses Tages können Teilnehmende selbst ändern; danach nur noch das Team (E-31). Leer: bis zur Veranstaltung.'],
+    'cme' => ['Fortbildungspunkte', 'Die Anzeige erscheint auf der Startseite; Punkte, Kategorie, Kammer und Nummer stehen auf der Teilnahmebescheinigung (AP-10).'],
+    'zertifikat' => ['Bescheinigung', 'Steht auf der Teilnahmebescheinigung (AP-10, E-57). Die Unterschrift als Bild lädst du unter „Teilnahme“ hoch.'],
+    'listen' => ['Berufsgruppen', 'Je Zeile ein Eintrag; die Reihenfolge gilt im Formular.'],
 ];
 
 /**
@@ -74,17 +78,6 @@ function va_an(string $schluessel): bool
 }
 
 /** Kurzname der Veranstaltung für Mails und Kopfzeilen. */
-/**
- * Titel der Startseite aus dem Namen der Veranstaltung (Admin 2026-10-31):
- * ein Wort ganz lila, sonst das erste Wort weiß und der Rest lila.
- */
-function va_titel_html(): string
-{
-    $name = trim(preg_replace('/\s+/u', ' ', va('veranstaltung_name') !== '' ? va('veranstaltung_name') : va_kurz()) ?? '');
-    $teile = explode(' ', $name, 2);
-    return count($teile) === 1 ? '<em>' . e($name) . '</em>' : e($teile[0]) . ' <em>' . e($teile[1]) . '</em>';
-}
-
 function va_kurz(): string
 {
     return va('veranstaltung_kurz') !== '' ? va('veranstaltung_kurz') : 'Wintersymposium';
@@ -272,10 +265,18 @@ function va_anlegen(string $kuerzel, string $name, ?int $vorlage, ?int $kontoId)
         if ($vorlage !== null) {
             db_ausfuehren('INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) SELECT ?, schluessel, wert, ? FROM va_einstellung WHERE veranstaltung_id = ?', [$id, db_jetzt(), $vorlage]);
             db_ausfuehren('INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, text, ?, NULL FROM inhalt WHERE veranstaltung_id = ?', [$id, db_jetzt(), $vorlage]);
+            // Eigener Titel der Startseite nur bei gleichem Namen; sonst zeigt sie den neuen Namen (E-70 (2))
+            if (trim($name) !== va_von($vorlage, 'veranstaltung_name')) {
+                db_ausfuehren("UPDATE inhalt SET text = '' WHERE veranstaltung_id = ? AND schluessel = 'start_titel'", [$id]);
+            }
             programm_kopieren($vorlage, $id);
         } else {
-            // Startwerte der Texte von der aktuellen Veranstaltung, damit die Startseite nicht leer ist
+            // Schlüssel der Texte von der aktuellen Veranstaltung (leer)
             db_ausfuehren("INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am, geaendert_von) SELECT ?, schluessel, '', ?, NULL FROM inhalt WHERE veranstaltung_id = ?", [$id, db_jetzt(), va_aktuell_id() ?? db_zahl('SELECT MIN(id) FROM veranstaltung WHERE id <> ?', [$id])]);
+            // Zeilen und Überschriften der Abschnitte wie bisher fest (E-70 (2): leer hieße „nicht angezeigt“)
+            foreach (START_STANDARD as $k => $text) {
+                db_ausfuehren('INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE text = VALUES(text)', [$id, $k, $text, db_jetzt()]);
+            }
         }
         db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'veranstaltung_name', ?, ?)
             ON DUPLICATE KEY UPDATE wert = VALUES(wert)", [$id, $name, db_jetzt()]);
@@ -484,6 +485,30 @@ function va_pruefen(array $eingabe): array
     return ['werte' => $werte, 'fehler' => $fehler];
 }
 
+/**
+ * Eine Kachel der Übersicht prüfen (E-70 (8)): die Felder der Gruppe aus
+ * $eingabe, alle übrigen wie gespeichert (so greifen die Prüfungen über
+ * Gruppen hinweg, z. B. Stichtag nach dem Datum). Ohne Gruppe zählen alle
+ * mitgeschickten Felder. Gibt va_pruefen() zurück, 'werte' nur mit den
+ * Feldern der Gruppe, dazu 'eingabe' (alle Werte fürs Formular).
+ */
+function va_gruppe_pruefen(array $eingabe, ?string $gruppe): array
+{
+    $alle = [];
+    $teil = [];
+    foreach (VA_KATALOG as $k => $d) {
+        $mit = $gruppe === null ? array_key_exists($k, $eingabe) : $d['gruppe'] === $gruppe;
+        $alle[$k] = $mit ? (string)($eingabe[$k] ?? '') : va_formularwert($k);
+        if ($mit) {
+            $teil[$k] = true;
+        }
+    }
+    $r = va_pruefen($alle);
+    $r['werte'] = array_intersect_key($r['werte'], $teil);
+    $r['eingabe'] = $alle;
+    return $r;
+}
+
 /** Geprüfte Werte speichern; gibt die Schlüssel der geänderten Einstellungen zurück. */
 function va_speichern(array $werte, ?int $kontoId): array
 {
@@ -505,6 +530,44 @@ function va_speichern(array $werte, ?int $kontoId): array
         audit_schreiben('einstellungen', 'Geändert: ' . implode(', ', $geaendert), $kontoId);
     }
     return $geaendert;
+}
+
+/**
+ * Zusammenfassung einer Gruppe für ihre Kachel in der Übersicht (E-70 (8)):
+ * Liste von [Begriff, Text]; bei „bausteine“ Text 'an' oder 'aus'.
+ */
+function va_zusammenfassung(string $gruppe): array
+{
+    $w = fn(string $k): string => va($k) !== '' ? va($k) : '–';
+    $tag = fn(string $k): string => va($k) !== '' ? 'bis ' . tag_text(va($k)) : 'bis zur Veranstaltung';
+    return match ($gruppe) {
+        'veranstaltung' => [
+            ['Name', $w('veranstaltung_name')],
+            ['Kurz', va_kurz() . ' · ' . (VA_ARTEN[va('veranstaltung_art')] ?? VA_ARTEN['symposium'])],
+            ['Wann', (va('veranstaltung_datum') !== '' ? tag_text(va('veranstaltung_datum')) : '–') . (va('veranstaltung_beginn') !== '' ? ' · ' . va('veranstaltung_beginn') . (va('veranstaltung_ende') !== '' ? '–' . va('veranstaltung_ende') : '') : '')],
+            ['Wo', $w('veranstaltung_ort')],
+            ['Plätze', va_zahl('veranstaltung_kapazitaet') > 0 ? (string)va_zahl('veranstaltung_kapazitaet') : 'ohne Grenze'],
+            ['Adresse', '/' . (va_zeile()['kuerzel'] ?? '')],
+        ],
+        'bausteine' => [['Essen', va_an('mit_essen') ? 'an' : 'aus'], ['Fortbildungspunkte', va_an('mit_cme') ? 'an' : 'aus'], ['Bescheinigung', va_an('mit_zertifikat') ? 'an' : 'aus']],
+        'anmeldung' => [
+            ['Ab', va('anmeldung_start') !== '' ? datum_zeit_text(va('anmeldung_start')) : '–'],
+            ['Bis', va('anmeldung_ende') !== '' ? datum_zeit_text(va('anmeldung_ende')) : 'Beginn der Veranstaltung'],
+            ['Workshops', (VA_KATALOG['workshop_pflicht']['optionen'][va('workshop_pflicht')] ?? 'freiwillig') . ' · ' . (va_zahl('workshop_limit') > 0 ? 'höchstens ' . va_zahl('workshop_limit') : 'ohne Grenze')],
+            ['Bestätigung', va_zahl('anmeldung_bestaetigung_h') . ' Stunden'],
+        ],
+        'nachruecken' => [['Annahme', va_zahl('nachrueck_frist_h') . ' Stunden für ein Angebot'], ['Automatisch', 'bis ' . va_zahl('nachrueck_grenze_tage') . ' Tage vorher']],
+        'stichtage' => [['Workshops', $tag('stichtag_workshop')], ['Essen', $tag('stichtag_essen')], ['Storno', $tag('stichtag_storno')]],
+        'cme' => [
+            ['Anzeige', va('cme_anzeige') !== '' ? va('cme_anzeige') : '– (nicht in den Eckdaten)'],
+            ['Punkte', va('cme_punkte') !== '' ? va('cme_punkte') . (va('cme_kategorie') !== '' ? ' · Kategorie ' . va('cme_kategorie') : '') : '–'],
+            ['Kammer', $w('cme_kammer')],
+            ['VNR', $w('cme_veranstaltungsnummer')],
+        ],
+        'zertifikat' => [['Unterschrift', implode(', ', array_filter([va('zertifikat_leitung'), va('zertifikat_leitung_rolle')], fn($x) => $x !== '')) ?: '–']],
+        'listen' => [['Berufsgruppen', implode(' · ', va_liste('berufsgruppen'))]],
+        default => [],
+    };
 }
 
 /** Eckdaten für die Startseite: Liste von [Titel, Text]. */

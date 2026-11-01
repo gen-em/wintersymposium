@@ -630,6 +630,19 @@ function migration_katalog(): array
                 "UPDATE audit SET objekt_art = 'konto', objekt_id = konto_id WHERE objekt_art IS NULL AND konto_id IS NOT NULL AND art IN ('konto', 'login', 'zweitfaktor')",
             ],
         ],
+        22 => [
+            'beschreibung' => 'Startseite mit eigenen Feldern (AP-18, E-70): Zeile und Titel leer (= automatisch), Zeilen und Überschriften der Abschnitte mit den bisher festen Texten',
+            'sql' => [
+                // Zeile und Titel werden seit E-68 nicht mehr angezeigt; leer = automatisch wie bisher (Admin 2026-11-01)
+                "UPDATE inhalt SET text = '' WHERE schluessel IN ('start_kicker', 'start_titel')",
+                "INSERT IGNORE INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_infos_kicker', 'Worum es geht', UTC_TIMESTAMP() FROM veranstaltung",
+                "INSERT IGNORE INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_programm_kicker', 'Programm', UTC_TIMESTAMP() FROM veranstaltung",
+                "INSERT IGNORE INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_programm_titel', 'Der Abend im Überblick', UTC_TIMESTAMP() FROM veranstaltung",
+                // Leere Überschrift der Kacheln war bisher „Worum es geht“; jetzt hieße leer: keine Überschrift
+                "INSERT INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_infos_titel', 'Worum es geht', UTC_TIMESTAMP() FROM veranstaltung
+                    ON DUPLICATE KEY UPDATE text = IF(text = '', VALUES(text), text)",
+            ],
+        ],
     ];
 }
 

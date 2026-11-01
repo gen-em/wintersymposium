@@ -40,7 +40,8 @@ function kopf_https(): bool
     return false;
 }
 
-function kopf_csp(): string
+/** Richtlinie der Seiten; $einbettbar: nur in Seiten derselben Herkunft im iframe (Vorschau der Startseite, E-70 (6)). */
+function kopf_csp(bool $einbettbar = false): string
 {
     return implode('; ', [
         "default-src 'none'",
@@ -54,7 +55,7 @@ function kopf_csp(): string
         "frame-src 'self'",
         "manifest-src 'self'",
         "form-action 'self'",
-        "frame-ancestors 'none'",
+        $einbettbar ? "frame-ancestors 'self'" : "frame-ancestors 'none'",
         "base-uri 'none'",
         "object-src 'none'",
     ]);
@@ -80,15 +81,18 @@ function kopf_gemeinsam(): void
     }
 }
 
-/** HTML-Seite: alle Kopfzeilen inkl. CSP, nicht zwischenspeichern. */
-function kopfzeilen_seite(): void
+/** HTML-Seite: alle Kopfzeilen inkl. CSP, nicht zwischenspeichern. $einbettbar: siehe kopf_csp(). */
+function kopfzeilen_seite(bool $einbettbar = false): void
 {
     if (headers_sent()) {
         return;
     }
     kopf_gemeinsam();
+    if ($einbettbar) {
+        header('X-Frame-Options: SAMEORIGIN');
+    }
     header('Content-Type: text/html; charset=utf-8');
-    header('Content-Security-Policy: ' . kopf_csp());
+    header('Content-Security-Policy: ' . kopf_csp($einbettbar));
     header('Cache-Control: no-store');
 }
 

@@ -20,6 +20,7 @@ const BEISPIEL_PASSWORT_ADMIN = 'beispiel-ada-admin-2026';
 function beispieldaten_laden(): array
 {
     beispieldaten_einstellungen();
+    beispieldaten_startseite();
     $r = ['programm' => beispieldaten_programm(), 'anmeldungen' => beispieldaten_anmeldungen()];
     $r['mailings'] = beispieldaten_mailings();
     $r['newsletter'] = beispieldaten_newsletter();
@@ -53,6 +54,29 @@ function beispieldaten_einstellungen(): void
         throw new RuntimeException('Beispieldaten Einstellungen: ' . json_encode($w['fehler'], JSON_UNESCAPED_UNICODE));
     }
     va_speichern($w['werte'], null);
+}
+
+/**
+ * Startseite der aktuellen Veranstaltung (AP-18, E-70): Titel mit Lila und
+ * einer Trennstelle in „Notfall­symposium“ (Größe XL statt L), zwei Kacheln,
+ * die dritte leer (erscheint nicht), eigene Überschrift des Programms.
+ */
+function beispieldaten_startseite(): void
+{
+    $w = [
+        'start_titel' => "Allgäuer <em>Winter-Notfall\u{AD}symposium</em>",
+        'start_unter' => 'Ein Abend für Rettungsdienst, Notaufnahme und Krankenhaus.',
+        'start_sticker' => 'Kostenlos',
+        'start_infos_titel' => 'Für alle, die da sind',
+        'start_kachel_1_titel' => 'Für wen', 'start_kachel_1_text' => '<p>Pflegende, NotSan, MFA, ÄrztInnen – alle Bereiche.</p>',
+        'start_kachel_2_titel' => 'Wie', 'start_kachel_2_text' => '<p>Erst Input, dann Hände dran.</p>',
+        'start_kachel_3_titel' => '', 'start_kachel_3_text' => '',
+        'start_programm_titel' => 'Der Abend im Überblick',
+    ];
+    [, $fehler] = start_texte_speichern($w, null);
+    if ($fehler !== []) {
+        throw new RuntimeException('Beispieldaten Startseite: ' . json_encode($fehler, JSON_UNESCAPED_UNICODE));
+    }
 }
 
 /**
