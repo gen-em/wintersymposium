@@ -844,7 +844,7 @@ Ziel: Alles sieht aus und funktioniert wie vorher, bis auf die Punkte im CHANGEL
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
-| T-309 bis T-316 | 2026-11-01 | claude-dev | lokal bestanden | ERGEBNIS_ZAHLEN | Im Browser gefunden und behoben: „Lila“ ließ sich nicht entfernen (Lila ist im Editor nicht kursiv), Trennstelle bekam in Chromium Stil und Umbruch, die Messung der Trennung meldete in Chromium fälschlich eine Warnung; im Volllauf: Kopie einer Veranstaltung zeigte den alten Titel (Konzept AP-18 probleme) |
+| T-309 bis T-316 | 2026-11-01 | claude-dev | lokal bestanden | 0.29.0 AP-18: `lauf.php` 1095 ok, 0 Fehler in 2:58 min (vorher 1047; neu: Bereich `startseite` mit T-309 bis T-312, T-315, T-316 und HTTP-Bereich `ap18`); Browser-Durchlauf Stufe 3 (Ende des AP, gemeinsame Teile: Navigation, Kopfzeilen, Editor, CSS): 9110 ok, 0 Fehler in Chromium, Firefox und WebKit × 4 Breiten (vorher 8570), 15 min; Fotos der Startseite, der Seite „Startseite“ (Desktop mit Vorschau, Handy mit Vorschau darunter, Warnung), der Einstellungen (zu, offen, Fehler) und des Komponentenblatts in allen Engines angesehen | Im Browser gefunden und behoben: „Lila“ ließ sich nicht entfernen (Lila ist im Editor nicht kursiv), Trennstelle bekam in Chromium Stil und Umbruch, die Messung der Trennung meldete in Chromium fälschlich eine Warnung; im Volllauf: Kopie einer Veranstaltung zeigte den alten Titel; erster Stufe-3-Lauf: WebKit-Überstand der Titel-Beispiele im Komponentenblatt (overflow-wrap: anywhere) und ein einmaliger Abbruch beim Login mit Wiederherstellungscode in WebKit, während parallel lauf.php lief – im zweiten Lauf ohne Befund (Konzept AP-18 probleme) |
 
 ### Noch zu prüfen
 
