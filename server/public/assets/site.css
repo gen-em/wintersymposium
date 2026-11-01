@@ -325,15 +325,11 @@ select { contain: paint; max-width: 100%; }
 .zg p { margin: 0; }
 .zg .knopf { justify-self: start; }
 .status-band { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 14px 18px; margin-top: 16px; background: var(--flaeche); border: 1px solid var(--linie); }
-.status-band .sticker { transform: rotate(-2deg); }
 .angebot { border: 2px solid var(--akz); background: var(--flaeche); padding: 18px 20px; display: grid; gap: 10px; }
 .angebot p { margin: 0; }
 .angebot .uhr { font-family: var(--f-mono); font-size: 1.3rem; }
 .ersetzt { display: grid; gap: 6px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--linie); border-left: 4px solid var(--rot); }
 .ersetzt .kicker { color: var(--fg); }
-.gefahrenzone { display: grid; gap: 8px; padding: 12px 14px; margin-top: 8px; border: 2px solid var(--rot); background: repeating-linear-gradient(135deg, var(--rot-schein) 0 8px, transparent 8px 16px); }
-.gefahrenzone .unterkopf { margin: 0; padding: 0; border: 0; color: var(--rot); }
-.gefahrenzone p { margin: 0; }
 /* Teilnahme und Zertifikate (AP-10, E-57) */
 .akzent-kasten { border-top: 4px solid var(--akz); }
 .als-naechstes { display: grid; gap: 10px; padding: 14px 16px; background: var(--bg); border: 1px solid var(--linie); }
@@ -349,6 +345,8 @@ select { contain: paint; max-width: 100%; }
 .etikett-mono { letter-spacing: var(--etikett-abstand); font-size: .72rem; color: var(--meta); }
 .sticker { display: inline-block; font-family: var(--f-titel); text-transform: uppercase; background: var(--akz); color: var(--auf-akz); padding: 4px 12px 2px; transform: rotate(-4deg); font-size: 1.05rem; letter-spacing: .02em; line-height: 1.15; }
 .sticker.hinweis { background: var(--weiss); color: var(--nachtblau); box-shadow: 6px 6px 0 var(--gruen); transform: rotate(3deg); }
+/* Sticker im Status-Band: nach .sticker.hinweis, gleiche Spezifität */
+.status-band .sticker { transform: rotate(-2deg); }
 .format { font-family: var(--f-mono); font-size: .72rem; font-weight: 700; padding: 1px 7px; background: var(--akz); color: var(--auf-akz); line-height: 1.5; white-space: nowrap; }
 .format.rot { background: var(--rot); color: var(--nachtblau); }
 .format.offen { background: transparent; color: var(--fg); border: 1px solid var(--meta); }
@@ -576,7 +574,8 @@ details.schlicht > summary::-webkit-details-marker, .menue > summary::-webkit-de
 .popup::backdrop { background: var(--backdrop); }
 .popup-innen { position: relative; background: var(--bg); color: var(--fg); border: 1px solid var(--linie); border-top: 4px solid var(--akz); padding: 22px 22px 20px; display: grid; gap: 12px; max-height: 85vh; overflow-y: auto; }
 .popup-innen.rot { border-top-color: var(--rot); --akz: var(--rot); }
-.popup-innen > * { margin: 0; }
+/* :where: Klassenregeln der Inhalte (z. B. .unterkopf) behalten ihre Abstände */
+:where(.popup-innen) > * { margin: 0; }
 .popup-zu { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border: 1px solid var(--linie); background: var(--flaeche); color: var(--fg); font-size: 1rem; cursor: pointer; }
 .popup .titel { font-size: clamp(1.7rem, 6vw, 2.1rem); padding-right: 44px; }
 .bestaetigen > summary { cursor: pointer; }
@@ -799,6 +798,10 @@ table.pg-termine td.t-aktion { display: flex; flex-wrap: wrap; gap: 6px 12px; al
 .detail { display: grid; gap: 12px; }
 .detail > p, .detail .form { margin: 0; }
 .detail .unterkopf { margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--linie); }
+/* Gefahrenzone (in .detail, Personen): nach .detail .unterkopf, gleiche Spezifität */
+.gefahrenzone { display: grid; gap: 8px; padding: 12px 14px; margin-top: 8px; border: 2px solid var(--rot); background: repeating-linear-gradient(135deg, var(--rot-schein) 0 8px, transparent 8px 16px); }
+.gefahrenzone .unterkopf { margin: 0; padding: 0; border: 0; color: var(--rot); }
+.gefahrenzone p { margin: 0; }
 .aufgaben { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .aufgaben li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding-bottom: 10px; border-bottom: 1px solid var(--linie); }
 .aufgaben li > span:nth-child(2) { flex: 1 1 220px; }
