@@ -1767,6 +1767,39 @@ function http_bereich_ap18(array $u): void
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'nachruecken', 'nachrueck_frist_h' => '12', 'veranstaltung_ort' => 'Fremd'] + $gruppe('nachruecken'), $k);
     pruefe($r['status'] === 303 && str_ends_with($r['kopf']['location'] ?? '', '/team/einstellungen#nachruecken') && va('nachrueck_frist_h') === '12' && va('veranstaltung_ort') === 'Hörsaal Testklinik'
         && (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'") === $audit + 1, 'Speichern einer Kachel ändert nur deren Werte (protokolliert)');
+    // Staging-Durchlauf 2026-11-01: jede Kachel so abschicken, wie der Browser sie zeigt – auch mit leer gespeicherten Auswahlen (ältere Testdaten)
+    foreach (['mit_essen', 'veranstaltung_art', 'zielgruppe'] as $leer) {
+        einstellung_setzen($leer, '');
+    }
+    $audit = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'");
+    $seite = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $k)['text'];
+    $dom = new DOMDocument();
+    @$dom->loadHTML('<?xml encoding="utf-8"?>' . $seite);
+    $geaendert = [];
+    foreach ((new DOMXPath($dom))->query('//form[contains(@class, "einst-form")]') as $form) {
+        $werte = [];
+        foreach ((new DOMXPath($dom))->query('.//input|.//select|.//textarea', $form) as $el) {
+            $n = $el->getAttribute('name');
+            if ($n === '' || $el->hasAttribute('disabled') || ($el->nodeName === 'input' && in_array($el->getAttribute('type'), ['checkbox', 'radio'], true) && !$el->hasAttribute('checked'))) {
+                continue;
+            }
+            if ($el->nodeName === 'select') {
+                $opts = iterator_to_array($el->getElementsByTagName('option'));
+                $gew = array_values(array_filter($opts, fn($o) => $o->hasAttribute('selected')))[0] ?? ($opts[0] ?? null);
+                $w = $gew ? $gew->getAttribute('value') : '';
+            } else {
+                $w = $el->nodeName === 'textarea' ? $el->textContent : $el->getAttribute('value');
+            }
+            $werte[] = rawurlencode($n) . '=' . rawurlencode($w);
+        }
+        parse_str(implode('&', $werte), $post);
+        $vorher = (int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'");
+        http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c] + $post, $k);
+        if ((int)db_wert("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen'") !== $vorher) {
+            $geaendert[] = $post['gruppe'] ?? '?';
+        }
+    }
+    pruefe($geaendert === [] && va('mit_essen') === 'ja' && va('zielgruppe') === 'beide', 'jede Kachel unverändert abgeschickt: „Nichts geändert“, auch bei leer gespeicherter Auswahl (' . implode(', ', $geaendert) . ')');
     $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $c, 'gruppe' => 'veranstaltung', 'kuerzel' => va_zeile()['kuerzel'], 'veranstaltung_ende' => '17:00'] + $gruppe('veranstaltung'), $k);
     pruefe($r['status'] === 200 && str_contains($r['text'], 'Nicht gespeichert') && preg_match('#id="veranstaltung"><details class="einst-auf" open>#', $r['text']) === 1 && substr_count($r['text'], ' open>') === 1
         && str_contains($r['text'], 'value="17:00"') && va('veranstaltung_ende') === '22:00', 'Fehler: nur diese Kachel offen, Eingabe bleibt, nichts gespeichert');

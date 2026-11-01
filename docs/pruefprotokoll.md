@@ -42,7 +42,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | AP-19 | Veranstaltungsreihen und Newsletter (E-71) | umgesetzt, Staging offen | lokal T-317 bis T-325 | Staging (siehe unten) |
 | E-72 | Rückmeldungen nach AP-18/AP-19 | umgesetzt, Staging offen | lokal T-326 bis T-330 | Staging (siehe unten) |
 | E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
-| E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen | umgesetzt, Staging offen | lokal T-332, T-333 | Staging: Reihe wechseln, Durchklicken (siehe unten) |
+| E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen, Staging durchklicken | umgesetzt, Staging durchgeklickt | lokal T-332, T-333, T-340; Staging T-339 | Status-Seite im eigenen Browser, Frage an den Hoster (siehe unten) |
 | E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
 
 ## Wie geprüft wird
@@ -934,6 +934,8 @@ Nach dem Merge auf Staging.
 
 ```yaml
 - {id: T-332, ap: E-74, was: "Auswahlfelder: Schlüssel bleiben Werte, Textlisten über liste", wie: "formular_helfer: optionen [0 => …, 1 => …, 2 => …] behalten 0, 1, 2 als Werte, liste hängt sich an; konventionen.php: keine Listen in optionen, kein array_is_list in formular_lib; http_tests (ap19): Reihen in Nummern-Reihenfolge wie auf Staging → Optionen tragen die Nummer; Name statt Nummer → „Unbekannte Reihe.“, nichts gespeichert; Gegenprobe mit dem alten feld(): drei Prüfungen rot", status: "ok"}
+- {id: T-339, ap: E-74, was: "Staging durchgeklickt (E-74 (3))", wie: "Playwright gegen Staging 0.30.3 mit den Testkonten: alle Seiten je Rolle (Gast, Teilnehmende, Admin, BetreiberIn) in Chromium und Firefox, 390 und 1440 px, Popups und Aufklapper; Abläufe Teilnehmende, Gast, Admin, BetreiberIn; Fehlerprotokoll gelesen; danach zurückgesetzt", status: "ok"}
+- {id: T-340, ap: E-74, was: "Unverändert speichern meldet „Nichts geändert“; Testkonten mit Codes", wie: "http_tests (ap18): jede Kachel so abgeschickt, wie der Browser sie zeigt (DOM), auch mit leer gespeicherter Auswahl → kein Protokolleintrag; Gegenprobe mit altem Stand: veranstaltung, bausteine, reihe, listen gemeldet wie auf Staging; lauf.php (20_reihen): Team-Testkonten haben Codes, Teilnehmende nicht", status: "ok"}
 - {id: T-333, ap: E-74, was: "Staging zurücksetzen", wie: "lauf.php (12_sicherung): vorher Sicherung; nur das Team-Konto außerhalb der Testdaten bleibt (mit Codes, Rechten für die erste Veranstaltung und die Reihe Wintersymposium); Anmeldungen, Programm, Dozierende, Mailings, Newsletter leer; eine Veranstaltung in der Reihe Wintersymposium; Impressum, Betriebs-Einstellungen, Hostnamen bleiben; Kontonummern nicht neu vergeben; Protokoll-Eintrag. http_tests (daten): ohne Code abgelehnt, mit Code zurückgesetzt, eigenes Testkonto abgemeldet. Browser: Dialog mit Code-Feld (rot)", status: "ok"}
 ```
 
@@ -941,11 +943,18 @@ Nach dem Merge auf Staging.
 
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
+| T-339 | 2026-11-01 | claude-dev | bestanden mit Befunden | Staging 0.30.3: Reihe → Wintersymposium gespeichert (POST `reihe_id=3`, „Reihe: Wintersymposium.“), auch in Firefox in beide Richtungen; Seiten je Rolle in Chromium und Firefox ohne PHP-/JS-Fehler (nur erwartete 403 für Admin auf BetreiberIn-Seiten); Abläufe siehe Konzept E-74 (3); Staging danach zurückgesetzt | Befunde (a) bis (g) im Konzept E-74 (3). Die Prüfung lief über einen Proxy der Sandbox; Mail-Links (Bestätigung, Einmal-Link) und WebKit wurden auf Staging nicht geprüft |
+| T-340 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1195 ok, 0 Fehler; Gegenprobe ohne die Änderung in veranstaltung_lib → genau die vier Kacheln von Staging rot. Browser: **Stufe 1** – keine Änderung an Markup, CSS oder JavaScript | – |
 | T-332, T-333 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1183 ok, 0 Fehler; Gegenprobe mit altem `feld()` (WS_HTTP=ap19) → 3 Fehler wie erwartet; Browser **Stufe 3** (gemeinsame Teile: `feld()` in allen Formularen) `node tools/browser/durchlauf.js` → 9374 ok, 0 Fehler (3 Engines × 4 Breiten); danach nur das Foto des neuen Dialogs nachgebessert (400 ms Warten wie beim Dialog „Testdaten laden“) und gezielt nachgeprüft: `WS_STUFE=2 WS_ENGINES=webkit WS_SEITEN=team-daten` → 238 ok, 0 Fehler; Fotos angesehen (Dialog „Staging zurücksetzen“ rot, mit Code-Feld, Handy) | Ursache vorher live auf Staging nachgestellt (Chromium, Testkonto BetreiberIn): POST `gruppe=reihe&reihe_id=Wintersymposium&zielgruppe=beide`, Meldung „Nichts geändert. Reihe: einzeln.“ – nicht browserabhängig, sondern abhängig von der Reihenfolge der Reihen-Nummern |
 
 ### Noch zu prüfen
 
-Nach dem Merge auf Staging (Claude, mit den Testkonten).
+1. **Status-Seite (E-74 (3) d):** Betrieb → Status im eigenen Browser öffnen. Steht bei „Umgebung“ „In Ordnung“, kam die Proxy-Warnung von Claudes Zugang; steht die Warnung auch dort, beim Hoster klären, ob Anfragen über einen Proxy kommen.
+2. **Fehlerseiten (E-74 (3) e):** beim Hoster nachfragen, wofür das Skript mit dem Cookie `_lcp3` auf 403/404-Seiten ist.
+3. **Testkonten:** vor dem nächsten Durchklicken Betrieb → Betrieb → „Testkonten anlegen“ (nach dem Zurücksetzen gibt es sie nicht mehr).
+4. **Mail-Links** (Bestätigung, Einmal-Link, Passwort-Link) und WebKit auf Staging sind noch nicht durchgeklickt.
+
+Erledigt (2026-11-01, T-339):
 
 1. **Reihe:** Einstellungen → Reihe & Zielgruppe → „Wintersymposium“ → Speichern. Erwartet: „Gespeichert (…). Reihe: Wintersymposium.“
 2. **Durchklicken (E-74 (3)):** alle Funktionen mit BetreiberIn, Admin und Teilnehmender; Bericht an den Admin.

@@ -36,10 +36,6 @@ if (ist_post()) {
         // Kein stilles „einzeln“ bei einem Wert, der keine Nummer ist (Reihe-Fehler auf Staging: der Name kam statt der Nummer)
         $r['fehler']['reihe_id'] = 'Unbekannte Reihe.';
     }
-    if ($gruppe === 'reihe' && $reihe === false) {
-        // Diagnose (Rückmeldung Staging: Reihe sprang ohne Meldung zurück): warum der Wechsel nicht versucht wurde
-        error_log('Einstellungen: Reihe nicht übernommen (Rolle ' . $konto['rolle'] . ', Felder: ' . implode(', ', array_keys($_POST)) . ')');
-    }
     if ($reihe !== false && $reihe !== null && va_reihe($reihe) === null) {
         $r['fehler']['reihe_id'] = 'Unbekannte Reihe.';
     }

@@ -2,6 +2,23 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [0.30.5] – 2026-11-01
+
+Befunde aus dem Durchklicken von Staging (E-74 (3)).
+
+### Behoben
+
+- **Einstellungen: „geändert“ ohne Änderung.** Wer eine Kachel öffnete und unverändert speicherte, bekam bei Art, Bausteinen, Zielgruppe und der Vorauswahl je Berufsgruppe „… Einstellungen geändert“ samt Protokolleintrag. Ursache: „Testdaten laden“ speicherte alle nicht gesetzten Einstellungen leer; die Auswahl zeigte den Startwert. Jetzt gilt eine leer gespeicherte Auswahl als ihr Startwert, eine leere Zuordnung als die Regel, die das Formular zeigt; eine leere Auswahl wird als Startwert gespeichert, und die Testdaten speichern nur, was sie setzen.
+- Team-Testkonten auf Staging bekommen Wiederherstellungscodes; der rote Hinweis „0 Wiederherstellungscodes“ stand sonst auf jeder Team-Seite. Angezeigt werden die Codes nicht.
+
+### Entfernt
+
+- Diagnosezeile „Einstellungen: Reihe nicht übernommen …“ im Fehlerprotokoll (0.30.2): Die Ursache ist gefunden (0.30.3); die Zeile stand sonst bei jedem Admin, der die Kachel „Reihe & Zielgruppe“ speichert.
+
+### Doku
+
+- Konzept E-74 (3) mit Ergebnis des Durchklickens, Prüfprotokoll T-339 und T-340, betrieb.md (Testkonten).
+
 ## [0.30.4] – 2026-11-01
 
 Passkey direkt abfragen (E-75).
@@ -55,7 +72,7 @@ Rückmeldungen vom Admin nach AP-18 und AP-19 (Staging).
 - **Newsletter-Mailing:** Postfach newsletter@ vorausgewählt, wenn eingerichtet, sonst Hinweis.
 - **Feste Testkonten auf Staging:** BetreiberIn, Admin, Teilnehmende mit Passwort und zweitem Faktor aus der `config.php` (`testkonten`, nie im Repo); „Testdaten laden“ legt sie mit an, „Testkonten anlegen“ setzt sie einzeln zurück.
 - **Browser-Durchlauf: Abbruch und Teilwiederholung (E-73):** Bricht eine Engine ab, zählt das als Fehler mit Seite und Zeile, und die übrigen Engines laufen weiter. `ergebnis.json` hält je Engine Status, Zahlen, Version und Code-Stand fest. `WS_WIEDERHOLEN=<ordner>` fährt nur die roten oder abgebrochenen Engines neu und übernimmt die grünen samt Fotos in einen gemeinsamen Bericht; geänderte Dateien seit dem alten Stand stehen im Bericht.
-- **Diagnose:** Speichern der Kachel „Reihe & Zielgruppe“ nennt die gespeicherte Reihe; wird die Reihe nicht übernommen, steht der Grund im Fehlerprotokoll.
+- **Diagnose:** Speichern der Kachel „Reihe & Zielgruppe“ nennt die gespeicherte Reihe; wird die Reihe nicht übernommen, steht der Grund im Fehlerprotokoll (Fehlerprotokoll-Zeile in 0.30.5 wieder entfernt).
 
 ### Geändert
 

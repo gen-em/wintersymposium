@@ -391,7 +391,9 @@ function va(string $schluessel): string
     if (!isset(VA_KATALOG[$schluessel])) {
         throw new InvalidArgumentException('Unbekannte Einstellung: ' . $schluessel);
     }
-    return einstellung($schluessel) ?? VA_KATALOG[$schluessel]['start'];
+    $w = einstellung($schluessel) ?? VA_KATALOG[$schluessel]['start'];
+    // Eine Auswahl ist nie leer: ein leerer Wert (ältere Testdaten) gilt als Startwert, wie im Formular angezeigt
+    return $w === '' && VA_KATALOG[$schluessel]['typ'] === 'auswahl' ? (string)VA_KATALOG[$schluessel]['start'] : $w;
 }
 
 function va_zahl(string $schluessel): int
@@ -430,7 +432,7 @@ function va_pruefen(array $eingabe): array
             if (!empty($d['pflicht'])) {
                 $fehler[$k] = "„{$titel}“ darf nicht leer sein.";
             }
-            $werte[$k] = '';
+            $werte[$k] = $d['typ'] === 'auswahl' ? (string)$d['start'] : '';
             continue;
         }
         switch ($d['typ']) {
@@ -555,8 +557,8 @@ function va_speichern(array $werte, ?int $kontoId): array
             if (!array_key_exists($k, $werte)) {
                 continue;
             }
-            if (va($k) !== $werte[$k] || einstellung($k) === null) {
-                if (va($k) !== $werte[$k]) {
+            if (!va_gleich($k, $werte[$k]) || einstellung($k) === null) {
+                if (!va_gleich($k, $werte[$k])) {
                     $geaendert[] = $k;
                 }
                 einstellung_setzen($k, $werte[$k]);
@@ -567,6 +569,28 @@ function va_speichern(array $werte, ?int $kontoId): array
         audit_schreiben('einstellungen', 'Geändert: ' . implode(', ', $geaendert), $kontoId);
     }
     return $geaendert;
+}
+
+/**
+ * Ob $neu dem gespeicherten Wert entspricht. Leer gespeicherte Zuordnung je
+ * Berufsgruppe gilt als die Regel (va_interesse), die das Formular anzeigt –
+ * sonst meldete das erste Speichern ohne Änderung „geändert“ (Staging-Durchlauf 2026-11-01).
+ */
+function va_gleich(string $schluessel, string $neu): bool
+{
+    $alt = va($schluessel);
+    if ($alt === $neu) {
+        return true;
+    }
+    if ($alt === '' && VA_KATALOG[$schluessel]['typ'] === 'zuordnung') {
+        $regel = [];
+        foreach (va_liste('berufsgruppen') as $bg) {
+            $regel[$bg] = va_interesse($bg);
+        }
+        ksort($regel);
+        $alt = json_encode($regel, JSON_UNESCAPED_UNICODE);
+    }
+    return $alt === $neu;
 }
 
 /**

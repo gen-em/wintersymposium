@@ -449,6 +449,11 @@ function testdaten_konten(?int $durch): array
         db_ausfuehren('UPDATE konto SET email_bestaetigt_am = COALESCE(email_bestaetigt_am, ?) WHERE id = ?', [db_jetzt(), $id]);
         if ($rolle !== 'teilnehmend' && strlen($roh) >= 10) {
             totp_fest_setzen($id, $roh);
+            // Wiederherstellungscodes, damit der rote Hinweis „0 Codes“ nicht auf jeder Seite steht; angezeigt
+            // werden sie nicht – der Notweg für Testkonten ist „Testkonten anlegen“
+            if (db_zahl('SELECT COUNT(*) FROM konto_code WHERE konto_id = ? AND benutzt_am IS NULL', [$id]) === 0) {
+                totp_codes_schreiben($id, totp_codes_erzeugen());
+            }
         }
         if ($rolle === 'admin') {
             va_rechte_setzen($id, true, [], $durch);
