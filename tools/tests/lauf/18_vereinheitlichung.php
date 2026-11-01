@@ -1,18 +1,21 @@
 <?php
 declare(strict_types=1);
 
-/* Testbereich: Vereinheitlichung (AP-17) (mechanisch aus lauf.php ausgelagert, noch nicht auf test_frisch umgestellt). */
+/* Testbereich: Vereinheitlichung (AP-17) – Einmal-Links in einer Tabelle, Protokoll mit Objektbezug (beide mit Migration der Altdaten), ein Weg für Bilder, Kontext statt $GLOBALS. */
 
 function test_vereinheitlichung(): void
 {
     abschnitt('Einmal-Links in einer Tabelle (AP-17 Unterpunkt 8, V-1)');
+    $f = test_frisch();
+    $an = $f['bd']['anmeldungen'];
     $lt = link_token();
     pruefe(preg_match('/^[A-Za-z0-9_-]{43}$/', $lt) === 1 && link_token() !== $lt, 'ein Token-Format: 32 Byte Base64url (43 Zeichen)');
     pruefe(!db_tabelle_da('konto_link') && !db_tabelle_da('anmeldung_link') && !db_tabelle_da('newsletter_link') && db_tabelle_da('link'), 'alte Link-Tabellen entfernt, eine Tabelle link (E-69 (7))');
     // Migration der Altdaten: dieselben INSERT … SELECT wie Migration 20, auf vorübergehenden Tabellen mit den alten Namen
-    $lAnm = (int)db_wert('SELECT MIN(id) FROM anmeldung');
-    $lKonto = (int)db_wert("SELECT MIN(id) FROM konto WHERE rolle = 'teilnehmend'");
-    $lPerson = nl_person_anlegen('alt-link@example.org', 'Alt');
+    // Lea (Anmeldung und Konto) und Nina (Newsletter) aus den Beispieldaten
+    $lAnm = (int)$an['lea'];
+    $lKonto = (int)$an['lea_konto'];
+    $lPerson = (int)$f['bd']['newsletter']['nina'];
     $altHex = bin2hex(random_bytes(24));
     $altKonto = link_token();
     $altNl = bin2hex(random_bytes(24));
@@ -34,7 +37,7 @@ function test_vereinheitlichung(): void
     pruefe(nl_link_finden($altNl, 'verwalten') !== null && nl_link_finden($altNl, 'bestaetigen') === null, 'Migration: Newsletter-Link übernommen, Zweck getrennt');
     pruefe(link_verbrauchen((int)$fa['id']) && anm_link_finden($altHex) === null && !link_verbrauchen((int)$fa['id']), 'alter Hex-Token wird einmal verbraucht');
     // Zweck- und Art-Trennung
-    $teamK = (int)db_wert("SELECT MIN(id) FROM konto WHERE rolle <> 'teilnehmend'");
+    $teamK = $f['betreiber'];
     $teamTok = konto_link_erzeugen($teamK, 'passwort');
     pruefe(konto_link_finden($teamTok) !== null && tk_link_einloesen($teamTok) === null && konto_link_finden($teamTok) !== null, 'Team-Link geht nicht über /konto/link (und bleibt unverbraucht)');
     pruefe(link_finden('anmeldung', $teamTok) === null && link_finden('newsletter', $altKonto) === null, 'Token einer Art gilt nicht für eine andere Art');
@@ -48,12 +51,10 @@ function test_vereinheitlichung(): void
     // Aufräumen
     $kurz = link_erzeugen('anmeldung', $lAnm, 'zugang', 60, [], $t0);
     $lang = link_erzeugen('anmeldung', $lAnm, 'zugang', 7200, [], $t0);
+    $abgelaufen = (int)db_wert('SELECT COUNT(*) FROM link WHERE gueltig_bis < ?', [db_zeit($t0 + 120)]);
     $weg = link_aufraeumen($t0 + 120);
-    pruefe($weg >= 1 && link_finden('anmeldung', $kurz, null, $t0) === null && link_finden('anmeldung', $lang, null, $t0) !== null, 'Aufräumen löscht nur abgelaufene Links');
+    pruefe($weg === $abgelaufen && link_finden('anmeldung', $kurz, null, $t0) === null && link_finden('anmeldung', $lang, null, $t0) !== null, 'Aufräumen löscht nur abgelaufene Links');
     pruefe(str_ends_with(konto_link_url('abc'), '/einrichten?t=abc') && str_ends_with(link_url('konto', 'abc'), '/konto/link?t=abc') && str_ends_with(anm_link_url('abc'), '/link?t=abc') && str_ends_with(link_url('newsletter', 'abc', 'bestaetigen'), '/newsletter/bestaetigen?t=abc'), 'Pfade der Links unverändert (verschickte Mails gelten weiter)');
-    link_loeschen('anmeldung', $lAnm);
-    link_loeschen('konto', $lKonto);
-    link_loeschen('konto', $teamK);
 
     abschnitt('Protokoll mit Objektbezug (AP-17 Unterpunkt 9, V-8)');
     pruefe(audit_text('anmeldung', 12, 'storniert') === 'Anmeldung 12: storniert' && audit_text('rundmail', 3, 'gesendet') === 'Mailing 3: gesendet', 'audit_text: einheitliche Formulierung');
@@ -63,13 +64,13 @@ function test_vereinheitlichung(): void
     } catch (InvalidArgumentException) {
         pruefe(true, 'unbekannte Objekt-Art abgewiesen');
     }
-    $oAnm = (int)db_wert('SELECT MIN(id) FROM anmeldung');
+    $oAnm = (int)$an['lea'];
     audit_schreiben('anmeldung', audit_text('anmeldung', $oAnm, 'Test Objektbezug'), null, ['anmeldung' => $oAnm]);
     $oL = audit_letzter('anmeldung', $oAnm);
     pruefe($oL !== null && $oL['text'] === 'Anmeldung ' . $oAnm . ': Test Objektbezug', 'Eintrag mit Bezug wird über objekt_art/objekt_id gefunden (statt LIKE)');
-    $oBetr = konto_laden((int)db_wert("SELECT MIN(id) FROM konto WHERE rolle = 'betreiber'"));
+    $oBetr = konto_laden($f['betreiber']);
     $oS = audit_suchen($oBetr, 'alle', '', '', 1, 50, ['anmeldung', $oAnm]);
-    pruefe($oS['gesamt'] >= 1 && array_filter($oS['zeilen'], fn($z) => $z['objekt_art'] !== 'anmeldung' || (int)$z['objekt_id'] !== $oAnm) === [], 'Protokoll-Filter nach Objekt zeigt nur dessen Einträge');
+    pruefe(in_array('Anmeldung ' . $oAnm . ': Test Objektbezug', array_column($oS['zeilen'], 'text'), true) && array_filter($oS['zeilen'], fn($z) => $z['objekt_art'] !== 'anmeldung' || (int)$z['objekt_id'] !== $oAnm) === [], 'Protokoll-Filter nach Objekt zeigt nur dessen Einträge');
     // Altdaten: dieselben UPDATEs wie Migration 21 auf Einträgen ohne Bezug
     $altIds = [];
     foreach ([['anmeldung', 'Anmeldung 12 storniert', null], ['nachruecken', 'Angebot an Anmeldung 13 für Termin 4', null], ['mailing', 'Entwurf 7 gelöscht', null], ['konto', 'Konto 5 mit Anmeldung 9 verknüpft', null], ['login', 'Ausgeloggt', $oBetr['id']], ['programm', 'Dozent·in 3 gelöscht', null], ['datenschutz', 'Anmeldungen geleert: 4', null]] as [$aArt, $aText, $aKonto]) {
@@ -83,7 +84,6 @@ function test_vereinheitlichung(): void
     pruefe($bezugVon('Anmeldung 12 storniert') == ['objekt_art' => 'anmeldung', 'objekt_id' => 12] && $bezugVon('Angebot an Anmeldung 13 für Termin 4') == ['objekt_art' => 'anmeldung', 'objekt_id' => 13], 'Migration ordnet „Anmeldung 12 storniert“ und Angebote der Anmeldung zu');
     pruefe($bezugVon('Entwurf 7 gelöscht') == ['objekt_art' => 'rundmail', 'objekt_id' => 7] && $bezugVon('Konto 5 mit Anmeldung 9 verknüpft') == ['objekt_art' => 'konto', 'objekt_id' => 5] && $bezugVon('Dozent·in 3 gelöscht') == ['objekt_art' => 'dozent', 'objekt_id' => 3], 'Migration: Mailing, Konto (Hauptbezug vor weiteren Nummern), Dozent·in');
     pruefe($bezugVon('Ausgeloggt') == ['objekt_art' => 'konto', 'objekt_id' => (int)$oBetr['id']] && $bezugVon('Anmeldungen geleert: 4') == ['objekt_art' => null, 'objekt_id' => null], 'Migration: eigene Konto-Einträge ohne Nummer, Sammel-Einträge ohne Bezug');
-    db_ausfuehren('DELETE FROM audit WHERE id IN (' . implode(',', $altIds) . ')');
 
     abschnitt('Lib-Aufteilung, Bilder, Kontext (AP-17 Unterpunkt 10)');
     // Ein Weg für Bilder (V-12): dasselbe Testbild als JPG und PNG, zu groß, kein Bild
