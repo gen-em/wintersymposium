@@ -147,3 +147,29 @@ function jetzt_iso(): string
 {
     return (string)iso_utc(db_jetzt());
 }
+
+/** EFN: 15 Ziffern mit Prüfziffer nach Luhn (E-22). */
+function efn_gueltig(string $efn): bool
+{
+    if (preg_match('/^\d{15}$/', $efn) !== 1) {
+        return false;
+    }
+    $summe = 0;
+    foreach (array_reverse(str_split($efn)) as $i => $z) {
+        $n = (int)$z;
+        if ($i % 2 === 1) {
+            $n *= 2;
+            if ($n > 9) {
+                $n -= 9;
+            }
+        }
+        $summe += $n;
+    }
+    return $summe % 10 === 0;
+}
+
+/** EFN zum Anzeigen: „80276 12 3456789 3" → in Fünfer-Gruppen. */
+function efn_text(?string $efn): string
+{
+    return $efn === null || $efn === '' ? '' : trim(chunk_split($efn, 5, ' '));
+}

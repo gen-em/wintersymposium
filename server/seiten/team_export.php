@@ -22,9 +22,4 @@ if ($datei === null) {
     nicht_gefunden();
 }
 export_protokollieren('Export ' . $art . ' als ' . EXPORT_FORMATE[$format] . ($bg !== '' ? ' (' . $bg . ')' : ''), (int)$konto['id']);
-header('Content-Type: ' . $datei['typ']);
-header('Content-Disposition: attachment; filename="' . $datei['datei'] . '"');
-header('Content-Length: ' . strlen($datei['inhalt']));
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
-echo $datei['inhalt'];
+datei_senden($datei['inhalt'], $datei['typ'], $datei['datei']);

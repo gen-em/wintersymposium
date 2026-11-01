@@ -50,12 +50,7 @@ if (ist_post()) {
                 $fehler[] = $f;
             } else {
                 sicherung_herunterladen_protokollieren($name, $ich);
-                header('Content-Type: ' . (str_ends_with($name, '.gz') ? 'application/gzip' : 'application/x-ndjson'));
-                header('Content-Disposition: attachment; filename="' . $name . '"');
-                header('Content-Length: ' . filesize($p));
-                header('Cache-Control: no-store');
-                readfile($p);
-                exit;
+                bild_senden($p, str_ends_with($name, '.gz') ? 'application/gzip' : 'application/x-ndjson', 'no-store', $name);
             }
             break;
         case 'wiederherstellen':

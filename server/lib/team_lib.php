@@ -406,23 +406,6 @@ function team_rolle_vergeben(int $kontoId, string $rolle): bool
 
 /* ---- CSV ----------------------------------------------------------------- */
 
-/** CSV für Excel: Semikolon, UTF-8 mit BOM; Zellen mit = + - @ am Anfang werden entschärft. */
-function csv_text(array $kopf, array $zeilen): string
-{
-    $zelle = function ($w): string {
-        $w = (string)$w;
-        if ($w !== '' && strpbrk($w[0], "=+-@\t\r") !== false) {
-            $w = "'" . $w;
-        }
-        return '"' . str_replace('"', '""', $w) . '"';
-    };
-    $out = "\u{FEFF}" . implode(';', array_map($zelle, $kopf)) . "\r\n";
-    foreach ($zeilen as $z) {
-        $out .= implode(';', array_map($zelle, $z)) . "\r\n";
-    }
-    return $out;
-}
-
 /** Bestätigte Anmeldungen der Veranstaltung seit einem Zeitpunkt (Übersicht „seit gestern“). */
 function team_bestaetigt_seit(int $ts): int
 {

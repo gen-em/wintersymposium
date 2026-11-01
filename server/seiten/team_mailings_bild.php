@@ -27,7 +27,4 @@ if ($b === null || !is_file($pfad) || !rm_bild_sichtbar($b, (int)$konto['id'])) 
     nicht_gefunden();
 }
 kopf_gemeinsam();
-header('Content-Type: image/' . $b['typ']);
-header('Cache-Control: private, max-age=86400');
-header('Content-Length: ' . filesize($pfad));
-readfile($pfad);
+bild_senden($pfad, 'image/' . $b['typ'], 'private, max-age=86400');
