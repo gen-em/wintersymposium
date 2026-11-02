@@ -2,6 +2,15 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [1.1.1] – 2026-11-02
+
+Nur Doku: Claude prüft selbst (E-81).
+
+### Doku
+
+- **CLAUDE.md:** Regel „Selbst prüfen“ – Claude prüft alles, was es kann, selbst (lokal, Staging mit Testkonten, Produktion ohne Anmeldung); Zugangsdaten der Staging-Testkonten aus `SYMPOSIUM_*` der Cloud-Umgebung. betrieb.md Abschnitt 17 entsprechend.
+- Prüfprotokoll: T-352 Ersatz-Check für Lighthouse auf Staging (SEO-Punkte, Ladezeiten) bestanden, T-353 Abruf wie ein Messenger und Icon auf Staging mit dem Testkonto der BetreiberIn bestanden; offen nur noch Lighthouse selbst. Konzept E-81, AP-21 Status.
+
 ## [1.1.0] – 2026-11-02
 
 Linkvorschau, Suchmaschinen und Icon je Veranstaltung (AP-21, E-78 bis E-80).
