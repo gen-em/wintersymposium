@@ -1142,7 +1142,17 @@ async function pruefeSeite(p, fehler, engine, breite, name, url) {
         notiere(engine, breite, 'team-konten', 'Veranstaltungen im Dialog, Menü zu', await p.isVisible('dialog[open] input[name="umfang"][value="auswahl"]') && !(await zeile.locator('.zeilen-menue').evaluate(d => d.open)));
         await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-konten-dialog.png`) });
         await p.keyboard.press('Escape');
+        // Release 1.0 (O-48): Adresse ändern im Dialog, mit Feld und eigenem Code
+        await zeile.locator('.zeilen-menue > summary').click();
+        await zeile.locator('.menue-punkt', { hasText: 'Adresse ändern' }).click();
+        await p.waitForTimeout(250);
+        notiere(engine, breite, 'team-konten', 'Adresse ändern im Dialog: Feld und Code', await p.isVisible('dialog[open] input[type=email][name=email]') && await p.isVisible('dialog[open] input[name=totp]') && await p.isVisible('dialog[open] button:has-text("Adresse ändern")'));
+        await p.screenshot({ path: path.join(AUS, `${engine}-${breite}-team-konten-adresse.png`) });
+        await p.keyboard.press('Escape');
       }
+      // Release 1.0: Kasten Suchmaschinen unter Betrieb (in der Entwicklung ohne Schalter)
+      await p.goto(basis + '/team/daten');
+      notiere(engine, 'handy', 'team-daten', 'Kasten Suchmaschinen: gesperrt, Schalter nur auf Produktion', await p.isVisible('#suchmaschinen') && (await p.textContent('#suchmaschinen')).includes('nur auf Produktion'));
       await p.setViewportSize({ width: 390, height: 844 });
 
       // Einrichtungslink des Admin-Kontos öffnen (zweites Fenster), Passwort setzen

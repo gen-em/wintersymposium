@@ -9,6 +9,6 @@ declare(strict_types=1);
  * dieselbe Funktion zeichnet die Vorschau (team_startseite_vorschau.php).
  */
 
-seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js']]);
+seite_kopf('Start', ['aktiv' => '/', 'skripte' => ['programm.js'], 'suchmaschinen' => true]);
 echo start_html(start_werte());
 seite_fuss();

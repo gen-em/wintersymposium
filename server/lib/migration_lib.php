@@ -701,6 +701,19 @@ function migration_katalog(): array
                 "INSERT IGNORE INTO inhalt (veranstaltung_id, schluessel, text, geaendert_am) SELECT id, 'start_cme_titel', 'Merke · Fortbildungspunkte', UTC_TIMESTAMP() FROM veranstaltung",
             ],
         ],
+        25 => [
+            'beschreibung' => 'Bekannte IPs je Konto für die Login-Sperre (O-47), nur als HMAC',
+            'sql' => [
+                "CREATE TABLE login_bekannt (
+                    konto_id INT UNSIGNED NOT NULL,
+                    merkmal  CHAR(64)     NOT NULL,
+                    zuletzt  DATETIME     NOT NULL,
+                    PRIMARY KEY (konto_id, merkmal),
+                    KEY ix_login_bekannt_zuletzt (zuletzt),
+                    CONSTRAINT fk_login_bekannt_konto FOREIGN KEY (konto_id) REFERENCES konto (id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+            ],
+        ],
     ];
 }
 

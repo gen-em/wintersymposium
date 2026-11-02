@@ -25,6 +25,8 @@ const RATE_TOEPFE = [
     // Team-Login: je Herkunft großzügig, je Konto streng
     'login_ip'     => [30, 900, 900],
     'login'        => [5, 900, 900],
+    // Login von einer bekannten IP des Kontos (O-47): eigener Zähler je Konto und IP
+    'login_bekannt' => [5, 900, 900],
     'zweitfaktor'  => [5, 900, 900],
     // Mail-Codes je Konto (Review S-9): jeder Versand zählt
     'mailcode_minute' => [1, 60, 60],
@@ -143,6 +145,40 @@ function rate_gleiche_dauer(float $beginn, float $mindestSekunden = 0.35): void
     }
 }
 
+/* ---- Bekannte IPs je Konto (O-47) ---------------------------------------- */
+
+/**
+ * Wie lange eine IP nach dem letzten erfolgreichen Login als bekannt gilt.
+ * Technischer Sicherheitswert (R-11 betrifft ihn nicht).
+ */
+const RATE_BEKANNT_TAGE = 30;
+
+/** HMAC aus Konto und IP; die IP selbst wird nie gespeichert (R-02). */
+function rate_merkmal_bekannt(int $kontoId): string
+{
+    return rate_merkmal('bekannt:' . $kontoId . ':' . rate_ip());
+}
+
+/** Nach einem erfolgreichen Login: diese IP gilt für das Konto 30 Tage als bekannt. */
+function rate_bekannt_merken(int $kontoId, ?int $jetzt = null): void
+{
+    $jetzt ??= time();
+    db_ausfuehren(
+        'INSERT INTO login_bekannt (konto_id, merkmal, zuletzt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE zuletzt = VALUES(zuletzt)',
+        [$kontoId, rate_merkmal_bekannt($kontoId), db_zeit($jetzt)]
+    );
+}
+
+/** Hat sich das Konto von dieser IP in den letzten 30 Tagen erfolgreich eingeloggt? */
+function rate_bekannt(int $kontoId, ?int $jetzt = null): bool
+{
+    $jetzt ??= time();
+    return db_gibt_es(
+        'SELECT COUNT(*) FROM login_bekannt WHERE konto_id = ? AND merkmal = ? AND zuletzt >= ?',
+        [$kontoId, rate_merkmal_bekannt($kontoId), db_zeit($jetzt - RATE_BEKANNT_TAGE * 86400)]
+    );
+}
+
 /** Abgelaufene Einträge entfernen (Job 'aufraeumen'). */
 function rate_aufraeumen(?int $jetzt = null): int
 {
@@ -150,8 +186,10 @@ function rate_aufraeumen(?int $jetzt = null): int
     $laengstesFenster = max(array_map(fn(array $t) => max($t[1], $t[2]), RATE_TOEPFE));
     $grenze = db_zeit($jetzt - $laengstesFenster);
     $jetztDb = db_zeit($jetzt);
-    return db_ausfuehren(
+    $n = db_ausfuehren(
         'DELETE FROM rate_limit WHERE fenster_start < ? AND (gesperrt_bis IS NULL OR gesperrt_bis < ?)',
         [$grenze, $jetztDb]
     )->rowCount();
+    // Bekannte IPs nach 30 Tagen ohne Login vergessen (O-47)
+    return $n + db_ausfuehren('DELETE FROM login_bekannt WHERE zuletzt < ?', [db_zeit($jetzt - RATE_BEKANNT_TAGE * 86400)])->rowCount();
 }

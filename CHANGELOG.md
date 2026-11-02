@@ -2,6 +2,24 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [1.0.0] – 2026-11-01
+
+Erste Version für Produktion (E-76, AP-20). Produktion geht damit online, zunächst ohne Suchmaschinen; die Anmeldung öffnet über die Einstellung „Anmeldestart“.
+
+### Neu
+
+- **Suchmaschinen-Schalter** unter Betrieb → Betrieb (nur BetreiberInnen): Nach der Installation tragen alle Seiten „noindex“. Auf Produktion gibt „Suchmaschinen erlauben …“ Startseite, Anmeldung, Newsletter, Impressum und Datenschutz frei; Team-Bereich, Login, Konto und Links bleiben gesperrt. Auf Staging und in der Entwicklung bleibt immer alles gesperrt. Ein- und Ausschalten steht im Protokoll.
+- **Adresse eines Team-Kontos ändern** (O-48): Team-Konten → „Bearbeiten“ → „Adresse ändern …“, nur BetreiberInnen, mit dem eigenen Code. Gilt sofort für Login und verknüpfte Anmeldungen; offene Einladungs- und Passwort-Links verfallen; die alte Adresse bekommt einen Hinweis (neue Mail „Deine Adresse im Team … wurde geändert“).
+
+### Geändert
+
+- **Login-Sperre** (O-47, Variante C): 5 falsche Passwörter für eine Adresse sperren den Passwort-Login weiter 15 Minuten, aber nicht mehr von einer IP, von der aus sich das Konto in den letzten 30 Tagen eingeloggt hat; dort gilt ein eigener Zähler je Konto und IP. Wer die Adresse kennt, kann so niemanden mehr von seinem eigenen Rechner aussperren. Gespeichert wird nur ein HMAC aus Konto und IP (Migration 25, Tabelle `login_bekannt`), gelöscht 30 Tage nach dem letzten Login.
+
+### Doku
+
+- betrieb.md: Besonderheiten auf Produktion (config.php ohne Umleitung und Testkonten, Reihenfolge beim ersten Mal), Tag über GitHub-Releases, Suchmaschinen, Login-Sperre, Adresse ändern.
+- Konzept: E-76, AP-20, O-47 und O-48 entschieden, Checkliste Anmeldestart (Schalter, mail-tester), K-09 und K-10. Prüfprotokoll T-343 bis T-347 mit der Liste der Prüfungen für den Admin auf echten Geräten.
+
 ## [0.30.6] – 2026-11-01
 
 ### Behoben

@@ -116,6 +116,45 @@ function konto_rolle_setzen(int $id, string $rolle, ?int $durch): void
     audit_schreiben('konto', audit_text('konto', $id, 'Rolle auf ' . $rolle . ' gesetzt'), $durch, ['konto' => $id]);
 }
 
+/**
+ * Adresse eines Team-Kontos ändern (O-48, Admin 2026-11-01): nur BetreiberInnen
+ * unter Team-Konten (E-63 (2)). Die neue Adresse gilt sofort für Login und
+ * verknüpfte Anmeldungen aller Veranstaltungen; offene Einrichtungs-, Passwort-
+ * und Adress-Links des Kontos verfallen; die alte Adresse bekommt eine
+ * Hinweis-Mail; das Protokoll nennt keine Adressen (R-02).
+ * Gibt null oder einen Fehlertext zurück (K-a).
+ */
+function konto_adresse_aendern(int $id, string $neu, ?int $durch): ?string
+{
+    $k = konto_laden($id);
+    if (!konto_ist_team($k)) {
+        return 'Dieses Konto gibt es nicht.';
+    }
+    $neu = konto_email_normieren($neu);
+    if (filter_var($neu, FILTER_VALIDATE_EMAIL) === false || strlen($neu) > 254) {
+        return 'Bitte eine gültige E-Mail-Adresse angeben.';
+    }
+    if ($neu === $k['email']) {
+        return 'Das ist schon die Adresse dieses Kontos.';
+    }
+    if (konto_per_email($neu) !== null) {
+        return 'Für diese E-Mail-Adresse gibt es schon ein Konto.';
+    }
+    if (db_gibt_es('SELECT COUNT(*) FROM anmeldung WHERE email = ? AND (konto_id IS NULL OR konto_id <> ?)', [$neu, $id])) {
+        return 'Diese Adresse gehört schon zu einer Anmeldung. Bitte zuerst dort ändern oder eine andere Adresse wählen.';
+    }
+    $alt = (string)$k['email'];
+    db_transaktion(function () use ($id, $neu): void {
+        $jetzt = db_jetzt();
+        db_ausfuehren('UPDATE konto SET email = ?, geaendert_am = ? WHERE id = ?', [$neu, $jetzt, $id]);
+        db_ausfuehren('UPDATE anmeldung SET email = ?, geaendert_am = ? WHERE konto_id = ?', [$neu, $jetzt, $id]);
+    });
+    link_loeschen('konto', $id);
+    mail_vorlage_einreihen($alt, 'team_adresse', ['vorname' => (string)$k['name']]);
+    audit_schreiben('konto', audit_text('konto', $id, 'Adresse durch BetreiberIn geändert'), $durch, ['konto' => $id]);
+    return null;
+}
+
 /** Zahl aktiver Betreiber (es muss immer mindestens einer bleiben). */
 function konto_aktive_betreiber(): int
 {

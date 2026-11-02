@@ -12,7 +12,7 @@ declare(strict_types=1);
  *   {"art":"zeilen", name, daten: [[…], …]}      – bis zu 500 Zeilen je Block
  *   {"art":"datei", ordner, name, inhalt}        – Fotos der Dozierenden, Bilder der Mailings und Texte, Unterschrift des Zertifikats (base64)
  *   {"art":"ende", tabellen, zeilen}             – fehlt sie, ist die Datei unvollständig
- * Ohne Inhalt gesichert: rate_limit und mail_ausgang (kein erneuter Versand).
+ * Ohne Inhalt gesichert: rate_limit, login_bekannt (Ratenschutz) und mail_ausgang (kein erneuter Versand).
  *
  * Wiederherstellen ersetzt alle Tabellen – auch die Team-Konten – durch den
  * Stand der Sicherung; vorher legt es selbst eine Sicherung an. Eine Sicherung
@@ -21,7 +21,7 @@ declare(strict_types=1);
  */
 
 const SICHERUNG_FORMAT = 1;
-const SICHERUNG_OHNE_INHALT = ['rate_limit', 'mail_ausgang'];
+const SICHERUNG_OHNE_INHALT = ['rate_limit', 'login_bekannt', 'mail_ausgang'];
 const SICHERUNG_BLOCK = 500;
 const SICHERUNG_NAME = '/^sicherung-\d{8}-\d{6}-[0-9a-f]{6}\.jsonl(\.gz)?$/';
 

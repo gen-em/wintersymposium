@@ -551,7 +551,7 @@ function reihe_name(): string
 }
 
 /** Vorlagen, die für alle Veranstaltungen gelten (E-67): Absender, Betreff, Kicker und Gruß mit dem Namen der Reihe. */
-const MAIL_VORLAGEN_ALLGEMEIN = ['konto_loeschen_bald', 'konto_bestaetigen', 'konto_vorhanden', 'konto_passwort', 'team_rolle', 'team_einladung',
+const MAIL_VORLAGEN_ALLGEMEIN = ['konto_loeschen_bald', 'konto_bestaetigen', 'konto_vorhanden', 'konto_passwort', 'team_rolle', 'team_einladung', 'team_adresse',
     'newsletter_bestaetigen', 'newsletter_schon', 'zweitfaktor_code', 'team_passwort', 'test'];
 
 /** Betreff und Text einer Vorlage; allgemeine Vorlagen grüßen im Namen der Reihe. */
@@ -643,6 +643,11 @@ function mail_vorlage_roh(string $name, array $d): array
                 $hallo . 'du hast jetzt die Rolle „' . $d['rolle'] . '“ im Team-Bereich. Einloggen kannst du dich unter ' . url('/einloggen')
                 . ($d['link'] === '' ? ' mit deiner Adresse und deinem Passwort.' : '. Lege vorher über diesen Link dein Passwort fest (gilt ' . dauer_text(KONTO_LINK_GUELTIG_S) . "):\n\n" . $d['link'] . "\n\n")
                 . " Beim ersten Login richtest du einen zweiten Faktor ein (Authenticator-App auf dem Handy).\n\nDas warst nicht du? Dann melde dich bitte beim Team." . mail_gruss()];
+        case 'team_adresse':
+            // an die alte Adresse, wenn eine BetreiberIn die Adresse des Team-Kontos geändert hat (O-48)
+            return ['Deine Adresse im Team von ' . reihe_name() . ' wurde geändert',
+                $hallo . 'eine BetreiberIn hat die Adresse deines Team-Kontos geändert. Der Login und alle Mails laufen ab jetzt über die neue Adresse, diese hier gilt nicht mehr. '
+                . "Passwort, zweiter Faktor und Passkeys bleiben, wie sie waren.\n\nDas war nicht mit dir abgesprochen? Dann melde dich bitte sofort beim Team." . mail_gruss()];
         case 'team_einladung':
             return ['Einladung in den Team-Bereich von ' . reihe_name(),
                 $hallo . 'du bist jetzt im Team von ' . reihe_name() . ' (Rolle „' . $d['rolle'] . "“). Lege über diesen Link dein Passwort fest:\n\n" . $d['link']

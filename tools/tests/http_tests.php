@@ -171,7 +171,7 @@ function test_va_form(string $csrf): array
 
 /** HTTP-Bereiche in der Reihenfolge des Laufs (Funktion http_bereich_<name>). */
 const HTTP_BEREICHE = ['login', 'einstellungen', 'programm', 'anmeldung', 'konto', 'daten', 'betrieb', 'team', 'mailings',
-    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18', 'ap19'];
+    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18', 'ap19', 'release'];
 
 function http_tests(string $wurzel, string $tmp): void
 {
@@ -1924,4 +1924,39 @@ function http_bereich_ap19(array $u): void
     pruefe(nl_abos((int)$np['id']) === array_fill_keys(array_keys($abos), 'bestaetigt') && nl_interessen_von((int)$np['id']) === 'praeklinik', 'bestätigt: beide Abos, Interesse Präklinik');
     $r = http_anfrage($basis, 'GET', '/deine-anmeldung', $h, [], null, $a);
     pruefe(str_contains($r['text'], 'Newsletter der Reihe, Allgäu Akut (Präklinik)'), 'Meine Anmeldung zeigt den Newsletter-Wunsch');
+}
+
+/** Release 1.0: Suchmaschinen-Schalter (nur Produktion), noindex, Adresse eines Team-Kontos ändern (O-48). */
+function http_bereich_release(array $u): void
+{
+    ['basis' => $basis, 'h' => $h] = $u;
+    $f = http_frisch($u);
+    $olaf = beispieldaten_team_anmeldung();
+    $login = http_team_einloggen($u, TEST_BETREIBER, TEST_PASSWORT);
+    $b = $login['keks'];
+
+    abschnitt('HTTP: Suchmaschinen (Release 1.0, T-344)');
+    einstellung_setzen('suchmaschinen', '1'); // wie aus einer Sicherung von Produktion
+    $r = http_anfrage($basis, 'GET', '/', $h);
+    pruefe(str_contains($r['text'], '<meta name="robots" content="noindex">'), 'Entwicklung: Startseite trägt noindex, auch mit gesetztem Schalter');
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'id="suchmaschinen"') && str_contains($r['text'], 'Den Schalter gibt es nur auf Produktion') && !str_contains($r['text'], 'Suchmaschinen erlauben'), 'Betrieb: Kasten „Suchmaschinen“ ohne Schalter außerhalb der Produktion');
+    $r = http_anfrage($basis, 'POST', '/team/daten', $h, [], ['csrf' => http_csrf($r['text']), 'aktion' => 'suchmaschinen', 'wert' => '1'], $b);
+    $r = http_anfrage($basis, 'GET', '/team/daten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'bleiben Suchmaschinen immer gesperrt'), 'Einschalten außerhalb der Produktion abgewiesen');
+    einstellung_setzen('suchmaschinen', '0');
+
+    abschnitt('HTTP: Adresse eines Team-Kontos ändern (O-48, T-345)');
+    $kid = $olaf['konto'];
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    $c = http_csrf($r['text']);
+    pruefe(str_contains($r['text'], 'id="m-adresse-' . $kid . '"') && str_contains($r['text'], 'id="adresse-' . $kid . '"') && str_contains($r['text'], 'id="totp-ad-' . $kid . '"'), 'Team-Konten: Menüpunkt „Adresse ändern …“ mit Dialog, Feld und Code');
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $c, 'aktion' => 'adresse', 'id' => $kid, 'email' => 'olaf.neu@example.org', 'totp' => '000000'], $b);
+    pruefe(konto_laden($kid)['email'] === 'olaf.orga@example.org' && str_contains($r['text'], 'nicht geändert'), 'ohne gültigen Code: nichts geändert');
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $c, 'aktion' => 'adresse', 'id' => $kid, 'email' => 'olaf.neu@example.org', 'totp' => $login['codes'][0]], $b);
+    pruefe($r['status'] === 303 && konto_laden($kid)['email'] === 'olaf.neu@example.org' && anm_laden($olaf['anmeldung'])['email'] === 'olaf.neu@example.org', 'mit Code: Adresse von Konto und Anmeldung geändert');
+    $r = http_anfrage($basis, 'GET', '/team/konten', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'An die alte Adresse ging ein Hinweis') && str_contains($r['text'], 'olaf.neu@example.org'), 'Meldung und neue Adresse in der Liste');
+    $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $c, 'aktion' => 'adresse', 'id' => $f['betreiber'], 'email' => 'bea.neu@example.org'], $b);
+    pruefe(konto_laden($f['betreiber'])['email'] === TEST_BETREIBER && str_contains($r['text'], 'Mein Konto'), 'das eigene Konto nicht über Team-Konten');
 }

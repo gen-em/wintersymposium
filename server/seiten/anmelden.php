@@ -87,7 +87,7 @@ $profilHtml = function (array $eingabe, array $fehler, ?array $tk): string {
         'email_hilfe' => 'Die Adresse deines Kontos. Du bist eingeloggt, deshalb ist keine Bestätigung per Mail nötig.']);
 };
 
-seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'pow.js']]);
+seite_kopf('Anmelden', ['aktiv' => '/anmelden', 'skripte' => ['anmelden.js', 'pow.js'], 'suchmaschinen' => true]);
 $kicker = va_kurz() . ' · ' . tag_text(va('veranstaltung_datum'));
 if ($danke) {
     echo seiten_kopfzeile('Anmelden', $kicker, '', true); ?>

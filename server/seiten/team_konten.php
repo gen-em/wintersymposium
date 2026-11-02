@@ -4,8 +4,9 @@ declare(strict_types=1);
 /*
  * Team-Konten (nur Betreiber, E-11): anlegen, Einrichtungs-/Passwortlink
  * (per Mail oder angezeigt, AP-6),
- * zweiten Faktor zurücksetzen, sperren, Rolle ändern. Rolle ändern, zweiten
- * Faktor zurücksetzen und Sperren verlangen den eigenen zweiten Faktor (E-41,
+ * zweiten Faktor zurücksetzen, sperren, Rolle und Adresse ändern (O-48). Rolle
+ * und Adresse ändern, zweiten Faktor zurücksetzen und Sperren verlangen den
+ * eigenen zweiten Faktor (E-41,
  * Review B-7: Code aus App oder Mail, Wiederherstellungscode oder Passkey). Das eigene Konto lässt sich
  * hier nicht sperren oder herabstufen, und es bleibt immer mindestens ein
  * aktiver Betreiber. Admins sind für alle Veranstaltungen (auch künftige) oder
@@ -57,6 +58,16 @@ if (ist_post()) {
                 }
                 konto_aktiv_setzen((int)$ziel['id'], (int)$ziel['aktiv'] !== 1, $ich);
                 fertig('ok', $ziel['name'] . ((int)$ziel['aktiv'] === 1 ? ' gesperrt.' : ' entsperrt.'), '/team/konten');
+            case 'adresse':
+                // O-48 (Admin 2026-11-01): nur BetreiberIn, mit eigenem Code, Hinweis an die alte Adresse
+                if (($f = zweitfaktor_aus_formular($ich)) !== null) {
+                    $fehler[] = $f . ' Die Adresse wurde nicht geändert.';
+                } elseif (($f = konto_adresse_aendern((int)$ziel['id'], post_text('email'), $ich)) !== null) {
+                    $fehler[] = $f;
+                } else {
+                    fertig('ok', 'Adresse von ' . $ziel['name'] . ' geändert. An die alte Adresse ging ein Hinweis.', '/team/konten');
+                }
+                break;
             case 'veranstaltungen':
                 if ($ziel['rolle'] !== 'admin') {
                     $fehler[] = 'BetreiberInnen sehen immer alle Veranstaltungen.';
@@ -115,6 +126,7 @@ if (is_array($link)): ?>
                     <div class="menue-karte zeilen-liste" role="menu">
                         <?php if ($k['rolle'] === 'admin'): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-va-<?= $kid ?>">Veranstaltungen …</button><?php endif; ?>
                         <button type="button" hidden class="menue-punkt" role="menuitem" id="m-rolle-<?= $kid ?>">Rolle ändern …</button>
+                        <button type="button" hidden class="menue-punkt" role="menuitem" id="m-adresse-<?= $kid ?>">Adresse ändern …</button>
                         <hr>
                         <form method="post" action="/team/konten"><?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="link"><button class="menue-punkt" role="menuitem" type="submit"><?= $k['hat_passwort'] ? 'Passwort-Link mailen' : 'Einladung neu mailen' ?></button></form>
                         <?php if (zweitfaktor_da($k)): ?><button type="button" hidden class="menue-punkt" role="menuitem" id="m-zf-<?= $kid ?>">Zweiten Schritt zurücksetzen …</button><?php endif; ?>
@@ -144,6 +156,15 @@ if (is_array($link)): ?>
                         <select id="rolle-<?= $kid ?>" name="rolle"><?php foreach (TEAM_ROLLEN as $r): if ($r !== $k['rolle']): ?><option value="<?= e($r) ?>"><?= e(ROLLEN[$r]) ?></option><?php endif; endforeach; ?></select>
                         <?= zweitfaktor_feld_html($konto, 'totp-' . $kid) ?>
                         <button class="knopf" type="submit">Rolle ändern</button>
+                    </form>
+                </details>
+                <details class="bestaetigen" data-art="lila" data-ausloeser="m-adresse-<?= $kid ?>" data-titel="<?= e($k['name']) ?> · Adresse ändern"><summary class="klein-link">Adresse ändern</summary>
+                    <form method="post" action="/team/konten" class="formular">
+                        <?= csrf_feld() ?><input type="hidden" name="id" value="<?= $kid ?>"><input type="hidden" name="aktion" value="adresse">
+                        <?= feld('email', 'Neue E-Mail-Adresse', ['typ' => 'email', 'id' => 'adresse-' . $kid, 'pflicht' => true, 'attr' => ['maxlength' => 254, 'autocomplete' => 'off'], 'ohne_rahmen' => true,
+                            'hilfe' => 'Gilt sofort für Login und Anmeldungen. Die alte Adresse ' . $k['email'] . ' bekommt einen Hinweis; offene Einladungs- und Passwort-Links verfallen.']) ?>
+                        <?= zweitfaktor_feld_html($konto, 'totp-ad-' . $kid) ?>
+                        <button class="knopf" type="submit">Adresse ändern</button>
                     </form>
                 </details>
                 <?php if (zweitfaktor_da($k)): ?>
