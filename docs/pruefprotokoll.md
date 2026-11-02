@@ -45,6 +45,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen, Staging durchklicken | umgesetzt, Staging durchgeklickt | lokal T-332, T-333, T-340; Staging T-339 | Status-Seite im eigenen Browser, Frage an den Hoster (siehe unten) |
 | E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
 | AP-20 | Release 1.0 (E-76): Suchmaschinen-Schalter, Login-Sperre mit bekannten IPs (O-47), Adresse eines Team-Kontos ändern (O-48) | umgesetzt, Produktion online (1.0.0) | lokal T-343 bis T-346 | T-347 bestanden; offen: Login-Sperre-Stichprobe, Prüfungen auf echten Geräten, Checkliste Anmeldestart (siehe unten) |
+| E-77 | README, Bilder, Lizenz, SECURITY.md | umgesetzt | T-348, T-349 | Private Meldung auf GitHub einschalten (Admin); README auf GitHub ansehen |
 
 ## Wie geprüft wird
 
@@ -1034,4 +1035,25 @@ Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gi
 4. Exporte (CSV, xlsx) in Excel und LibreOffice öffnen, PDF am Handy (T-156, Export xlsx und PDF).
 5. Bitwarden füllt den Code in Firefox ein (T-221).
 6. Stehende Kopfleiste und Menü auf Handy und Tablet (T-271).
+
+## README, Bilder und Lizenz (E-77)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-348, ap: E-77, was: "Bilder ohne Marke", wie: "node tools/browser/readme_bilder.js: vor jedem Foto Prüfung von Seite, iframe und Eingabefeldern auf „Allgäu“ (Abbruch sonst), PDF-Text der Bescheinigung ebenso; jedes Bild angesehen"}
+- {id: T-349, ap: E-77, was: "README stimmt", wie: "Funktionen, Voraussetzungen (PHP-Erweiterungen aus dem Code), Fristen und Lizenzen gegen Code, betrieb.md und die Lizenzdateien geprüft; Links und Bildpfade relativ zum Repo"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-348 | 2026-11-02 | claude-dev | bestanden | `node tools/browser/readme_bilder.js` → 10 Bilder, zusammen 520 KB; alle angesehen: Logo als neutraler Schriftzug, keine Markennamen, Mail-Vorschau ohne Logo, Bescheinigung ohne Bildmarke | Erster Lauf: Mail-Vorschau zeigte das Logo als Bild, Übersicht „Cron noch nie gelaufen“, Statistik nur ein Punkt – im Skript behoben (Konzept E-77 Probleme) |
+| T-349 | 2026-11-02 | claude-dev | bestanden | PHP-Erweiterungen aus dem Code (PDO, OpenSSL, mbstring, GD, zlib), Fristen aus E-24/E-59, Lizenzen aus den Lizenzdateien (OFL, MIT für Phosphor und qrcode-generator, LGPL-2.1 für tFPDF); `php tools/tests/lauf.php` → 1236 ok, 0 Fehler | – |
+
+### Noch zu prüfen
+
+1. **Admin:** auf GitHub Settings → Security („Code security“) → **Private vulnerability reporting** → Enable; danach steht im Reiter Security „Report a vulnerability“.
+2. **Admin:** README auf der Startseite des Repos ansehen (Bilder, Tabellen, Links).
 

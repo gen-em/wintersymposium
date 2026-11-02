@@ -2,6 +2,21 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [1.0.2] – 2026-11-02
+
+README für alle, die die Software nutzen wollen (E-77).
+
+### Neu
+
+- **README neu:** wofür die Software da ist, Funktionen für Teilnehmende und Team, Bilder, Datenschutz und Sicherheit, Voraussetzungen, Installation in Kürze, Grenzen, Lizenz in klarer Sprache (Code AGPL-3.0, © Philipp Chadid; Logo und Name „Allgäu Akut“ ausgenommen; fremde Bestandteile mit Lizenzen).
+- **Bilder** in `docs/bilder/` mit erfundenen Beispieldaten und ohne Marke; neu erzeugen mit `node tools/browser/readme_bilder.js` (ersetzt Logo und Markennamen nur im Bild und bricht ab, wenn irgendwo noch „Allgäu“ steht).
+- **SECURITY.md:** Sicherheitslücken privat über GitHub melden („Report a vulnerability“).
+- Beispieldatensatz: `beispieldaten_neutral()` für die Bilder.
+
+### Doku
+
+- Konzept E-77, Prüfprotokoll T-348 und T-349, betrieb.md (Abschnitt Tests), CLAUDE.md (Bilder erneuern, wenn sich die Oberfläche deutlich ändert).
+
 ## [1.0.1] – 2026-11-02
 
 Nur Doku: Release 1.0 läuft auf Produktion.
