@@ -2,7 +2,7 @@
 dokument: pruefprotokoll
 projekt: wintersymposium
 repo: gen-em/wintersymposium
-stand: 2026-11-01
+stand: 2026-11-02
 ---
 
 # Prüfprotokoll: Webseite Wintersymposium
@@ -46,6 +46,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
 | AP-20 | Release 1.0 (E-76): Suchmaschinen-Schalter, Login-Sperre mit bekannten IPs (O-47), Adresse eines Team-Kontos ändern (O-48) | umgesetzt, Produktion online (1.0.0) | lokal T-343 bis T-346 | T-347 bestanden; offen: Login-Sperre-Stichprobe, Prüfungen auf echten Geräten, Checkliste Anmeldestart (siehe unten) |
 | E-77 | README, Bilder, Lizenz, SECURITY.md | umgesetzt | T-348, T-349 | Private Meldung auf GitHub einschalten (Admin); README auf GitHub ansehen |
+| AP-21 | Linkvorschau, Suchmaschinen, Icon je Veranstaltung, Logo kompakt | umgesetzt, PR offen | lokal T-350, T-351; Browser Stufe 3 T-352 | T-352 Lighthouse; T-353 Staging/Produktion und echte Messenger (Admin) |
 
 ## Wie geprüft wird
 
@@ -1056,4 +1057,30 @@ Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gi
 
 1. **Admin:** auf GitHub Settings → Security („Code security“) → **Private vulnerability reporting** → Enable; danach steht im Reiter Security „Report a vulnerability“.
 2. **Admin:** README auf der Startseite des Repos ansehen (Bilder, Tabellen, Links).
+
+## AP-21 Linkvorschau, Suchmaschinen und Icon je Veranstaltung (E-78 bis E-80)
+
+### Geplante Prüfungen
+
+```yaml
+- {id: T-350, ap: AP-21, was: "Linkvorschau und Suchmaschinen-Angaben", wie: "lauf.php Bereich vorschau und HTTP-Bereich vorschau: Titel, Beschreibung, canonical, og:*, JSON-LD Event (auch mit </script> im Ort), allgemeine Vorschau ohne Link-Schlüssel, robots.txt und sitemap.xml mit Schalter aus und an (Produktion simuliert), Entwurf nicht in der Sitemap"}
+- {id: T-351, ap: AP-21, was: "Icon je Veranstaltung", wie: "lauf.php: PNG nötig (SVG, JPG abgelehnt), quadratisch, ab 512 px; drei Dateien 512/180/1200×630 mit Nachtblau; Kopie teilt das Icon, Entfernen löscht erst, wenn niemand es nutzt; Aufräumen; Sicherung und Wiederherstellen mit Icon. HTTP: Upload über die Kachel, Kopf mit Icon statt Logo, Favicon, og:image, /bild/ ohne Anmeldung, Entfernen"}
+- {id: T-352, ap: AP-21, was: "Browser und Lighthouse", wie: "Stufe 3 (gemeinsamer Seitenkopf): node tools/browser/durchlauf.js; Fotos von Kopf und Einstellungen ansehen; README-Bilder neu; Lighthouse (SEO, Leistung, Barrierefreiheit) auf der Startseite"}
+- {id: T-353, ap: AP-21, was: "Staging und Produktion", wie: "Admin nach dem Merge: Link der Startseite (mit ?v=1) in WhatsApp und Signal einfügen – Titel, Datum/Ort, Bild; auf Staging ein Icon hochladen und wieder entfernen; nach dem Schalter (Anmeldestart) /robots.txt und /sitemap.xml ansehen, Search Console"}
+```
+
+### Ergebnisse
+
+| T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
+|---|---|---|---|---|---|
+| T-350 | 2026-11-02 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1290 ok, 0 Fehler (vorher 1236); Bereich vorschau 147 ok, HTTP vorschau ok | 5 Tests liefen nach dem ersten Einbau rot (Seiten vor der Installation, Logo-Name, eigene absolute Adressen als „extern“) – behoben, siehe Konzept AP-21 probleme |
+| T-351 | 2026-11-02 | claude-dev | bestanden | in `lauf.php` enthalten (Icon-Abschnitt und HTTP „Icon je Veranstaltung“) | SVG bewusst abgelehnt (E-79) |
+| T-352 | 2026-11-02 | claude-dev | teilweise | Stufe 3: `node tools/browser/durchlauf.js` → 9385 ok, 0 Fehler (Chromium 3123, Firefox 3123, WebKit 3139); Fotos angesehen: Kopf mit Logo kompakt (Desktop, Handy), Kachel „Icon“ (Handy); `node tools/browser/readme_bilder.js` → Bilder neu (nur Version/Datum geändert, Marke weiter neutral) | Lighthouse nicht gelaufen: das Nachladen per `npx lighthouse` war in der Sitzung nicht erlaubt |
+
+### Noch zu prüfen
+
+1. **Lighthouse** (T-352): Chrome → Entwicklertools → „Lighthouse“ → Kategorien SEO, Leistung, Barrierefreiheit, Best Practices → Startseite auf Staging; Ergebnis (Zahlen und rote Punkte) zurückmelden. Oder in einer Sitzung mit erlaubtem `npx`.
+2. **Admin, Messenger** (T-353): Startseite von Staging bzw. Produktion mit `?v=1` am Ende in WhatsApp und Signal einfügen.
+3. **Admin, Icon auf Staging** (T-353): Einstellungen → Icon → PNG hochladen, Kopf und Browser-Tab ansehen, Link teilen, Icon entfernen.
+4. **Zum Anmeldestart** (Checkliste): nach dem Schalter `/robots.txt` und `/sitemap.xml` ansehen, Domain in der Google Search Console anmelden und die Sitemap eintragen.
 
