@@ -740,3 +740,33 @@ function beispieldaten_review2(): array
     db_ausfuehren("DELETE FROM mail_ausgang WHERE an = 'ada.abend@example.org'");
     return ['fremd_ada' => (int)$e['id'], 'liste_intern' => (int)$liste];
 }
+
+/**
+ * Neutrale Fassung für die Bilder der README (E-77): ersetzt in allen
+ * Textspalten der Datenbank die Namen der Marke („Allgäu Akut“, „Allgäuer …“)
+ * durch neutrale Bezeichnungen und setzt die Dachmarke auf „Fortbildung
+ * Notfallmedizin“. Nur für tools/browser/readme_bilder.js; nach
+ * beispieldaten_laden(). Gibt die Zahl der geänderten Zeilen zurück.
+ */
+const BEISPIEL_NEUTRAL = [
+    'Allgäuer ' => '',
+    'ALLGÄUER ' => '',
+    'Allgäu Akut' => 'Fortbildung Notfallmedizin',
+    'ALLGÄU AKUT' => 'FORTBILDUNG NOTFALLMEDIZIN',
+    'Allgäu' => 'Musterstadt',
+];
+
+function beispieldaten_neutral(): int
+{
+    einstellung_setzen('reihe_name', 'Fortbildung Notfallmedizin');
+    $n = 0;
+    $spalten = db_zeilen("SELECT table_name AS t, column_name AS c FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND data_type IN ('varchar', 'text', 'mediumtext', 'longtext') AND character_set_name = 'utf8mb4'");
+    foreach ($spalten as $s) {
+        foreach (BEISPIEL_NEUTRAL as $alt => $neu) {
+            $n += db_ausfuehren('UPDATE `' . $s['t'] . '` SET `' . $s['c'] . '` = REPLACE(`' . $s['c'] . '`, ?, ?) WHERE `' . $s['c'] . '` LIKE ?', [$alt, $neu, '%' . $alt . '%'])->rowCount();
+        }
+    }
+    va_zwischenspeicher_leeren();
+    return $n;
+}
