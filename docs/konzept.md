@@ -798,9 +798,14 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
       loesung:
         - "lauf.php: Meta-Angaben je Seitenart, keine Inhalte auf persönlichen Seiten, Icon-Upload (Formate, Größe, Ablehnung), robots/sitemap mit und ohne Schalter; Browser Stufe 3 (gemeinsamer Seitenkopf)"
         - "README (Funktionen), betrieb.md, Komponentenblatt falls neue Klasse, Prüfprotokoll, CHANGELOG"
-  status: "in Umsetzung"
-  ergebnis: null
-  probleme: []
+  status: "umgesetzt, PR offen; Staging und Produktion nach dem Merge (T-353)"
+  ergebnis: "21a bis 21d in einem Branch (gemeinsamer Seitenkopf, ein Stufe-3-Lauf). vorschau_lib mit vorschau_angaben/vorschau_kopf_html/vorschau_event_json, robots_text, sitemap_xml; seite_kopf() mit Optionen 'teilen' ('veranstaltung' für Start und Anmeldung, 'oeffentlich' für Newsletter und Rechtstexte), 'start', 'beschreibung'; Icon: va_icon_schreiben/-setzen/-entfernen/-datei in veranstaltung_lib, Kachel „Icon“ in den Einstellungen, Auslieferung über /bild/, Sicherung und Aufräumen; Logo kompakt negativ-lila/-rot aus zina-branding (Commit c29e238); Standard-Vorschaubild assets/logo/vorschau.png (11 KB). lauf.php 1289 ok (vorher 1236); Browser Stufe 3 und README-Bilder siehe Prüfprotokoll T-350 bis T-353"
+  probleme:
+    - {problem: "Absprache war „PNG oder SVG“; eine hochgeladene SVG kann Skripte enthalten, und die App liefert Uploads nie im Original aus (sie schreibt sie mit GD neu, V-12) – GD kann SVG nicht umwandeln", loesung: "nur PNG (Transparenz bleibt); SVG wird mit Hinweis abgelehnt (E-79), dem Admin gemeldet"}
+    - {problem: "Die neuen absoluten Adressen (canonical, og:image) galten im HTTP-Test „keine externen Ressourcen“ als fremd", loesung: "Test erlaubt Adressen des eigenen Hosts"}
+    - {problem: "Seiten vor der Installation (Meldung „noch nicht eingerichtet“) riefen die Vorschau-Angaben ohne Datenbank auf (503-Test rot)", loesung: "seite_kopf() baut die Angaben nur nach der Installation"}
+    - {problem: "Ein Einmal-Link (/link?t=…) hätte als og:url den Schlüssel nach außen gegeben", loesung: "allgemeine Vorschau nutzt immer die Startseite als Adresse und kein canonical (Test)"}
+    - {problem: "Icons fehlten in der Sicherung (feste Liste der Dateimuster)", loesung: "va-*.png in Sicherung, Prüfung, Wiederherstellen und Zurücksetzen von Staging; Test mit Sicherung und Wiederherstellen"}
 
 - id: AP-20
   titel: Release 1.0
