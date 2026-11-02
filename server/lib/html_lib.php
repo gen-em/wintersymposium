@@ -25,7 +25,11 @@ function e(mixed $wert): string
  *       'suchmaschinen' => true: öffentliche Seite, die Suchmaschinen aufnehmen dürfen, sobald der
  *                     Schalter unter Betrieb an ist (nur Produktion); sonst immer noindex,
  *       'vorschau' => Hinweise (Liste): Vorschau der Startseite im iframe (E-70 (6)) –
- *                     einbettbar, Navigation wie für Besucherinnen und Besucher, Links ohne Wirkung.
+ *                     einbettbar, Navigation wie für Besucherinnen und Besucher, Links ohne Wirkung,
+ *       'teilen' => 'veranstaltung' (Startseite, Anmeldung) oder 'oeffentlich' (Newsletter, Rechtstexte):
+ *                     Linkvorschau und Suchmaschinen-Angaben der Seite (AP-21, E-78); ohne: allgemeine
+ *                     Vorschau ohne Inhalte; 'start' => true: Startseite (Titel, strukturierte Daten);
+ *                     'beschreibung' => eigener Text der Vorschau (nur mit 'teilen').
  */
 function seite_kopf(string $titel, array $opt = []): void
 {
@@ -48,18 +52,30 @@ function seite_kopf(string $titel, array $opt = []): void
         $ich = $tk ?? $team; // eingeloggtes Konto
         $erkannt = is_array($tn) || is_array($ich);
     }
+    // Linkvorschau und Suchmaschinen (AP-21, E-78): öffentliche Seiten mit Angaben der Veranstaltung,
+    // alle übrigen allgemein (ohne Namen, Inhalte oder die angefragte Adresse); nicht in der Vorschau-Ansicht
+    // Vor der Installation (Meldungsseiten, Installer) ohne Datenbank: keine Angaben
+    $teilen = $vorschau ? 'allgemein' : (string)($opt['teilen'] ?? 'allgemein');
+    $angaben = !installiert() ? null : vorschau_angaben($teilen, ['titel' => $titel, 'start' => $opt['start'] ?? false] + (isset($opt['beschreibung']) ? ['beschreibung' => $opt['beschreibung']] : []));
+    // Icon der Veranstaltung (E-79): ersetzt Logo, Favicon und App-Symbol auf ihren Seiten
+    $icon = vorschau_va_da() ? va_icon_datei('icon') : null;
+    $touch = vorschau_va_da() ? va_icon_datei('touch') : null;
     echo '<!doctype html><html lang="de"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         // Suchmaschinen nur für öffentliche Seiten ('suchmaschinen' => true), nur auf Produktion
         // und nur mit dem Schalter unter Betrieb (Release 1.0, Checkliste Anmeldestart)
         . (($opt['suchmaschinen'] ?? false) && betrieb_suchmaschinen_erlaubt() ? '' : '<meta name="robots" content="noindex">')
-        . '<title>' . e($titel) . ' – ' . e(seiten_name()) . '</title>'
+        . '<title>' . ($angaben !== null && $teilen !== 'allgemein' ? e($angaben['titel']) : e($titel) . ' – ' . e(seiten_name())) . '</title>'
+        . ($angaben !== null ? vorschau_kopf_html($angaben) : '')
+        . (!empty($opt['start']) && $teilen === 'veranstaltung' ? vorschau_event_json() : '')
         . '<link rel="stylesheet" href="/assets/site.css">'
         // .ico zuerst mit fester Größe, SVG danach: so nehmen Chrome, Edge und Firefox die SVG,
         // die sich hellen und dunklen Oberflächen anpasst; Safari bleibt bei der .ico (Kachel).
-        . '<link rel="icon" href="/favicon.ico" sizes="32x32">'
-        . '<link rel="icon" href="/favicon.svg" type="image/svg+xml">'
-        . '<link rel="apple-touch-icon" href="/apple-touch-icon.png">'
+        // Mit Icon der Veranstaltung nur dessen PNG (E-79).
+        . ($icon !== null
+            ? '<link rel="icon" href="/bild/' . e($icon) . '" type="image/png" sizes="512x512">'
+            : '<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/favicon.svg" type="image/svg+xml">')
+        . '<link rel="apple-touch-icon" href="' . ($touch !== null ? '/bild/' . e($touch) : '/apple-touch-icon.png') . '">'
         . '<meta name="theme-color" content="#001E3A">'
         // CSRF für Skripte (ws.post in basis.js), nur mit Sitzung
         . (session_status() === PHP_SESSION_ACTIVE ? '<meta name="csrf" content="' . e(csrf_token()) . '">' : '')
@@ -69,8 +85,11 @@ function seite_kopf(string $titel, array $opt = []): void
         . '<a class="sprung" href="#inhalt">Zum Inhalt</a>'
         . '<header class="kopf"><div class="innen">'
         . '<a href="/" aria-label="Zur Startseite">'
-        . '<img class="logo logo-lila" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-lila.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
-        . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_quer_negativ-rot.svg" alt="ALLGÄU AKUT – Fortbildung Notfallmedizin" width="158" height="46">'
+        // Logo kompakt ohne Unterzeile (E-80); mit Icon der Veranstaltung nur dieses (E-79, Variante a)
+        . ($icon !== null
+            ? '<img class="logo logo-icon" src="/bild/' . e($icon) . '" alt="' . e(va_kurz()) . '" width="46" height="46">'
+            : '<img class="logo logo-lila" src="/assets/logo/ALLGAEU-AKUT_Logo_kompakt_negativ-lila.svg" alt="ALLGÄU AKUT" width="170" height="46">'
+            . '<img class="logo logo-rot" src="/assets/logo/ALLGAEU-AKUT_Logo_kompakt_negativ-rot.svg" alt="ALLGÄU AKUT" width="170" height="46">')
         . '</a>';
     if ($nav) {
         $a = fn(string $href, string $text, string $pfad, string $klasse = '') => '<li><a' . ($klasse !== '' ? ' class="' . $klasse . '"' : '') . ' href="' . e($href) . '"'

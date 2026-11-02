@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [1.1.0] – 2026-11-02
+
+Linkvorschau, Suchmaschinen und Icon je Veranstaltung (AP-21, E-78 bis E-80).
+
+### Neu
+
+- **Linkvorschau:** Geteilte Links zeigen in WhatsApp, Signal & Co. Titel, Beschreibung (Auflage, Datum, Zeit, Ort, CME) und Bild – automatisch aus den Einstellungen der Veranstaltung. Persönliche und interne Seiten zeigen nur eine allgemeine Vorschau ohne Namen, Inhalte oder Link-Schlüssel. Standard-Vorschaubild `assets/logo/vorschau.png` (lila Bildzeichen auf Nachtblau, 1200 × 630).
+- **Suchmaschinen:** Beschreibung, `canonical`, strukturierte Daten schema.org „Event“ auf der Startseite, `/robots.txt` und `/sitemap.xml` – beide folgen dem Suchmaschinen-Schalter unter Betrieb (aus: alles gesperrt, keine Sitemap). Seitentitel der Startseite „<Name> <Jahr> – <Dachmarke>“.
+- **Icon je Veranstaltung:** Einstellungen → Kachel „Icon“ (PNG, quadratisch, ab 512 px). Ersetzt auf den Seiten der Veranstaltung das Logo links oben, ist Favicon und App-Symbol und steht in der Vorschau geteilter Links. Kopien übernehmen es; die Sicherung nimmt es mit.
+- Neue `vorschau_lib` (Präfixe `vorschau`, `robots`, `sitemap`); Tests `lauf/22_vorschau.php` und HTTP-Bereich `vorschau`; Beispieldaten `beispieldaten_icon()`.
+
+### Geändert
+
+- **Logo links oben ohne Unterzeile** („Fortbildung Notfallmedizin“ war kaum lesbar, E-80): Logo kompakt aus dem Branding-Repo; Fuß, Mails und PDFs unverändert.
+
+### Doku
+
+- Konzept AP-21, E-78 bis E-80, Präfix-Tabelle, Checkliste Anmeldestart (Search Console, Linkvorschau); betrieb.md (Abschnitte 10 und 17); README (Funktionen, Bilder neu); Prüfprotokoll T-350 bis T-353.
+
 ## [1.0.2] – 2026-11-02
 
 README für alle, die die Software nutzen wollen (E-77).

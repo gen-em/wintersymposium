@@ -659,6 +659,132 @@ function va_eckdaten(): array
     return $eck;
 }
 
+/* ---- Icon der Veranstaltung (AP-21, E-79) --------------------------------- */
+
+/*
+ * Ein hochgeladenes Icon ersetzt auf den Seiten der Veranstaltung das Logo links
+ * oben, ist ihr Favicon und App-Symbol und steht mittig im Vorschaubild geteilter
+ * Links. Nur PNG (kein SVG: hochgeladene Dateien werden nie im Original
+ * ausgeliefert, bild_lib). Der Upload wird neu geschrieben: Icon 512 px
+ * (durchsichtig), App-Symbol 180 px und Vorschaubild 1200 × 630 (beide auf
+ * Nachtblau). Gespeichert ist nur der Grundname (va_einstellung „icon“, nicht im
+ * Katalog der Formulare); eine Kopie der Veranstaltung übernimmt das Icon.
+ */
+const VA_ICON_MIN = 512;
+const VA_ICON_MAX_BYTES = 8 * 1024 * 1024;
+const VA_ICON_GRUND = [0x00, 0x1E, 0x3A]; // Nachtblau, wie Kopf und Standard-Vorschaubild
+/** Dateien je Art: Endung hinter dem Grundnamen. */
+const VA_ICON_ARTEN = ['icon' => '-512', 'touch' => '-180', 'vorschau' => '-vorschau'];
+
+/** Grundname des Icons der Veranstaltung im Kontext (oder $id) bzw. null. */
+function va_icon_name(?int $id = null): ?string
+{
+    if (!va_tabellen_da() || va_keine()) {
+        return null;
+    }
+    $w = db_wert("SELECT wert FROM va_einstellung WHERE veranstaltung_id = ? AND schluessel = 'icon'", [$id ?? va_id()]);
+    return is_string($w) && preg_match('/^va-[0-9a-f]{16}$/', $w) === 1 ? $w : null;
+}
+
+/** Dateiname einer Art ('icon', 'touch', 'vorschau') unter /bild/ oder null ohne Icon. */
+function va_icon_datei(string $art): ?string
+{
+    $name = va_icon_name();
+    if ($name === null || !isset(VA_ICON_ARTEN[$art])) {
+        return null;
+    }
+    $datei = $name . VA_ICON_ARTEN[$art] . '.png';
+    return is_file(foto_ordner() . '/' . $datei) ? $datei : null;
+}
+
+/** Hochgeladenes Icon prüfen und für die Veranstaltung im Kontext ablegen; wirft RuntimeException mit Text für die Oberfläche. */
+function va_icon_speichern(array $upload, ?int $kontoId): void
+{
+    $name = va_icon_schreiben(bild_upload_lesen($upload, VA_ICON_MAX_BYTES, 'Icon'));
+    va_icon_setzen($name);
+    audit_schreiben('einstellungen', 'Icon der Veranstaltung hochgeladen', $kontoId);
+}
+
+/** Geschriebenes Icon (Grundname aus va_icon_schreiben) der Veranstaltung im Kontext zuordnen; das alte fällt weg, wenn niemand es mehr nutzt. */
+function va_icon_setzen(string $name): void
+{
+    $alt = va_icon_name();
+    db_ausfuehren("INSERT INTO va_einstellung (veranstaltung_id, schluessel, wert, geaendert_am) VALUES (?, 'icon', ?, ?)
+        ON DUPLICATE KEY UPDATE wert = VALUES(wert), geaendert_am = VALUES(geaendert_am)", [va_id(), $name, db_jetzt()]);
+    if ($alt !== $name) {
+        va_icon_loeschen_wenn_frei($alt);
+    }
+}
+
+/**
+ * Bilddaten prüfen (PNG, quadratisch, mindestens VA_ICON_MIN) und die drei
+ * Dateien schreiben (auch für Tests und Beispieldaten). Gibt den Grundnamen zurück.
+ */
+function va_icon_schreiben(string $daten): string
+{
+    $info = @getimagesizefromstring($daten);
+    if ($info === false || $info[2] !== IMAGETYPE_PNG) {
+        throw new RuntimeException('Bitte das Icon als PNG hochladen (SVG und JPG gehen nicht).');
+    }
+    [$w, $h] = [(int)$info[0], (int)$info[1]];
+    if (abs($w - $h) > max(2, intdiv(max($w, $h), 100))) {
+        throw new RuntimeException('Das Icon muss quadratisch sein (hochgeladen: ' . $w . ' × ' . $h . ' px).');
+    }
+    if (min($w, $h) < VA_ICON_MIN) {
+        throw new RuntimeException('Das Icon muss mindestens ' . VA_ICON_MIN . ' × ' . VA_ICON_MIN . ' px groß sein (hochgeladen: ' . $w . ' × ' . $h . ' px).');
+    }
+    $name = 'va-' . bin2hex(random_bytes(8));
+    $ordner = foto_ordner();
+    // Icon mit Transparenz (Kopf, Favicon)
+    $mitAlpha = imagecreatetruecolor(VA_ICON_MIN, VA_ICON_MIN);
+    imagealphablending($mitAlpha, false);
+    imagesavealpha($mitAlpha, true);
+    imagefill($mitAlpha, 0, 0, imagecolorallocatealpha($mitAlpha, 0, 0, 0, 127));
+    $quelle = @imagecreatefromstring($daten);
+    if ($quelle === false) {
+        throw new RuntimeException('Das Bild lässt sich nicht lesen.');
+    }
+    $seite = min($w, $h);
+    imagecopyresampled($mitAlpha, $quelle, 0, 0, intdiv($w - $seite, 2), intdiv($h - $seite, 2), VA_ICON_MIN, VA_ICON_MIN, $seite, $seite);
+    bild_schreiben($mitAlpha, $ordner . '/' . $name . VA_ICON_ARTEN['icon'] . '.png', true, 9);
+    // App-Symbol und Vorschaubild auf Nachtblau (iOS zeigt Transparenz schwarz)
+    $flaeche = function (int $b, int $h, int $kante) use ($mitAlpha): GdImage {
+        $z = imagecreatetruecolor($b, $h);
+        imagefill($z, 0, 0, imagecolorallocate($z, ...VA_ICON_GRUND));
+        imagealphablending($z, true);
+        imagecopyresampled($z, $mitAlpha, intdiv($b - $kante, 2), intdiv($h - $kante, 2), 0, 0, $kante, $kante, VA_ICON_MIN, VA_ICON_MIN);
+        return $z;
+    };
+    bild_schreiben($flaeche(180, 180, 180), $ordner . '/' . $name . VA_ICON_ARTEN['touch'] . '.png', true, 9);
+    // Motiv 440 px mittig: im quadratischen Zuschnitt von WhatsApp ganz sichtbar (E-78)
+    bild_schreiben($flaeche(VORSCHAU_BREITE, VORSCHAU_HOEHE, 440), $ordner . '/' . $name . VA_ICON_ARTEN['vorschau'] . '.png', true, 9);
+    imagedestroy($quelle);
+    return $name;
+}
+
+/** Icon der Veranstaltung im Kontext entfernen (zurück zu Logo und Standardbildern). */
+function va_icon_entfernen(?int $kontoId): void
+{
+    $alt = va_icon_name();
+    if ($alt === null) {
+        return;
+    }
+    db_ausfuehren("DELETE FROM va_einstellung WHERE veranstaltung_id = ? AND schluessel = 'icon'", [va_id()]);
+    va_icon_loeschen_wenn_frei($alt);
+    audit_schreiben('einstellungen', 'Icon der Veranstaltung entfernt', $kontoId);
+}
+
+/** Dateien eines Icons löschen, wenn keine Veranstaltung es mehr nutzt (Kopien teilen es). */
+function va_icon_loeschen_wenn_frei(?string $name): void
+{
+    if ($name === null || db_gibt_es("SELECT COUNT(*) FROM va_einstellung WHERE schluessel = 'icon' AND wert = ?", [$name])) {
+        return;
+    }
+    foreach (VA_ICON_ARTEN as $endung) {
+        @unlink(foto_ordner() . '/' . $name . $endung . '.png');
+    }
+}
+
 /* ---- Veranstaltungsreihen (AP-19, E-71) ---------------------------------- */
 
 /*

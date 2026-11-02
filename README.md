@@ -37,7 +37,8 @@ Entstanden für ein jährliches Notfallmedizin-Symposium (rund 250 Teilnehmende,
 - **Statistik** und **Exporte** als CSV, Excel und PDF: Teilnehmendenliste, Essensliste, Unterschriftenliste mit EFN-Barcode, CME-Liste.
 - **Teilnahme und Zertifikate**: Anwesenheit erfassen, Bescheinigungen freischalten.
 - **Einstellungen je Veranstaltung**: Kapazität, Fristen, Stichtage, Bausteine (Workshops, Essen, Fortbildungspunkte, Bescheinigung) – nichts davon steht fest im Code.
-- **Mehrere Veranstaltungen und Reihen**, Rechte für Admins je Veranstaltung oder Reihe, Protokoll aller Änderungen.
+- **Mehrere Veranstaltungen und Reihen**, Rechte für Admins je Veranstaltung oder Reihe, Protokoll aller Änderungen. Jede Veranstaltung kann ein **eigenes Icon** haben (links oben, im Browser-Tab, in der Linkvorschau).
+- **Linkvorschau und Suchmaschinen**: Geteilte Links zeigen in Messengern Titel, Datum, Ort und Bild; Suchmaschinen bekommen Beschreibung, strukturierte Daten zur Veranstaltung, `sitemap.xml` und `robots.txt` – alles automatisch aus den Einstellungen und erst freigegeben, wenn eine BetreiberIn es einschaltet.
 - **Betrieb**: Status-Seite mit Ampeln (Cron, Mail, Datenbank, Sicherung), automatische Sicherung mit Wiederherstellen, Wartungsmodus, Team-Konten mit Rollen.
 
 | Team-Übersicht | Programm-Pflege |

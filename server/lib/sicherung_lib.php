@@ -105,7 +105,8 @@ function sicherung_anlegen(string $anlass, ?int $kontoId = null): string
             $schreib(['art' => 'zeilen', 'name' => $tab, 'daten' => $block]);
         }
     }
-    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.png') ?: [], glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: []) as $f) {
+    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.jpg') ?: [], glob(foto_ordner() . '/mail-*.png') ?: [], glob(foto_ordner() . '/text-*.jpg') ?: [], glob(foto_ordner() . '/text-*.png') ?: [],
+        glob(foto_ordner() . '/va-*.png') ?: []) as $f) { // mit den Icons der Veranstaltungen (AP-21)
         $schreib(['art' => 'datei', 'ordner' => 'bilder', 'name' => basename($f), 'inhalt' => base64_encode((string)file_get_contents($f))]);
     }
     // Unterschrift auf dem Zertifikat (AP-10)
@@ -185,7 +186,7 @@ function sicherung_pruefen(string $name): ?string
             $tabellen[$d['name']] = true;
         } elseif ($art === 'zeilen' && !isset($tabellen[$d['name'] ?? ''])) {
             break;
-        } elseif ($art === 'datei' && !((($d['ordner'] ?? '') === 'bilder' && preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|(mail|text)-[0-9a-f]{16}\.(jpg|png))$/', (string)($d['name'] ?? '')) === 1)
+        } elseif ($art === 'datei' && !((($d['ordner'] ?? '') === 'bilder' && preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|(mail|text)-[0-9a-f]{16}\.(jpg|png)|va-[0-9a-f]{16}-(512|180|vorschau)\.png)$/', (string)($d['name'] ?? '')) === 1)
             || (($d['ordner'] ?? '') === 'zertifikat' && preg_match('#^\d{1,9}/unterschrift\.png$#', (string)($d['name'] ?? '')) === 1))) {
             break;
         } elseif ($art === 'ende') {
@@ -394,9 +395,9 @@ function testdaten_zuruecksetzen(?int $kontoId, bool $testkonten = false): strin
             db_wert('SELECT RELEASE_LOCK(?)', [$sperre]);
         }
     }
-    // Dateien: Fotos, Bilder der Mailings und Unterschriften weg; Bilder in Impressum und Datenschutz bleiben
+    // Dateien: Fotos, Bilder der Mailings, Icons der Veranstaltungen und Unterschriften weg; Bilder in Impressum und Datenschutz bleiben
     $texte = implode(' ', array_column($behalten['inhalt'], 'text'));
-    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*') ?: [], glob(foto_ordner() . '/text-*') ?: []) as $f) {
+    foreach (array_merge(glob(foto_ordner() . '/dozent-*.jpg') ?: [], glob(foto_ordner() . '/mail-*') ?: [], glob(foto_ordner() . '/text-*') ?: [], glob(foto_ordner() . '/va-*.png') ?: []) as $f) {
         if (!str_contains($texte, basename($f))) {
             @unlink($f);
         }
