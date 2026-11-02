@@ -766,7 +766,7 @@ Grundlage: Review 2026-10-31 Abschnitt 3 (V-2, V-5, V-6, V-7, V-10, V-14, V-46, 
     - {nr: 3, titel: "Adresse eines Team-Kontos ändern (O-48)", loesung: "konto_adresse_aendern(); Team-Konten → Bearbeiten → „Adresse ändern …“ mit eigenem Code; verknüpfte Anmeldungen ziehen mit, Konto-Links verfallen, Mail team_adresse an die alte Adresse, Protokoll ohne Adressen", test: "T-345"}
     - {nr: 4, titel: "Version 1.0.0, Doku, Prüfung", loesung: "CHANGELOG, betrieb.md (Produktion, Tag über Releases, Schalter, Login-Sperre, Adresse ändern), Konzept, Prüfprotokoll mit Geräteliste; R-10-Prüfung; lauf.php und voller Browser-Lauf (Stufe 3, vor Produktion)"}
   status: "umgesetzt 2026-11-01, Produktion offen (Tag v1.0.0 nach dem Merge)"
-  ergebnis: "Siehe Unterpunkte; Prüfungen T-343 bis T-347"
+  ergebnis: "Siehe Unterpunkte; lauf.php 1236 ok, Browser Stufe 3 9353 ok (WebKit per Teilwiederholung); Prüfungen T-343 bis T-346, T-347 (Produktion) offen"
   probleme:
     - {problem: "Die Links eines Kontos liegen seit Migration 20 in der Tabelle link, nicht mehr in konto_link", loesung: "konto_adresse_aendern() nutzt link_loeschen('konto', …); der Test hatte das sofort gezeigt"}
     - {problem: "Der Test zu O-48 legte zuerst selbst eine Anmeldung für ein Team-Konto an (Grep-Test V-50)", loesung: "vorhandener Beispieldatensatz beispieldaten_team_anmeldung() (Olaf Orga) statt eigenem Anlegen"}
