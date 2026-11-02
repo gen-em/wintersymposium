@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen. Versionen nach [Semantic Versioning](https://semver.org/lang/de/); die aktuelle Version steht in `VERSION`.
 
+## [1.0.1] – 2026-11-02
+
+Nur Doku: Release 1.0 läuft auf Produktion.
+
+### Doku
+
+- Prüfprotokoll T-347 (Produktion per Tag `v1.0.0`, Installer, Cron, Status grün, Testmail) und T-106 bestanden; Konzept: AP-1 abgenommen, AP-20 abgeschlossen, O-22 erledigt. Produktion braucht für diese Version kein neues Tag (kein geänderter Code).
+
 ## [1.0.0] – 2026-11-01
 
 Erste Version für Produktion (E-76, AP-20). Produktion geht damit online, zunächst ohne Suchmaschinen; die Anmeldung öffnet über die Einstellung „Anmeldestart“.
