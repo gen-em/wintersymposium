@@ -15,7 +15,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 
 | AP | Titel | Status | Geprüft | Offen |
 |---|---|---|---|---|
-| AP-1 | Grundgerüst und Auslieferung | auf Staging abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | Produktion per Tag (T-106); T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
+| AP-1 | Grundgerüst und Auslieferung | auf Staging und Produktion abgenommen | Staging: T-100, T-101, T-105, T-106 (Staging und Produktion, T-347), T-107, T-108 (ohne Login), T-110; lokal: T-102, T-104 | T-103 Ablauf, T-108 Login-Teil (mit AP-5); T-102/T-109 im Browser (mit AP-4); T-104 über HTTP (optional) |
 | AP-2 | Design-Mockups und öffentliche Seiten | auf Staging abgenommen | T-111 bis T-114, T-116; T-115 teilweise | T-115 Pflege mit AP-5 |
 | AP-3 | Team-Login, Programm und Veranstaltungs-Einstellungen | Schritt 1 bis 3 umgesetzt, Staging für Schritt 2 und 3 offen | lokal T-120, T-121, T-127 bis T-129, T-150, T-151, T-153, T-154, T-210 bis T-222 | Staging Schritt 2 und 3 (siehe unten); T-122 bis T-126 Wirkung mit AP-4 |
 | AP-4 | Anmeldung, Einmal-Links, Warteliste und Nachrücken | umgesetzt, Staging offen | lokal T-130 bis T-144; Mailversand auf Staging (Admin 2026-10-29) | Staging (siehe unten) |
@@ -44,7 +44,7 @@ Ein Abschnitt je Arbeitspaket in der Reihenfolge des Konzepts (Rückmeldungen un
 | E-73 | Browser-Durchlauf: Abbruch und Teilwiederholung | umgesetzt | T-331 | – |
 | E-74 | Auswahlfelder ohne Raten, Staging zurücksetzen, Staging durchklicken | umgesetzt, Staging durchgeklickt | lokal T-332, T-333, T-340; Staging T-339 | Status-Seite im eigenen Browser, Frage an den Hoster (siehe unten) |
 | E-75 | Passkey direkt abfragen (Adressfeld, Merker) | umgesetzt, Staging offen | lokal T-334 bis T-338 | Staging: iPhone/Safari, LibreWolf, Android/Chrome (siehe unten) |
-| AP-20 | Release 1.0 (E-76): Suchmaschinen-Schalter, Login-Sperre mit bekannten IPs (O-47), Adresse eines Team-Kontos ändern (O-48) | umgesetzt, Produktion offen | lokal T-343 bis T-346 | T-347 Produktion per Tag, Prüfungen auf echten Geräten (siehe unten) |
+| AP-20 | Release 1.0 (E-76): Suchmaschinen-Schalter, Login-Sperre mit bekannten IPs (O-47), Adresse eines Team-Kontos ändern (O-48) | umgesetzt, Produktion online (1.0.0) | lokal T-343 bis T-346 | T-347 bestanden; offen: Login-Sperre-Stichprobe, Prüfungen auf echten Geräten, Checkliste Anmeldestart (siehe unten) |
 
 ## Wie geprüft wird
 
@@ -61,7 +61,7 @@ Automatisch: `php tools/tests/lauf.php` (lokal und im Workflow „Prüfung“ be
 - {id: T-103, ap: AP-1, was: "Sitzungen in eigener Ablage, Ablauf 30 min", wie: "eigener Sitzungsordner im Webspace; Ablauf nach Wartezeit prüfen", status: "teilweise: Ablage var/sitzungen auf Staging vorhanden; Ablauf nach 30 min offen (mit AP-5-Login prüfen)"}
 - {id: T-104, ap: AP-1, was: "Ratenschutz", wie: "11-mal /health mit falschem Token → danach auch mit richtigem Token 404 für 10 min; nach Ablauf wieder 200", status: "lokal bestanden; über HTTP auf Staging offen (optional)"}
 - {id: T-105, ap: AP-1, was: "Cron-Job läuft", wie: "Cron des Hosters ruft Job-Endpunkt auf; Zeitstempel letzter Lauf in der DB aktualisiert sich", status: "bestanden (Staging 2026-10-29, Cron per URL)"}
-- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "Staging bestanden (2026-10-29); Produktion per Tag offen"}
+- {id: T-106, ap: AP-1, was: "Auslieferung per GitHub Actions (E-32)", wie: "Push auf main → Ordner staging aktualisiert, produktiv unverändert; Freigabeweg → Ordner produktiv; config.php, install.lock und Laufzeitordner bleiben in beiden Zielen unverändert (Prüfsumme vorher/nachher)", status: "Staging bestanden (2026-10-29); Produktion per Tag v1.0.0 bestanden (2026-11-02, T-347)"}
 - {id: T-107, ap: AP-1, was: "Health-Endpunkt", wie: "GET /health mit Kopfzeile X-Health-Token oder ?token= liefert 200 und JSON (status ok, Schema ist = soll); ohne Token 404", status: "bestanden (Staging 2026-10-29)"}
 - {id: T-108, ap: AP-1, was: "Wartungsmodus", wie: "var/wartung.lock per FTP anlegen → Startseite 503 mit Hinweisseite, /health meldet wartung: true, Team-Login weiter möglich (ab AP-5); Datei löschen → wieder 200", status: "bestanden ohne Login-Teil (Staging 2026-10-29); Login-Teil nach AP-5"}
 - {id: T-109, ap: AP-1, was: "Botschutz des Hosters", wie: "Formular-POST per curl und per Browser; bei 403 beim Hoster klären (K-03)", status: "teilweise: curl-POST erreicht die App (kein Hoster-403); Browser-Formular mit AP-4"}
@@ -1004,7 +1004,7 @@ Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gi
 - {id: T-344, ap: AP-20, was: "Suchmaschinen-Schalter", wie: "lauf.php: aus nach der Installation, außerhalb der Produktion nicht einschaltbar und wirkungslos, auf Produktion ein/aus mit Protokoll; http_tests (release): Startseite trägt noindex, Kasten unter Betrieb ohne Schalter, Einschalten abgewiesen; Browser: Kasten auf team-daten. Auf Produktion: Admin (siehe unten)"}
 - {id: T-345, ap: AP-20, was: "Adresse eines Team-Kontos ändern (O-48)", wie: "lauf.php: Prüfungen (ungültig, belegt, gleich, Teilnehmenden-Konto), Änderung mit verknüpfter Anmeldung, Links verfallen, Mail an die alte Adresse, Protokoll ohne Adressen, Login mit neuer Adresse; http_tests: Menüpunkt und Dialog, ohne Code nichts geändert, mit Wiederherstellungscode geändert, eigenes Konto abgewiesen; Browser: Dialog in allen Engines (Handy, Desktop)"}
 - {id: T-346, ap: AP-20, was: "Repo-Prüfung R-10 vor dem Release", wie: "git grep nach Hoster-Namen, privaten IP-Adressen, Serverpfaden und Zugangsdaten im ganzen Repo und im Diff"}
-- {id: T-347, ap: AP-20, was: "Produktion per Tag v1.0.0 (ergänzt T-106)", wie: "Tag auf main → Lauf „Auslieferung“ grün, Ordner Produktion gefüllt, Staging unverändert; config.php, Installer, Cron, Status „Alles in Ordnung“, Quelltext der Startseite enthält noindex", status: offen}
+- {id: T-347, ap: AP-20, was: "Produktion per Tag v1.0.0 (ergänzt T-106)", wie: "Tag auf main → Lauf „Auslieferung“ grün, Ordner Produktion gefüllt, Staging unverändert; config.php, Installer, Cron, Status „Alles in Ordnung“, Quelltext der Startseite enthält noindex", status: "bestanden (Admin 2026-11-02)"}
 ```
 
 ### Ergebnisse
@@ -1012,11 +1012,12 @@ Auf Staging mit echten Geräten (Admin oder Claude mit Testkonto; ein Passkey gi
 | T-Nr. | Datum | Prüfer | Ergebnis | Befehl / entscheidende Ausgabe | Auffälligkeiten |
 |---|---|---|---|---|---|
 | T-343 bis T-345 | 2026-11-01 | claude-dev | bestanden | `php tools/tests/lauf.php` → 1236 ok, 0 Fehler (vorher 1197; neu: Bereich `release` und HTTP-Bereich `release`); Browser **Stufe 3** (Release auf Produktion, Login ist ein gemeinsamer Teil) `node tools/browser/durchlauf.js`: Chromium 3123 ok, Firefox 3123 ok, WebKit 1 Fehler; Teilwiederholung nur WebKit (`WS_WIEDERHOLEN`, E-73, ohne Code-Änderung) → 3107 ok; zusammen **9353 ok, 0 Fehler** (3 Engines × 4 Breiten); Fotos angesehen (Dialog „Adresse ändern“ auf dem Handy, Kasten „Suchmaschinen“ unter Betrieb) | WebKit meldete im ersten Lauf einmal auf der unveränderten Seite Einstellungen „gespeichert, Zusammenfassung zeigt den Ort“ (leerer Text direkt nach dem Speichern); in der Wiederholung grün, also ein Zeitproblem des Durchlaufs. Links eines Kontos liegen seit Migration 20 in `link` (Test zeigte es sofort); der O-48-Test nimmt den Beispieldatensatz Olaf Orga statt eigenem Anlegen (V-50) |
+| T-347 | 2026-11-02 | Admin | bestanden | Release `v1.0.0` auf `main` → Lauf „Auslieferung“ grün; `config.php` (produktion, ohne Umleitung und Testkonten, neue Zufallswerte), Installer sauber, BetreiberIn-Konto mit zweitem Faktor; Fußzeile ohne Version, Team-Übersicht 1.0.0; Betrieb: Suchmaschinen gesperrt; Shell-Cronjob alle 5 Minuten, Status alles grün; Testmail angekommen | – |
 | T-346 | 2026-11-01 | claude-dev | bestanden | `git grep` nach Hoster-Namen, IP-Adressen außerhalb der Tests (nur die privaten Bereiche in der Proxy-Prüfung als Code), Serverpfaden und Passwörtern; im Diff nur Beispiel-IPs aus den Dokumentationsbereichen (198.51.100.0/24, 203.0.113.0/24) | Der Name des Hosters, den der Admin im Chat genannt hat, steht nirgends im Repo |
 
 ### Noch zu prüfen
 
-**Produktion (Admin, nach dem Merge, T-347):** Schritte in `docs/betrieb.md` Abschnitt 2 („Besonderheiten auf Produktion“) und 3.
+**Produktion (T-347):** Schritte 1 bis 5 bestanden (Admin 2026-11-02, siehe Ergebnisse); offen sind nur noch 5 (mail-tester, Checkliste) und 6.
 
 1. Tag `v1.0.0` auf `main` setzen; unter GitHub → Actions ist der Lauf „Auslieferung“ grün; Staging bleibt auf seinem Stand.
 2. `config.php` mit `umgebung` = `produktion`, ohne `mail.umleiten_an`, ohne `testkonten`, mit neuen Zufallswerten; Installer; BetreiberIn-Konto mit zweitem Faktor.
