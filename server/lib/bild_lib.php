@@ -73,6 +73,14 @@ function foto_aufraeumen(): int
             $n++;
         }
     }
+    // Icons gelöschter Veranstaltungen (AP-21, E-79): Grundname in keiner va_einstellung mehr
+    $icons = va_tabellen_da() ? array_column(db_zeilen("SELECT wert FROM va_einstellung WHERE schluessel = 'icon'"), 'wert') : [];
+    foreach (glob(foto_ordner() . '/va-*.png') ?: [] as $datei) {
+        if (preg_match('/^(va-[0-9a-f]{16})-/', basename($datei), $m) === 1 && !in_array($m[1], $icons, true)
+            && filemtime($datei) < time() - 3600 && @unlink($datei)) {
+            $n++;
+        }
+    }
     return $n;
 }
 

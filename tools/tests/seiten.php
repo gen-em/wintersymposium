@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 /** Pfade ohne eigene HTML-Seite für GET: Token nötig, Datei/JSON, nur POST, Weiterleitung. */
 const TEST_SEITEN_OHNE = [
-    '/install', '/jobs', '/health', '/ausloggen', '/einrichten', '/passkey', '/link', '/konto/link',
+    '/install', '/jobs', '/health', '/robots.txt', '/sitemap.xml', '/ausloggen', '/einrichten', '/passkey', '/link', '/konto/link',
     '/team/profil', '/team/anmeldungen', '/team/startseite/vorschau', '/team/export', '/team/texte/bild',
     '/team/mailings/vorschau', '/team/mailings/bild', '/team/mailings/empfaenger',
     '/newsletter/bestaetigen', '/newsletter/verwalten', '/newsletter/abmelden',

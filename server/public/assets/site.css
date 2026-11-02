@@ -438,6 +438,7 @@ table.t tr.ausgeblendet td { opacity: .62; }
 .sprung:focus { left: 8px; }
 .kopf .innen { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; padding-bottom: 12px; }
 .kopf .logo { height: 46px; width: auto; display: block; }
+.kopf .logo-icon { width: 46px; }
 .kopf .logo-rot { display: none; }
 body.akzent-rot .kopf .logo-rot { display: block; }
 body.akzent-rot .kopf .logo-lila { display: none; }
@@ -926,6 +927,7 @@ table.teilnahme tr.fehlt td:first-child a { text-decoration: line-through; }
 @media (min-width: 760px) { .einst-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .einst-kachel:has(> .einst-auf[open]) { grid-column: 1 / -1; } }
 @media (min-width: 1000px) { .einst-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); } .einst-kachel:has(> .einst-auf[open]) { grid-column: span 2; } }
 .einst-kachel { min-width: 0; }
+.einst-icon { display: block; width: 96px; height: 96px; background: var(--nachtblau); border: 1px solid var(--linie); }
 .einst-kachel:has(> .einst-auf[open]), .einst-start { border-color: var(--akz); }
 .einst-kachel:has(> .einst-auf[open]) > .einst-zus { display: none; }
 .einst-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 10px; }

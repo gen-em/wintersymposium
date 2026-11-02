@@ -41,7 +41,8 @@ if (ist_post()) {
         fertig('ok', 'Fast geschafft: Schau in dein Postfach und bestätige den Newsletter über den Link in der Mail. Ohne Bestätigung tragen wir dich nicht ein.', '/newsletter');
     }
 }
-seite_kopf('Newsletter', ['aktiv' => '/newsletter', 'skripte' => ['pow.js'], 'suchmaschinen' => true]);
+seite_kopf('Newsletter', ['aktiv' => '/newsletter', 'skripte' => ['pow.js'], 'suchmaschinen' => true, 'teilen' => 'oeffentlich',
+    'beschreibung' => 'Newsletter von ' . vorschau_marke() . ': Termine der nächsten Fortbildungen in der Notfallmedizin.']);
 echo seiten_kopfzeile('Newsletter', reihe_name(), 'Termine und Neuigkeiten per Mail. Kostenlos, jederzeit abbestellbar über den Link in jeder Mail.');
 ?>
 <div class="innen">

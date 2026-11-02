@@ -770,3 +770,30 @@ function beispieldaten_neutral(): int
     va_zwischenspeicher_leeren();
     return $n;
 }
+
+/**
+ * PNG für ein Veranstaltungs-Icon (AP-21, E-79): $breite × $hoehe px, durchsichtiger
+ * Grund mit rotem Kreis. Auch für fehlerhafte Fälle (nicht quadratisch, zu klein).
+ */
+function beispieldaten_icon_png(int $breite = 600, ?int $hoehe = null): string
+{
+    $hoehe ??= $breite;
+    $b = imagecreatetruecolor($breite, $hoehe);
+    imagealphablending($b, false);
+    imagesavealpha($b, true);
+    imagefill($b, 0, 0, imagecolorallocatealpha($b, 0, 0, 0, 127));
+    imagealphablending($b, true);
+    imagefilledellipse($b, intdiv($breite, 2), intdiv($hoehe, 2), (int)($breite * 0.8), (int)($hoehe * 0.8), imagecolorallocate($b, 0xFF, 0x5A, 0x5F));
+    ob_start();
+    imagepng($b);
+    imagedestroy($b);
+    return (string)ob_get_clean();
+}
+
+/** Icon für die Veranstaltung im Kontext setzen (wie der Upload unter Einstellungen → Icon). Gibt den Grundnamen zurück. */
+function beispieldaten_icon(): string
+{
+    $name = va_icon_schreiben(beispieldaten_icon_png());
+    va_icon_setzen($name);
+    return $name;
+}

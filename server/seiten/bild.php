@@ -8,8 +8,9 @@ declare(strict_types=1);
  */
 
 $name = substr((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), strlen('/bild/'));
-// Fotos der Dozierenden und Bilder der Texte (Rückmeldung 2026-10-30); Bilder der Mailings nur über /team/mailings/bild
-if (preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|text-[0-9a-f]{16}\.(jpg|png))$/', $name) !== 1 || !is_file(foto_ordner() . '/' . $name)) {
+// Fotos der Dozierenden und Bilder der Texte (Rückmeldung 2026-10-30), Icons der Veranstaltungen (AP-21, E-79);
+// Bilder der Mailings nur über /team/mailings/bild
+if (preg_match('/^(dozent-\d+-[0-9a-f]{12}\.jpg|text-[0-9a-f]{16}\.(jpg|png)|va-[0-9a-f]{16}-(512|180|vorschau)\.png)$/', $name) !== 1 || !is_file(foto_ordner() . '/' . $name)) {
     nicht_gefunden();
 }
 kopf_gemeinsam();

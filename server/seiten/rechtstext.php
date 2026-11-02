@@ -11,7 +11,7 @@ declare(strict_types=1);
  */
 
 $text = inhalt($rechtstext['schluessel']);
-seite_kopf($rechtstext['titel'], ['suchmaschinen' => true]);
+seite_kopf($rechtstext['titel'], ['suchmaschinen' => true, 'teilen' => 'oeffentlich']);
 ?>
 <?= seiten_kopfzeile($rechtstext['titel']) ?>
 <div class="innen">

@@ -17,6 +17,20 @@ $fehler = [];
 $eingabe = null;
 $offen = null;
 
+// Icon der Veranstaltung (AP-21, E-79): eigene Kachel mit Upload
+if (ist_post() && in_array(aktion(), ['icon', 'icon_weg'], true)) {
+    if (aktion() === 'icon_weg') {
+        va_icon_entfernen((int)$konto['id']);
+        fertig('ok', 'Icon entfernt. Die Seiten zeigen wieder das Logo.', '/team/einstellungen#icon');
+    }
+    try {
+        va_icon_speichern($_FILES['icon'] ?? [], (int)$konto['id']);
+        fertig('ok', 'Icon gespeichert. Es erscheint links oben, im Browser-Tab und in der Vorschau geteilter Links.', '/team/einstellungen#icon');
+    } catch (RuntimeException $ex) {
+        fertig('fehler', $ex->getMessage(), '/team/einstellungen#icon');
+    }
+}
+
 if (ist_post()) {
     $gruppe = isset(VA_GRUPPEN[post_text('gruppe')]) ? post_text('gruppe') : null;
     if (aktion() === 'abbrechen') {
@@ -140,6 +154,22 @@ team_seite_kopf($konto, 'Einstellungen', '/team/einstellungen');
 <div class="einst-raster">
     <?= $kachel('veranstaltung') ?>
     <?= $kachel('bausteine') ?>
+    <section class="kasten einst-kachel" id="icon">
+        <h2 class="zwischen klein-titel">Icon</h2>
+        <?php if (($icon = va_icon_datei('icon')) !== null): ?>
+        <p><img class="einst-icon" src="/bild/<?= e($icon) ?>" alt="Icon der Veranstaltung" width="96" height="96"></p>
+        <?php if (!$nurLesen): ?><?= aktion_knopf('/team/einstellungen#icon', 'icon_weg', [], 'Icon entfernen', 'klein-link') ?><?php endif; ?>
+        <?php else: ?>
+        <p class="meta klein">Kein eigenes Icon: Links oben steht das Logo, im Browser-Tab das Allgäu-Akut-Zeichen.</p>
+        <?php endif; ?>
+        <?php if (!$nurLesen): ?>
+        <form class="formular" method="post" action="/team/einstellungen#icon" enctype="multipart/form-data"><?= csrf_feld() . versteckt_html(['aktion' => 'icon']) ?>
+            <?= feld('icon', $icon !== null ? 'Neues Icon' : 'Icon hochladen', ['typ' => 'file', 'pflicht' => true, 'attr' => ['accept' => 'image/png'],
+                'hilfe' => 'PNG, quadratisch, mindestens ' . VA_ICON_MIN . ' × ' . VA_ICON_MIN . ' px (gern mit durchsichtigem Hintergrund). Ersetzt auf den Seiten dieser Veranstaltung das Logo links oben, ist ihr Symbol im Browser-Tab und auf dem Handy und steht mittig auf Nachtblau in der Vorschau geteilter Links.']) ?>
+            <div class="aktionen"><button type="submit" class="knopf">Hochladen</button></div>
+        </form>
+        <?php endif; ?>
+    </section>
     <section class="kasten einst-kachel einst-start" id="startseite">
         <div class="einst-kopf"><h2 class="zwischen klein-titel">Startseite</h2><a class="knopf klein" href="/team/startseite">Startseite bearbeiten</a></div>
         <div class="einst-mini" aria-label="Kopf der Startseite">

@@ -171,7 +171,7 @@ function test_va_form(string $csrf): array
 
 /** HTTP-Bereiche in der Reihenfolge des Laufs (Funktion http_bereich_<name>). */
 const HTTP_BEREICHE = ['login', 'einstellungen', 'programm', 'anmeldung', 'konto', 'daten', 'betrieb', 'team', 'mailings',
-    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18', 'ap19', 'release'];
+    'rueckmeldung', 'konto_alles', 'passkey', 'newsletter', 'veranstaltungen', 'rechte', 'ap14', 'ap16', 'ap18', 'ap19', 'release', 'vorschau'];
 
 function http_tests(string $wurzel, string $tmp): void
 {
@@ -337,14 +337,15 @@ function http_installer(array $u): void
     abschnitt('HTTP: Öffentliche Seiten und Erscheinungsbild (T-112 bis T-116, lokal)');
     $r = http_anfrage($basis, 'GET', '/', $h);
     $html = $r['text'];
-    pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_quer_negativ-lila.svg'), 'Logo eingebunden');
+    pruefe(str_contains($html, 'ALLGAEU-AKUT_Logo_kompakt_negativ-lila.svg'), 'Logo (kompakt, E-80) eingebunden');
     pruefe(str_contains($html, '<h1 class="titel titel-l">Allgäuer <em>Winter-Notfallsymposium</em></h1>') && str_contains($html, '<p class="kicker">Allgäu Akut · Wintersymposium</p>'), 'Titel und Zeile aus der Veranstaltung (erstes Wort weiß, Rest lila; Größenstufe L nach „Notfallsymposium“)');
     pruefe(str_contains($html, 'Für wen') && str_contains($html, 'id="programm"'), 'Infokästen und Programmabschnitt vorhanden');
     pruefe(str_contains($html, '<dl class="eckdaten">') && str_contains($html, '240 / 240') && str_contains($html, 'Mi 20.01.2027'), 'Eckdaten aus den Einstellungen (Startwerte)');
     pruefe(str_contains($html, 'Das Programm erscheint hier, sobald es veröffentlicht ist') && !str_contains($html, 'Tigerente'), 'ohne veröffentlichtes Programm: Hinweis, kein Beispielprogramm');
     pruefe(str_contains($html, 'href="/impressum"') && str_contains($html, 'href="/datenschutz"') && str_contains($html, 'Quelltext (AGPL)'), 'Fußzeile mit Impressum, Datenschutz, Quelltext');
     preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
-    $fremd = array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/'));
+    // Eigene absolute Adressen (canonical, Vorschaubild, AP-21) sind keine fremden Ressourcen
+    $fremd = array_filter($m[1], fn($u) => !str_starts_with($u, 'https://github.com/gen-em/') && parse_url($u, PHP_URL_HOST) !== $h);
     pruefe($fremd === [], 'keine externen Ressourcen (nur Quelltext-Link nach GitHub)');
     pruefe(!str_contains(file_get_contents($wurzel . '/server/public/assets/site.css'), 'http'), 'CSS ohne externe Adressen');
     foreach (['Anton-Regular', 'Antonio-Bold', 'Tajawal-Regular', 'IBMPlexMono-Regular'] as $font) {
@@ -594,7 +595,7 @@ function http_bereich_programm(array $u): void
     pruefe(str_contains($html, 'Bitte pünktlich') && str_contains($html, 'Handschuhe'), 'Workshop-Popup mit Bring und Notiz');
     pruefe(str_contains($html, '/assets/programm.js'), 'Skript für Popups eingebunden');
     preg_match_all('/(?:src|href)="(https?:[^"]+)"/', $html, $m);
-    pruefe(array_filter($m[1], fn($x) => !str_starts_with($x, 'https://github.com/gen-em/')) === [], 'Programm ohne externe Ressourcen');
+    pruefe(array_filter($m[1], fn($x) => !str_starts_with($x, 'https://github.com/gen-em/') && parse_url($x, PHP_URL_HOST) !== $h) === [], 'Programm ohne externe Ressourcen');
     $r = http_anfrage($basis, 'GET', '/team/programm', $h, [], null, $b);
     pruefe(!str_contains($r['text'], 'Gespeichert, aber nicht veröffentlicht') && str_contains($r['text'], 'Alles veröffentlicht'), 'nach dem Veröffentlichen kein Banner');
     // Ändern, verschieben, verwerfen (VT 01 18:15–18:45, Block 19:30–21:30)
@@ -1959,4 +1960,71 @@ function http_bereich_release(array $u): void
     pruefe(str_contains($r['text'], 'An die alte Adresse ging ein Hinweis') && str_contains($r['text'], 'olaf.neu@example.org'), 'Meldung und neue Adresse in der Liste');
     $r = http_anfrage($basis, 'POST', '/team/konten', $h, [], ['csrf' => $c, 'aktion' => 'adresse', 'id' => $f['betreiber'], 'email' => 'bea.neu@example.org'], $b);
     pruefe(konto_laden($f['betreiber'])['email'] === TEST_BETREIBER && str_contains($r['text'], 'Mein Konto'), 'das eigene Konto nicht über Team-Konten');
+}
+
+/** Linkvorschau, Suchmaschinen und Icon je Veranstaltung (AP-21, E-78 bis E-80; T-350 bis T-352). */
+function http_bereich_vorschau(array $u): void
+{
+    ['basis' => $basis, 'h' => $h, 'tmp' => $tmp] = $u;
+    http_frisch($u);
+
+    abschnitt('HTTP: Linkvorschau auf öffentlichen und persönlichen Seiten (E-78)');
+    // Wie ein Vorschau-Abrufer: Kennung von WhatsApp, ohne Accept-Kopf, ohne Sitzung
+    $r = http_anfrage($basis, 'GET', '/', $h, ['User-Agent: WhatsApp/2.24'], null, "$tmp/kekse-vorschau.txt");
+    $t = $r['text'];
+    pruefe(substr_count($t, 'property="og:title"') === 1 && str_contains($t, 'property="og:title" content="' . e(vorschau_va_titel()) . ' – Allgäu Akut"'), 'Startseite: og:title mit Name und Jahr');
+    pruefe(str_contains($t, 'property="og:image" content="' . url(VORSCHAU_BILD)) && str_contains($t, '<link rel="canonical" href="' . url('/') . '">'), 'Standard-Vorschaubild und canonical');
+    pruefe(str_contains($t, '<script type="application/ld+json">') && str_contains($t, '"@type":"EducationEvent"'), 'strukturierte Daten auf der Startseite');
+    pruefe(str_contains($t, 'name="robots" content="noindex"'), 'Schalter aus: weiter noindex (Vorschau trotzdem da)');
+    pruefe(stripos($t, '<meta charset="utf-8">') < 300, 'charset bleibt ganz vorne');
+    $r = http_anfrage($basis, 'GET', '/anmelden', $h);
+    pruefe(str_contains($r['text'], 'property="og:title" content="Anmelden – ' . e(va_kurz()) . '"') && !str_contains($r['text'], 'application/ld+json'), 'Anmeldung: Titel mit Kurzname, ohne Event-Daten');
+    $r = http_anfrage($basis, 'GET', '/link?t=' . str_repeat('ab', 20), $h);
+    pruefe(str_contains($r['text'], 'property="og:title" content="Allgäu Akut"') && !str_contains($r['text'], str_repeat('ab', 20) . '"') && !str_contains($r['text'], 'rel="canonical"'), 'Einmal-Link: allgemeine Vorschau ohne Schlüssel');
+    $r = http_anfrage($basis, 'GET', '/einloggen', $h);
+    pruefe(str_contains($r['text'], 'property="og:title" content="Allgäu Akut"') && str_contains($r['text'], '<title>Einloggen – '), 'Login: allgemeine Vorschau, Tab-Titel unverändert');
+    pruefe(str_contains($r['text'], 'ALLGAEU-AKUT_Logo_kompakt_negativ-lila.svg') && !str_contains($r['text'], 'Logo_quer'), 'Kopf: Logo kompakt (E-80)');
+    $r = http_anfrage($basis, 'GET', '/assets/logo/vorschau.png', $h);
+    pruefe($r['status'] === 200 && strlen($r['text']) < 300_000 && (getimagesizefromstring($r['text'])[0] ?? 0) === 1200, 'Standard-Vorschaubild 1200 px, unter 300 KB');
+
+    abschnitt('HTTP: robots.txt und sitemap.xml (21c)');
+    $r = http_anfrage($basis, 'GET', '/robots.txt', $h);
+    pruefe($r['status'] === 200 && $r['text'] === "User-agent: *\nDisallow: /\n", 'robots.txt: alles gesperrt, solange der Schalter aus ist');
+    pruefe(http_anfrage($basis, 'GET', '/sitemap.xml', $h)['status'] === 404, 'sitemap.xml: 404, solange der Schalter aus ist');
+
+    abschnitt('HTTP: Icon je Veranstaltung (E-79)');
+    $b = http_team_einloggen($u, TEST_BETREIBER, TEST_PASSWORT)['keks'];
+    $r = http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b);
+    pruefe(str_contains($r['text'], 'id="icon"') && str_contains($r['text'], 'name="icon"') && str_contains($r['text'], 'accept="image/png"'), 'Kachel „Icon“ mit Upload');
+    $csrf = http_csrf($r['text']);
+    $hoch = function (string $daten) use ($basis, $h, $b, $csrf, $tmp): array {
+        file_put_contents("$tmp/icon.png", $daten);
+        $ch = curl_init($basis . '/team/einstellungen');
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20, CURLOPT_HTTPHEADER => ['Host: ' . $h],
+            CURLOPT_COOKIEFILE => $b, CURLOPT_COOKIEJAR => $b,
+            CURLOPT_POSTFIELDS => ['csrf' => $csrf, 'aktion' => 'icon', 'icon' => new CURLFile("$tmp/icon.png", 'image/png', 'icon.png')]]);
+        curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+        return ['status' => $status, 'seite' => http_anfrage($basis, 'GET', '/team/einstellungen', $h, [], null, $b)['text']];
+    };
+    $r = $hoch(beispieldaten_icon_png(600, 300));
+    pruefe($r['status'] === 303 && str_contains($r['seite'], 'quadratisch') && va_icon_name() === null, 'nicht quadratisch: Meldung, nichts gespeichert');
+    $r = $hoch(beispieldaten_icon_png(640));
+    va_zwischenspeicher_leeren();
+    $icon = va_icon_datei('icon');
+    pruefe($r['status'] === 303 && $icon !== null && str_contains($r['seite'], 'Icon gespeichert') && str_contains($r['seite'], 'class="einst-icon"'), 'PNG 640 px: gespeichert, Vorschau in der Kachel');
+    pruefe(db_zahl("SELECT COUNT(*) FROM audit WHERE art = 'einstellungen' AND text = 'Icon der Veranstaltung hochgeladen'") === 1, 'Upload im Protokoll');
+    $t = http_anfrage($basis, 'GET', '/', $h)['text'];
+    pruefe(str_contains($t, '<img class="logo logo-icon" src="/bild/' . $icon . '"') && !str_contains($t, 'Logo_kompakt'), 'Kopf: Icon statt Logo (Variante a)');
+    pruefe(str_contains($t, '<link rel="icon" href="/bild/' . $icon . '"') && str_contains($t, 'apple-touch-icon" href="/bild/' . va_icon_datei('touch') . '"') && !str_contains($t, '/favicon.svg'), 'Favicon und App-Symbol der Veranstaltung');
+    pruefe(str_contains($t, 'property="og:image" content="' . url('/bild/' . va_icon_datei('vorschau')) . '"'), 'Vorschaubild der Veranstaltung');
+    $r = http_anfrage($basis, 'GET', '/bild/' . va_icon_datei('vorschau'), $h);
+    pruefe($r['status'] === 200 && (getimagesizefromstring($r['text'])[1] ?? 0) === 630, 'Vorschaubild ohne Anmeldung abrufbar (630 px hoch)');
+    pruefe(http_anfrage($basis, 'GET', '/bild/va-0123456789abcdef-512.png', $h)['status'] === 404, 'unbekanntes Icon: 404');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $csrf, 'aktion' => 'icon_weg'], $b);
+    va_zwischenspeicher_leeren();
+    pruefe($r['status'] === 303 && va_icon_name() === null && str_contains(http_anfrage($basis, 'GET', '/', $h)['text'], 'Logo_kompakt'), 'entfernt: wieder das Logo');
+    $r = http_anfrage($basis, 'POST', '/team/einstellungen', $h, [], ['csrf' => $csrf, 'aktion' => 'icon_weg'], "$tmp/kekse-leer.txt");
+    pruefe($r['status'] === 303 && !str_contains((string)($r['kopf']['location'] ?? ''), '#icon'), 'ohne Login: keine Aktion');
 }
